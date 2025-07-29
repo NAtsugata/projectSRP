@@ -1,101 +1,114 @@
-import React, { useState } from 'react';
-import { storageService, payslipService } from '../lib/supabase';
-import { CustomFileInput } from '../components/SharedUI';
-import { DownloadIcon, TrashIcon } from '../components/SharedUI';
+// Ce code remplace le contenu de votre fichier existant, par exemple :
+// /src/pages/AdminVaultView.js
 
-export default function AdminVaultView({ users, showToast, showConfirmationModal }) {
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [files, setFiles] = useState([]);
-    const [uploading, setUploading] = useState(false);
-    const [selectedFiles, setSelectedFiles] = useState([]);
-    
-    const handleUserSelect = async (user) => {
-        setSelectedUser(user);
-        const { data, error } = await payslipService.getPayslips(user.id);
-        if (error) {
-            showToast("Erreur de chargement des fichiers.", "error");
-            setFiles([]);
-        } else {
-            setFiles(data);
-        }
-    };
-    
-    const handleFilesChange = (e) => {
-        setSelectedFiles(e.target.files);
-    };
-    
-    const handleUpload = async () => {
-        if (selectedFiles.length === 0 || !selectedUser) return;
-        setUploading(true);
-        for (const file of selectedFiles) {
-            const { error } = await storageService.uploadVaultFile(file, selectedUser.id);
-            if (error) {
-                showToast('Erreur d\'upload pour ' + file.name + '.', "error");
-            }
-        }
-        setUploading(false);
-        showToast("Téléchargement terminé.", "success");
-        handleUserSelect(selectedUser);
-    };
-    
-    const handleDeleteFile = (file) => {
-        showConfirmationModal({
-            title: "Supprimer le fichier ?",
-            message: 'Êtes-vous sûr de vouloir supprimer "' + file.name + '" ? Cette action est irréversible.',
-            onConfirm: async () => {
-                const { error } = await storageService.deleteVaultFile(file.path);
-                if (error) {
-                    showToast("Erreur lors de la suppression.", "error");
-                } else {
-                    showToast("Fichier supprimé.");
-                    handleUserSelect(selectedUser);
-                }
-            }
-        });
-    };
-    
-    return (
-        <div>
-            <h2 className="view-title">Coffre-fort Administrateur</h2>
-            <div className="grid-2-cols">
-                <div className="card-white">
-                    <h3>Employés</h3>
-                    <ul className="document-list">
-                        {users.filter(u => !u.is_admin).map(user => (
-                            <li key={user.id} onClick={() => handleUserSelect(user)} style={{cursor: 'pointer', background: selectedUser?.id === user.id ? '#f1f5f9' : 'transparent'}}>
-                                {user.full_name}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div className="card-white">
-                    {selectedUser ? (
-                        <>
-                            <h3>Documents pour {selectedUser.full_name}</h3>
-                            <ul className="document-list">
-                                {files.map(file => (
-                                    <li key={file.id}>
-                                        <span>{file.name}</span>
-                                        <div className="flex items-center gap-2">
-                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn-icon"><DownloadIcon/></a>
-                                            <button onClick={() => handleDeleteFile(file)} className="btn-icon-danger"><TrashIcon/></button>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                            <div className="section">
-                                <h4>Ajouter des documents</h4>
-                                <CustomFileInput multiple onChange={handleFilesChange}>
-                                    Choisir des documents
-                                </CustomFileInput>
-                                <button onClick={handleUpload} disabled={uploading} className="btn btn-success mt-2 w-full">
-                                    {uploading ? "Envoi en cours..." : "Envoyer"}
-                                </button>
-                            </div>
-                        </>
-                    ) : <p>Sélectionnez un employé pour voir ses documents.</p>}
-                </div>
-            </div>
+import React, { useState, useRef } from 'react';
+
+// J'ai créé un composant réutilisable pour la clarté,
+// mais vous pouvez intégrer cette logique directement dans votre page.
+function FileUploader() {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const [error, setError] = useState(null);
+
+  // useRef permet de garder une référence à l'input de type fichier
+  // pour pouvoir le réinitialiser après un envoi réussi.
+  const inputFileRef = useRef(null);
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setError(null); // Réinitialise l'erreur si un nouveau fichier est choisi
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    // CORRECTION N°2 : Ligne cruciale qui empêche la page de se recharger sur mobile
+    event.preventDefault();
+
+    if (!file) {
+      setError('Veuillez sélectionner un fichier avant de l\'envoyer.');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      // On envoie le fichier à notre mini-serveur /api/upload
+      const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+
+      if (!response.ok) {
+        throw new Error(`L'envoi a échoué: ${response.statusText}`);
+      }
+
+      const newBlob = await response.json();
+
+      // On sauvegarde l'URL permanente pour l'afficher
+      setUploadedFileUrl(newBlob.url);
+      setFile(null); // Réinitialise le state du fichier
+      if (inputFileRef.current) {
+        inputFileRef.current.value = ""; // Réinitialise le champ de l'input
+      }
+
+    } catch (err) {
+      console.error('Erreur lors de l\'upload:', err);
+      setError('Une erreur est survenue lors de l\'envoi du fichier.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', maxWidth: '500px', margin: '20px auto' }}>
+      <form onSubmit={handleSubmit}>
+        <h4>Envoyer un nouveau document</h4>
+        <input
+          type="file"
+          onChange={handleFileChange}
+          disabled={uploading}
+          ref={inputFileRef} // On lie la référence à l'input
+          style={{ marginBottom: '10px', display: 'block' }}
+        />
+        <button type="submit" disabled={uploading || !file} style={{ padding: '10px 15px', cursor: 'pointer' }}>
+          {uploading ? 'Envoi en cours...' : 'Envoyer le fichier'}
+        </button>
+      </form>
+
+      {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+
+      {uploadedFileUrl && (
+        <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+          <p style={{ color: 'green' }}>Fichier envoyé avec succès !</p>
+          {/* Affiche une image ou un lien selon le type de fichier */}
+          {file?.type.startsWith('image/') ? (
+             <img src={uploadedFileUrl} alt="Aperçu de l'upload" style={{ maxWidth: '100%', borderRadius: '4px' }} />
+          ) : (
+            <p>Le document est disponible ici :</p>
+          )}
+          <a href={uploadedFileUrl} target="_blank" rel="noopener noreferrer" style={{ wordBreak: 'break-all' }}>{uploadedFileUrl}</a>
         </div>
-    );
+      )}
+    </div>
+  );
+}
+
+
+// Votre vue principale peut maintenant utiliser ce composant
+export default function AdminVaultView() {
+  return (
+    <div>
+      <h2>Coffre-fort numérique - Administrateur</h2>
+      <p>Gérez ici les documents importants.</p>
+
+      {/* Intégration du composant d'upload */}
+      <FileUploader />
+
+      {/* Le reste de votre page... */}
+    </div>
+  );
 }
