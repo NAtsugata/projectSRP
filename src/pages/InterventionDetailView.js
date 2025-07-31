@@ -2,12 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
-import { ChevronLeftIcon, DownloadIcon } from '../components/SharedUI';
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon } from '../components/SharedUI';
 
 export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
+    const signatureCanvasRef = useRef(null);
+    const [uploadQueue, setUploadQueue] = useState([]);
+    const storageKey = 'srp-intervention-report-' + interventionId;
+    const [report, setReport] = useState(null);
 
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
@@ -15,31 +19,25 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             setIntervention(foundIntervention);
         }
     }, [interventions, interventionId]);
-    
-    const storageKey = 'srp-intervention-report-' + interventionId;
-    const [report, setReport] = useState(() => {
-        try {
-            const savedReport = window.sessionStorage.getItem(storageKey);
-            return savedReport ? JSON.parse(savedReport) : (intervention?.report || { notes: '', images: [], arrivalTime: null, departureTime: null, signature: null });
-        } catch (error) {
-            return intervention?.report || { notes: '', images: [], arrivalTime: null, departureTime: null, signature: null };
-        }
-    });
-
-    const [isUploading, setIsUploading] = useState(false);
-    const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
         if (intervention) {
-            setReport(intervention.report || { notes: '', images: [], arrivalTime: null, departureTime: null, signature: null });
+            const savedReport = window.sessionStorage.getItem(storageKey);
+            if (savedReport) {
+                setReport(JSON.parse(savedReport));
+            } else {
+                setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
+            }
         }
-    }, [intervention]);
+    }, [intervention, storageKey]);
 
     useEffect(() => {
-        try {
-            window.sessionStorage.setItem(storageKey, JSON.stringify(report));
-        } catch (error) {
-            console.error("Failed to save report to sessionStorage", error);
+        if (report) {
+            try {
+                window.sessionStorage.setItem(storageKey, JSON.stringify(report));
+            } catch (error) {
+                console.error("Failed to save report to sessionStorage", error);
+            }
         }
     }, [report, storageKey]);
 
@@ -80,26 +78,42 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 canvas.removeEventListener('touchmove', draw);
             };
         }
-    }, []);
+    }, [report]);
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
-    const handleImageUpload = async (e) => {
+
+    const handleFileUpload = async (e) => {
         e.preventDefault();
-        e.stopPropagation();
-        const file = e.target.files[0];
-        if (!file || !intervention) return;
-        setIsUploading(true);
-        try {
-            const { publicURL, error } = await storageService.uploadInterventionFile(file, intervention.id);
-            if (error) console.error("Erreur d'upload:", error);
-            else handleReportChange('images', [...(report.images || []), publicURL]);
-        } catch (error) {
-            console.error("Erreur d'upload:", error);
-        } finally {
-            setIsUploading(false);
-            if (e.target) e.target.value = '';
+        const selectedFiles = Array.from(e.target.files);
+        if (selectedFiles.length === 0 || !intervention) return;
+
+        const initialQueue = selectedFiles.map(file => ({ name: file.name, status: 'uploading', error: null }));
+        setUploadQueue(initialQueue);
+
+        const uploadPromises = selectedFiles.map(file => storageService.uploadInterventionFile(file, intervention.id));
+        const results = await Promise.allSettled(uploadPromises);
+
+        const newFiles = [];
+        const finalQueue = [...initialQueue];
+
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && !result.value.error) {
+                const fileInfo = { name: selectedFiles[index].name, url: result.value.publicURL, type: selectedFiles[index].type };
+                newFiles.push(fileInfo);
+                finalQueue[index].status = 'success';
+            } else {
+                finalQueue[index].status = 'error';
+                finalQueue[index].error = result.reason?.message || result.value.error?.message || 'Erreur inconnue';
+            }
+        });
+
+        setUploadQueue(finalQueue);
+        if (newFiles.length > 0) {
+            handleReportChange('files', [...(report.files || []), ...newFiles]);
         }
+        setTimeout(() => setUploadQueue([]), 5000);
     };
+
     const handleSave = () => {
         if (!intervention) return;
         const finalReport = { ...report };
@@ -109,25 +123,43 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                  finalReport.signature = dataUrl;
             }
         }
+        // On nettoie la sauvegarde temporaire UNIQUEMENT après l'envoi final
         window.sessionStorage.removeItem(storageKey);
         onSave(intervention.id, finalReport);
     };
-    const cleanupAndGoBack = () => {
-        window.sessionStorage.removeItem(storageKey);
+
+    // CORRIGÉ: La fonction de retour ne supprime plus la sauvegarde temporaire.
+    const handleGoBack = () => {
         navigate('/planning');
     };
+
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR') : 'N/A';
 
-    if (!intervention) {
+    const isUploading = uploadQueue.some(file => file.status === 'uploading');
+
+    if (!intervention || !report) {
         return <div className="loading-container"><div className="loading-spinner"></div><p>Chargement de l'intervention...</p></div>;
     }
 
     return (
         <div>
-            <button onClick={cleanupAndGoBack} className="back-button"><ChevronLeftIcon /> Retour au planning</button>
+            <style>{`
+                .document-list-detailed, .upload-queue-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+                .document-list-detailed li, .upload-queue-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
+                .document-thumbnail { width: 40px; height: 40px; object-fit: cover; border-radius: 0.25rem; background-color: #e9ecef; }
+                .document-icon, .upload-status-icon { width: 24px; height: 24px; flex-shrink: 0; }
+                .upload-status-icon.success { color: #28a745; }
+                .upload-status-icon.error { color: #dc3545; }
+                .document-list-detailed li span, .upload-queue-list li .file-name { flex-grow: 1; font-size: 0.9rem; word-break: break-all; }
+                .upload-queue-list li .error-message { font-size: 0.8rem; color: #dc3545; }
+                .document-list-detailed li .btn { flex-shrink: 0; }
+            `}</style>
+
+            <button onClick={handleGoBack} className="back-button"><ChevronLeftIcon /> Retour au planning</button>
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
+
                 <div className="section">
                     <h3>Documents de préparation</h3>
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
@@ -141,6 +173,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </ul>
                     ) : <p className="text-muted">Aucun document de préparation.</p>}
                 </div>
+
                 <div className="section">
                     <h3>Pointage</h3>
                     <div className="grid-2-cols">
@@ -152,31 +185,60 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         <p>Heure de départ: <span>{formatTime(report.departureTime)}</span></p>
                     </div>
                 </div>
+
                 <div className="section">
                     <h3>Rapport de chantier</h3>
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails de l'intervention..." rows="4" className="form-control" readOnly={isAdmin}></textarea>
                 </div>
+
                 <div className="section">
-                    <h3>Photos</h3>
-                    <div className="image-grid">
-                        {(report.images || []).map((img, idx) => (
-                            <div key={idx}>
-                                <img src={img} alt={'report-' + idx} />
-                                {isAdmin && <a href={img} download={'intervention-' + intervention.id + '-photo-' + (idx+1) + '.png'} className="btn btn-primary mt-2 w-full"><DownloadIcon/> Télécharger</a>}
-                            </div>
+                    <h3>Photos et Documents du Rapport</h3>
+                    <ul className="document-list-detailed">
+                        {(report.files || []).map((file, idx) => (
+                            <li key={idx}>
+                                {file.type.startsWith('image/') ? (
+                                    <img src={file.url} alt={`Aperçu de ${file.name}`} className="document-thumbnail" />
+                                ) : (
+                                    <FileTextIcon className="document-icon" />
+                                )}
+                                <span>{file.name}</span>
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">Voir</a>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
+
+                    {uploadQueue.length > 0 && (
+                        <div className="mt-4">
+                            <h4 className="font-semibold mb-2">Téléchargements en cours...</h4>
+                            <ul className="upload-queue-list">
+                                {uploadQueue.map((file, idx) => (
+                                    <li key={idx}>
+                                        {file.status === 'uploading' && <LoaderIcon className="upload-status-icon animate-spin" />}
+                                        {file.status === 'success' && <CheckCircleIcon className="upload-status-icon success" />}
+                                        {file.status === 'error' && <AlertTriangleIcon className="upload-status-icon error" />}
+                                        <div className="flex flex-col">
+                                            <span className="file-name">{file.name}</span>
+                                            {file.error && <span className="error-message">{file.error}</span>}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     {!isAdmin && (
                         <CustomFileInput
-                            accept="image/*"
-                            onChange={handleImageUpload}
+                            accept="image/*,application/pdf"
+                            onChange={handleFileUpload}
                             disabled={isUploading}
-                            className="mt-2"
+                            multiple
+                            className="mt-4"
                         >
-                            {isUploading ? 'Téléchargement...' : 'Ajouter une photo'}
+                            {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
                         </CustomFileInput>
                     )}
                 </div>
+
                 <div className="section">
                     <h3>Signature du client</h3>
                     {isAdmin && report.signature ? (
@@ -188,7 +250,10 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </>
                     )}
                 </div>
-                {!isAdmin && <button onClick={handleSave} className="btn btn-primary w-full mt-4">Sauvegarder et Clôturer le rapport</button>}
+
+                {!isAdmin && <button onClick={handleSave} disabled={isUploading} className="btn btn-primary w-full mt-4">
+                    {isUploading ? 'Veuillez attendre la fin des envois' : 'Sauvegarder et Clôturer le rapport'}
+                </button>}
             </div>
         </div>
     );

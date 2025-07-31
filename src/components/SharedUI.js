@@ -23,6 +23,11 @@ export const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="2
 export const FileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>;
 
 // --- Composants UI ---
+export const GenericStatusBadge = ({ status, colorMap }) => {
+    const statusClass = colorMap[status] || 'status-badge-default';
+    return <span className={'status-badge ' + statusClass}>{status}</span>;
+};
+
 export const Toast = ({ message, type, onDismiss }) => {
     const bgColor = type === 'success' ? 'toast-success' : 'toast-error';
     useEffect(() => {
@@ -58,21 +63,20 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
 
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
-    
+
     const handleClick = (e) => {
         e.preventDefault();
         if (!disabled && fileInputRef.current) {
             fileInputRef.current.click();
         }
     };
-    
+
     const handleChange = (e) => {
-        // Ne pas bloquer l'événement - laissez-le se propager normalement
         if (onChange) {
             onChange(e);
         }
     };
-    
+
     return (
         <div className={className}>
             <input
@@ -98,7 +102,35 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     );
 };
 
-export const GenericStatusBadge = ({ status, colorMap }) => {
-    const statusClass = colorMap[status] || 'status-badge-default';
-    return <span className={'status-badge ' + statusClass}>{status}</span>;
-};
+// --- Icônes pour la vue d'intervention ---
+
+export const FileTextIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <polyline points="10 9 9 9 8 9"></polyline>
+  </svg>
+);
+
+export const ImageIcon = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <polyline points="21 15 16 10 5 21"></polyline>
+    </svg>
+);
+
+export const CheckCircleIcon = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+);
+
+export const LoaderIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12,4a8,8,0,0,1,7.89,6.7A1.53,1.53,0,0,0,21.38,12h0a1.5,1.5,0,0,0,1.48-1.75,11,11,0,0,0-21.72,0A1.5,1.5,0,0,0,2.62,12h0a1.53,1.53,0,0,0,1.49-1.3A8,8,0,0,1,12,4Z"/>
+  </svg>
+);

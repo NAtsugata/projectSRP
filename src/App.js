@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
-import { authService, profileService, interventionService, leaveService, payslipService, storageService, supabase } from './lib/supabase';
+// On importe tous les services nécessaires, y compris le nouveau vaultService
+import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import './App.css';
 
-// Import des nouvelles pages
+// Import des pages
 import LoginScreen from './pages/LoginScreen';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPlanningView from './pages/AdminPlanningView';
@@ -60,7 +61,7 @@ function App() {
     const [users, setUsers] = useState([]);
     const [interventions, setInterventions] = useState([]);
     const [leaveRequests, setLeaveRequests] = useState([]);
-    const [payslips, setPayslips] = useState([]);
+    const [vaultDocuments, setVaultDocuments] = useState([]);
     const [toast, setToast] = useState(null);
     const [modal, setModal] = useState(null);
     const navigate = useNavigate();
@@ -73,11 +74,11 @@ function App() {
         try {
             const isAdmin = userProfile.is_admin;
             const userId = userProfile.id;
-            const [profilesRes, interventionsRes, leavesRes, payslipsRes] = await Promise.all([
+            const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
                 profileService.getAllProfiles(),
                 interventionService.getInterventions(isAdmin ? null : userId, false),
                 leaveService.getLeaveRequests(isAdmin ? null : userId),
-                payslipService.getPayslips(userId)
+                vaultService.getVaultDocuments()
             ]);
 
             if (profilesRes.error) throw profilesRes.error;
@@ -86,29 +87,21 @@ function App() {
             setInterventions(interventionsRes.data || []);
             if (leavesRes.error) throw leavesRes.error;
             setLeaveRequests(leavesRes.data || []);
-            if (payslipsRes.error) throw payslipsRes.error;
-            setPayslips(payslipsRes.data || []);
+            if (vaultRes.error) throw vaultRes.error;
+            setVaultDocuments(vaultRes.data || []);
+
         } catch (error) {
             console.error('Erreur chargement données:', error);
             showToast(`Erreur de chargement: ${error.message}`, "error");
         }
     }, [showToast]);
 
-    // ✅ REFACTORISÉ: Logique d'authentification en plusieurs étapes pour plus de robustesse.
-
-    // Étape 1: Gérer la session utilisateur avec onAuthStateChange.
-    // C'est la source de vérité pour savoir si l'utilisateur est connecté.
     useEffect(() => {
-        const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => {
-            setSession(sessionData);
-        });
-
+        const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => { setSession(sessionData); });
         return () => subscription.unsubscribe();
     }, []);
 
-    // Étape 2: Réagir aux changements de session pour charger ou nettoyer le profil.
     useEffect(() => {
-        // Si la session existe, on charge le profil.
         if (session?.user) {
             setLoading(true);
             profileService.getProfile(session.user.id)
@@ -116,43 +109,34 @@ function App() {
                     if (error) {
                         console.error("Error fetching profile:", error);
                         showToast("Impossible de récupérer le profil.", "error");
-                        authService.signOut(); // Déconnexion si le profil est invalide
+                        authService.signOut();
                     } else {
                         setProfile(userProfile);
                     }
-                })
-                .finally(() => {
-                    setLoading(false); // Chargement terminé après avoir traité le profil
-                });
+                }).finally(() => { setLoading(false); });
         } else {
-            // S'il n'y a pas de session, on s'assure que le profil est vide et on arrête de charger.
             setProfile(null);
             setLoading(false);
         }
     }, [session, showToast]);
 
-    // Étape 3: Charger les données de l'application uniquement lorsque le profil est disponible.
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            const sub = supabase
-                .channel('public-changes')
-                .on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile))
-                .subscribe();
+            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile)).subscribe();
             return () => { supabase.removeChannel(sub); };
         }
     }, [profile, refreshData]);
 
+    // CORRIGÉ: La fonction de déconnexion est maintenant complète
     const handleLogout = async () => {
         const { error } = await authService.signOut();
         if (error) {
             showToast("Erreur lors de la déconnexion.", "error");
         }
-        // Le onAuthStateChange s'occupera du reste, mais on peut forcer la redirection.
         navigate('/login');
     };
 
-    // ... (le reste des fonctions handle... reste inchangé)
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
@@ -225,6 +209,36 @@ function App() {
         else { showToast("Demande de congé envoyée."); }
     };
 
+    const handleSendDocument = async ({ file, userId, name }) => {
+        try {
+            const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
+            if (uploadError) throw uploadError;
+            const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
+            if (dbError) throw dbError;
+            await refreshData(profile);
+            showToast("Document envoyé avec succès.");
+        } catch (error) {
+            console.error("Erreur lors de l'envoi du document:", error);
+            showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
+        }
+    };
+
+    const handleDeleteDocument = async (documentId) => {
+        showConfirmationModal({
+            title: "Supprimer ce document ?",
+            message: "Cette action est irréversible et supprimera le fichier définitivement.",
+            onConfirm: async () => {
+                const { error } = await vaultService.deleteVaultDocument(documentId);
+                if (error) {
+                    showToast("Erreur lors de la suppression : " + error.message, "error");
+                } else {
+                    showToast("Document supprimé.");
+                    await refreshData(profile);
+                }
+            }
+        });
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -253,7 +267,15 @@ function App() {
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
                                 <Route path="leaves" element={<AdminLeaveView leaveRequests={leaveRequests} onUpdateRequestStatus={handleUpdateLeaveStatus} onDeleteLeaveRequest={handleDeleteLeaveRequest} />} />
                                 <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
-                                <Route path="vault" element={<AdminVaultView users={users} showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
+                                <Route
+                                    path="vault"
+                                    element={<AdminVaultView
+                                        users={users}
+                                        vaultDocuments={vaultDocuments}
+                                        onSendDocument={handleSendDocument}
+                                        onDeleteDocument={handleDeleteDocument}
+                                    />}
+                                />
                                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
                             </>
                         ) : (
@@ -263,7 +285,12 @@ function App() {
                                 <Route path="planning/:interventionId" element={<InterventionDetailView interventions={interventions} onSave={handleUpdateInterventionReport} isAdmin={profile.is_admin} />} />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
                                 <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile?.full_name} userId={profile?.id} showToast={showToast} />} />
-                                <Route path="vault" element={<CoffreNumeriqueView payslips={payslips} />} />
+                                <Route
+                                    path="vault"
+                                    element={<CoffreNumeriqueView
+                                        vaultDocuments={vaultDocuments.filter(doc => doc.user_id === profile.id)}
+                                    />}
+                                />
                                 <Route path="*" element={<Navigate to="/planning" replace />} />
                             </>
                         )}
