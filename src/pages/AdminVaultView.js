@@ -1,24 +1,37 @@
-import React, { useState, useMemo } from 'react';
-// On importe le service de stockage et des icônes pour l'interface
-import { storageService } from '../lib/supabase';
-import { DownloadIcon, TrashIcon } from '../components/SharedUI'; // Assurez-vous que TrashIcon est disponible
+import React, { useState, useMemo, useRef } from 'react';
+import { DownloadIcon, TrashIcon } from '../components/SharedUI';
 
-// La vue principale gère maintenant l'état et la logique
 export default function AdminVaultView({ users = [], vaultDocuments = [], onSendDocument, onDeleteDocument }) {
   const [file, setFile] = useState(null);
   const [documentName, setDocumentName] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
+  const inputFileRef = useRef(null);
 
   // On ne garde que les employés qui ne sont pas administrateurs dans la liste
   const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
+
+  // On regroupe les documents par employé pour l'affichage
+  const documentsByUser = useMemo(() => {
+    return vaultDocuments.reduce((acc, doc) => {
+      const userId = doc.user_id;
+      if (!acc[userId]) {
+        const user = users.find(u => u.id === userId);
+        acc[userId] = {
+          userName: user ? user.full_name : 'Employé inconnu',
+          documents: []
+        };
+      }
+      acc[userId].documents.push(doc);
+      return acc;
+    }, {});
+  }, [vaultDocuments, users]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      // Pré-remplir le nom du document avec le nom du fichier (sans extension)
       setDocumentName(selectedFile.name.split('.').slice(0, -1).join('.'));
     }
   };
@@ -34,17 +47,14 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     setError(null);
 
     try {
-      // On passe les informations nécessaires à la fonction onSendDocument
-      // Cette fonction (à définir dans votre composant parent) doit gérer :
-      // 1. L'upload du fichier via storageService
-      // 2. La création de l'enregistrement dans votre base de données
       await onSendDocument({ file, userId: selectedUserId, name: documentName });
 
-      // Réinitialiser le formulaire après l'envoi
       setFile(null);
       setDocumentName('');
       setSelectedUserId('');
-      event.target.reset(); // Vide le champ de fichier
+      if (inputFileRef.current) {
+        inputFileRef.current.value = "";
+      }
 
     } catch (err) {
       console.error('Erreur lors de l\'envoi:', err);
@@ -54,28 +64,10 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     }
   };
 
-  // On regroupe les documents par employé pour l'affichage
-  const documentsByUser = useMemo(() => {
-    return vaultDocuments.reduce((acc, doc) => {
-      const userId = doc.user_id;
-      if (!acc[userId]) {
-        // On cherche le nom de l'employé pour l'affichage
-        const user = users.find(u => u.id === userId);
-        acc[userId] = {
-          userName: user ? user.full_name : 'Employé inconnu',
-          documents: []
-        };
-      }
-      acc[userId].documents.push(doc);
-      return acc;
-    }, {});
-  }, [vaultDocuments, users]);
-
   return (
     <div>
       <h2 className="view-title">Coffre-fort numérique - Administrateur</h2>
 
-      {/* Section pour envoyer un nouveau document */}
       <div className="card-white mb-6">
         <h3>Envoyer un document</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -113,6 +105,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
             <input
               id="file-upload"
               type="file"
+              ref={inputFileRef}
               onChange={handleFileChange}
               className="form-control"
               required
@@ -127,7 +120,6 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         </form>
       </div>
 
-      {/* Section pour afficher les documents déjà envoyés */}
       <div className="card-white">
         <h3>Documents envoyés</h3>
         <div className="flex flex-col gap-6">

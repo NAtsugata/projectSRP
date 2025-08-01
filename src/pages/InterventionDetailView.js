@@ -2,7 +2,110 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
-import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon } from '../components/SharedUI';
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon } from '../components/SharedUI';
+
+// Composant pour la signature en plein écran
+const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
+    const modalCanvasRef = useRef(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+
+    useEffect(() => {
+        const canvas = modalCanvasRef.current;
+        if (!canvas) return;
+
+        canvas.width = window.innerWidth * 0.9;
+        canvas.height = window.innerHeight * 0.7;
+
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (existingSignature) {
+            const img = new Image();
+            img.onload = () => ctx.drawImage(img, 0, 0);
+            img.src = existingSignature;
+        }
+
+        let drawing = false;
+
+        const getPos = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+        };
+
+        const startDrawing = (e) => {
+            e.preventDefault();
+            drawing = true;
+            setIsDrawing(true);
+            draw(e);
+        };
+
+        const stopDrawing = (e) => {
+            e.preventDefault();
+            drawing = false;
+            ctx.beginPath();
+        };
+
+        const draw = (e) => {
+            if (!drawing) return;
+            e.preventDefault();
+            const { x, y } = getPos(e);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        };
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+
+        return () => {
+            canvas.removeEventListener('mousedown', startDrawing);
+            canvas.removeEventListener('mouseup', stopDrawing);
+            canvas.removeEventListener('mousemove', draw);
+            canvas.removeEventListener('touchstart', startDrawing);
+            canvas.removeEventListener('touchend', stopDrawing);
+            canvas.removeEventListener('touchmove', draw);
+        };
+    }, [existingSignature]);
+
+    const handleSaveSignature = () => {
+        if (modalCanvasRef.current) {
+            onSave(modalCanvasRef.current.toDataURL('image/png'));
+        }
+    };
+
+    const handleClear = () => {
+        if (modalCanvasRef.current) {
+            const canvas = modalCanvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            setIsDrawing(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content signature-modal-content">
+                <h3>Veuillez signer ci-dessous</h3>
+                <canvas ref={modalCanvasRef} className="signature-canvas-fullscreen"></canvas>
+                <div className="modal-footer">
+                    <button type="button" onClick={handleClear} className="btn btn-secondary">Effacer</button>
+                    <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
+                    <button type="button" onClick={handleSaveSignature} className="btn btn-primary" disabled={!isDrawing && !existingSignature}>Valider la Signature</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
     const { interventionId } = useParams();
@@ -12,6 +115,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const [uploadQueue, setUploadQueue] = useState([]);
     const storageKey = 'srp-intervention-report-' + interventionId;
     const [report, setReport] = useState(null);
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
 
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
@@ -43,54 +147,41 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     useEffect(() => {
         const canvas = signatureCanvasRef.current;
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            let drawing = false;
-            const getPos = (e) => {
-                const rect = canvas.getBoundingClientRect();
-                return { x: (e.clientX || e.touches[0].clientX) - rect.left, y: (e.clientY || e.touches[0].clientY) - rect.top };
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+
+        if (report && report.signature) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             };
-            const startDrawing = (e) => { e.preventDefault(); drawing = true; draw(e); };
-            const stopDrawing = (e) => { e.preventDefault(); drawing = false; ctx.beginPath(); };
-            const draw = (e) => {
-                if (!drawing) return;
-                e.preventDefault();
-                const pos = getPos(e);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(pos.x, pos.y);
-            };
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('touchstart', startDrawing, { passive: false });
-            canvas.addEventListener('touchend', stopDrawing, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false });
-            return () => {
-                canvas.removeEventListener('mousedown', startDrawing);
-                canvas.removeEventListener('mouseup', stopDrawing);
-                canvas.removeEventListener('mousemove', draw);
-                canvas.removeEventListener('touchstart', startDrawing);
-                canvas.removeEventListener('touchend', stopDrawing);
-                canvas.removeEventListener('touchmove', draw);
-            };
+            img.src = report.signature;
+        } else {
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-    }, [report]); // On relance l'effet si le rapport est chargé
+
+    }, [report, report?.signature]);
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    const handleFileUpload = async (e) => {
-        e.preventDefault();
-        const selectedFiles = Array.from(e.target.files);
-        if (selectedFiles.length === 0 || !intervention) return;
+    const handleFileUpload = (event) => {
+        const filesToUpload = Array.from(event.target.files);
+        if(event.target) {
+            event.target.value = "";
+        }
+        if (filesToUpload.length === 0 || !intervention) return;
+        processUploadQueue(filesToUpload);
+    };
 
-        const initialQueue = selectedFiles.map(file => ({ name: file.name, status: 'uploading', error: null }));
+    const processUploadQueue = async (filesToUpload) => {
+        const initialQueue = filesToUpload.map(file => ({ name: file.name, status: 'uploading', error: null }));
         setUploadQueue(initialQueue);
 
-        const uploadPromises = selectedFiles.map(file => storageService.uploadInterventionFile(file, intervention.id));
+        const uploadPromises = filesToUpload.map(file => storageService.uploadInterventionFile(file, intervention.id));
         const results = await Promise.allSettled(uploadPromises);
 
         const newFiles = [];
@@ -98,7 +189,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
         results.forEach((result, index) => {
             if (result.status === 'fulfilled' && !result.value.error) {
-                const fileInfo = { name: selectedFiles[index].name, url: result.value.publicURL, type: selectedFiles[index].type };
+                const fileInfo = { name: filesToUpload[index].name, url: result.value.publicURL, type: filesToUpload[index].type };
                 newFiles.push(fileInfo);
                 finalQueue[index].status = 'success';
             } else {
@@ -117,19 +208,26 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const handleSave = () => {
         if (!intervention) return;
         const finalReport = { ...report };
-        if (signatureCanvasRef.current && signatureCanvasRef.current.toDataURL) {
-            const dataUrl = signatureCanvasRef.current.toDataURL('image/png');
-            if (!dataUrl.startsWith('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg')) {
-                 finalReport.signature = dataUrl;
-            }
-        }
         window.sessionStorage.removeItem(storageKey);
         onSave(intervention.id, finalReport);
     };
 
-    const cleanupAndGoBack = () => {
-        window.sessionStorage.removeItem(storageKey);
+    const handleGoBack = () => {
         navigate('/planning');
+    };
+
+    const handleClearSignature = () => {
+        if (signatureCanvasRef.current) {
+            const canvas = signatureCanvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            setReport(prevReport => ({...prevReport, signature: null}));
+        }
+    };
+
+    const handleSaveSignatureFromModal = (signatureDataUrl) => {
+        setReport(prevReport => ({...prevReport, signature: signatureDataUrl}));
+        setShowSignatureModal(false);
     };
 
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR') : 'N/A';
@@ -142,6 +240,14 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     return (
         <div>
+            {showSignatureModal && (
+                <SignatureModal
+                    onSave={handleSaveSignatureFromModal}
+                    onCancel={() => setShowSignatureModal(false)}
+                    existingSignature={report.signature}
+                />
+            )}
+
             <style>{`
                 .document-list-detailed, .upload-queue-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
                 .document-list-detailed li, .upload-queue-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
@@ -152,9 +258,14 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 .document-list-detailed li span, .upload-queue-list li .file-name { flex-grow: 1; font-size: 0.9rem; word-break: break-all; }
                 .upload-queue-list li .error-message { font-size: 0.8rem; color: #dc3545; }
                 .document-list-detailed li .btn { flex-shrink: 0; }
+                .signature-container { position: relative; }
+                .signature-canvas { border: 1px solid #ccc; border-radius: 0.375rem; cursor: crosshair; }
+                .signature-canvas-fullscreen { border: 2px dashed #ccc; border-radius: 0.5rem; touch-action: none; }
+                .signature-modal-content { max-width: 95vw; width: auto; padding: 1rem; }
+                .signature-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
             `}</style>
 
-            <button onClick={cleanupAndGoBack} className="back-button"><ChevronLeftIcon /> Retour au planning</button>
+            <button onClick={handleGoBack} className="back-button"><ChevronLeftIcon /> Retour au planning</button>
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
@@ -243,10 +354,15 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     {isAdmin && report.signature ? (
                         <img src={report.signature} alt="Signature client" style={{border: '1px solid #ccc', borderRadius: '0.375rem'}} />
                     ) : (
-                        <>
-                            <canvas ref={signatureCanvasRef} className="signature-canvas"></canvas>
-                            {!isAdmin && <button onClick={() => signatureCanvasRef.current.getContext('2d').clearRect(0, 0, signatureCanvasRef.current.width, signatureCanvasRef.current.height)} className="text-muted-link">Effacer</button>}
-                        </>
+                        <div className="signature-container">
+                            <canvas ref={signatureCanvasRef} className="signature-canvas" width="300" height="150"></canvas>
+                            <div className="signature-actions">
+                                <button onClick={handleClearSignature} className="text-muted-link">Effacer</button>
+                                <button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary btn-sm">
+                                    <ExpandIcon /> Agrandir
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
 
