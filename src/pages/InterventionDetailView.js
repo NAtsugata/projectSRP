@@ -36,19 +36,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
             return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
         };
 
-        const startDrawing = (e) => {
-            e.preventDefault();
-            drawing = true;
-            setIsDrawing(true);
-            draw(e);
-        };
-
-        const stopDrawing = (e) => {
-            e.preventDefault();
-            drawing = false;
-            ctx.beginPath();
-        };
-
+        const startDrawing = (e) => { e.preventDefault(); drawing = true; setIsDrawing(true); draw(e); };
+        const stopDrawing = (e) => { e.preventDefault(); drawing = false; ctx.beginPath(); };
         const draw = (e) => {
             if (!drawing) return;
             e.preventDefault();

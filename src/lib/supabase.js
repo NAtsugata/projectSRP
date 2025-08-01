@@ -44,22 +44,33 @@ export const profileService = {
   }
 }
 
+// Fonction pour nettoyer les noms de fichiers
+const sanitizeFileName = (fileName) => {
+  // Remplace les espaces et les caractères non autorisés par des tirets
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, '-');
+};
+
 export const storageService = {
   async uploadInterventionFile(file, interventionId, folder = 'report') {
-    const fileName = `${Date.now()}_${file.name}`;
+    const cleanFileName = sanitizeFileName(file.name);
+    const fileName = `${Date.now()}_${cleanFileName}`;
     const filePath = `${interventionId}/${folder}/${fileName}`;
+
     const { error } = await supabase.storage.from('intervention-files').upload(filePath, file);
     if (error) return { publicURL: null, error };
+
     const { data } = supabase.storage.from('intervention-files').getPublicUrl(filePath);
     return { publicURL: data.publicUrl, error: null };
   },
 
-  // CORRIGÉ: La fonction retourne maintenant l'URL publique et le chemin du fichier.
   async uploadVaultFile(file, userId) {
-      const fileName = `${Date.now()}_${file.name}`;
+      const cleanFileName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `${userId}/${fileName}`;
+
       const { error } = await supabase.storage.from('vault-files').upload(filePath, file);
       if (error) return { publicURL: null, filePath: null, error };
+
       const { data } = supabase.storage.from('vault-files').getPublicUrl(filePath);
       return { publicURL: data.publicUrl, filePath: filePath, error: null };
   },
@@ -83,7 +94,6 @@ export const storageService = {
 }
 
 export const interventionService = {
-  // ... (service intervention inchangé)
   async getInterventions(userId = null, archived = false) {
     let query = supabase.from('interventions').select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)').eq('is_archived', archived).order('date', { ascending: true }).order('time', { ascending: true });
     if (userId) {
@@ -98,11 +108,10 @@ export const interventionService = {
     const assignments = assignedUserIds.map(userId => ({ intervention_id: interventionId, user_id: userId }));
     const { error: assignmentError } = await supabase.from('intervention_assignments').insert(assignments);
     if (assignmentError) return { error: assignmentError };
-    for (const file of briefingFiles) {
-        const { publicURL, error: uploadError } = await storageService.uploadInterventionFile(file, interventionId, 'briefing');
-        if (uploadError) return { error: uploadError };
-        await supabase.from('intervention_briefing_documents').insert({ intervention_id: interventionId, file_name: file.name, file_url: publicURL });
-    }
+
+    const { error: briefingError } = await this.addBriefingDocuments(interventionId, briefingFiles);
+    if (briefingError) return { error: briefingError };
+
     return { error: null };
   },
   async updateIntervention(id, updates) {
@@ -112,11 +121,29 @@ export const interventionService = {
     const { error: storageError } = await storageService.deleteInterventionFolder(id);
     if (storageError) console.error(`Impossible de supprimer le dossier de stockage pour l'intervention ${id}:`, storageError);
     return await supabase.from('interventions').delete().eq('id', id);
+  },
+  async addBriefingDocuments(interventionId, briefingFiles) {
+    for (const file of briefingFiles) {
+        const { publicURL, error: uploadError } = await storageService.uploadInterventionFile(file, interventionId, 'briefing');
+        if (uploadError) {
+            console.error("Erreur d'envoi pour le fichier", file.name, uploadError);
+            return { error: uploadError };
+        }
+        const { error: dbError } = await supabase.from('intervention_briefing_documents').insert({
+            intervention_id: interventionId,
+            file_name: file.name,
+            file_url: publicURL
+        });
+        if (dbError) {
+            console.error("Erreur d'insertion en base de données pour", file.name, dbError);
+            return { error: dbError };
+        }
+    }
+    return { error: null };
   }
 }
 
 export const leaveService = {
-  // ... (service leave inchangé)
   async getLeaveRequests(userId = null) {
     let query = supabase.from('leave_requests').select('*').order('start_date', { ascending: false });
     if (userId) query = query.eq('user_id', userId);
@@ -134,56 +161,29 @@ export const leaveService = {
   }
 }
 
-// NOUVEAU: Service pour gérer les documents du coffre-fort dans la base de données
 export const vaultService = {
   async getVaultDocuments() {
-    // On récupère aussi le nom de l'employé pour l'affichage
     return await supabase.from('vault_documents').select('*, profiles(full_name)').order('created_at', { ascending: false });
   },
-
   async createVaultDocument({ userId, name, url, path }) {
     return await supabase.from('vault_documents').insert([{
       user_id: userId,
       file_name: name,
       file_url: url,
-      file_path: path, // On sauvegarde le chemin pour pouvoir le supprimer du stockage
+      file_path: path,
     }]);
   },
-
   async deleteVaultDocument(documentId) {
     const { data: doc, error: fetchError } = await supabase.from('vault_documents').select('file_path').eq('id', documentId).single();
     if (fetchError || !doc) {
       console.error("Document non trouvé pour la suppression:", fetchError);
       return { error: fetchError || new Error("Document not found") };
     }
-
     const { error: storageError } = await storageService.deleteVaultFile(doc.file_path);
     if (storageError) {
       console.error("Impossible de supprimer le fichier du stockage:", storageError);
-      // On arrête ici pour ne pas avoir un enregistrement sans fichier
       return { error: storageError };
     }
-
     return await supabase.from('vault_documents').delete().eq('id', documentId);
   }
-}
-
-// Le service payslip n'est plus nécessaire si on utilise vaultService,
-// mais je le laisse au cas où vous l'utilisiez ailleurs.
-export const payslipService = {
-    async getPayslips(userId) {
-      const { data: fileList, error: listError } = await supabase.storage.from('vault-files').list(userId);
-      if (listError) return { data: [], error: listError };
-      if (!fileList || fileList.length === 0) return { data: [], error: null };
-      const filePaths = fileList.map(file => `${userId}/${file.name}`);
-      const { data: signedUrls, error: urlError } = await supabase.storage.from('vault-files').createSignedUrls(filePaths, 3600);
-      if (urlError) return { data: [], error: urlError };
-      const filesWithUrls = signedUrls.map((urlData, index) => ({
-          id: fileList[index].id,
-          name: fileList[index].name,
-          path: filePaths[index],
-          url: urlData.signedUrl
-      }));
-      return { data: filesWithUrls, error: null };
-    }
 }

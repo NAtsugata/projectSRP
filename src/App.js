@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
-// On importe tous les services nécessaires, y compris le nouveau vaultService
+// CORRIGÉ: On importe bien 'storageService' qui était manquant
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import './App.css';
 
@@ -128,7 +128,6 @@ function App() {
         }
     }, [profile, refreshData]);
 
-    // CORRIGÉ: La fonction de déconnexion est maintenant complète
     const handleLogout = async () => {
         const { error } = await authService.signOut();
         if (error) {
@@ -147,15 +146,27 @@ function App() {
         if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
         else { showToast("Intervention ajoutée."); }
     };
+
+    // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
     const handleUpdateInterventionReport = async (interventionId, report) => {
-        const { error } = await interventionService.updateIntervention(interventionId, { report, status: 'Terminée' });
-        if (error) { showToast("Erreur sauvegarde rapport.", "error"); }
-        else {
-            showToast("Rapport sauvegardé et intervention clôturée.");
+        // Détermine le nouveau statut en fonction du rapport
+        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
+
+        const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+
+        if (error) {
+            showToast("Erreur sauvegarde rapport.", "error");
+        } else {
+            if (newStatus === 'Terminée') {
+                showToast("Rapport sauvegardé et intervention clôturée.");
+            } else {
+                showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
+            }
             navigate('/planning');
             await refreshData(profile);
         }
     };
+
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
             title: "Supprimer l'intervention ?",
@@ -208,7 +219,6 @@ function App() {
         if (error) { showToast("Erreur envoi demande.", "error"); }
         else { showToast("Demande de congé envoyée."); }
     };
-
     const handleSendDocument = async ({ file, userId, name }) => {
         try {
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
@@ -222,7 +232,6 @@ function App() {
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
         }
     };
-
     const handleDeleteDocument = async (documentId) => {
         showConfirmationModal({
             title: "Supprimer ce document ?",
@@ -237,6 +246,19 @@ function App() {
                 }
             }
         });
+    };
+    const handleAddBriefingDocuments = async (interventionId, files) => {
+        try {
+            const { error } = await interventionService.addBriefingDocuments(interventionId, files);
+            if (error) {
+                throw error;
+            }
+            showToast("Documents de préparation ajoutés avec succès.");
+            await refreshData(profile);
+        } catch (error) {
+            showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
+            throw error;
+        }
     };
 
     if (loading) {
@@ -263,7 +285,15 @@ function App() {
                                 <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
                                 <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} />} />
-                                <Route path="planning/:interventionId" element={<InterventionDetailView interventions={interventions} onSave={handleUpdateInterventionReport} isAdmin={profile.is_admin} />} />
+                                <Route
+                                    path="planning/:interventionId"
+                                    element={<InterventionDetailView
+                                        interventions={interventions}
+                                        onSave={handleUpdateInterventionReport}
+                                        isAdmin={profile.is_admin}
+                                        onAddBriefingDocuments={handleAddBriefingDocuments}
+                                    />}
+                                />
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
                                 <Route path="leaves" element={<AdminLeaveView leaveRequests={leaveRequests} onUpdateRequestStatus={handleUpdateLeaveStatus} onDeleteLeaveRequest={handleDeleteLeaveRequest} />} />
                                 <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
@@ -282,7 +312,14 @@ function App() {
                             <>
                                 <Route index element={<Navigate to="/planning" replace />} />
                                 <Route path="planning" element={<EmployeePlanningView interventions={interventions} />} />
-                                <Route path="planning/:interventionId" element={<InterventionDetailView interventions={interventions} onSave={handleUpdateInterventionReport} isAdmin={profile.is_admin} />} />
+                                <Route
+                                    path="planning/:interventionId"
+                                    element={<InterventionDetailView
+                                        interventions={interventions}
+                                        onSave={handleUpdateInterventionReport}
+                                        isAdmin={profile.is_admin}
+                                    />}
+                                />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
                                 <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile?.full_name} userId={profile?.id} showToast={showToast} />} />
                                 <Route

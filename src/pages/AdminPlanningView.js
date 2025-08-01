@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CustomFileInput } from '../components/SharedUI';
-// MODIFIÉ: Ajout des icônes nécessaires
+import { CustomFileInput, GenericStatusBadge } from '../components/SharedUI';
 import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
 
@@ -10,9 +9,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
     const [showForm, setShowForm] = useState(false);
     const [formValues, setFormValues] = useState({ client: '', address: '', service: '', date: '', time: '08:00' });
     const [assignedUsers, setAssignedUsers] = useState([]);
-    // MODIFIÉ: L'état stocke maintenant un tableau de fichiers
     const [briefingFiles, setBriefingFiles] = useState([]);
-    // AJOUT: Un état pour suivre l'envoi du formulaire
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
@@ -29,38 +26,49 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
     };
 
-    // MODIFIÉ: La fonction convertit la FileList en tableau pour l'affichage
     const handleBriefingFilesChange = (e) => {
         const newFiles = Array.from(e.target.files);
         setBriefingFiles(prevFiles => [...prevFiles, ...newFiles]);
     };
 
-    // AJOUT: Fonction pour retirer un fichier de la liste
     const handleRemoveFile = (fileName) => {
         setBriefingFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsSubmitting(true); // Active l'état de chargement
+        setIsSubmitting(true);
         try {
             await onAddIntervention(formValues, assignedUsers, briefingFiles);
-            // Réinitialisation seulement après le succès
             setShowForm(false);
             setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
             setAssignedUsers([]);
             setBriefingFiles([]);
         } catch (error) {
-            // L'erreur est déjà gérée dans App.js avec un toast, on peut la logger ici si besoin
             console.error("Erreur lors de la création de l'intervention:", error);
         } finally {
-            setIsSubmitting(false); // Désactive l'état de chargement
+            setIsSubmitting(false);
         }
+    };
+
+    const getStatus = (intervention) => {
+        if (intervention.status === 'Terminée') {
+            return 'Terminée';
+        }
+        if (intervention.report && intervention.report.arrivalTime) {
+            return 'En cours';
+        }
+        return intervention.status || 'À venir';
+    };
+
+    const statusColorMap = {
+        "À venir": "status-badge-blue",
+        "En cours": "status-badge-yellow",
+        "Terminée": "status-badge-green"
     };
 
     return (
         <div>
-            {/* Styles pour la nouvelle liste de fichiers */}
             <style>{`
                 .file-preview-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
                 .file-preview-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
@@ -74,6 +82,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                     <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
                 </button>
             </div>
+            {/* CORRIGÉ: Le formulaire a été restauré */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                     <input name="client" value={formValues.client} onChange={handleInputChange} placeholder="Nom du client" required className="form-control"/>
@@ -92,7 +101,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         <CustomFileInput multiple onChange={handleBriefingFilesChange} className="mt-2">
                             Choisir des documents
                         </CustomFileInput>
-                        {/* AJOUT: Affichage des fichiers sélectionnés */}
                         {briefingFiles.length > 0 && (
                             <ul className="file-preview-list">
                                 {briefingFiles.map((file, index) => (
@@ -118,7 +126,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                             ))}
                         </div>
                     </div>
-                    {/* MODIFIÉ: Le bouton est désactivé pendant l'envoi */}
                     <button type="submit" className="btn btn-success w-full flex-center" disabled={isSubmitting}>
                         {isSubmitting && <LoaderIcon className="animate-spin" />}
                         {isSubmitting ? 'Ajout en cours...' : 'Ajouter l\'intervention'}
@@ -127,20 +134,26 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
             )}
             <div className="card-white">
                 <ul className="document-list">
-                    {interventions.map(int => (
-                        <li key={int.id}>
-                            <div style={{flexGrow: 1}}>
-                                <p className="font-semibold">{int.client} - {int.service}</p>
-                                <p className="text-muted">Assigné à: {getAssignedUsersNames(int.intervention_assignments)}</p>
-                                <p className="text-muted">{int.date} à {int.time}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => navigate('/planning/' + int.id)} className="btn-icon" title="Voir les détails"><EditIcon/></button>
-                                <button onClick={() => onArchive(int.id)} className="btn-icon" title="Archiver"><ArchiveIcon/></button>
-                                <button onClick={() => onDelete(int.id)} className="btn-icon-danger" title="Supprimer"><TrashIcon/></button>
-                            </div>
-                        </li>
-                    ))}
+                    {interventions.map(int => {
+                        const status = getStatus(int);
+                        return (
+                            <li key={int.id}>
+                                <div style={{flexGrow: 1}}>
+                                    <div className="flex-between items-start">
+                                        <p className="font-semibold">{int.client} - {int.service}</p>
+                                        <GenericStatusBadge status={status} colorMap={statusColorMap} />
+                                    </div>
+                                    <p className="text-muted">Assigné à: {getAssignedUsersNames(int.intervention_assignments)}</p>
+                                    <p className="text-muted">{int.date} à {int.time}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => navigate('/planning/' + int.id)} className="btn-icon" title="Voir les détails"><EditIcon/></button>
+                                    <button onClick={() => onArchive(int.id)} className="btn-icon" title="Archiver"><ArchiveIcon/></button>
+                                    <button onClick={() => onDelete(int.id)} className="btn-icon-danger" title="Supprimer"><TrashIcon/></button>
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ul>
             </div>
         </div>
