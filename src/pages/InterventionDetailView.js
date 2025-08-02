@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { storageService, interventionService } from '../lib/supabase';
+import { storageService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon } from '../components/SharedUI';
 
@@ -105,32 +105,13 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const storageKey = 'srp-intervention-report-' + interventionId;
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
-    // MODIFIÉ: Ajout d'un état de chargement local pour la page
-    const [isLoading, setIsLoading] = useState(true);
 
-    // MODIFIÉ: Logique de chargement de l'intervention rendue autonome et robuste
-    const fetchIntervention = useCallback(async () => {
-        setIsLoading(true);
-        // Essaye d'abord de trouver l'intervention dans les données déjà chargées
+    useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
             setIntervention(foundIntervention);
-        } else {
-            // Si non trouvée (ex: refresh de la page), on la charge directement depuis la BDD
-            const { data, error } = await interventionService.getInterventionById(interventionId);
-            if (error) {
-                console.error("Erreur de chargement de l'intervention:", error);
-                navigate('/planning'); // Redirige en cas d'erreur
-            } else {
-                setIntervention(data);
-            }
         }
-    }, [interventionId, interventions, navigate]);
-
-    useEffect(() => {
-        fetchIntervention();
-    }, [fetchIntervention]);
-
+    }, [interventions, interventionId]);
 
     useEffect(() => {
         if (intervention) {
@@ -140,7 +121,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             } else {
                 setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
             }
-            setIsLoading(false); // Fin du chargement une fois l'intervention et le rapport prêts
         }
     }, [intervention, storageKey]);
 
@@ -243,8 +223,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const isUploading = uploadQueue.some(file => file.status === 'uploading');
 
-    // MODIFIÉ: L'affichage de chargement est maintenant géré par l'état local `isLoading`
-    if (isLoading || !intervention || !report) {
+    if (!intervention || !report) {
         return <div className="loading-container"><div className="loading-spinner"></div><p>Chargement de l'intervention...</p></div>;
     }
 
@@ -316,7 +295,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     <ul className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
                             <li key={idx}>
-                                {file.type && file.type.startsWith('image/') ? (
+                                {file.type.startsWith('image/') ? (
                                     <img src={file.url} alt={`Aperçu de ${file.name}`} className="document-thumbnail" />
                                 ) : (
                                     <FileTextIcon className="document-icon" />

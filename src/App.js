@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
+// CORRIGÉ: On importe bien 'storageService' qui était manquant
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import './App.css';
 
@@ -63,7 +64,6 @@ function App() {
     const [vaultDocuments, setVaultDocuments] = useState([]);
     const [toast, setToast] = useState(null);
     const [modal, setModal] = useState(null);
-    const [isDataProcessing, setIsDataProcessing] = useState(false);
     const navigate = useNavigate();
 
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
@@ -123,17 +123,10 @@ function App() {
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                if (!isDataProcessing) {
-                    console.log('Changement détecté, rafraîchissement...', payload);
-                    refreshData(profile);
-                } else {
-                    console.log('Changement détecté, mais rafraîchissement ignoré car une opération est en cours.');
-                }
-            }).subscribe();
+            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile)).subscribe();
             return () => { supabase.removeChannel(sub); };
         }
-    }, [profile, refreshData, isDataProcessing]);
+    }, [profile, refreshData]);
 
     const handleLogout = async () => {
         const { error } = await authService.signOut();
@@ -146,66 +139,33 @@ function App() {
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
-        else { showToast("Profil mis à jour."); await refreshData(profile); }
+        else { showToast("Profil mis à jour."); }
     };
-
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        setIsDataProcessing(true);
-        try {
-            const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-            if (error) {
-                showToast(`Erreur création intervention: ${error.message}`, "error");
-            } else {
-                showToast("Intervention ajoutée.");
-                await refreshData(profile);
-            }
-        } finally {
-            setIsDataProcessing(false);
-        }
+        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
+        if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
+        else { showToast("Intervention ajoutée."); }
     };
 
-    // MODIFIÉ: La fonction met à jour l'état local de manière ciblée et fiable.
+    // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
     const handleUpdateInterventionReport = async (interventionId, report) => {
-        setIsDataProcessing(true);
-        try {
-            const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-            const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+        // Détermine le nouveau statut en fonction du rapport
+        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
 
-            if (error) {
-                showToast("Erreur sauvegarde rapport: " + error.message, "error");
+        const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+
+        if (error) {
+            showToast("Erreur sauvegarde rapport.", "error");
+        } else {
+            if (newStatus === 'Terminée') {
+                showToast("Rapport sauvegardé et intervention clôturée.");
             } else {
-                // On recharge spécifiquement l'intervention modifiée pour avoir les données les plus fraîches.
-                const { data: updatedIntervention, error: fetchError } = await supabase
-                    .from('interventions')
-                    .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)')
-                    .eq('id', interventionId)
-                    .single();
-
-                if (fetchError) {
-                    // Si la recharge ciblée échoue, on se rabat sur la méthode générale.
-                    showToast("Mise à jour réussie, rafraîchissement des données...", "success");
-                    await refreshData(profile);
-                } else {
-                    // On met à jour la liste des interventions dans l'état local.
-                    setInterventions(prevInterventions =>
-                        prevInterventions.map(int =>
-                            int.id === interventionId ? updatedIntervention : int
-                        )
-                    );
-                }
-
-                if (newStatus === 'Terminée') {
-                    showToast("Rapport sauvegardé et intervention clôturée.");
-                } else {
-                    showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
-                }
-                navigate('/planning');
+                showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
             }
-        } finally {
-            setIsDataProcessing(false);
+            navigate('/planning');
+            await refreshData(profile);
         }
     };
-
 
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
@@ -214,17 +174,15 @@ function App() {
             onConfirm: async () => {
                 const { error } = await interventionService.deleteIntervention(id);
                 if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Intervention supprimée."); await refreshData(profile); }
+                else { showToast("Intervention supprimée."); }
             }
         });
     };
-
     const handleArchiveIntervention = async (id) => {
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
         if (error) { showToast("Erreur archivage.", "error"); }
-        else { showToast("Intervention archivée."); await refreshData(profile); }
+        else { showToast("Intervention archivée."); }
     };
-
     const handleUpdateLeaveStatus = (id, status) => {
         if (status === 'Rejeté') {
             showConfirmationModal({
@@ -235,17 +193,16 @@ function App() {
                 onConfirm: async (reason) => {
                     const { error } = await leaveService.updateRequestStatus(id, status, reason);
                     if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                    else { showToast("Statut de la demande mis à jour."); await refreshData(profile); }
+                    else { showToast("Statut de la demande mis à jour."); }
                 }
             });
         } else {
-            leaveService.updateRequestStatus(id, status).then(async ({error}) => {
+            leaveService.updateRequestStatus(id, status).then(({error}) => {
                 if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                else { showToast("Statut de la demande mis à jour."); await refreshData(profile); }
+                else { showToast("Statut de la demande mis à jour."); }
             });
         }
     };
-
     const handleDeleteLeaveRequest = (id) => {
         showConfirmationModal({
             title: "Supprimer la demande ?",
@@ -253,34 +210,28 @@ function App() {
             onConfirm: async () => {
                 const { error } = await leaveService.deleteLeaveRequest(id);
                 if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Demande supprimée."); await refreshData(profile); }
+                else { showToast("Demande supprimée."); }
             }
         });
     };
-
     const handleSubmitLeaveRequest = async (requestData) => {
         const { error } = await leaveService.createLeaveRequest(requestData);
         if (error) { showToast("Erreur envoi demande.", "error"); }
-        else { showToast("Demande de congé envoyée."); await refreshData(profile); }
+        else { showToast("Demande de congé envoyée."); }
     };
-
     const handleSendDocument = async ({ file, userId, name }) => {
-        setIsDataProcessing(true);
         try {
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
             if (uploadError) throw uploadError;
             const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
             if (dbError) throw dbError;
-            showToast("Document envoyé avec succès.");
             await refreshData(profile);
+            showToast("Document envoyé avec succès.");
         } catch (error) {
             console.error("Erreur lors de l'envoi du document:", error);
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
-        } finally {
-            setIsDataProcessing(false);
         }
     };
-
     const handleDeleteDocument = async (documentId) => {
         showConfirmationModal({
             title: "Supprimer ce document ?",
@@ -296,9 +247,7 @@ function App() {
             }
         });
     };
-
     const handleAddBriefingDocuments = async (interventionId, files) => {
-        setIsDataProcessing(true);
         try {
             const { error } = await interventionService.addBriefingDocuments(interventionId, files);
             if (error) {
@@ -309,8 +258,6 @@ function App() {
         } catch (error) {
             showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
             throw error;
-        } finally {
-            setIsDataProcessing(false);
         }
     };
 
