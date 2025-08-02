@@ -61,66 +61,53 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
+// ✅ NOUVEAU COMPOSANT SIMPLIFIÉ ET ROBUSTE
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
-    const [isDragOver, setIsDragOver] = useState(false);
-    const [isSelecting, setIsSelecting] = useState(false);
-
-    const handleClick = (e) => {
-        e.preventDefault();
-        if (!disabled && fileInputRef.current && !isSelecting) {
-            setIsSelecting(true);
-            fileInputRef.current.click();
-        }
-    };
 
     const handleChange = (e) => {
-        setIsSelecting(false);
-        if (onChange && e.target.files) {
-            const event = {
-                ...e,
-                target: { ...e.target, files: e.target.files, value: e.target.value }
-            };
-            onChange(event);
+        if (onChange) {
+            onChange(e);
+        }
+        // C'est crucial pour mobile de permettre la resélection du même fichier
+        if (e.target) {
+            e.target.value = null;
         }
     };
 
-    const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); if (!disabled && !window.matchMedia('(max-width: 768px)').matches) { setIsDragOver(true); } };
-    const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget)) { setIsDragOver(false); } };
-    const handleDrop = (e) => {
-        e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
-        if (disabled || !onChange || window.matchMedia('(max-width: 768px)').matches) return;
-        const files = e.dataTransfer.files;
-        if (files.length > 0) { const event = { target: { files: files, value: "" } }; onChange(event); }
-    };
-
-    const handleError = (e) => { console.warn('Erreur de sélection de fichier:', e); setIsSelecting(false); };
-    const handleTouchStart = (e) => { if (!disabled) { e.currentTarget.style.backgroundColor = '#f0f9ff'; } };
-    const handleTouchEnd = (e) => { if (!disabled) { e.currentTarget.style.backgroundColor = ''; } };
-
+    // Utiliser un <label> est la méthode la plus fiable pour un bouton de téléversement personnalisé.
+    // Il hérite du style du bouton parent tout en étant plus stable.
     return (
         <div className={className}>
-            <input
-                ref={fileInputRef} type="file" accept={accept} multiple={multiple} onChange={handleChange} onError={handleError} disabled={disabled} style={{ display: 'none' }}
-                capture={accept?.includes('image') ? "environment" : undefined}
-            />
-            <button
-                type="button" onClick={handleClick} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}
-                disabled={disabled || isSelecting} className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
-                style={{ gap: '0.5rem', minHeight: '56px', border: isDragOver ? '2px solid #3b82f6' : '2px dashed #cbd5e1', backgroundColor: isDragOver ? '#f0f9ff' : (isSelecting ? '#e0f2fe' : ''), transition: 'all 0.2s ease', cursor: disabled ? 'not-allowed' : 'pointer' }}
-                aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')} tabIndex={disabled ? -1 : 0}
+             <label
+                className={`btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''}`}
+                style={{
+                    gap: '0.5rem',
+                    minHeight: '56px',
+                    border: '2px dashed #cbd5e1',
+                    transition: 'all 0.2s ease',
+                    cursor: disabled ? 'not-allowed' : 'pointer'
+                }}
+                tabIndex={disabled ? -1 : 0}
             >
-                {isSelecting ? ( <> <LoaderIcon /> Sélection... </> ) : (
-                    <>
-                        {multiple ? <FileIcon /> : <CameraIcon />}
-                        {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-                        {isDragOver && !window.matchMedia('(max-width: 768px)').matches && ( <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span> )}
-                    </>
-                )}
-            </button>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={accept}
+                    multiple={multiple}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    style={{ display: 'none' }} // L'input reste caché
+                    capture={accept?.includes('image') ? "environment" : undefined}
+                />
+                {/* Le texte du bouton est passé via `children` */}
+                {!disabled && (multiple ? <FileIcon /> : <CameraIcon />)}
+                {children}
+            </label>
         </div>
     );
 };
+
 
 // --- Icônes pour la vue d'intervention ---
 
