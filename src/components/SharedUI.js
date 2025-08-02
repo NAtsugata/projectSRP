@@ -61,22 +61,19 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// ✅ NOUVEAU COMPOSANT SIMPLIFIÉ ET ROBUSTE
+// ✅ COMPOSANT MIS À JOUR POUR LA FIABILITÉ MOBILE
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
 
-    const handleChange = (e) => {
-        if (onChange) {
-            onChange(e);
-        }
-        // C'est crucial pour mobile de permettre la resélection du même fichier
-        if (e.target) {
-            e.target.value = null;
+    // Cette fonction est appelée lorsque l'utilisateur clique sur le label (le bouton visible).
+    // Elle réinitialise la valeur de l'input caché.
+    // C'est une stratégie pour contourner les bugs sur mobile où un fichier ne peut pas être resélectionné.
+    const handleClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = null;
         }
     };
 
-    // Utiliser un <label> est la méthode la plus fiable pour un bouton de téléversement personnalisé.
-    // Il hérite du style du bouton parent tout en étant plus stable.
     return (
         <div className={className}>
              <label
@@ -95,10 +92,10 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                     type="file"
                     accept={accept}
                     multiple={multiple}
-                    onChange={handleChange}
+                    onChange={onChange} // Le onChange du parent est maintenant passé directement
+                    onClick={handleClick} // On utilise onClick pour la réinitialisation
                     disabled={disabled}
                     style={{ display: 'none' }} // L'input reste caché
-                    capture={accept?.includes('image') ? "environment" : undefined}
                 />
                 {/* Le texte du bouton est passé via `children` */}
                 {!disabled && (multiple ? <FileIcon /> : <CameraIcon />)}
