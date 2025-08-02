@@ -101,6 +101,14 @@ export const interventionService = {
     }
     return await query;
   },
+  // MODIFIÉ: Ajout de la fonction pour récupérer une seule intervention par son ID.
+  async getInterventionById(id) {
+    return await supabase
+      .from('interventions')
+      .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)')
+      .eq('id', id)
+      .single();
+  },
   async createIntervention(intervention, assignedUserIds, briefingFiles) {
     const { data: interventionData, error: interventionError } = await supabase.from('interventions').insert([{ client: intervention.client, address: intervention.address, service: intervention.service, date: intervention.date, time: intervention.time, }]).select().single();
     if (interventionError) return { error: interventionError };

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { storageService } from '../lib/supabase';
+import { storageService, interventionService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon } from '../components/SharedUI';
 
@@ -95,8 +95,6 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// MODIFIÉ: Helper pour générer un ID unique pour chaque téléversement
-const generateFileId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
     const { interventionId } = useParams();
@@ -107,13 +105,32 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const storageKey = 'srp-intervention-report-' + interventionId;
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
+    // MODIFIÉ: Ajout d'un état de chargement local pour la page
+    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
+    // MODIFIÉ: Logique de chargement de l'intervention rendue autonome et robuste
+    const fetchIntervention = useCallback(async () => {
+        setIsLoading(true);
+        // Essaye d'abord de trouver l'intervention dans les données déjà chargées
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
             setIntervention(foundIntervention);
+        } else {
+            // Si non trouvée (ex: refresh de la page), on la charge directement depuis la BDD
+            const { data, error } = await interventionService.getInterventionById(interventionId);
+            if (error) {
+                console.error("Erreur de chargement de l'intervention:", error);
+                navigate('/planning'); // Redirige en cas d'erreur
+            } else {
+                setIntervention(data);
+            }
         }
-    }, [interventions, interventionId]);
+    }, [interventionId, interventions, navigate]);
+
+    useEffect(() => {
+        fetchIntervention();
+    }, [fetchIntervention]);
+
 
     useEffect(() => {
         if (intervention) {
@@ -123,6 +140,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             } else {
                 setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
             }
+            setIsLoading(false); // Fin du chargement une fois l'intervention et le rapport prêts
         }
     }, [intervention, storageKey]);
 
@@ -161,62 +179,40 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleFileUpload = (event) => {
         const filesToUpload = Array.from(event.target.files);
+        if(event.target) {
+            event.target.value = "";
+        }
         if (filesToUpload.length === 0 || !intervention) return;
         processUploadQueue(filesToUpload);
     };
 
-    // MODIFIÉ: Logique de téléversement entièrement révisée pour plus de robustesse
     const processUploadQueue = async (filesToUpload) => {
-        if (!intervention) return;
+        const initialQueue = filesToUpload.map(file => ({ name: file.name, status: 'uploading', error: null }));
+        setUploadQueue(initialQueue);
 
-        const newUploadsWithIds = filesToUpload.map(file => ({
-            id: generateFileId(),
-            file: file,
-            name: file.name,
-            status: 'uploading',
-            error: null
-        }));
+        const uploadPromises = filesToUpload.map(file => storageService.uploadInterventionFile(file, intervention.id));
+        const results = await Promise.allSettled(uploadPromises);
 
-        setUploadQueue(prevQueue => [...prevQueue, ...newUploadsWithIds]);
+        const newFiles = [];
+        const finalQueue = [...initialQueue];
 
-        const uploadPromises = newUploadsWithIds.map(uploadItem =>
-            storageService.uploadInterventionFile(uploadItem.file, intervention.id)
-                .then(result => ({ ...result, uploadId: uploadItem.id, originalFile: uploadItem.file }))
-                .catch(error => ({ error, uploadId: uploadItem.id }))
-        );
-
-        const results = await Promise.all(uploadPromises);
-        const successfulFilesForReport = [];
-
-        setUploadQueue(prevQueue => {
-            const newQueue = prevQueue.map(item => ({ ...item }));
-            results.forEach(result => {
-                const itemIndex = newQueue.findIndex(item => item.id === result.uploadId);
-                if (itemIndex === -1) return;
-
-                if (result.error) {
-                    newQueue[itemIndex].status = 'error';
-                    newQueue[itemIndex].error = result.error.message || 'Erreur inconnue';
-                } else {
-                    newQueue[itemIndex].status = 'success';
-                    successfulFilesForReport.push({ name: result.originalFile.name, url: result.publicURL, type: result.originalFile.type });
-                }
-            });
-            return newQueue;
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && !result.value.error) {
+                const fileInfo = { name: filesToUpload[index].name, url: result.value.publicURL, type: filesToUpload[index].type };
+                newFiles.push(fileInfo);
+                finalQueue[index].status = 'success';
+            } else {
+                finalQueue[index].status = 'error';
+                finalQueue[index].error = result.reason?.message || result.value.error?.message || 'Erreur inconnue';
+            }
         });
 
-        if (successfulFilesForReport.length > 0) {
-            setReport(prevReport => ({
-                ...prevReport,
-                files: [...(prevReport.files || []), ...successfulFilesForReport]
-            }));
+        setUploadQueue(finalQueue);
+        if (newFiles.length > 0) {
+            handleReportChange('files', [...(report.files || []), ...newFiles]);
         }
-
-        setTimeout(() => {
-            setUploadQueue(prevQueue => prevQueue.filter(item => item.status === 'uploading'));
-        }, 5000);
+        setTimeout(() => setUploadQueue([]), 5000);
     };
-
 
     const handleSave = () => {
         if (!intervention) return;
@@ -247,7 +243,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const isUploading = uploadQueue.some(file => file.status === 'uploading');
 
-    if (!intervention || !report) {
+    // MODIFIÉ: L'affichage de chargement est maintenant géré par l'état local `isLoading`
+    if (isLoading || !intervention || !report) {
         return <div className="loading-container"><div className="loading-spinner"></div><p>Chargement de l'intervention...</p></div>;
     }
 
@@ -319,7 +316,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     <ul className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
                             <li key={idx}>
-                                {file.type.startsWith('image/') ? (
+                                {file.type && file.type.startsWith('image/') ? (
                                     <img src={file.url} alt={`Aperçu de ${file.name}`} className="document-thumbnail" />
                                 ) : (
                                     <FileTextIcon className="document-icon" />
@@ -334,9 +331,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         <div className="mt-4">
                             <h4 className="font-semibold mb-2">Téléchargements en cours...</h4>
                             <ul className="upload-queue-list">
-                                {/* MODIFIÉ: Utilisation de l'ID unique du fichier comme clé */}
-                                {uploadQueue.map((file) => (
-                                    <li key={file.id}>
+                                {uploadQueue.map((file, idx) => (
+                                    <li key={idx}>
                                         {file.status === 'uploading' && <LoaderIcon className="upload-status-icon animate-spin" />}
                                         {file.status === 'success' && <CheckCircleIcon className="upload-status-icon success" />}
                                         {file.status === 'error' && <AlertTriangleIcon className="upload-status-icon error" />}
@@ -351,24 +347,15 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     )}
 
                     {!isAdmin && (
-                        <div className="grid-2-cols mt-4">
-                            <CustomFileInput
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                disabled={isUploading}
-                                multiple
-                            >
-                                {isUploading ? 'Envoi...' : 'Prendre Photo(s)'}
-                            </CustomFileInput>
-                            <CustomFileInput
-                                accept="image/*,application/pdf"
-                                onChange={handleFileUpload}
-                                disabled={isUploading}
-                                multiple
-                            >
-                                {isUploading ? 'Envoi...' : 'Joindre Fichier(s)'}
-                            </CustomFileInput>
-                        </div>
+                        <CustomFileInput
+                            accept="image/*,application/pdf"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                            multiple
+                            className="mt-4"
+                        >
+                            {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
+                        </CustomFileInput>
                     )}
                 </div>
 
