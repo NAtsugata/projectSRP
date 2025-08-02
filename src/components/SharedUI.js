@@ -1,6 +1,7 @@
+// src/components/SharedUI.js - Version corrigée pour mobile
 import React, { useEffect, useState, useRef } from 'react';
 
-// --- Icônes SVG ---
+// --- Icônes SVG (inchangées) ---
 export const FolderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
 export const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
 export const BriefcaseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
@@ -22,7 +23,7 @@ export const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width=
 export const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
 export const FileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>;
 
-// --- Composants UI ---
+// --- Composants UI (inchangés) ---
 export const GenericStatusBadge = ({ status, colorMap }) => {
     const statusClass = colorMap[status] || 'status-badge-default';
     return <span className={'status-badge ' + statusClass}>{status}</span>;
@@ -61,53 +62,181 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// ✅ COMPOSANT MIS À JOUR POUR LA FIABILITÉ MOBILE
+// ✅ COMPOSANT MOBILE FIXÉ - Solution complète pour les problèmes d'upload mobile
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
-    const fileInputRef = useRef(null);
+    const inputId = useRef(`file-input-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    const [isDragOver, setIsDragOver] = useState(false);
 
-    // Cette fonction est appelée lorsque l'utilisateur clique sur le label (le bouton visible).
-    // Elle réinitialise la valeur de l'input caché.
-    // C'est une stratégie pour contourner les bugs sur mobile où un fichier ne peut pas être resélectionné.
-    const handleClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.value = null;
+    // Détection des capacités du device
+    const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+
+    // Fonction pour adapter l'attribut accept selon le device
+    const getOptimizedAccept = () => {
+        if (!accept) return undefined;
+        
+        // Sur Android, on ajoute capture="environment" pour forcer la caméra arrière
+        if (isAndroid && accept.includes('image')) {
+            return accept;
+        }
+        
+        // Sur iOS, on simplifie pour éviter les bugs
+        if (isIOS && accept.includes('image')) {
+            return 'image/*';
+        }
+        
+        return accept;
+    };
+
+    // Gestion optimisée du changement de fichier
+    const handleFileChange = (event) => {
+        const files = event.target.files;
+        if (files && files.length > 0 && onChange) {
+            // Création d'un nouvel événement pour éviter les problèmes de référence
+            const newEvent = {
+                target: {
+                    files: files,
+                    value: event.target.value
+                }
+            };
+            onChange(newEvent);
+        }
+        
+        // Reset de la valeur pour permettre de re-sélectionner le même fichier
+        event.target.value = '';
+    };
+
+    // Gestion du drag & drop (desktop uniquement)
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isMobile && !disabled) {
+            setIsDragOver(true);
         }
     };
 
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        
+        if (disabled || isMobile) return;
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0 && onChange) {
+            const newEvent = {
+                target: {
+                    files: files,
+                    value: ''
+                }
+            };
+            onChange(newEvent);
+        }
+    };
+
+    // Attributs optimisés pour mobile
+    const inputAttributes = {
+        id: inputId.current,
+        type: 'file',
+        accept: getOptimizedAccept(),
+        multiple: multiple,
+        onChange: handleFileChange,
+        disabled: disabled,
+        style: {
+            position: 'absolute',
+            opacity: 0,
+            width: '100%',
+            height: '100%',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: '16px' // Évite le zoom automatique sur iOS
+        }
+    };
+
+    // Ajout de l'attribut capture pour mobile
+    if (isMobile && accept && accept.includes('image')) {
+        if (isAndroid) {
+            // Sur Android, on force la caméra arrière
+            inputAttributes.capture = 'environment';
+        } else if (isIOS) {
+            // Sur iOS, on laisse le choix à l'utilisateur
+            inputAttributes.capture = true;
+        }
+    }
+
+    const labelClasses = [
+        'mobile-file-input-label',
+        disabled ? 'disabled' : '',
+        isDragOver ? 'drag-over' : '',
+        className
+    ].filter(Boolean).join(' ');
+
     return (
         <div className={className}>
-             <label
-                className={`btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''}`}
+            <label
+                htmlFor={inputId.current}
+                className={labelClasses}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
                 style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.5rem',
-                    minHeight: '56px',
+                    minHeight: isMobile ? '60px' : '56px',
+                    padding: '1rem',
                     border: '2px dashed #cbd5e1',
+                    borderRadius: '0.5rem',
+                    backgroundColor: disabled ? '#f8f9fa' : (isDragOver ? '#f0f9ff' : 'white'),
+                    borderColor: disabled ? '#dee2e6' : (isDragOver ? '#3b82f6' : '#cbd5e1'),
+                    cursor: disabled ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s ease',
-                    cursor: disabled ? 'not-allowed' : 'pointer'
+                    fontSize: isMobile ? '16px' : '14px',
+                    fontWeight: '500',
+                    color: disabled ? '#6c757d' : '#495057',
+                    textAlign: 'center',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)'
                 }}
-                tabIndex={disabled ? -1 : 0}
             >
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={accept}
-                    multiple={multiple}
-                    onChange={onChange} // Le onChange du parent est maintenant passé directement
-                    onClick={handleClick} // On utilise onClick pour la réinitialisation
-                    disabled={disabled}
-                    style={{ display: 'none' }} // L'input reste caché
-                />
-                {/* Le texte du bouton est passé via `children` */}
-                {!disabled && (multiple ? <FileIcon /> : <CameraIcon />)}
-                {children}
+                <input {...inputAttributes} />
+                
+                {/* Icône adaptée au contexte */}
+                {!disabled && (
+                    <>
+                        {multiple ? <FileIcon /> : <CameraIcon />}
+                    </>
+                )}
+                
+                {/* Texte adaptatif */}
+                <span style={{ 
+                    flexGrow: 1,
+                    minWidth: 0,
+                    wordWrap: 'break-word'
+                }}>
+                    {children}
+                </span>
             </label>
         </div>
     );
 };
 
-
-// --- Icônes pour la vue d'intervention ---
-
+// --- Icônes pour la vue d'intervention (inchangées) ---
 export const FileTextIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -145,7 +274,6 @@ export const ExpandIcon = () => (
     </svg>
 );
 
-// ✅ AJOUT DES ICÔNES MANQUANTES
 export const RefreshCwIcon = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="23 4 23 10 17 10"></polyline>

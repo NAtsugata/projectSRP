@@ -1362,3 +1362,256 @@ body {
         background-color: #dbeafe;
     }
 }
+/* ✅ AJOUTEZ CES STYLES À LA FIN DE src/App.css */
+
+/* STYLES MOBILE OPTIMISÉS POUR CUSTOMFILEINPUT */
+.mobile-file-input-label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 2px dashed #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px; /* Important pour éviter le zoom iOS */
+    font-weight: 500;
+    color: #495057;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+    min-height: 60px; /* Zone tactile plus large sur mobile */
+}
+
+/* États interactifs */
+.mobile-file-input-label:hover:not(.disabled) {
+    border-color: #3b82f6;
+    background-color: #f8fafc;
+    color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.mobile-file-input-label:active:not(.disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.mobile-file-input-label.disabled {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.mobile-file-input-label.drag-over {
+    border-color: #3b82f6 !important;
+    background-color: #f0f9ff !important;
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+}
+
+/* STYLES SPÉCIFIQUES MOBILE */
+@media (max-width: 768px) {
+    .mobile-file-input-label {
+        min-height: 64px; /* Plus grand sur mobile */
+        padding: 1.25rem;
+        font-size: 16px; /* Évite le zoom automatique */
+        border-width: 3px; /* Bordure plus visible sur petit écran */
+    }
+
+    /* Suppression des effets hover sur mobile pour améliorer les performances */
+    .mobile-file-input-label:hover:not(.disabled) {
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Feedback tactile amélioré */
+    .mobile-file-input-label:active:not(.disabled) {
+        background-color: #e0f2fe;
+        border-color: #0369a1;
+        transform: scale(0.98);
+    }
+}
+
+/* OPTIMISATIONS POUR IOS SAFARI */
+@supports (-webkit-touch-callout: none) {
+    .mobile-file-input-label input[type="file"] {
+        font-size: 16px !important; /* Force 16px pour éviter le zoom */
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .mobile-file-input-label {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+    }
+}
+
+/* OPTIMISATIONS POUR ANDROID */
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+    .mobile-file-input-label input[type="file"] {
+        font-size: 16px; /* Évite le zoom sur Android */
+    }
+}
+
+/* GESTION DES ORIENTATIONS MOBILES */
+@media screen and (orientation: landscape) and (max-height: 600px) {
+    .mobile-file-input-label {
+        min-height: 48px;
+        padding: 0.875rem;
+    }
+}
+
+/* SUPPORT DES MODES SOMBRES */
+@media (prefers-color-scheme: dark) {
+    .mobile-file-input-label {
+        background-color: #1f2937;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .mobile-file-input-label:hover:not(.disabled) {
+        background-color: #374151;
+        border-color: #60a5fa;
+        color: #60a5fa;
+    }
+
+    .mobile-file-input-label.disabled {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #9ca3af;
+    }
+
+    .mobile-file-input-label.drag-over {
+        background-color: #1e3a8a !important;
+        border-color: #60a5fa !important;
+    }
+}
+
+/* SUPPORT DU CONTRASTE ÉLEVÉ */
+@media (prefers-contrast: high) {
+    .mobile-file-input-label {
+        border-width: 3px;
+        border-style: solid;
+    }
+
+    .mobile-file-input-label:hover:not(.disabled) {
+        border-color: #1d4ed8;
+        color: #1d4ed8;
+    }
+}
+
+/* SUPPORT DE LA RÉDUCTION DES MOUVEMENTS */
+@media (prefers-reduced-motion: reduce) {
+    .mobile-file-input-label,
+    .mobile-file-input-label:hover,
+    .mobile-file-input-label:active,
+    .mobile-file-input-label.drag-over {
+        transition: none !important;
+        transform: none !important;
+        animation: none !important;
+    }
+}
+
+/* GESTION DES SAFE AREAS SUR IOS */
+@supports (padding: max(0px)) {
+    .mobile-file-input-label {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+}
+
+/* AMÉLIORATION DE L'ACCESSIBILITÉ TACTILE */
+@media (pointer: coarse) {
+    /* Appareils tactiles */
+    .mobile-file-input-label {
+        min-height: 56px;
+        min-width: 56px;
+        padding: 1rem 1.25rem;
+    }
+}
+
+/* OPTIMISATIONS POUR LES TRÈS PETITS ÉCRANS */
+@media (max-width: 480px) {
+    .mobile-file-input-label {
+        min-height: 60px;
+        padding: 1rem;
+        font-size: 15px;
+        border-radius: 0.375rem;
+    }
+
+    .mobile-file-input-label svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* OPTIMISATIONS POUR CONNEXIONS LENTES */
+@media (prefers-reduced-data) {
+    .mobile-file-input-label {
+        box-shadow: none;
+    }
+
+    .mobile-file-input-label:hover:not(.disabled) {
+        box-shadow: none;
+        transform: none;
+    }
+
+    .mobile-file-input-label.drag-over {
+        box-shadow: none;
+        transform: none;
+    }
+}
+
+/* CORRECTION SPÉCIFIQUE POUR LE BACK BUTTON SUR MOBILE */
+.back-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #3b82f6;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    min-height: 44px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    touch-action: manipulation;
+}
+
+.back-button:hover {
+    background-color: #f1f5f9;
+    transform: translateX(-2px);
+}
+
+@media (max-width: 768px) {
+    .back-button {
+        min-height: 48px;
+        padding: 1rem;
+    }
+}
+
+/* ANIMATIONS OPTIMISÉES POUR MOBILE */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.upload-queue-list li {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .upload-queue-list li {
+        animation: none;
+    }
+}
