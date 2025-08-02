@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
+import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
 
-// Le composant SignatureModal reste inchangé, il est bien conçu.
+// Le composant SignatureModal reste inchangé
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const modalCanvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -52,15 +53,12 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
 
-    const fileInputRef = useRef(null);
-
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
             setIntervention(foundIntervention);
             setLoading(false);
         } else if (interventions.length > 0) {
-            console.error('Intervention non trouvée:', interventionId);
             navigate('/planning');
         }
     }, [interventions, interventionId, navigate]);
@@ -112,18 +110,25 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         }
     };
 
+    // ✅ CORRECTION MAJEURE: Logique de téléversement robuste
     const processUploadQueue = async (itemsToProcess) => {
         for (const item of itemsToProcess) {
             setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'uploading' } : q));
             try {
                 const result = await storageService.uploadInterventionFile(item.fileObject, intervention.id);
                 if (result.error) throw result.error;
+
                 const newFileInfo = { name: item.name, url: result.publicURL, type: item.fileObject.type };
+
+                // ✅ ACTION CLÉ: Met à jour le rapport principal immédiatement après chaque succès.
+                // L'état est ainsi sauvegardé dans sessionStorage et survit à un rechargement.
                 setReport(prevReport => ({
                     ...prevReport,
                     files: [...(prevReport.files || []), newFileInfo]
                 }));
+
                 setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success' } : q));
+
             } catch (error) {
                 console.error("Échec du téléversement pour", item.name, error);
                 setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: error.message || 'Une erreur est survenue' } : q));
@@ -133,7 +138,11 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleRetryUpload = (item) => {
         if (item.status === 'error') {
-            processUploadQueue([item]);
+            // Recrée un tableau avec l'objet Fichier pour le traitement
+            const fileToRetry = [item.fileObject];
+            const itemToProcess = [{...item, status: 'pending'}];
+            setUploadQueue(prev => prev.map(q => q.id === item.id ? {...q, status: 'pending'} : q));
+            processUploadQueue(itemToProcess);
         }
     };
 
@@ -181,7 +190,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
 
-                {/* ✅ AFFICHAGE RESTAURÉ */}
                 <div className="section">
                     <h3>Documents de préparation</h3>
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
@@ -248,25 +256,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     )}
 
                     {!isAdmin && (
-                        <div className="mt-4">
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelect}
-                                multiple
-                                accept="image/*,application/pdf"
-                                style={{ display: 'none' }}
-                            />
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
-                                className="btn btn-secondary w-full flex items-center justify-center gap-2"
-                                style={{minHeight: '56px'}}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
-                            </button>
-                        </div>
+                        <CustomFileInput accept="image/*,application/pdf" onChange={handleFileSelect} disabled={isUploading} multiple className="mt-4">
+                            {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
+                        </CustomFileInput>
                     )}
                 </div>
 
