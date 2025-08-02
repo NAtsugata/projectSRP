@@ -64,16 +64,21 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
 
+    const handleClick = (e) => {
+        e.preventDefault();
+        if (!disabled && fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
     const handleChange = (e) => {
         if (onChange) {
             onChange(e);
         }
-        // MODIFIÉ: La ligne qui réinitialisait la valeur a été supprimée.
-        // Elle causait des comportements instables sur les navigateurs mobiles.
     };
 
     return (
-        <label className={`${className} btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''}`} style={{ gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer', boxSizing: 'border-box' }}>
+        <div className={className}>
             <input
                 ref={fileInputRef}
                 type="file"
@@ -82,11 +87,18 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                 onChange={handleChange}
                 disabled={disabled}
                 style={{ display: 'none' }}
-                capture={accept === 'image/*' ? 'environment' : undefined}
             />
-            {multiple ? <FileIcon /> : <CameraIcon />}
-            {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-        </label>
+            <button
+                type="button"
+                onClick={handleClick}
+                disabled={disabled}
+                className="btn btn-secondary w-full flex-center"
+                style={{ gap: '0.5rem' }}
+            >
+                {multiple ? <FileIcon /> : <CameraIcon />}
+                {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+            </button>
+        </div>
     );
 };
 
