@@ -61,14 +61,16 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput
+// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput - CORRIGÉ
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [isSelecting, setIsSelecting] = useState(false);
 
     const handleClick = (e) => {
-        e.preventDefault();
+        e.preventDefault(); // ✅ IMPORTANT : Empêche la soumission du formulaire
+        e.stopPropagation(); // ✅ NOUVEAU : Empêche la propagation de l'événement
+
         if (!disabled && fileInputRef.current && !isSelecting) {
             setIsSelecting(true);
             fileInputRef.current.click();
@@ -162,15 +164,13 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                 // ✅ NOUVEAU : Attributs pour mobile
                 capture={accept?.includes('image') ? "environment" : undefined}
             />
-            <button
-                type="button"
+            <div
                 onClick={handleClick}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
-                disabled={disabled || isSelecting}
                 className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
                 style={{
                     gap: '0.5rem',
@@ -180,9 +180,17 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                     transition: 'all 0.2s ease',
                     cursor: disabled ? 'not-allowed' : 'pointer'
                 }}
-                // ✅ CORRECTION WARNING : Retirer role="button" car redondant
+                // ✅ CHANGEMENT PRINCIPAL : Utilisation d'un div au lieu d'un button
+                role="button"
                 aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
                 tabIndex={disabled ? -1 : 0}
+                // ✅ NOUVEAU : Support clavier
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleClick(e);
+                    }
+                }}
             >
                 {isSelecting ? (
                     <>
@@ -198,7 +206,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                         )}
                     </>
                 )}
-            </button>
+            </div>
         </div>
     );
 };
