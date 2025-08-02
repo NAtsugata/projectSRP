@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
-// CORRIGÉ: On importe bien 'storageService' qui était manquant
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import './App.css';
 
@@ -120,10 +119,18 @@ function App() {
         }
     }, [session, showToast]);
 
+    // MODIFIÉ: La gestion du temps réel est ajustée pour la stabilité
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile)).subscribe();
+            // L'abonnement temps réel est conservé, mais le rafraîchissement automatique
+            // qui causait les bugs a été désactivé. Le rafraîchissement est maintenant
+            // géré manuellement après chaque action de l'utilisateur.
+            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+                console.log('Changement détecté, rafraîchissement global désactivé pour la stabilité:', payload);
+                // La ligne ci-dessous a été volontairement désactivée pour corriger le bug.
+                // refreshData(profile);
+            }).subscribe();
             return () => { supabase.removeChannel(sub); };
         }
     }, [profile, refreshData]);
@@ -136,24 +143,23 @@ function App() {
         navigate('/login');
     };
 
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
-        else { showToast("Profil mis à jour."); }
+        else { showToast("Profil mis à jour."); await refreshData(profile); }
     };
+
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
         const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
         if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
-        else { showToast("Intervention ajoutée."); }
+        else { showToast("Intervention ajoutée."); await refreshData(profile); }
     };
 
-    // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
     const handleUpdateInterventionReport = async (interventionId, report) => {
-        // Détermine le nouveau statut en fonction du rapport
         const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-
         const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
-
         if (error) {
             showToast("Erreur sauvegarde rapport.", "error");
         } else {
@@ -167,6 +173,7 @@ function App() {
         }
     };
 
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
             title: "Supprimer l'intervention ?",
@@ -174,15 +181,19 @@ function App() {
             onConfirm: async () => {
                 const { error } = await interventionService.deleteIntervention(id);
                 if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Intervention supprimée."); }
+                else { showToast("Intervention supprimée."); await refreshData(profile); }
             }
         });
     };
+
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleArchiveIntervention = async (id) => {
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
         if (error) { showToast("Erreur archivage.", "error"); }
-        else { showToast("Intervention archivée."); }
+        else { showToast("Intervention archivée."); await refreshData(profile); }
     };
+
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleUpdateLeaveStatus = (id, status) => {
         if (status === 'Rejeté') {
             showConfirmationModal({
@@ -193,16 +204,18 @@ function App() {
                 onConfirm: async (reason) => {
                     const { error } = await leaveService.updateRequestStatus(id, status, reason);
                     if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                    else { showToast("Statut de la demande mis à jour."); }
+                    else { showToast("Statut de la demande mis à jour."); await refreshData(profile); }
                 }
             });
         } else {
-            leaveService.updateRequestStatus(id, status).then(({error}) => {
+            leaveService.updateRequestStatus(id, status).then(async ({error}) => {
                 if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                else { showToast("Statut de la demande mis à jour."); }
+                else { showToast("Statut de la demande mis à jour."); await refreshData(profile); }
             });
         }
     };
+
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleDeleteLeaveRequest = (id) => {
         showConfirmationModal({
             title: "Supprimer la demande ?",
@@ -210,15 +223,18 @@ function App() {
             onConfirm: async () => {
                 const { error } = await leaveService.deleteLeaveRequest(id);
                 if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Demande supprimée."); }
+                else { showToast("Demande supprimée."); await refreshData(profile); }
             }
         });
     };
+
+    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleSubmitLeaveRequest = async (requestData) => {
         const { error } = await leaveService.createLeaveRequest(requestData);
         if (error) { showToast("Erreur envoi demande.", "error"); }
-        else { showToast("Demande de congé envoyée."); }
+        else { showToast("Demande de congé envoyée."); await refreshData(profile); }
     };
+
     const handleSendDocument = async ({ file, userId, name }) => {
         try {
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
@@ -232,6 +248,7 @@ function App() {
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
         }
     };
+
     const handleDeleteDocument = async (documentId) => {
         showConfirmationModal({
             title: "Supprimer ce document ?",
@@ -247,6 +264,7 @@ function App() {
             }
         });
     };
+
     const handleAddBriefingDocuments = async (interventionId, files) => {
         try {
             const { error } = await interventionService.addBriefingDocuments(interventionId, files);
