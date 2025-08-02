@@ -130,7 +130,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
+export default function InterventionDetailView({ interventions, onSave, isAdmin, onAddBriefingDocuments }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
@@ -159,7 +159,12 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         if (intervention) {
             const savedReport = window.sessionStorage.getItem(storageKey);
             if (savedReport) {
-                setReport(JSON.parse(savedReport));
+                try {
+                    setReport(JSON.parse(savedReport));
+                } catch (error) {
+                    console.error("Erreur parsing du rapport sauvegardé:", error);
+                    setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
+                }
             } else {
                 setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
             }

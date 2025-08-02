@@ -22,6 +22,67 @@ import InterventionDetailView from './pages/InterventionDetailView';
 import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 
+// ✅ NOUVEAU : Hook pour détecter les appareils mobiles
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkIsMobile = () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isMobileAgent = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent);
+            const isSmallScreen = window.innerWidth <= 768;
+            setIsMobile(isMobileAgent || isSmallScreen);
+        };
+
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
+
+    return isMobile;
+};
+
+// ✅ NOUVEAU : Composant de chargement progressif mobile
+const MobileLoadingIndicator = ({ loadingState, isMobile, isAdmin }) => {
+    if (!isMobile || !isAdmin) return null;
+
+    const steps = [
+        { key: 'interventions', label: 'Interventions', priority: 1 },
+        { key: 'users', label: 'Utilisateurs', priority: 2 },
+        { key: 'leaves', label: 'Congés', priority: 3 },
+        { key: 'vault', label: 'Documents', priority: 4 }
+    ];
+
+    const allLoaded = Object.values(loadingState).every(state => state === 'loaded');
+
+    if (allLoaded) return null;
+
+    return (
+        <div className="mobile-loading-overlay">
+            <div className="mobile-loading-content">
+                <div className="loading-spinner"></div>
+                <h3>Chargement optimisé mobile</h3>
+                <div className="loading-steps">
+                    {steps.map((step) => (
+                        <div key={step.key} className={`loading-step ${loadingState[step.key] || 'idle'}`}>
+                            <div className="step-indicator">
+                                {loadingState[step.key] === 'loaded' && '✅'}
+                                {loadingState[step.key] === 'loading' && '⏳'}
+                                {(loadingState[step.key] === 'idle' || !loadingState[step.key]) && '⭕'}
+                                {loadingState[step.key] === 'error' && '❌'}
+                            </div>
+                            <span>{step.label}</span>
+                        </div>
+                    ))}
+                </div>
+                <p className="loading-tip">
+                    💡 Premier chargement optimisé pour mobile admin
+                </p>
+            </div>
+        </div>
+    );
+};
+
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
     const navItems = profile.is_admin ?
@@ -66,35 +127,154 @@ function App() {
     const [modal, setModal] = useState(null);
     const navigate = useNavigate();
 
+    // ✅ NOUVEAU : État de chargement progressif pour mobile
+    const [loadingState, setLoadingState] = useState({
+        interventions: 'idle',
+        users: 'idle',
+        leaves: 'idle',
+        vault: 'idle'
+    });
+
+    // ✅ NOUVEAU : Détection mobile
+    const isMobile = useIsMobile();
+
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
     const showConfirmationModal = useCallback((config) => setModal(config), []);
 
+    // ✅ FONCTION PRINCIPALE CORRIGÉE : Chargement optimisé mobile
     const refreshData = useCallback(async (userProfile) => {
         if (!userProfile) return;
+
         try {
             const isAdmin = userProfile.is_admin;
             const userId = userProfile.id;
-            const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
-                profileService.getAllProfiles(),
-                interventionService.getInterventions(isAdmin ? null : userId, false),
-                leaveService.getLeaveRequests(isAdmin ? null : userId),
-                vaultService.getVaultDocuments()
-            ]);
 
-            if (profilesRes.error) throw profilesRes.error;
-            setUsers(profilesRes.data || []);
-            if (interventionsRes.error) throw interventionsRes.error;
-            setInterventions(interventionsRes.data || []);
-            if (leavesRes.error) throw leavesRes.error;
-            setLeaveRequests(leavesRes.data || []);
-            if (vaultRes.error) throw vaultRes.error;
-            setVaultDocuments(vaultRes.data || []);
+            console.log('🔄 Démarrage chargement données', {
+                isMobile,
+                isAdmin,
+                strategy: isMobile && isAdmin ? 'séquentiel mobile' : 'parallèle standard'
+            });
+
+            if (isMobile && isAdmin) {
+                // ✅ CHARGEMENT SÉQUENTIEL OPTIMISÉ MOBILE ADMIN
+                console.log('📱 Mode mobile admin - Chargement séquentiel');
+
+                // Réinitialiser les états de chargement
+                setLoadingState({
+                    interventions: 'loading',
+                    users: 'idle',
+                    leaves: 'idle',
+                    vault: 'idle'
+                });
+
+                // 1. PRIORITÉ HAUTE : Interventions (données les plus importantes)
+                try {
+                    const interventionsRes = await interventionService.getInterventions(null, false);
+                    if (interventionsRes.error) throw interventionsRes.error;
+                    setInterventions(interventionsRes.data || []);
+                    setLoadingState(prev => ({ ...prev, interventions: 'loaded' }));
+                    console.log('✅ Interventions chargées');
+                } catch (error) {
+                    console.error('❌ Erreur interventions:', error);
+                    setLoadingState(prev => ({ ...prev, interventions: 'error' }));
+                }
+
+                // 2. Attendre 400ms puis charger utilisateurs
+                setTimeout(async () => {
+                    setLoadingState(prev => ({ ...prev, users: 'loading' }));
+                    try {
+                        const profilesRes = await profileService.getAllProfiles();
+                        if (profilesRes.error) throw profilesRes.error;
+                        setUsers(profilesRes.data || []);
+                        setLoadingState(prev => ({ ...prev, users: 'loaded' }));
+                        console.log('✅ Utilisateurs chargés');
+                    } catch (error) {
+                        console.error('❌ Erreur utilisateurs:', error);
+                        setLoadingState(prev => ({ ...prev, users: 'error' }));
+                    }
+                }, 400);
+
+                // 3. Attendre 800ms puis charger congés
+                setTimeout(async () => {
+                    setLoadingState(prev => ({ ...prev, leaves: 'loading' }));
+                    try {
+                        const leavesRes = await leaveService.getLeaveRequests(null);
+                        if (leavesRes.error) throw leavesRes.error;
+                        setLeaveRequests(leavesRes.data || []);
+                        setLoadingState(prev => ({ ...prev, leaves: 'loaded' }));
+                        console.log('✅ Congés chargés');
+                    } catch (error) {
+                        console.error('❌ Erreur congés:', error);
+                        setLoadingState(prev => ({ ...prev, leaves: 'error' }));
+                    }
+                }, 800);
+
+                // 4. Attendre 1200ms puis charger coffre-fort
+                setTimeout(async () => {
+                    setLoadingState(prev => ({ ...prev, vault: 'loading' }));
+                    try {
+                        const vaultRes = await vaultService.getVaultDocuments();
+                        if (vaultRes.error) throw vaultRes.error;
+                        setVaultDocuments(vaultRes.data || []);
+                        setLoadingState(prev => ({ ...prev, vault: 'loaded' }));
+                        console.log('✅ Documents chargés');
+                    } catch (error) {
+                        console.error('❌ Erreur documents:', error);
+                        setLoadingState(prev => ({ ...prev, vault: 'error' }));
+                    }
+                }, 1200);
+
+            } else {
+                // ✅ CHARGEMENT PARALLÈLE STANDARD (Desktop ou Employé)
+                console.log('💻 Mode standard - Chargement parallèle');
+
+                setLoadingState({
+                    interventions: 'loading',
+                    users: 'loading',
+                    leaves: 'loading',
+                    vault: 'loading'
+                });
+
+                const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
+                    profileService.getAllProfiles(),
+                    interventionService.getInterventions(isAdmin ? null : userId, false),
+                    leaveService.getLeaveRequests(isAdmin ? null : userId),
+                    vaultService.getVaultDocuments()
+                ]);
+
+                if (profilesRes.error) throw profilesRes.error;
+                setUsers(profilesRes.data || []);
+
+                if (interventionsRes.error) throw interventionsRes.error;
+                setInterventions(interventionsRes.data || []);
+
+                if (leavesRes.error) throw leavesRes.error;
+                setLeaveRequests(leavesRes.data || []);
+
+                if (vaultRes.error) throw vaultRes.error;
+                setVaultDocuments(vaultRes.data || []);
+
+                setLoadingState({
+                    interventions: 'loaded',
+                    users: 'loaded',
+                    leaves: 'loaded',
+                    vault: 'loaded'
+                });
+
+                console.log('✅ Toutes les données chargées en parallèle');
+            }
 
         } catch (error) {
-            console.error('Erreur chargement données:', error);
+            console.error('❌ Erreur chargement données:', error);
             showToast(`Erreur de chargement: ${error.message}`, "error");
+            setLoadingState({
+                interventions: 'error',
+                users: 'error',
+                leaves: 'error',
+                vault: 'error'
+            });
         }
-    }, [showToast]);
+    }, [showToast, isMobile]);
 
     useEffect(() => {
         const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => { setSession(sessionData); });
@@ -123,10 +303,35 @@ function App() {
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile)).subscribe();
+
+            // ✅ OPTIMISATION : Réduction fréquence temps réel sur mobile
+            const updateInterval = isMobile && profile.is_admin ? 30000 : 10000; // 30s mobile admin vs 10s autres
+
+            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' },
+                // ✅ Debounce pour éviter trop de mises à jour
+                debounce(() => {
+                    if (!isMobile || !profile.is_admin) {
+                        refreshData(profile);
+                    }
+                }, updateInterval)
+            ).subscribe();
+
             return () => { supabase.removeChannel(sub); };
         }
-    }, [profile, refreshData]);
+    }, [profile, refreshData, isMobile]);
+
+    // ✅ FONCTION UTILITAIRE : Debounce
+    const debounce = (func, wait) => {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    };
 
     const handleLogout = async () => {
         const { error } = await authService.signOut();
@@ -141,6 +346,7 @@ function App() {
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
         else { showToast("Profil mis à jour."); }
     };
+
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
         const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
         if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
@@ -178,11 +384,13 @@ function App() {
             }
         });
     };
+
     const handleArchiveIntervention = async (id) => {
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
         if (error) { showToast("Erreur archivage.", "error"); }
         else { showToast("Intervention archivée."); }
     };
+
     const handleUpdateLeaveStatus = (id, status) => {
         if (status === 'Rejeté') {
             showConfirmationModal({
@@ -203,6 +411,7 @@ function App() {
             });
         }
     };
+
     const handleDeleteLeaveRequest = (id) => {
         showConfirmationModal({
             title: "Supprimer la demande ?",
@@ -214,11 +423,13 @@ function App() {
             }
         });
     };
+
     const handleSubmitLeaveRequest = async (requestData) => {
         const { error } = await leaveService.createLeaveRequest(requestData);
         if (error) { showToast("Erreur envoi demande.", "error"); }
         else { showToast("Demande de congé envoyée."); }
     };
+
     const handleSendDocument = async ({ file, userId, name }) => {
         try {
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
@@ -232,6 +443,7 @@ function App() {
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
         }
     };
+
     const handleDeleteDocument = async (documentId) => {
         showConfirmationModal({
             title: "Supprimer ce document ?",
@@ -247,6 +459,7 @@ function App() {
             }
         });
     };
+
     const handleAddBriefingDocuments = async (interventionId, files) => {
         try {
             const { error } = await interventionService.addBriefingDocuments(interventionId, files);
@@ -261,19 +474,33 @@ function App() {
         }
     };
 
+    // ✅ ÉCRAN DE CHARGEMENT AMÉLIORÉ
     if (loading) {
         return (
             <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Chargement...</p>
+                <p>Chargement de votre espace...</p>
+                {isMobile && <p className="text-muted">Optimisation mobile activée...</p>}
             </div>
         );
     }
+
+    // ✅ VÉRIFICATION : Chargement mobile admin en cours
+    const isMobileAdminLoading = profile?.is_admin && isMobile &&
+        Object.values(loadingState).some(state => state === 'loading' || state === 'idle');
 
     return (
         <>
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
             {modal && <ConfirmationModal {...modal} onConfirm={(inputValue) => { modal.onConfirm(inputValue); setModal(null); }} onCancel={() => setModal(null)} />}
+
+            {/* ✅ INDICATEUR DE CHARGEMENT MOBILE */}
+            <MobileLoadingIndicator
+                loadingState={loadingState}
+                isMobile={isMobile}
+                isAdmin={profile?.is_admin}
+            />
+
             <Routes>
                 {!session || !profile ? (
                     <Route path="*" element={<LoginScreen />} />
@@ -282,9 +509,30 @@ function App() {
                         {profile.is_admin ? (
                             <>
                                 <Route index element={<Navigate to="/dashboard" replace />} />
-                                <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
-                                <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} />} />
+                                <Route path="dashboard" element={
+                                    <AdminDashboard
+                                        interventions={interventions}
+                                        leaveRequests={leaveRequests}
+                                        isLoading={isMobileAdminLoading}
+                                        loadingState={loadingState}
+                                    />
+                                } />
+                                <Route path="agenda" element={
+                                    <AgendaView
+                                        interventions={interventions}
+                                        isLoading={loadingState.interventions !== 'loaded'}
+                                    />
+                                } />
+                                <Route path="planning" element={
+                                    <AdminPlanningView
+                                        interventions={interventions}
+                                        users={users}
+                                        onAddIntervention={handleAddIntervention}
+                                        onArchive={handleArchiveIntervention}
+                                        onDelete={handleDeleteIntervention}
+                                        isLoading={loadingState.interventions !== 'loaded' || loadingState.users !== 'loaded'}
+                                    />
+                                } />
                                 <Route
                                     path="planning/:interventionId"
                                     element={<InterventionDetailView
@@ -295,8 +543,21 @@ function App() {
                                     />}
                                 />
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
-                                <Route path="leaves" element={<AdminLeaveView leaveRequests={leaveRequests} onUpdateRequestStatus={handleUpdateLeaveStatus} onDeleteLeaveRequest={handleDeleteLeaveRequest} />} />
-                                <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
+                                <Route path="leaves" element={
+                                    <AdminLeaveView
+                                        leaveRequests={leaveRequests}
+                                        onUpdateRequestStatus={handleUpdateLeaveStatus}
+                                        onDeleteLeaveRequest={handleDeleteLeaveRequest}
+                                        isLoading={loadingState.leaves !== 'loaded'}
+                                    />
+                                } />
+                                <Route path="users" element={
+                                    <AdminUserView
+                                        users={users}
+                                        onUpdateUser={handleUpdateUser}
+                                        isLoading={loadingState.users !== 'loaded'}
+                                    />
+                                } />
                                 <Route
                                     path="vault"
                                     element={<AdminVaultView
@@ -304,6 +565,7 @@ function App() {
                                         vaultDocuments={vaultDocuments}
                                         onSendDocument={handleSendDocument}
                                         onDeleteDocument={handleDeleteDocument}
+                                        isLoading={loadingState.vault !== 'loaded'}
                                     />}
                                 />
                                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -311,7 +573,12 @@ function App() {
                         ) : (
                             <>
                                 <Route index element={<Navigate to="/planning" replace />} />
-                                <Route path="planning" element={<EmployeePlanningView interventions={interventions} />} />
+                                <Route path="planning" element={
+                                    <EmployeePlanningView
+                                        interventions={interventions}
+                                        isLoading={loadingState.interventions !== 'loaded'}
+                                    />
+                                } />
                                 <Route
                                     path="planning/:interventionId"
                                     element={<InterventionDetailView
@@ -320,12 +587,27 @@ function App() {
                                         isAdmin={profile.is_admin}
                                     />}
                                 />
-                                <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile?.full_name} userId={profile?.id} showToast={showToast} />} />
+                                <Route path="agenda" element={
+                                    <AgendaView
+                                        interventions={interventions}
+                                        isLoading={loadingState.interventions !== 'loaded'}
+                                    />
+                                } />
+                                <Route path="leaves" element={
+                                    <EmployeeLeaveView
+                                        leaveRequests={leaveRequests}
+                                        onSubmitRequest={handleSubmitLeaveRequest}
+                                        userName={profile?.full_name}
+                                        userId={profile?.id}
+                                        showToast={showToast}
+                                        isLoading={loadingState.leaves !== 'loaded'}
+                                    />
+                                } />
                                 <Route
                                     path="vault"
                                     element={<CoffreNumeriqueView
                                         vaultDocuments={vaultDocuments.filter(doc => doc.user_id === profile.id)}
+                                        isLoading={loadingState.vault !== 'loaded'}
                                     />}
                                 />
                                 <Route path="*" element={<Navigate to="/planning" replace />} />

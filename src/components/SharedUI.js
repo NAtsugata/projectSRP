@@ -180,9 +180,8 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                     transition: 'all 0.2s ease',
                     cursor: disabled ? 'not-allowed' : 'pointer'
                 }}
-                // ✅ NOUVEAU : Amélioration de l'accessibilité
+                // ✅ CORRECTION WARNING : Retirer role="button" car redondant
                 aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-                role="button"
                 tabIndex={disabled ? -1 : 0}
             >
                 {isSelecting ? (

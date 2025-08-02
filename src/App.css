@@ -125,6 +125,8 @@ body {
     min-height: 44px; /* iOS recommended touch target */
     text-decoration: none;
     box-sizing: border-box;
+    touch-action: manipulation; /* ✅ Améliore la réactivité tactile */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); /* ✅ Feedback tactile iOS */
 }
 
 .btn-primary { background-color: #3b82f6; color: white; }
@@ -153,6 +155,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation; /* ✅ Optimisation mobile */
 }
 
 .btn-icon:hover:not(:disabled) {
@@ -172,6 +175,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation; /* ✅ Optimisation mobile */
 }
 
 .btn-icon-danger:hover:not(:disabled) {
@@ -191,6 +195,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation; /* ✅ Optimisation mobile */
 }
 
 .btn-icon-success:hover:not(:disabled) {
@@ -284,6 +289,7 @@ body {
     text-decoration: none;
     min-width: 44px;
     flex-shrink: 0;
+    touch-action: manipulation; /* ✅ Optimisation mobile */
 }
 
 .nav-button:hover:not(:disabled) {
@@ -408,13 +414,16 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 0.75rem; /* ✅ Plus grande zone tactile */
     border-radius: 0.375rem;
     min-height: 44px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
 }
 
 .back-button:hover {
     background-color: #f1f5f9;
+    transform: translateX(-2px);
 }
 
 .section {
@@ -450,17 +459,23 @@ body {
 /* Image Grid - Mobile Optimized */
 .image-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* ✅ Plus petit sur mobile */
+    gap: 0.5rem; /* ✅ Gap réduit */
     margin-bottom: 0.75rem;
 }
 
 .image-grid img {
     width: 100%;
-    height: 8rem;
+    height: 6rem; /* ✅ Réduit sur mobile */
     object-fit: cover;
     border-radius: 0.375rem;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.image-grid img:hover {
+    transform: scale(1.05);
 }
 
 /* File Input - Mobile Optimized */
@@ -500,6 +515,22 @@ body {
     background-color: #f8fafc;
     touch-action: none;
     cursor: crosshair;
+    -webkit-touch-callout: none; /* ✅ Optimisation iOS */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.signature-canvas-fullscreen {
+    border: 2px dashed #ccc;
+    border-radius: 0.5rem;
+    touch-action: none;
+    width: 100%;
+    background-color: white;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .text-muted-link {
@@ -536,6 +567,19 @@ body {
 .btn.btn-secondary.w-full.flex-center:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ✅ OPTIMISATION DRAG & DROP POUR DESKTOP */
+.btn.drag-over {
+    border-color: #3b82f6 !important;
+    background-color: #f0f9ff !important;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+.btn.selecting {
+    background-color: #e0f2fe !important;
+    opacity: 0.8;
 }
 
 /* Modals - Mobile Optimized */
@@ -631,6 +675,363 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* ===== ✅ NOUVELLES CORRECTIONS MOBILE ADMIN ===== */
+
+/* 🚀 Overlay de chargement mobile progressif */
+.mobile-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+}
+
+.mobile-loading-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 320px;
+    width: 100%;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.mobile-loading-content h3 {
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.loading-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    background-color: #f8fafc;
+}
+
+.loading-step.loading {
+    background-color: #dbeafe;
+    color: #1e40af;
+    animation: pulse 1.5s infinite;
+}
+
+.loading-step.loaded {
+    background-color: #dcfce7;
+    color: #166534;
+    transform: scale(1.02);
+}
+
+.loading-step.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.step-indicator {
+    font-size: 1.25rem;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-tip {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    font-style: italic;
+}
+
+/* 🎯 Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+/* 🔧 Améliorations pour les composants de pages avec état de chargement */
+.page-loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.skeleton-item {
+    height: 2rem;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading-skeleton 1.5s infinite;
+    border-radius: 0.375rem;
+}
+
+.skeleton-item.large {
+    height: 4rem;
+}
+
+.skeleton-item.small {
+    height: 1.5rem;
+    width: 60%;
+}
+
+@keyframes loading-skeleton {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* 🚨 Message d'optimisation mobile pour admin */
+.mobile-admin-notice {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    color: white;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+    animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 💾 Optimisations mémoire pour les listes sur mobile */
+@media (max-width: 768px) {
+    /* Réduction de la complexité visuelle sur mobile */
+    .document-list li {
+        padding: 0.75rem 0;
+    }
+
+    .intervention-list-item-clickable {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Cache certains éléments moins importants sur mobile */
+    .mobile-hidden {
+        display: none !important;
+    }
+
+    /* Optimise les transitions pour réduire la charge GPU */
+    .btn, .nav-button {
+        transition: background-color 0.15s ease !important;
+    }
+
+    /* Réduit l'ombre portée sur mobile pour améliorer les performances */
+    .card-white {
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Optimisations spécifiques mobile pour les modales */
+    .signature-modal-content {
+        width: 95vw !important;
+        max-width: none !important;
+        padding: 0.5rem !important;
+        margin: 1rem;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .signature-canvas-fullscreen {
+        border-radius: 0.25rem;
+        height: 50vh; /* Réduit sur très petit écran */
+    }
+
+    /* Amélioration des boutons en modal sur mobile */
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    /* Amélioration des listes d'upload */
+    .upload-queue-list li {
+        min-height: 60px;
+        align-items: flex-start;
+        padding: 1rem;
+    }
+
+    /* Optimisations pour les inputs fichier sur mobile */
+    .form-control[type="file"] {
+        font-size: 16px !important; /* Évite le zoom automatique */
+        padding: 1rem !important;
+        -webkit-appearance: none;
+        border-radius: 0.5rem;
+    }
+}
+
+/* Amélioration des listes d'upload */
+.upload-queue-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upload-queue-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    min-height: 60px;
+    transition: background-color 0.2s ease;
+}
+
+.upload-queue-list li:hover {
+    background-color: #e9ecef;
+}
+
+.upload-progress {
+    width: 100%;
+    height: 4px;
+    background-color: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background-color: #3b82f6;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+/* 🔧 Amélioration des icônes de statut d'upload */
+.upload-status-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.upload-status-icon.success {
+    color: #22c55e;
+}
+
+.upload-status-icon.error {
+    color: #ef4444;
+}
+
+.upload-status-icon.loading {
+    color: #3b82f6;
+    animation: spin 1s linear infinite;
+}
+
+/* Amélioration des listes de documents détaillées */
+.document-list-detailed {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.document-list-detailed li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    min-height: 60px;
+    transition: background-color 0.2s ease;
+}
+
+.document-list-detailed li:hover {
+    background-color: #e9ecef;
+}
+
+.document-thumbnail {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    background-color: #e9ecef;
+    flex-shrink: 0;
+}
+
+.document-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #6c757d;
+}
+
+/* 🔧 Gestion responsive des textes longs */
+.document-list-detailed li span,
+.upload-queue-list li .file-name {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.4;
+}
+
+/* 🔧 Messages d'erreur d'upload */
+.upload-queue-list li .error-message {
+    font-size: 0.8rem;
+    color: #dc3545;
+    margin-top: 0.25rem;
+    font-style: italic;
+    line-height: 1.3;
+}
+
 /* Tablet Styles (768px and up) */
 @media (min-width: 768px) {
     .main-content {
@@ -694,6 +1095,15 @@ body {
     .signature-canvas {
         height: 150px;
     }
+
+    .image-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .image-grid img {
+        height: 8rem;
+    }
 }
 
 /* Desktop Styles (1024px and up) */
@@ -732,289 +1142,7 @@ body {
     }
 }
 
-/* Accessibility and iOS-specific fixes */
-@supports (-webkit-touch-callout: none) {
-    .form-control, input, textarea, select {
-        font-size: 16px !important;
-        -webkit-text-size-adjust: 100%;
-    }
-
-    .signature-canvas {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-    }
-}
-
-/* Dark mode support (optional) */
-@media (prefers-color-scheme: dark) {
-    /* Add dark mode styles here if needed */
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .btn {
-        border: 2px solid currentColor;
-    }
-
-    .form-control {
-        border-width: 2px;
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-/* ===== CORRECTIONS MOBILES ADDITIONNELLES =====
-   À ajouter à la fin du fichier App.css existant */
-
-/* 🔧 Corrections pour les zones tactiles */
-.btn, .nav-button, .btn-icon, .btn-icon-danger, .btn-icon-success {
-    min-height: 44px;
-    min-width: 44px;
-    touch-action: manipulation; /* Améliore la réactivité tactile */
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); /* Feedback tactile iOS */
-}
-
-/* 🔧 Optimisation du drag & drop pour desktop */
-.btn.drag-over {
-    border-color: #3b82f6 !important;
-    background-color: #f0f9ff !important;
-    transform: scale(1.02);
-    transition: all 0.2s ease;
-}
-
-.btn.selecting {
-    background-color: #e0f2fe !important;
-    opacity: 0.8;
-}
-
-/* 🔧 Canvas de signature mobile optimisé */
-.signature-canvas-fullscreen {
-    width: 100%;
-    height: 60vh;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    border: 2px dashed #cbd5e1;
-    border-radius: 0.5rem;
-    background-color: white;
-}
-
-/* 🔧 Amélioration des inputs fichier sur mobile */
-@supports (-webkit-touch-callout: none) {
-    /* Spécifique iOS */
-    .form-control[type="file"] {
-        font-size: 16px !important; /* Évite le zoom automatique */
-        padding: 1rem !important;
-        -webkit-appearance: none;
-        border-radius: 0.5rem;
-    }
-
-    /* Optimisation pour Safari iOS */
-    .signature-canvas, .signature-canvas-fullscreen {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-    }
-}
-
-/* 🔧 Optimisation des modales sur mobile */
-@media (max-width: 768px) {
-    .signature-modal-content {
-        width: 95vw !important;
-        max-width: none !important;
-        padding: 0.5rem !important;
-        margin: 1rem;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .signature-canvas-fullscreen {
-        border-radius: 0.25rem;
-        height: 50vh; /* Réduit sur très petit écran */
-    }
-
-    /* Amélioration des boutons en modal sur mobile */
-    .modal-footer {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .modal-footer .btn {
-        width: 100%;
-        min-height: 48px;
-    }
-}
-
-/* 🔧 Amélioration des listes d'upload */
-.upload-queue-list li {
-    min-height: 60px;
-    align-items: flex-start;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-}
-
-.upload-progress {
-    width: 100%;
-    height: 4px;
-    background-color: #e5e7eb;
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: 0.5rem;
-}
-
-.upload-progress-bar {
-    height: 100%;
-    background-color: #3b82f6;
-    transition: width 0.3s ease;
-    border-radius: 2px;
-}
-
-/* 🔧 Amélioration des icônes de statut d'upload */
-.upload-status-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-}
-
-.upload-status-icon.success {
-    color: #22c55e;
-}
-
-.upload-status-icon.error {
-    color: #ef4444;
-}
-
-.upload-status-icon.loading {
-    color: #3b82f6;
-    animation: spin 1s linear infinite;
-}
-
-/* 🔧 Animation de spin pour le loader */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* 🔧 Amélioration des grilles d'images sur mobile */
-.image-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.image-grid img {
-    width: 100%;
-    height: 6rem; /* Réduit sur mobile */
-    object-fit: cover;
-    border-radius: 0.375rem;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.image-grid img:hover {
-    transform: scale(1.05);
-}
-
-/* 🔧 Amélioration des listes de documents détaillées */
-.document-list-detailed li {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background-color: #f8f9fa;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-    min-height: 60px;
-    transition: background-color 0.2s ease;
-}
-
-.document-list-detailed li:hover {
-    background-color: #e9ecef;
-}
-
-.document-thumbnail {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 0.25rem;
-    background-color: #e9ecef;
-    flex-shrink: 0;
-}
-
-.document-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    color: #6c757d;
-}
-
-/* 🔧 Gestion responsive des textes longs */
-.document-list-detailed li span,
-.upload-queue-list li .file-name {
-    flex-grow: 1;
-    font-size: 0.9rem;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    line-height: 1.4;
-}
-
-/* 🔧 Messages d'erreur d'upload */
-.upload-queue-list li .error-message {
-    font-size: 0.8rem;
-    color: #dc3545;
-    margin-top: 0.25rem;
-    font-style: italic;
-    line-height: 1.3;
-}
-
-/* 🔧 Amélioration du bouton de retour */
-.back-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #3b82f6;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.75rem;
-    border-radius: 0.375rem;
-    min-height: 44px;
-    transition: all 0.2s ease;
-    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
-}
-
-.back-button:hover {
-    background-color: #f1f5f9;
-    transform: translateX(-2px);
-}
-
-/* 🔧 Optimisations spécifiques Android */
-@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
-    /* Chrome/Android spécifique */
-    .form-control,
-    .btn,
-    input[type="file"] {
-        font-size: 16px; /* Évite le zoom sur Android */
-    }
-}
-
-/* 🔧 Optimisations pour les petits écrans (< 480px) */
+/* ✅ Optimisations pour les petits écrans (< 480px) */
 @media (max-width: 480px) {
     .signature-canvas-fullscreen {
         height: 40vh; /* Encore plus petit sur très petits écrans */
@@ -1039,9 +1167,39 @@ body {
         width: 32px;
         height: 32px;
     }
+
+    .mobile-loading-content {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    .mobile-loading-content h3 {
+        font-size: 1.125rem;
+    }
+
+    .loading-steps {
+        gap: 0.5rem;
+    }
+
+    .loading-step {
+        padding: 0.375rem;
+    }
 }
 
-/* 🔧 Support des modes sombres */
+/* Accessibility and iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    .form-control, input, textarea, select {
+        font-size: 16px !important;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .signature-canvas, .signature-canvas-fullscreen {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+    }
+}
+
+/* ✅ Support des modes sombres */
 @media (prefers-color-scheme: dark) {
     .signature-canvas-fullscreen {
         background-color: #1f2937;
@@ -1060,7 +1218,7 @@ body {
     }
 }
 
-/* 🔧 Support du contraste élevé */
+/* ✅ Support du contraste élevé */
 @media (prefers-contrast: high) {
     .btn,
     .signature-canvas,
@@ -1078,7 +1236,7 @@ body {
     }
 }
 
-/* 🔧 Support de la réduction des mouvements */
+/* ✅ Support de la réduction des mouvements */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -1093,12 +1251,23 @@ body {
     .back-button:hover {
         transform: none;
     }
+
+    .mobile-loading-overlay,
+    .loading-step,
+    .skeleton-item {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .mobile-loading-content {
+        animation: none !important;
+    }
 }
 
-/* 🔧 Amélioration de l'accessibilité tactile */
+/* ✅ Amélioration de l'accessibilité tactile */
 @media (pointer: coarse) {
     /* Appareils tactiles */
-    .btn, .nav-button, .btn-icon {
+    .btn, .nav-button, .btn-icon, .btn-icon-danger, .btn-icon-success {
         min-height: 48px;
         min-width: 48px;
         padding: 0.875rem 1.25rem;
@@ -1110,7 +1279,7 @@ body {
     }
 }
 
-/* 🔧 Gestion des orientations sur mobile */
+/* ✅ Gestion des orientations sur mobile */
 @media screen and (orientation: landscape) and (max-height: 600px) {
     .signature-modal-content {
         max-height: 95vh;
@@ -1119,9 +1288,18 @@ body {
     .signature-canvas-fullscreen {
         height: 30vh;
     }
+
+    .mobile-loading-overlay {
+        padding: 0.5rem;
+    }
+
+    .mobile-loading-content {
+        padding: 1rem;
+        max-width: 280px;
+    }
 }
 
-/* 🔧 Gestion des notchs et safe areas sur iOS */
+/* ✅ Gestion des notchs et safe areas sur iOS */
 @supports (padding: max(0px)) {
     .modal-overlay {
         padding-left: max(1rem, env(safe-area-inset-left));
@@ -1135,12 +1313,52 @@ body {
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
     }
+
+    .mobile-loading-overlay {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
 }
 
-/* 🔧 Corrections spécifiques pour les versions anciennes d'iOS */
+/* ✅ Corrections spécifiques pour les versions anciennes d'iOS */
 @supports (-webkit-overflow-scrolling: touch) {
     .modal-content,
     .signature-modal-content {
         -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ✅ Optimisations spécifiques Android */
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+    /* Chrome/Android spécifique */
+    .form-control,
+    .btn,
+    input[type="file"] {
+        font-size: 16px; /* Évite le zoom sur Android */
+    }
+}
+
+/* ✅ Support connexion lente */
+@media (prefers-reduced-data) {
+    .mobile-loading-content {
+        background: #f8fafc;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .mobile-loading-overlay {
+        background: #64748b;
+    }
+
+    /* Réduit les animations gourmandes en données */
+    .skeleton-item {
+        background: #e5e7eb;
+        animation: none;
+    }
+
+    .loading-step.loading {
+        animation: none;
+        background-color: #dbeafe;
     }
 }
