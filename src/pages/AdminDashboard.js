@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-// ✅ NOUVEAU : Composant skeleton pour le chargement
+// Composant skeleton pour le chargement
 const DashboardSkeleton = () => (
     <div className="page-loading-skeleton">
         <div className="skeleton-item large"></div>
@@ -14,30 +14,38 @@ const DashboardSkeleton = () => (
 );
 
 export default function AdminDashboard({
-    interventions = [],
-    leaveRequests = [],
-    isLoading = false,
-    loadingState = {}
+    interventions,
+    leaveRequests,
+    isLoading,
+    loadingState
 }) {
-    // ✅ CORRECTION : Mémorisation des données sécurisées pour éviter l'erreur React Hooks
+    // Valeurs par défaut sécurisées
+    const defaultInterventions = interventions || [];
+    const defaultLeaveRequests = leaveRequests || [];
+    const defaultLoadingState = loadingState || {};
+    const defaultIsLoading = Boolean(isLoading);
+
+    // Mémorisation des données sécurisées
     const safeInterventions = useMemo(() => {
-        return Array.isArray(interventions) ? interventions : [];
-    }, [interventions]);
+        return Array.isArray(defaultInterventions) ? defaultInterventions : [];
+    }, [defaultInterventions]);
 
     const safeLeaveRequests = useMemo(() => {
-        return Array.isArray(leaveRequests) ? leaveRequests : [];
-    }, [leaveRequests]);
+        return Array.isArray(defaultLeaveRequests) ? defaultLeaveRequests : [];
+    }, [defaultLeaveRequests]);
 
-    // ✅ DÉTECTION MOBILE
-    const isMobile = useMemo(() => window.innerWidth <= 768, []);
+    // Détection mobile
+    const isMobile = useMemo(() => {
+        return typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+    }, []);
 
-    // ✅ NOUVEAU : Vérification de l'état de chargement spécifique
-    const isInterventionsLoading = loadingState.interventions === 'loading' || loadingState.interventions === 'idle';
-    const isLeavesLoading = loadingState.leaves === 'loading' || loadingState.leaves === 'idle';
+    // États de chargement
+    const isInterventionsLoading = defaultLoadingState.interventions === 'loading' || defaultLoadingState.interventions === 'idle';
+    const isLeavesLoading = defaultLoadingState.leaves === 'loading' || defaultLoadingState.leaves === 'idle';
     const isAnyDataLoading = isInterventionsLoading || isLeavesLoading;
 
-    // ✅ NOUVEAU : Affichage du skeleton pendant le chargement initial
-    if (isLoading && safeInterventions.length === 0 && safeLeaveRequests.length === 0) {
+    // Affichage du skeleton pendant le chargement initial
+    if (defaultIsLoading && safeInterventions.length === 0 && safeLeaveRequests.length === 0) {
         return (
             <div>
                 <h3>Tableau de Bord</h3>
@@ -51,15 +59,17 @@ export default function AdminDashboard({
         );
     }
 
-    // ✅ OPTIMISATION : Calculs mémorisés pour éviter les re-calculs - HOOKS CORRECTS
+    // Calculs des statistiques
     const stats = useMemo(() => {
-        const pendingLeaves = safeLeaveRequests.filter(r => r.status === 'En attente').length;
-        const upcomingInterventions = safeInterventions.filter(i => !i.is_archived).length;
+        const pendingLeaves = safeLeaveRequests.filter(r => r && r.status === 'En attente').length;
+        const upcomingInterventions = safeInterventions.filter(i => i && !i.is_archived).length;
         const completedToday = safeInterventions.filter(i => {
+            if (!i || !i.date) return false;
             const today = new Date().toISOString().split('T')[0];
             return i.date === today && i.status === 'Terminée';
         }).length;
         const inProgressToday = safeInterventions.filter(i => {
+            if (!i || !i.date) return false;
             const today = new Date().toISOString().split('T')[0];
             return i.date === today && i.status === 'En cours';
         }).length;
@@ -70,13 +80,13 @@ export default function AdminDashboard({
             completedToday,
             inProgressToday
         };
-    }, [safeInterventions, safeLeaveRequests]); // ✅ CORRECTION : Dépendances correctes
+    }, [safeInterventions, safeLeaveRequests]);
 
     return (
         <div>
             <h3>Tableau de Bord</h3>
 
-            {/* ✅ NOUVEAU : Indicateur mobile d'optimisation */}
+            {/* Indicateur mobile d'optimisation */}
             {isMobile && (
                 <div className="mobile-admin-notice">
                     📱 Interface optimisée pour mobile admin
@@ -84,7 +94,7 @@ export default function AdminDashboard({
                 </div>
             )}
 
-            {/* ✅ NOUVEAU : Statistiques principales */}
+            {/* Statistiques principales */}
             <div className="grid-2-cols">
                 <div className="card-white">
                     {isInterventionsLoading ? (
@@ -95,7 +105,7 @@ export default function AdminDashboard({
                         </p>
                     )}
                     <p className="text-muted">Interventions planifiées</p>
-                    {loadingState.interventions === 'loading' && (
+                    {defaultLoadingState.interventions === 'loading' && (
                         <p style={{fontSize: '0.75rem', color: '#f59e0b'}}>⏳ Chargement...</p>
                     )}
                 </div>
@@ -109,13 +119,13 @@ export default function AdminDashboard({
                         </p>
                     )}
                     <p className="text-muted">Demandes de congés</p>
-                    {loadingState.leaves === 'loading' && (
+                    {defaultLoadingState.leaves === 'loading' && (
                         <p style={{fontSize: '0.75rem', color: '#f59e0b'}}>⏳ Chargement...</p>
                     )}
                 </div>
             </div>
 
-            {/* ✅ NOUVEAU : Statistiques supplémentaires pour mobile */}
+            {/* Statistiques supplémentaires pour mobile */}
             {isMobile && !isInterventionsLoading && safeInterventions.length > 0 && (
                 <div className="grid-2-cols" style={{marginTop: '1rem'}}>
                     <div className="card-white">
@@ -134,7 +144,7 @@ export default function AdminDashboard({
                 </div>
             )}
 
-            {/* ✅ NOUVEAU : Résumé rapide mobile */}
+            {/* Résumé rapide mobile */}
             {isMobile && !isInterventionsLoading && safeInterventions.length > 0 && (
                 <div className="card-white" style={{marginTop: '1rem'}}>
                     <h4 style={{marginBottom: '0.75rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
@@ -149,53 +159,26 @@ export default function AdminDashboard({
                         <div style={{display: 'flex', justifyContent: 'space-between'}}>
                             <span>En cours:</span>
                             <strong style={{color: '#f59e0b'}}>
-                                {safeInterventions.filter(i => i.status === 'En cours').length}
+                                {safeInterventions.filter(i => i && i.status === 'En cours').length}
                             </strong>
                         </div>
                         <div style={{display: 'flex', justifyContent: 'space-between'}}>
                             <span>Terminées:</span>
                             <strong style={{color: '#22c55e'}}>
-                                {safeInterventions.filter(i => i.status === 'Terminée').length}
+                                {safeInterventions.filter(i => i && i.status === 'Terminée').length}
                             </strong>
                         </div>
                         <div style={{display: 'flex', justifyContent: 'space-between'}}>
                             <span>À venir:</span>
                             <strong style={{color: '#3b82f6'}}>
-                                {safeInterventions.filter(i => !i.status || i.status === 'À venir').length}
+                                {safeInterventions.filter(i => i && (!i.status || i.status === 'À venir')).length}
                             </strong>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ✅ NOUVEAU : Résumé desktop plus détaillé */}
-            {!isMobile && !isInterventionsLoading && safeInterventions.length > 0 && (
-                <div className="card-white" style={{marginTop: '1.5rem'}}>
-                    <h4 style={{marginBottom: '1rem', fontSize: '1.25rem'}}>📈 Statistiques détaillées</h4>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-                        <div style={{textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.5rem'}}>
-                            <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', margin: '0'}}>
-                                {stats.completedToday}
-                            </p>
-                            <p className="text-muted" style={{margin: '0', fontSize: '0.875rem'}}>Terminées aujourd'hui</p>
-                        </div>
-                        <div style={{textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.5rem'}}>
-                            <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', margin: '0'}}>
-                                {stats.inProgressToday}
-                            </p>
-                            <p className="text-muted" style={{margin: '0', fontSize: '0.875rem'}}>En cours aujourd'hui</p>
-                        </div>
-                        <div style={{textAlign: 'center', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.5rem'}}>
-                            <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#6b7280', margin: '0'}}>
-                                {safeInterventions.filter(i => i.is_archived).length}
-                            </p>
-                            <p className="text-muted" style={{margin: '0', fontSize: '0.875rem'}}>Archivées</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ✅ NOUVEAU : État de chargement des données */}
+            {/* État de chargement des données */}
             {isAnyDataLoading && safeInterventions.length === 0 && safeLeaveRequests.length === 0 && (
                 <div className="card-white" style={{textAlign: 'center', padding: '2rem', marginTop: '1rem'}}>
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
@@ -207,22 +190,22 @@ export default function AdminDashboard({
                             </p>
                         </div>
 
-                        {/* ✅ NOUVEAU : Indicateurs de progression mobile */}
+                        {/* Indicateurs de progression mobile */}
                         {isMobile && (
                             <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem'}}>
                                 <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem'}}>
-                                    {loadingState.interventions === 'loaded' ? '✅' :
-                                     loadingState.interventions === 'loading' ? '⏳' : '⭕'}
+                                    {defaultLoadingState.interventions === 'loaded' ? '✅' :
+                                     defaultLoadingState.interventions === 'loading' ? '⏳' : '⭕'}
                                     <span>Interventions</span>
                                 </div>
                                 <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem'}}>
-                                    {loadingState.users === 'loaded' ? '✅' :
-                                     loadingState.users === 'loading' ? '⏳' : '⭕'}
+                                    {defaultLoadingState.users === 'loaded' ? '✅' :
+                                     defaultLoadingState.users === 'loading' ? '⏳' : '⭕'}
                                     <span>Utilisateurs</span>
                                 </div>
                                 <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem'}}>
-                                    {loadingState.leaves === 'loaded' ? '✅' :
-                                     loadingState.leaves === 'loading' ? '⏳' : '⭕'}
+                                    {defaultLoadingState.leaves === 'loaded' ? '✅' :
+                                     defaultLoadingState.leaves === 'loading' ? '⏳' : '⭕'}
                                     <span>Congés</span>
                                 </div>
                             </div>
@@ -231,8 +214,8 @@ export default function AdminDashboard({
                 </div>
             )}
 
-            {/* ✅ NOUVEAU : Message de bienvenue si aucune donnée après chargement */}
-            {!isLoading && !isAnyDataLoading && safeInterventions.length === 0 && safeLeaveRequests.length === 0 && (
+            {/* Message de bienvenue si aucune donnée après chargement */}
+            {!defaultIsLoading && !isAnyDataLoading && safeInterventions.length === 0 && safeLeaveRequests.length === 0 && (
                 <div className="card-white" style={{textAlign: 'center', padding: '2rem', marginTop: '1rem'}}>
                     <p style={{fontSize: '1.125rem', marginBottom: '0.5rem'}}>🎯 Tableau de bord prêt</p>
                     <p className="text-muted">
@@ -246,8 +229,8 @@ export default function AdminDashboard({
                 </div>
             )}
 
-            {/* ✅ NOUVEAU : Message d'erreur si problème de chargement */}
-            {(loadingState.interventions === 'error' || loadingState.leaves === 'error') && (
+            {/* Message d'erreur si problème de chargement */}
+            {(defaultLoadingState.interventions === 'error' || defaultLoadingState.leaves === 'error') && (
                 <div className="card-white" style={{
                     textAlign: 'center',
                     padding: '2rem',
