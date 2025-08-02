@@ -82,7 +82,7 @@ function App() {
 
     const refreshData = useCallback(async (currentProfile) => {
         if (!currentProfile) return;
-        setLoading(true);
+        // Ne met pas setLoading à true ici pour éviter un flash de chargement inutile lors des rafraîchissements en arrière-plan
         try {
             const [interventionsRes, usersRes, leavesRes, vaultRes] = await Promise.all([
                 interventionService.getInterventions(currentProfile.is_admin ? null : currentProfile.id),
@@ -102,6 +102,7 @@ function App() {
         } catch (error) {
             showToast("Erreur de chargement des données: " + error.message, "error");
         } finally {
+            // Le chargement principal est terminé une fois que les données initiales sont là
             setLoading(false);
         }
     }, []);
@@ -116,6 +117,7 @@ function App() {
                     setLoading(false);
                 } else {
                     setProfile(userProfile);
+                    // refreshData mettra setLoading à false une fois terminé
                     await refreshData(userProfile);
                 }
             } else {
@@ -222,7 +224,8 @@ function App() {
         else showToast("Statut de la demande mis à jour.");
     };
 
-    if (loading && !profile) return <div className="loading-container"><div className="loading-spinner"></div></div>;
+    // ✅ CORRECTION: Affiche un écran de chargement tant que le profil n'est pas prêt.
+    if (loading) return <div className="loading-container"><div className="loading-spinner"></div></div>;
 
     return (
         <>
@@ -230,7 +233,9 @@ function App() {
             {confirmation.show && <ConfirmationModal title={confirmation.title} message={confirmation.message} onConfirm={confirmation.onConfirm} onCancel={() => setConfirmation({ show: false })} />}
             <Routes>
                 <Route path="/login" element={<LoginScreen onLogin={authService.signIn} />} />
-                {!session ? <Route path="*" element={<Navigate to="/login" replace />} /> : (
+
+                {/* ✅ CORRECTION: On vérifie que la session ET le profil existent avant de rendre les routes protégées. */}
+                {!session || !profile ? <Route path="*" element={<Navigate to="/login" replace />} /> : (
                     <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} />}>
                         {profile.is_admin ? (
                             <>
