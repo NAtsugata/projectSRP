@@ -1,154 +1,149 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { DownloadIcon, TrashIcon } from '../components/SharedUI';
+// ✅ VERSION CORRIGÉE POUR MOBILE
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import FileUploader from '../components/FileUploader';
+import { GenericStatusBadge, PlusIcon, EditIcon, ArchiveIcon, TrashIcon } from '../components/SharedUI';
+import { getAssignedUsersNames } from '../utils/helpers';
 
-export default function AdminVaultView({ users = [], vaultDocuments = [], onSendDocument, onDeleteDocument }) {
-  const [file, setFile] = useState(null);
-  const [documentName, setDocumentName] = useState('');
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
-  const inputFileRef = useRef(null);
+export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
+    const navigate = useNavigate();
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({ client: '', address: '', service: '', date: '', time: '08:00' });
+    const [assignedUsers, setAssignedUsers] = useState([]);
+    const [briefingFiles, setBriefingFiles] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // On ne garde que les employés qui ne sont pas administrateurs dans la liste
-  const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
+    const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
 
-  // On regroupe les documents par employé pour l'affichage
-  const documentsByUser = useMemo(() => {
-    return vaultDocuments.reduce((acc, doc) => {
-      const userId = doc.user_id;
-      if (!acc[userId]) {
-        const user = users.find(u => u.id === userId);
-        acc[userId] = {
-          userName: user ? user.full_name : 'Employé inconnu',
-          documents: []
-        };
-      }
-      acc[userId].documents.push(doc);
-      return acc;
-    }, {});
-  }, [vaultDocuments, users]);
+    const handleUserAssignmentChange = (userId) => {
+        setAssignedUsers(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
 
-  const handleFileChange = (event) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setDocumentName(selectedFile.name.split('.').slice(0, -1).join('.'));
-    }
-  };
+    const setDateShortcut = (daysToAdd) => {
+        const date = new Date();
+        date.setDate(date.getDate() + daysToAdd);
+        setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
+    };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!file || !selectedUserId || !documentName) {
-      setError('Veuillez sélectionner un employé, un fichier et donner un nom au document.');
-      return;
-    }
+    const handleBriefingFilesUpload = (urls) => {
+        const uploadedFiles = urls.map((url, i) => ({ name: `Fichier_${i + 1}`, url }));
+        setBriefingFiles(prev => [...prev, ...uploadedFiles]);
+    };
 
-    setIsUploading(true);
-    setError(null);
+    const handleRemoveFile = (fileUrl) => {
+        setBriefingFiles(prevFiles => prevFiles.filter(file => file.url !== fileUrl));
+    };
 
-    try {
-      await onSendDocument({ file, userId: selectedUserId, name: documentName });
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
 
-      setFile(null);
-      setDocumentName('');
-      setSelectedUserId('');
-      if (inputFileRef.current) {
-        inputFileRef.current.value = "";
-      }
+        setIsSubmitting(true);
+        try {
+            await onAddIntervention(formValues, assignedUsers, briefingFiles);
+            setShowForm(false);
+            setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
+            setAssignedUsers([]);
+            setBriefingFiles([]);
+        } catch (error) {
+            console.error('Erreur création intervention:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-    } catch (err) {
-      console.error('Erreur lors de l\'envoi:', err);
-      setError('Une erreur est survenue lors de l\'envoi du document.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    const handleCancelForm = (e) => {
+        e.preventDefault();
+        setShowForm(false);
+        setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
+        setAssignedUsers([]);
+        setBriefingFiles([]);
+    };
 
-  return (
-    <div>
-      <h2 className="view-title">Coffre-fort numérique - Administrateur</h2>
+    const getStatus = (intervention) => {
+        if (intervention.status === 'Terminée') return 'Terminée';
+        if (intervention.report?.arrivalTime) return 'En cours';
+        return intervention.status || 'À venir';
+    };
 
-      <div className="card-white mb-6">
-        <h3>Envoyer un document</h3>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
-            <label htmlFor="employee-select">Choisir un employé</label>
-            <select
-              id="employee-select"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="form-control"
-              required
-            >
-              <option value="" disabled>Sélectionnez un destinataire</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.full_name}</option>
-              ))}
-            </select>
-          </div>
+    const statusColorMap = {
+        'À venir': 'status-badge-blue',
+        'En cours': 'status-badge-yellow',
+        'Terminée': 'status-badge-green'
+    };
 
-          <div className="form-group">
-            <label htmlFor="document-name">Nom du document</label>
-            <input
-              id="document-name"
-              type="text"
-              value={documentName}
-              onChange={(e) => setDocumentName(e.target.value)}
-              placeholder="Ex: Fiche de paie - Juillet 2025"
-              className="form-control"
-              required
-            />
-          </div>
+    return (
+        <div>
+            <div className="flex-between mb-6">
+                <h3>Gestion du Planning</h3>
+                <button
+                    type="button"
+                    onClick={() => setShowForm(!showForm)}
+                    className="btn btn-primary flex-center"
+                    disabled={isSubmitting}
+                >
+                    <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
+                </button>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="file-upload">Fichier</label>
-            <input
-              id="file-upload"
-              type="file"
-              ref={inputFileRef}
-              onChange={handleFileChange}
-              className="form-control"
-              required
-            />
-          </div>
+            {showForm && (
+                <div className="card-white mb-6">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <input name="client" value={formValues.client} onChange={handleInputChange} placeholder="Nom du client" className="form-control" required disabled={isSubmitting} />
+                        <input name="address" value={formValues.address} onChange={handleInputChange} placeholder="Adresse" className="form-control" required disabled={isSubmitting} />
+                        <input name="service" value={formValues.service} onChange={handleInputChange} placeholder="Service" className="form-control" required disabled={isSubmitting} />
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+                        <div className="grid-2-cols">
+                            <input name="date" type="date" value={formValues.date} onChange={handleInputChange} className="form-control" required disabled={isSubmitting} />
+                            <input name="time" type="time" value={formValues.time} onChange={handleInputChange} className="form-control" required disabled={isSubmitting} />
+                        </div>
 
-          <button type="submit" className="btn btn-primary w-full" disabled={isUploading}>
-            {isUploading ? 'Envoi en cours...' : 'Envoyer le document'}
-          </button>
-        </form>
-      </div>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setDateShortcut(0)} className="btn btn-secondary" disabled={isSubmitting}>Aujourd'hui</button>
+                            <button type="button" onClick={() => setDateShortcut(1)} className="btn btn-secondary" disabled={isSubmitting}>Demain</button>
+                        </div>
 
-      <div className="card-white">
-        <h3>Documents envoyés</h3>
-        <div className="flex flex-col gap-6">
-          {Object.keys(documentsByUser).length > 0 ? (
-            Object.entries(documentsByUser).map(([userId, data]) => (
-              <div key={userId}>
-                <h4 className="font-semibold mb-2">{data.userName}</h4>
-                <ul className="document-list">
-                  {data.documents.map(doc => (
-                    <li key={doc.id}>
-                      <span>{doc.file_name}</span>
-                      <div className="flex items-center gap-2">
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Télécharger">
-                          <DownloadIcon />
-                        </a>
-                        <button onClick={() => onDeleteDocument(doc.id)} className="btn-icon-danger" title="Supprimer">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          ) : (
-            <p className="text-muted">Aucun document n'a encore été envoyé.</p>
-          )}
+                        <div>
+                            <label>Documents de préparation (PDF, images...)</label>
+                            <FileUploader
+                                multiple
+                                onUploadComplete={handleBriefingFilesUpload}
+                                disabled={isSubmitting}
+                            />
+                            <ul className="file-preview-list">
+                                {briefingFiles.map(file => (
+                                    <li key={file.url}>
+                                        <span>{file.name}</span>
+                                        <button onClick={() => handleRemoveFile(file.url)} type="button" className="btn btn-danger">Supprimer</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className="flex gap-4 justify-end">
+                            <button onClick={handleCancelForm} type="button" className="btn btn-secondary">Annuler</button>
+                            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>Créer l'intervention</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            <div className="intervention-list">
+                {interventions.map(int => (
+                    <div key={int.id} className="card-white mb-3">
+                        <div className="flex-between">
+                            <div>
+                                <p className="font-semibold">{int.client}</p>
+                                <p className="text-muted">{int.service}</p>
+                                <p className="text-muted">{int.date} à {int.time}</p>
+                            </div>
+                            <GenericStatusBadge status={getStatus(int)} colorMap={statusColorMap}/>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
