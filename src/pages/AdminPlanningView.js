@@ -27,8 +27,10 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
     };
 
     const handleBriefingFilesChange = (e) => {
-        const newFiles = Array.from(e.target.files);
-        setBriefingFiles(prevFiles => [...prevFiles, ...newFiles]);
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            setBriefingFiles(prevFiles => [...prevFiles, ...newFiles]);
+        }
     };
 
     const handleRemoveFile = (fileName) => {
@@ -82,7 +84,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                     <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
                 </button>
             </div>
-            {/* CORRIGÉ: Le formulaire a été restauré */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                     <input name="client" value={formValues.client} onChange={handleInputChange} placeholder="Nom du client" required className="form-control"/>
@@ -103,8 +104,9 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         </CustomFileInput>
                         {briefingFiles.length > 0 && (
                             <ul className="file-preview-list">
+                                {/* MODIFIÉ: Utilisation d'une clé plus robuste pour la liste de fichiers */}
                                 {briefingFiles.map((file, index) => (
-                                    <li key={index}>
+                                    <li key={`${file.name}-${file.lastModified}-${index}`}>
                                         <FileTextIcon className="file-preview-icon" />
                                         <span>{file.name}</span>
                                         <button type="button" onClick={() => handleRemoveFile(file.name)} className="btn-icon-danger">

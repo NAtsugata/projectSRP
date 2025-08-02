@@ -61,7 +61,6 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// MODIFIÉ: Le composant CustomFileInput a été réécrit pour une meilleure compatibilité mobile.
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
 
@@ -69,14 +68,10 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
         if (onChange) {
             onChange(e);
         }
-        // Réinitialise la valeur pour permettre de sélectionner le même fichier à nouveau.
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        // MODIFIÉ: La ligne qui réinitialisait la valeur a été supprimée.
+        // Elle causait des comportements instables sur les navigateurs mobiles.
     };
 
-    // Utiliser une balise <label> est plus fiable pour déclencher l'input de type "file",
-    // surtout sur les navigateurs mobiles, par rapport à un clic JavaScript.
     return (
         <label className={`${className} btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''}`} style={{ gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer', boxSizing: 'border-box' }}>
             <input
@@ -87,15 +82,13 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                 onChange={handleChange}
                 disabled={disabled}
                 style={{ display: 'none' }}
-                // Suggère d'utiliser l'appareil photo sur mobile quand seules les images sont acceptées.
                 capture={accept === 'image/*' ? 'environment' : undefined}
             />
-            <FileIcon />
+            {multiple ? <FileIcon /> : <CameraIcon />}
             {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
         </label>
     );
 };
-
 
 // --- Icônes pour la vue d'intervention ---
 
