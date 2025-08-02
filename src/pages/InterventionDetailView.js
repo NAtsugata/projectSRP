@@ -110,7 +110,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         }
     };
 
-    // ✅ CORRECTION MAJEURE: Logique de téléversement robuste
     const processUploadQueue = async (itemsToProcess) => {
         for (const item of itemsToProcess) {
             setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'uploading' } : q));
@@ -120,8 +119,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
                 const newFileInfo = { name: item.name, url: result.publicURL, type: item.fileObject.type };
 
-                // ✅ ACTION CLÉ: Met à jour le rapport principal immédiatement après chaque succès.
-                // L'état est ainsi sauvegardé dans sessionStorage et survit à un rechargement.
+                // ✅ ACTION CLÉ: Met à jour le rapport principal immédiatement.
+                // L'état est sauvegardé dans sessionStorage et ne sera pas perdu si l'app est suspendue.
                 setReport(prevReport => ({
                     ...prevReport,
                     files: [...(prevReport.files || []), newFileInfo]
@@ -138,8 +137,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleRetryUpload = (item) => {
         if (item.status === 'error') {
-            // Recrée un tableau avec l'objet Fichier pour le traitement
-            const fileToRetry = [item.fileObject];
             const itemToProcess = [{...item, status: 'pending'}];
             setUploadQueue(prev => prev.map(q => q.id === item.id ? {...q, status: 'pending'} : q));
             processUploadQueue(itemToProcess);
