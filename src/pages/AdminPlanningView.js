@@ -28,14 +28,21 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
     // ✅ CORRECTION PRINCIPALE : Gestion améliorée du changement de fichiers
     const handleBriefingFilesChange = (e) => {
-        // ✅ IMPORTANT : Empêche la propagation de l'événement
-        e.preventDefault();
-        e.stopPropagation();
+        console.log('📁 Événement reçu:', e);
 
-        console.log('📁 Fichiers sélectionnés:', e.target.files?.length);
+        // ✅ IMPORTANT : Vérifier si preventDefault existe avant de l'appeler
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
-        if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
+        // ✅ Gestion des fichiers depuis l'événement personnalisé de CustomFileInput
+        const files = e.target?.files;
+
+        console.log('📁 Fichiers sélectionnés:', files?.length);
+
+        if (files && files.length > 0) {
+            const newFiles = Array.from(files);
             console.log('📁 Nouveaux fichiers:', newFiles.map(f => f.name));
 
             setBriefingFiles(prevFiles => {
@@ -43,11 +50,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                 console.log('📁 Total fichiers:', updatedFiles.length);
                 return updatedFiles;
             });
-        }
-
-        // ✅ IMPORTANT : Reset de l'input après sélection pour permettre de re-sélectionner le même fichier
-        if (e.target) {
-            e.target.value = '';
         }
     };
 
