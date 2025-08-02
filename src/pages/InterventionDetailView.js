@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
-import { CustomFileInput, ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
+// ✅ CustomFileInput a été retiré des imports car il n'est plus utilisé ici.
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
 
 // Le composant SignatureModal reste inchangé, il est bien conçu.
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
@@ -52,6 +53,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
 
+    // ✅ NOUVEAU: Référence pour l'input de fichier caché
+    const fileInputRef = useRef(null);
+
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
@@ -89,7 +93,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ CORRECTION: La fonction de sélection est séparée du traitement
     const handleFileSelect = (event) => {
         const filesToUpload = Array.from(event.target.files);
         if (filesToUpload.length === 0 || !intervention) return;
@@ -98,45 +101,33 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         const newQueueItems = filesToUpload
             .filter(file => file.size <= maxFileSize)
             .map(file => ({
-                id: `${file.name}-${file.lastModified}-${file.size}`, // ID unique
+                id: `${file.name}-${file.lastModified}-${file.size}`,
                 name: file.name,
-                status: 'pending', // 'pending', 'uploading', 'success', 'error'
+                status: 'pending',
                 error: null,
                 fileObject: file,
             }));
 
         if (newQueueItems.length > 0) {
             setUploadQueue(prev => [...prev, ...newQueueItems]);
-            // On lance le traitement juste après avoir mis à jour l'état
             processUploadQueue(newQueueItems);
         }
     };
 
-    // ✅ CORRECTION: Logique de téléversement robuste qui met à jour l'état principal après chaque succès
     const processUploadQueue = async (itemsToProcess) => {
         for (const item of itemsToProcess) {
-            // Met à jour l'UI pour montrer que le téléversement commence
             setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'uploading' } : q));
-
             try {
                 const result = await storageService.uploadInterventionFile(item.fileObject, intervention.id);
                 if (result.error) throw result.error;
-
                 const newFileInfo = { name: item.name, url: result.publicURL, type: item.fileObject.type };
-
-                // ✅ ACTION CLÉ: Met à jour le rapport principal immédiatement.
-                // L'état est sauvegardé dans sessionStorage et ne sera pas perdu si l'app est suspendue.
                 setReport(prevReport => ({
                     ...prevReport,
                     files: [...(prevReport.files || []), newFileInfo]
                 }));
-
-                // Met à jour l'UI pour montrer le succès
                 setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success' } : q));
-
             } catch (error) {
                 console.error("Échec du téléversement pour", item.name, error);
-                // Met à jour l'UI pour montrer l'erreur
                 setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: error.message || 'Une erreur est survenue' } : q));
             }
         }
@@ -144,7 +135,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleRetryUpload = (item) => {
         if (item.status === 'error') {
-            processUploadQueue([item]); // Relance le processus pour cet item
+            processUploadQueue([item]);
         }
     };
 
@@ -224,10 +215,27 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                             </ul>
                         </div>
                     )}
+                    {/* ✅ NOUVELLE MÉTHODE DE SÉLECTION DE FICHIER */}
                     {!isAdmin && (
-                        <CustomFileInput accept="image/*,application/pdf" onChange={handleFileSelect} disabled={isUploading} multiple className="mt-4">
-                            {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
-                        </CustomFileInput>
+                        <div className="mt-4">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileSelect}
+                                multiple
+                                accept="image/*,application/pdf"
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="btn btn-secondary w-full flex items-center justify-center gap-2"
+                                style={{minHeight: '56px'}}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
+                            </button>
+                        </div>
                     )}
                 </div>
                 {/* ... Section signature ... */}
