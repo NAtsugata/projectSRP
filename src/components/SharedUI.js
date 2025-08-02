@@ -61,19 +61,90 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
+// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [isSelecting, setIsSelecting] = useState(false);
 
     const handleClick = (e) => {
         e.preventDefault();
-        if (!disabled && fileInputRef.current) {
+        if (!disabled && fileInputRef.current && !isSelecting) {
+            setIsSelecting(true);
             fileInputRef.current.click();
         }
     };
 
     const handleChange = (e) => {
-        if (onChange) {
-            onChange(e);
+        setIsSelecting(false);
+        if (onChange && e.target.files) {
+            // ✅ IMPORTANT : Créer un nouvel événement pour éviter les problèmes de référence
+            const event = {
+                ...e,
+                target: {
+                    ...e.target,
+                    files: e.target.files,
+                    value: e.target.value
+                }
+            };
+            onChange(event);
+        }
+    };
+
+    // ✅ NOUVEAU : Support du drag & drop (desktop uniquement)
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!disabled && !window.matchMedia('(max-width: 768px)').matches) {
+            setIsDragOver(true);
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Vérifier si on quitte vraiment l'élément
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setIsDragOver(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        if (disabled || !onChange || window.matchMedia('(max-width: 768px)').matches) return;
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            // ✅ Créer un événement artificiel pour la compatibilité
+            const event = {
+                target: {
+                    files: files,
+                    value: ""
+                }
+            };
+            onChange(event);
+        }
+    };
+
+    // ✅ NOUVEAU : Détection des erreurs mobiles
+    const handleError = (e) => {
+        console.warn('Erreur de sélection de fichier:', e);
+        setIsSelecting(false);
+    };
+
+    // ✅ NOUVEAU : Support des événements tactiles
+    const handleTouchStart = (e) => {
+        if (!disabled) {
+            e.currentTarget.style.backgroundColor = '#f0f9ff';
+        }
+    };
+
+    const handleTouchEnd = (e) => {
+        if (!disabled) {
+            e.currentTarget.style.backgroundColor = '';
         }
     };
 
@@ -85,18 +156,49 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                 accept={accept}
                 multiple={multiple}
                 onChange={handleChange}
+                onError={handleError}
                 disabled={disabled}
                 style={{ display: 'none' }}
+                // ✅ NOUVEAU : Attributs pour mobile
+                capture={accept?.includes('image') ? "environment" : undefined}
             />
             <button
                 type="button"
                 onClick={handleClick}
-                disabled={disabled}
-                className="btn btn-secondary w-full flex-center"
-                style={{ gap: '0.5rem' }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                disabled={disabled || isSelecting}
+                className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
+                style={{
+                    gap: '0.5rem',
+                    minHeight: '56px', // ✅ Plus grande zone tactile pour mobile
+                    border: isDragOver ? '2px solid #3b82f6' : '2px dashed #cbd5e1',
+                    backgroundColor: isDragOver ? '#f0f9ff' : (isSelecting ? '#e0f2fe' : ''),
+                    transition: 'all 0.2s ease',
+                    cursor: disabled ? 'not-allowed' : 'pointer'
+                }}
+                // ✅ NOUVEAU : Amélioration de l'accessibilité
+                aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
             >
-                {multiple ? <FileIcon /> : <CameraIcon />}
-                {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+                {isSelecting ? (
+                    <>
+                        <LoaderIcon />
+                        Sélection...
+                    </>
+                ) : (
+                    <>
+                        {multiple ? <FileIcon /> : <CameraIcon />}
+                        {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+                        {isDragOver && !window.matchMedia('(max-width: 768px)').matches && (
+                            <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span>
+                        )}
+                    </>
+                )}
             </button>
         </div>
     );
@@ -134,6 +236,7 @@ export const LoaderIcon = ({ className }) => (
     <path d="M12,4a8,8,0,0,1,7.89,6.7A1.53,1.53,0,0,0,21.38,12h0a1.5,1.5,0,0,0,1.48-1.75,11,11,0,0,0-21.72,0A1.5,1.5,0,0,0,2.62,12h0a1.53,1.53,0,0,0,1.49-1.3A8,8,0,0,1,12,4Z"/>
   </svg>
 );
+
 export const ExpandIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
