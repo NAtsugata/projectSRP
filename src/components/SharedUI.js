@@ -61,24 +61,24 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
+// MODIFIÉ: Le composant CustomFileInput a été réécrit pour une meilleure compatibilité mobile.
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
-
-    const handleClick = (e) => {
-        e.preventDefault();
-        if (!disabled && fileInputRef.current) {
-            fileInputRef.current.click();
-        }
-    };
 
     const handleChange = (e) => {
         if (onChange) {
             onChange(e);
         }
+        // Réinitialise la valeur pour permettre de sélectionner le même fichier à nouveau.
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
+    // Utiliser une balise <label> est plus fiable pour déclencher l'input de type "file",
+    // surtout sur les navigateurs mobiles, par rapport à un clic JavaScript.
     return (
-        <div className={className}>
+        <label className={`${className} btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''}`} style={{ gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer', boxSizing: 'border-box' }}>
             <input
                 ref={fileInputRef}
                 type="file"
@@ -87,20 +87,15 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
                 onChange={handleChange}
                 disabled={disabled}
                 style={{ display: 'none' }}
+                // Suggère d'utiliser l'appareil photo sur mobile quand seules les images sont acceptées.
+                capture={accept === 'image/*' ? 'environment' : undefined}
             />
-            <button
-                type="button"
-                onClick={handleClick}
-                disabled={disabled}
-                className="btn btn-secondary w-full flex-center"
-                style={{ gap: '0.5rem' }}
-            >
-                {multiple ? <FileIcon /> : <CameraIcon />}
-                {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-            </button>
-        </div>
+            <FileIcon />
+            {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+        </label>
     );
 };
+
 
 // --- Icônes pour la vue d'intervention ---
 

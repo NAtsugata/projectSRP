@@ -159,31 +159,29 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleFileUpload = (event) => {
         const filesToUpload = Array.from(event.target.files);
-        if(event.target) {
-            event.target.value = "";
-        }
         if (filesToUpload.length === 0 || !intervention) return;
         processUploadQueue(filesToUpload);
     };
 
     const processUploadQueue = async (filesToUpload) => {
         const initialQueue = filesToUpload.map(file => ({ name: file.name, status: 'uploading', error: null }));
-        setUploadQueue(initialQueue);
+        setUploadQueue(prevQueue => [...prevQueue, ...initialQueue]);
 
         const uploadPromises = filesToUpload.map(file => storageService.uploadInterventionFile(file, intervention.id));
         const results = await Promise.allSettled(uploadPromises);
 
         const newFiles = [];
-        const finalQueue = [...initialQueue];
+        const finalQueue = [...uploadQueue, ...initialQueue];
 
         results.forEach((result, index) => {
+            const originalFileIndex = uploadQueue.length + index;
             if (result.status === 'fulfilled' && !result.value.error) {
                 const fileInfo = { name: filesToUpload[index].name, url: result.value.publicURL, type: filesToUpload[index].type };
                 newFiles.push(fileInfo);
-                finalQueue[index].status = 'success';
+                finalQueue[originalFileIndex].status = 'success';
             } else {
-                finalQueue[index].status = 'error';
-                finalQueue[index].error = result.reason?.message || result.value.error?.message || 'Erreur inconnue';
+                finalQueue[originalFileIndex].status = 'error';
+                finalQueue[originalFileIndex].error = result.reason?.message || result.value.error?.message || 'Erreur inconnue';
             }
         });
 
@@ -191,7 +189,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         if (newFiles.length > 0) {
             handleReportChange('files', [...(report.files || []), ...newFiles]);
         }
-        setTimeout(() => setUploadQueue([]), 5000);
+        setTimeout(() => setUploadQueue(q => q.filter(f => f.status !== 'success' && f.status !== 'error')), 5000);
     };
 
     const handleSave = () => {
@@ -325,16 +323,26 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
+                    {/* MODIFIÉ: Remplacement du bouton unique par deux boutons plus spécifiques */}
                     {!isAdmin && (
-                        <CustomFileInput
-                            accept="image/*,application/pdf"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                            multiple
-                            className="mt-4"
-                        >
-                            {isUploading ? 'Envoi en cours...' : 'Ajouter des fichiers (Photo/PDF)'}
-                        </CustomFileInput>
+                        <div className="grid-2-cols mt-4">
+                            <CustomFileInput
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                                multiple
+                            >
+                                {isUploading ? 'Envoi...' : 'Prendre Photo(s)'}
+                            </CustomFileInput>
+                            <CustomFileInput
+                                accept="image/*,application/pdf"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                                multiple
+                            >
+                                {isUploading ? 'Envoi...' : 'Joindre Fichier(s)'}
+                            </CustomFileInput>
+                        </div>
                     )}
                 </div>
 
