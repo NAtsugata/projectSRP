@@ -140,11 +140,13 @@ function App() {
 
             console.log('🔄 Démarrage chargement données', { isMobile, isAdmin, isManual, strategy: isMobile && isAdmin && isManual ? 'séquentiel mobile' : 'parallèle standard' });
 
+            // ✅ CORRECTION : Remplacement des `setTimeout` par un enchaînement `await` plus robuste.
             if (isMobile && isAdmin && isManual) {
                 setIsManualRefresh(true);
                 console.log('📱 Mode mobile admin - Chargement séquentiel');
-                setLoadingState({ interventions: 'loading', users: 'idle', leaves: 'idle', vault: 'idle' });
 
+                // 1. Interventions
+                setLoadingState({ interventions: 'loading', users: 'idle', leaves: 'idle', vault: 'idle' });
                 try {
                     const interventionsRes = await interventionService.getInterventions(null, false);
                     if (interventionsRes.error) throw interventionsRes.error;
@@ -156,52 +158,47 @@ function App() {
                     setLoadingState(prev => ({ ...prev, interventions: 'error' }));
                 }
 
-                setTimeout(async () => {
-                    setLoadingState(prev => ({ ...prev, users: 'loading' }));
-                    try {
-                        const profilesRes = await profileService.getAllProfiles();
-                        if (profilesRes.error) throw profilesRes.error;
-                        setUsers(profilesRes.data || []);
-                        setLoadingState(prev => ({ ...prev, users: 'loaded' }));
-                        console.log('✅ Utilisateurs chargés');
-                    } catch (error) {
-                        console.error('❌ Erreur utilisateurs:', error);
-                        setLoadingState(prev => ({ ...prev, users: 'error' }));
-                    }
-                }, 400);
+                // 2. Utilisateurs
+                setLoadingState(prev => ({ ...prev, users: 'loading' }));
+                try {
+                    const profilesRes = await profileService.getAllProfiles();
+                    if (profilesRes.error) throw profilesRes.error;
+                    setUsers(profilesRes.data || []);
+                    setLoadingState(prev => ({ ...prev, users: 'loaded' }));
+                    console.log('✅ Utilisateurs chargés');
+                } catch (error) {
+                    console.error('❌ Erreur utilisateurs:', error);
+                    setLoadingState(prev => ({ ...prev, users: 'error' }));
+                }
 
-                setTimeout(async () => {
-                    setLoadingState(prev => ({ ...prev, leaves: 'loading' }));
-                    try {
-                        const leavesRes = await leaveService.getLeaveRequests(null);
-                        if (leavesRes.error) throw leavesRes.error;
-                        setLeaveRequests(leavesRes.data || []);
-                        setLoadingState(prev => ({ ...prev, leaves: 'loaded' }));
-                        console.log('✅ Congés chargés');
-                    } catch (error) {
-                        console.error('❌ Erreur congés:', error);
-                        setLoadingState(prev => ({ ...prev, leaves: 'error' }));
-                    }
-                }, 800);
+                // 3. Congés
+                setLoadingState(prev => ({ ...prev, leaves: 'loading' }));
+                try {
+                    const leavesRes = await leaveService.getLeaveRequests(null);
+                    if (leavesRes.error) throw leavesRes.error;
+                    setLeaveRequests(leavesRes.data || []);
+                    setLoadingState(prev => ({ ...prev, leaves: 'loaded' }));
+                    console.log('✅ Congés chargés');
+                } catch (error) {
+                    console.error('❌ Erreur congés:', error);
+                    setLoadingState(prev => ({ ...prev, leaves: 'error' }));
+                }
 
-                setTimeout(async () => {
-                    setLoadingState(prev => ({ ...prev, vault: 'loading' }));
-                    try {
-                        const vaultRes = await vaultService.getVaultDocuments();
-                        if (vaultRes.error) throw vaultRes.error;
-                        setVaultDocuments(vaultRes.data || []);
-                        setLoadingState(prev => ({ ...prev, vault: 'loaded' }));
-                        console.log('✅ Documents chargés');
-                        setTimeout(() => {
-                            setIsManualRefresh(false);
-                            console.log('🎯 Refresh manuel terminé - reprise du temps réel');
-                        }, 500);
-                    } catch (error) {
-                        console.error('❌ Erreur documents:', error);
-                        setLoadingState(prev => ({ ...prev, vault: 'error' }));
-                        setIsManualRefresh(false);
-                    }
-                }, 1200);
+                // 4. Documents
+                setLoadingState(prev => ({ ...prev, vault: 'loading' }));
+                try {
+                    const vaultRes = await vaultService.getVaultDocuments();
+                    if (vaultRes.error) throw vaultRes.error;
+                    setVaultDocuments(vaultRes.data || []);
+                    setLoadingState(prev => ({ ...prev, vault: 'loaded' }));
+                    console.log('✅ Documents chargés');
+                } catch (error) {
+                    console.error('❌ Erreur documents:', error);
+                    setLoadingState(prev => ({ ...prev, vault: 'error' }));
+                }
+
+                setIsManualRefresh(false);
+                console.log('🎯 Refresh manuel terminé - reprise du temps réel');
 
             } else {
                 console.log('💻 Mode standard - Chargement parallèle');
@@ -280,9 +277,6 @@ function App() {
         await authService.signOut();
         navigate('/login');
     };
-
-    // ✅ CORRECTION : Toutes les fonctions de mise à jour appellent refreshData avec `false`
-    // pour éviter de redéclencher le chargement initial optimisé pour mobile.
 
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
