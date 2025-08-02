@@ -63,7 +63,6 @@ function App() {
     const [vaultDocuments, setVaultDocuments] = useState([]);
     const [toast, setToast] = useState(null);
     const [modal, setModal] = useState(null);
-    // MODIFIÉ: Ajout d'un état pour "verrouiller" le rafraîchissement pendant les envois
     const [isDataProcessing, setIsDataProcessing] = useState(false);
     const navigate = useNavigate();
 
@@ -121,12 +120,10 @@ function App() {
         }
     }, [session, showToast]);
 
-    // MODIFIÉ: Le rafraîchissement temps réel est maintenant conditionnel
     useEffect(() => {
         if (profile) {
             refreshData(profile);
             const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                // Le rafraîchissement automatique ne se produit que si aucune opération (upload, etc.) n'est en cours.
                 if (!isDataProcessing) {
                     console.log('Changement détecté, rafraîchissement...', payload);
                     refreshData(profile);
@@ -152,7 +149,6 @@ function App() {
         else { showToast("Profil mis à jour."); await refreshData(profile); }
     };
 
-    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
         setIsDataProcessing(true);
         try {
@@ -168,27 +164,48 @@ function App() {
         }
     };
 
-    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
+    // MODIFIÉ: La fonction met à jour l'état local de manière ciblée et fiable.
     const handleUpdateInterventionReport = async (interventionId, report) => {
         setIsDataProcessing(true);
         try {
             const newStatus = report.departureTime ? 'Terminée' : 'En cours';
             const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+
             if (error) {
-                showToast("Erreur sauvegarde rapport.", "error");
+                showToast("Erreur sauvegarde rapport: " + error.message, "error");
             } else {
+                // On recharge spécifiquement l'intervention modifiée pour avoir les données les plus fraîches.
+                const { data: updatedIntervention, error: fetchError } = await supabase
+                    .from('interventions')
+                    .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)')
+                    .eq('id', interventionId)
+                    .single();
+
+                if (fetchError) {
+                    // Si la recharge ciblée échoue, on se rabat sur la méthode générale.
+                    showToast("Mise à jour réussie, rafraîchissement des données...", "success");
+                    await refreshData(profile);
+                } else {
+                    // On met à jour la liste des interventions dans l'état local.
+                    setInterventions(prevInterventions =>
+                        prevInterventions.map(int =>
+                            int.id === interventionId ? updatedIntervention : int
+                        )
+                    );
+                }
+
                 if (newStatus === 'Terminée') {
                     showToast("Rapport sauvegardé et intervention clôturée.");
                 } else {
                     showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
                 }
                 navigate('/planning');
-                await refreshData(profile);
             }
         } finally {
             setIsDataProcessing(false);
         }
     };
+
 
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
@@ -247,7 +264,6 @@ function App() {
         else { showToast("Demande de congé envoyée."); await refreshData(profile); }
     };
 
-    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
     const handleSendDocument = async ({ file, userId, name }) => {
         setIsDataProcessing(true);
         try {
