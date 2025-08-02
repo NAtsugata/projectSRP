@@ -95,6 +95,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
+// MODIFIÉ: Helper pour générer un ID unique pour chaque téléversement
+const generateFileId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
     const { interventionId } = useParams();
@@ -163,34 +165,58 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         processUploadQueue(filesToUpload);
     };
 
+    // MODIFIÉ: Logique de téléversement entièrement révisée pour plus de robustesse
     const processUploadQueue = async (filesToUpload) => {
-        const initialQueue = filesToUpload.map(file => ({ name: file.name, status: 'uploading', error: null }));
-        setUploadQueue(prevQueue => [...prevQueue, ...initialQueue]);
+        if (!intervention) return;
 
-        const uploadPromises = filesToUpload.map(file => storageService.uploadInterventionFile(file, intervention.id));
-        const results = await Promise.allSettled(uploadPromises);
+        const newUploadsWithIds = filesToUpload.map(file => ({
+            id: generateFileId(),
+            file: file,
+            name: file.name,
+            status: 'uploading',
+            error: null
+        }));
 
-        const newFiles = [];
-        const finalQueue = [...uploadQueue, ...initialQueue];
+        setUploadQueue(prevQueue => [...prevQueue, ...newUploadsWithIds]);
 
-        results.forEach((result, index) => {
-            const originalFileIndex = uploadQueue.length + index;
-            if (result.status === 'fulfilled' && !result.value.error) {
-                const fileInfo = { name: filesToUpload[index].name, url: result.value.publicURL, type: filesToUpload[index].type };
-                newFiles.push(fileInfo);
-                finalQueue[originalFileIndex].status = 'success';
-            } else {
-                finalQueue[originalFileIndex].status = 'error';
-                finalQueue[originalFileIndex].error = result.reason?.message || result.value.error?.message || 'Erreur inconnue';
-            }
+        const uploadPromises = newUploadsWithIds.map(uploadItem =>
+            storageService.uploadInterventionFile(uploadItem.file, intervention.id)
+                .then(result => ({ ...result, uploadId: uploadItem.id, originalFile: uploadItem.file }))
+                .catch(error => ({ error, uploadId: uploadItem.id }))
+        );
+
+        const results = await Promise.all(uploadPromises);
+        const successfulFilesForReport = [];
+
+        setUploadQueue(prevQueue => {
+            const newQueue = prevQueue.map(item => ({ ...item }));
+            results.forEach(result => {
+                const itemIndex = newQueue.findIndex(item => item.id === result.uploadId);
+                if (itemIndex === -1) return;
+
+                if (result.error) {
+                    newQueue[itemIndex].status = 'error';
+                    newQueue[itemIndex].error = result.error.message || 'Erreur inconnue';
+                } else {
+                    newQueue[itemIndex].status = 'success';
+                    successfulFilesForReport.push({ name: result.originalFile.name, url: result.publicURL, type: result.originalFile.type });
+                }
+            });
+            return newQueue;
         });
 
-        setUploadQueue(finalQueue);
-        if (newFiles.length > 0) {
-            handleReportChange('files', [...(report.files || []), ...newFiles]);
+        if (successfulFilesForReport.length > 0) {
+            setReport(prevReport => ({
+                ...prevReport,
+                files: [...(prevReport.files || []), ...successfulFilesForReport]
+            }));
         }
-        setTimeout(() => setUploadQueue(q => q.filter(f => f.status !== 'success' && f.status !== 'error')), 5000);
+
+        setTimeout(() => {
+            setUploadQueue(prevQueue => prevQueue.filter(item => item.status === 'uploading'));
+        }, 5000);
     };
+
 
     const handleSave = () => {
         if (!intervention) return;
@@ -308,8 +334,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         <div className="mt-4">
                             <h4 className="font-semibold mb-2">Téléchargements en cours...</h4>
                             <ul className="upload-queue-list">
-                                {uploadQueue.map((file, idx) => (
-                                    <li key={idx}>
+                                {/* MODIFIÉ: Utilisation de l'ID unique du fichier comme clé */}
+                                {uploadQueue.map((file) => (
+                                    <li key={file.id}>
                                         {file.status === 'uploading' && <LoaderIcon className="upload-status-icon animate-spin" />}
                                         {file.status === 'success' && <CheckCircleIcon className="upload-status-icon success" />}
                                         {file.status === 'error' && <AlertTriangleIcon className="upload-status-icon error" />}
@@ -323,7 +350,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
-                    {/* MODIFIÉ: Remplacement du bouton unique par deux boutons plus spécifiques */}
                     {!isAdmin && (
                         <div className="grid-2-cols mt-4">
                             <CustomFileInput
