@@ -26,29 +26,79 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
     };
 
+    // ✅ CORRECTION PRINCIPALE : Gestion améliorée du changement de fichiers
     const handleBriefingFilesChange = (e) => {
-        const newFiles = Array.from(e.target.files);
-        setBriefingFiles(prevFiles => [...prevFiles, ...newFiles]);
+        // ✅ IMPORTANT : Empêche la propagation de l'événement
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('📁 Fichiers sélectionnés:', e.target.files?.length);
+
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            console.log('📁 Nouveaux fichiers:', newFiles.map(f => f.name));
+
+            setBriefingFiles(prevFiles => {
+                const updatedFiles = [...prevFiles, ...newFiles];
+                console.log('📁 Total fichiers:', updatedFiles.length);
+                return updatedFiles;
+            });
+        }
+
+        // ✅ IMPORTANT : Reset de l'input après sélection pour permettre de re-sélectionner le même fichier
+        if (e.target) {
+            e.target.value = '';
+        }
     };
 
     const handleRemoveFile = (fileName) => {
         setBriefingFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
     };
 
+    // ✅ CORRECTION : Gestion améliorée de la soumission
     const handleSubmit = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+
+        console.log('📝 Soumission du formulaire...');
+
+        if (isSubmitting) {
+            console.log('⚠️ Soumission déjà en cours, ignorée');
+            return;
+        }
+
         setIsSubmitting(true);
+
         try {
+            console.log('📋 Données du formulaire:', formValues);
+            console.log('👥 Utilisateurs assignés:', assignedUsers);
+            console.log('📁 Fichiers de briefing:', briefingFiles.length);
+
             await onAddIntervention(formValues, assignedUsers, briefingFiles);
+
+            // Reset du formulaire uniquement en cas de succès
             setShowForm(false);
             setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
             setAssignedUsers([]);
             setBriefingFiles([]);
+
+            console.log('✅ Intervention créée avec succès');
         } catch (error) {
-            console.error("Erreur lors de la création de l'intervention:", error);
+            console.error('❌ Erreur lors de la création de l\'intervention:', error);
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // ✅ NOUVEAU : Gestionnaire pour annuler le formulaire
+    const handleCancelForm = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setShowForm(false);
+        setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
+        setAssignedUsers([]);
+        setBriefingFiles([]);
     };
 
     const getStatus = (intervention) => {
@@ -78,60 +128,163 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
             <div className="flex-between mb-6">
                 <h3>Gestion du Planning</h3>
-                <button onClick={() => setShowForm(!showForm)} className="btn btn-primary flex-center">
+                <button
+                    type="button"
+                    onClick={() => setShowForm(!showForm)}
+                    className="btn btn-primary flex-center"
+                    disabled={isSubmitting}
+                >
                     <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
                 </button>
             </div>
-            {/* CORRIGÉ: Le formulaire a été restauré */}
+
             {showForm && (
-                <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    <input name="client" value={formValues.client} onChange={handleInputChange} placeholder="Nom du client" required className="form-control"/>
-                    <input name="address" value={formValues.address} onChange={handleInputChange} placeholder="Adresse" required className="form-control"/>
-                    <input name="service" value={formValues.service} onChange={handleInputChange} placeholder="Service" required className="form-control"/>
-                    <div className="grid-2-cols">
-                        <input name="date" type="date" value={formValues.date} onChange={handleInputChange} required className="form-control"/>
-                        <input name="time" type="time" value={formValues.time} onChange={handleInputChange} required className="form-control"/>
-                    </div>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={() => setDateShortcut(0)} className="btn btn-secondary">Aujourd'hui</button>
-                        <button type="button" onClick={() => setDateShortcut(1)} className="btn btn-secondary">Demain</button>
-                    </div>
-                    <div>
-                        <label>Documents de préparation (PDF, images...)</label>
-                        <CustomFileInput multiple onChange={handleBriefingFilesChange} className="mt-2">
-                            Choisir des documents
-                        </CustomFileInput>
-                        {briefingFiles.length > 0 && (
-                            <ul className="file-preview-list">
-                                {briefingFiles.map((file, index) => (
-                                    <li key={index}>
-                                        <FileTextIcon className="file-preview-icon" />
-                                        <span>{file.name}</span>
-                                        <button type="button" onClick={() => handleRemoveFile(file.name)} className="btn-icon-danger">
-                                            <TrashIcon width={16} height={16} />
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                    <div>
-                        <label>Assigner à :</label>
-                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
-                            {users.filter(u => !u.is_admin).map(u => (
-                                <label key={u.id} className="flex items-center gap-2">
-                                    <input type="checkbox" checked={assignedUsers.includes(u.id)} onChange={() => handleUserAssignmentChange(u.id)} />
-                                    {u.full_name}
-                                </label>
-                            ))}
+                <div className="card-white mb-6">
+                    <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                        <input
+                            name="client"
+                            value={formValues.client}
+                            onChange={handleInputChange}
+                            placeholder="Nom du client"
+                            required
+                            className="form-control"
+                            disabled={isSubmitting}
+                        />
+
+                        <input
+                            name="address"
+                            value={formValues.address}
+                            onChange={handleInputChange}
+                            placeholder="Adresse"
+                            required
+                            className="form-control"
+                            disabled={isSubmitting}
+                        />
+
+                        <input
+                            name="service"
+                            value={formValues.service}
+                            onChange={handleInputChange}
+                            placeholder="Service"
+                            required
+                            className="form-control"
+                            disabled={isSubmitting}
+                        />
+
+                        <div className="grid-2-cols">
+                            <input
+                                name="date"
+                                type="date"
+                                value={formValues.date}
+                                onChange={handleInputChange}
+                                required
+                                className="form-control"
+                                disabled={isSubmitting}
+                            />
+                            <input
+                                name="time"
+                                type="time"
+                                value={formValues.time}
+                                onChange={handleInputChange}
+                                required
+                                className="form-control"
+                                disabled={isSubmitting}
+                            />
                         </div>
-                    </div>
-                    <button type="submit" className="btn btn-success w-full flex-center" disabled={isSubmitting}>
-                        {isSubmitting && <LoaderIcon className="animate-spin" />}
-                        {isSubmitting ? 'Ajout en cours...' : 'Ajouter l\'intervention'}
-                    </button>
-                </form>
+
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setDateShortcut(0)}
+                                className="btn btn-secondary"
+                                disabled={isSubmitting}
+                            >
+                                Aujourd'hui
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDateShortcut(1)}
+                                className="btn btn-secondary"
+                                disabled={isSubmitting}
+                            >
+                                Demain
+                            </button>
+                        </div>
+
+                        <div>
+                            <label>Documents de préparation (PDF, images...)</label>
+                            <CustomFileInput
+                                multiple
+                                onChange={handleBriefingFilesChange}
+                                disabled={isSubmitting}
+                                accept="image/*,application/pdf,.doc,.docx"
+                                className="mt-2"
+                            >
+                                {isSubmitting ? 'Traitement en cours...' : 'Choisir des documents'}
+                            </CustomFileInput>
+
+                            {briefingFiles.length > 0 && (
+                                <ul className="file-preview-list">
+                                    {briefingFiles.map((file, index) => (
+                                        <li key={`${file.name}-${index}`}>
+                                            <FileTextIcon className="file-preview-icon" />
+                                            <span>{file.name}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveFile(file.name)}
+                                                className="btn-icon-danger"
+                                                disabled={isSubmitting}
+                                                aria-label={`Supprimer ${file.name}`}
+                                            >
+                                                <TrashIcon width={16} height={16} />
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        <div>
+                            <label>Assigner à :</label>
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
+                                {users.filter(u => !u.is_admin).map(u => (
+                                    <label key={u.id} className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={assignedUsers.includes(u.id)}
+                                            onChange={() => handleUserAssignmentChange(u.id)}
+                                            disabled={isSubmitting}
+                                        />
+                                        {u.full_name}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{display: 'flex', gap: '0.75rem', marginTop: '1rem'}}>
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                className="btn btn-secondary flex-center"
+                                disabled={isSubmitting}
+                            >
+                                Annuler
+                            </button>
+
+                            <button
+                                type="submit"
+                                className="btn btn-success flex-center"
+                                disabled={isSubmitting}
+                                style={{flex: 1}}
+                            >
+                                {isSubmitting && <LoaderIcon className="animate-spin" />}
+                                {isSubmitting ? 'Ajout en cours...' : 'Ajouter l\'intervention'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
+
             <div className="card-white">
                 <ul className="document-list">
                     {interventions.map(int => {
