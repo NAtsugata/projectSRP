@@ -61,7 +61,6 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
     const fileInputRef = useRef(null);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -78,124 +77,44 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     const handleChange = (e) => {
         setIsSelecting(false);
         if (onChange && e.target.files) {
-            // ✅ IMPORTANT : Créer un nouvel événement pour éviter les problèmes de référence
             const event = {
                 ...e,
-                target: {
-                    ...e.target,
-                    files: e.target.files,
-                    value: e.target.value
-                }
+                target: { ...e.target, files: e.target.files, value: e.target.value }
             };
             onChange(event);
         }
     };
 
-    // ✅ NOUVEAU : Support du drag & drop (desktop uniquement)
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!disabled && !window.matchMedia('(max-width: 768px)').matches) {
-            setIsDragOver(true);
-        }
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Vérifier si on quitte vraiment l'élément
-        if (!e.currentTarget.contains(e.relatedTarget)) {
-            setIsDragOver(false);
-        }
-    };
-
+    const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); if (!disabled && !window.matchMedia('(max-width: 768px)').matches) { setIsDragOver(true); } };
+    const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget)) { setIsDragOver(false); } };
     const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
+        e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
         if (disabled || !onChange || window.matchMedia('(max-width: 768px)').matches) return;
-
         const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            // ✅ Créer un événement artificiel pour la compatibilité
-            const event = {
-                target: {
-                    files: files,
-                    value: ""
-                }
-            };
-            onChange(event);
-        }
+        if (files.length > 0) { const event = { target: { files: files, value: "" } }; onChange(event); }
     };
 
-    // ✅ NOUVEAU : Détection des erreurs mobiles
-    const handleError = (e) => {
-        console.warn('Erreur de sélection de fichier:', e);
-        setIsSelecting(false);
-    };
-
-    // ✅ NOUVEAU : Support des événements tactiles
-    const handleTouchStart = (e) => {
-        if (!disabled) {
-            e.currentTarget.style.backgroundColor = '#f0f9ff';
-        }
-    };
-
-    const handleTouchEnd = (e) => {
-        if (!disabled) {
-            e.currentTarget.style.backgroundColor = '';
-        }
-    };
+    const handleError = (e) => { console.warn('Erreur de sélection de fichier:', e); setIsSelecting(false); };
+    const handleTouchStart = (e) => { if (!disabled) { e.currentTarget.style.backgroundColor = '#f0f9ff'; } };
+    const handleTouchEnd = (e) => { if (!disabled) { e.currentTarget.style.backgroundColor = ''; } };
 
     return (
         <div className={className}>
             <input
-                ref={fileInputRef}
-                type="file"
-                accept={accept}
-                multiple={multiple}
-                onChange={handleChange}
-                onError={handleError}
-                disabled={disabled}
-                style={{ display: 'none' }}
-                // ✅ NOUVEAU : Attributs pour mobile
+                ref={fileInputRef} type="file" accept={accept} multiple={multiple} onChange={handleChange} onError={handleError} disabled={disabled} style={{ display: 'none' }}
                 capture={accept?.includes('image') ? "environment" : undefined}
             />
             <button
-                type="button"
-                onClick={handleClick}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-                disabled={disabled || isSelecting}
-                className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
-                style={{
-                    gap: '0.5rem',
-                    minHeight: '56px', // ✅ Plus grande zone tactile pour mobile
-                    border: isDragOver ? '2px solid #3b82f6' : '2px dashed #cbd5e1',
-                    backgroundColor: isDragOver ? '#f0f9ff' : (isSelecting ? '#e0f2fe' : ''),
-                    transition: 'all 0.2s ease',
-                    cursor: disabled ? 'not-allowed' : 'pointer'
-                }}
-                // ✅ CORRECTION WARNING : Retirer role="button" car redondant
-                aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-                tabIndex={disabled ? -1 : 0}
+                type="button" onClick={handleClick} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}
+                disabled={disabled || isSelecting} className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
+                style={{ gap: '0.5rem', minHeight: '56px', border: isDragOver ? '2px solid #3b82f6' : '2px dashed #cbd5e1', backgroundColor: isDragOver ? '#f0f9ff' : (isSelecting ? '#e0f2fe' : ''), transition: 'all 0.2s ease', cursor: disabled ? 'not-allowed' : 'pointer' }}
+                aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')} tabIndex={disabled ? -1 : 0}
             >
-                {isSelecting ? (
-                    <>
-                        <LoaderIcon />
-                        Sélection...
-                    </>
-                ) : (
+                {isSelecting ? ( <> <LoaderIcon /> Sélection... </> ) : (
                     <>
                         {multiple ? <FileIcon /> : <CameraIcon />}
                         {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-                        {isDragOver && !window.matchMedia('(max-width: 768px)').matches && (
-                            <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span>
-                        )}
+                        {isDragOver && !window.matchMedia('(max-width: 768px)').matches && ( <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span> )}
                     </>
                 )}
             </button>
@@ -239,5 +158,22 @@ export const LoaderIcon = ({ className }) => (
 export const ExpandIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+    </svg>
+);
+
+// ✅ AJOUT DES ICÔNES MANQUANTES
+export const RefreshCwIcon = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+    </svg>
+);
+
+export const XCircleIcon = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
     </svg>
 );
