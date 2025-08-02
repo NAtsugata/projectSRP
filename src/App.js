@@ -138,12 +138,21 @@ function App() {
     // ✅ NOUVEAU : Détection mobile
     const isMobile = useIsMobile();
 
+    // ✅ NOUVEAU : Flag pour éviter les refreshs en cascade
+    const [isManualRefresh, setIsManualRefresh] = useState(false);
+
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
     const showConfirmationModal = useCallback((config) => setModal(config), []);
 
     // ✅ FONCTION PRINCIPALE CORRIGÉE : Chargement optimisé mobile
-    const refreshData = useCallback(async (userProfile) => {
+    const refreshData = useCallback(async (userProfile, isManual = false) => {
         if (!userProfile) return;
+
+        // ✅ NOUVEAU : Éviter les refreshs en cascade sur mobile admin
+        if (isMobile && userProfile.is_admin && isManualRefresh && !isManual) {
+            console.log('🚫 Refresh temps réel ignoré sur mobile admin - refresh manuel en cours');
+            return;
+        }
 
         try {
             const isAdmin = userProfile.is_admin;
@@ -152,10 +161,13 @@ function App() {
             console.log('🔄 Démarrage chargement données', {
                 isMobile,
                 isAdmin,
+                isManual,
                 strategy: isMobile && isAdmin ? 'séquentiel mobile' : 'parallèle standard'
             });
 
-            if (isMobile && isAdmin) {
+            if (isMobile && isAdmin && isManual) {
+                setIsManualRefresh(true);
+
                 // ✅ CHARGEMENT SÉQUENTIEL OPTIMISÉ MOBILE ADMIN
                 console.log('📱 Mode mobile admin - Chargement séquentiel');
 
@@ -218,9 +230,16 @@ function App() {
                         setVaultDocuments(vaultRes.data || []);
                         setLoadingState(prev => ({ ...prev, vault: 'loaded' }));
                         console.log('✅ Documents chargés');
+
+                        // ✅ Fin du refresh manuel
+                        setTimeout(() => {
+                            setIsManualRefresh(false);
+                            console.log('🎯 Refresh manuel terminé - reprise du temps réel');
+                        }, 500);
                     } catch (error) {
                         console.error('❌ Erreur documents:', error);
                         setLoadingState(prev => ({ ...prev, vault: 'error' }));
+                        setIsManualRefresh(false);
                     }
                 }, 1200);
 
@@ -228,12 +247,14 @@ function App() {
                 // ✅ CHARGEMENT PARALLÈLE STANDARD (Desktop ou Employé)
                 console.log('💻 Mode standard - Chargement parallèle');
 
-                setLoadingState({
-                    interventions: 'loading',
-                    users: 'loading',
-                    leaves: 'loading',
-                    vault: 'loading'
-                });
+                if (!isManual) {
+                    setLoadingState({
+                        interventions: 'loading',
+                        users: 'loading',
+                        leaves: 'loading',
+                        vault: 'loading'
+                    });
+                }
 
                 const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
                     profileService.getAllProfiles(),
@@ -254,12 +275,14 @@ function App() {
                 if (vaultRes.error) throw vaultRes.error;
                 setVaultDocuments(vaultRes.data || []);
 
-                setLoadingState({
-                    interventions: 'loaded',
-                    users: 'loaded',
-                    leaves: 'loaded',
-                    vault: 'loaded'
-                });
+                if (!isManual) {
+                    setLoadingState({
+                        interventions: 'loaded',
+                        users: 'loaded',
+                        leaves: 'loaded',
+                        vault: 'loaded'
+                    });
+                }
 
                 console.log('✅ Toutes les données chargées en parallèle');
             }
@@ -273,8 +296,9 @@ function App() {
                 leaves: 'error',
                 vault: 'error'
             });
+            setIsManualRefresh(false);
         }
-    }, [showToast, isMobile]);
+    }, [showToast, isMobile, isManualRefresh]);
 
     useEffect(() => {
         const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => { setSession(sessionData); });
@@ -302,17 +326,22 @@ function App() {
 
     useEffect(() => {
         if (profile) {
-            refreshData(profile);
+            // ✅ Premier chargement manuel
+            refreshData(profile, true);
 
-            // ✅ OPTIMISATION : Réduction fréquence temps réel sur mobile
-            const updateInterval = isMobile && profile.is_admin ? 30000 : 10000; // 30s mobile admin vs 10s autres
+            // ✅ OPTIMISATION : Désactiver temps réel sur mobile admin pendant les interactions
+            if (isMobile && profile.is_admin) {
+                console.log('📱 Mobile admin détecté - Temps réel désactivé pour optimiser les performances');
+                return; // Pas de subscription temps réel sur mobile admin
+            }
+
+            // ✅ Temps réel seulement pour desktop ou employés
+            const updateInterval = 10000; // 10s standard
 
             const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' },
                 // ✅ Debounce pour éviter trop de mises à jour
                 debounce(() => {
-                    if (!isMobile || !profile.is_admin) {
-                        refreshData(profile);
-                    }
+                    refreshData(profile, false);
                 }, updateInterval)
             ).subscribe();
 
@@ -344,13 +373,28 @@ function App() {
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
-        else { showToast("Profil mis à jour."); }
+        else {
+            showToast("Profil mis à jour.");
+            // ✅ Refresh manuel uniquement si nécessaire
+            if (!isMobile || !profile.is_admin) {
+                refreshData(profile, true);
+            }
+        }
     };
 
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-        if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
-        else { showToast("Intervention ajoutée."); }
+        try {
+            const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
+            if (error) {
+                showToast(`Erreur création intervention: ${error.message}`, "error");
+            } else {
+                showToast("Intervention ajoutée.");
+                // ✅ Refresh manuel après création
+                refreshData(profile, true);
+            }
+        } catch (error) {
+            showToast(`Erreur création intervention: ${error.message}`, "error");
+        }
     };
 
     // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
@@ -369,7 +413,7 @@ function App() {
                 showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
             }
             navigate('/planning');
-            await refreshData(profile);
+            await refreshData(profile, true);
         }
     };
 
@@ -379,16 +423,24 @@ function App() {
             message: "Cette action est irréversible.",
             onConfirm: async () => {
                 const { error } = await interventionService.deleteIntervention(id);
-                if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Intervention supprimée."); }
+                if (error) {
+                    showToast("Erreur suppression.", "error");
+                } else {
+                    showToast("Intervention supprimée.");
+                    refreshData(profile, true);
+                }
             }
         });
     };
 
     const handleArchiveIntervention = async (id) => {
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
-        if (error) { showToast("Erreur archivage.", "error"); }
-        else { showToast("Intervention archivée."); }
+        if (error) {
+            showToast("Erreur archivage.", "error");
+        } else {
+            showToast("Intervention archivée.");
+            refreshData(profile, true);
+        }
     };
 
     const handleUpdateLeaveStatus = (id, status) => {
@@ -400,14 +452,22 @@ function App() {
                 inputLabel: "Motif du refus",
                 onConfirm: async (reason) => {
                     const { error } = await leaveService.updateRequestStatus(id, status, reason);
-                    if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                    else { showToast("Statut de la demande mis à jour."); }
+                    if (error) {
+                        showToast("Erreur mise à jour congé.", "error");
+                    } else {
+                        showToast("Statut de la demande mis à jour.");
+                        refreshData(profile, true);
+                    }
                 }
             });
         } else {
             leaveService.updateRequestStatus(id, status).then(({error}) => {
-                if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                else { showToast("Statut de la demande mis à jour."); }
+                if (error) {
+                    showToast("Erreur mise à jour congé.", "error");
+                } else {
+                    showToast("Statut de la demande mis à jour.");
+                    refreshData(profile, true);
+                }
             });
         }
     };
@@ -418,16 +478,24 @@ function App() {
             message: "Cette action est irréversible.",
             onConfirm: async () => {
                 const { error } = await leaveService.deleteLeaveRequest(id);
-                if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Demande supprimée."); }
+                if (error) {
+                    showToast("Erreur suppression.", "error");
+                } else {
+                    showToast("Demande supprimée.");
+                    refreshData(profile, true);
+                }
             }
         });
     };
 
     const handleSubmitLeaveRequest = async (requestData) => {
         const { error } = await leaveService.createLeaveRequest(requestData);
-        if (error) { showToast("Erreur envoi demande.", "error"); }
-        else { showToast("Demande de congé envoyée."); }
+        if (error) {
+            showToast("Erreur envoi demande.", "error");
+        } else {
+            showToast("Demande de congé envoyée.");
+            refreshData(profile, true);
+        }
     };
 
     const handleSendDocument = async ({ file, userId, name }) => {
@@ -436,7 +504,7 @@ function App() {
             if (uploadError) throw uploadError;
             const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
             if (dbError) throw dbError;
-            await refreshData(profile);
+            await refreshData(profile, true);
             showToast("Document envoyé avec succès.");
         } catch (error) {
             console.error("Erreur lors de l'envoi du document:", error);
@@ -454,7 +522,7 @@ function App() {
                     showToast("Erreur lors de la suppression : " + error.message, "error");
                 } else {
                     showToast("Document supprimé.");
-                    await refreshData(profile);
+                    await refreshData(profile, true);
                 }
             }
         });
@@ -467,7 +535,7 @@ function App() {
                 throw error;
             }
             showToast("Documents de préparation ajoutés avec succès.");
-            await refreshData(profile);
+            await refreshData(profile, true);
         } catch (error) {
             showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
             throw error;
