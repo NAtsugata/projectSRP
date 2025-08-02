@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useId } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 // --- Icônes SVG ---
 export const FolderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
@@ -61,23 +61,37 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
     );
 };
 
-// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput - CORRIGÉ
-// Correction: Utilisation d'une <label> pour une compatibilité mobile maximale.
+// ✅ COMPOSANT OPTIMISÉ MOBILE : CustomFileInput
 export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = "" }) => {
-    const inputId = useId(); // Hook pour générer un ID unique.
+    const fileInputRef = useRef(null);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [isSelecting, setIsSelecting] = useState(false);
 
-    // La logique de clic manuel est supprimée car la <label> s'en charge nativement.
+    const handleClick = (e) => {
+        e.preventDefault();
+        if (!disabled && fileInputRef.current && !isSelecting) {
+            setIsSelecting(true);
+            fileInputRef.current.click();
+        }
+    };
 
     const handleChange = (e) => {
+        setIsSelecting(false);
         if (onChange && e.target.files) {
-            // On s'assure que l'événement est bien propagé au composant parent.
-            const event = { ...e, target: { ...e.target, files: e.target.files, value: e.target.value } };
+            // ✅ IMPORTANT : Créer un nouvel événement pour éviter les problèmes de référence
+            const event = {
+                ...e,
+                target: {
+                    ...e.target,
+                    files: e.target.files,
+                    value: e.target.value
+                }
+            };
             onChange(event);
         }
     };
 
-    // La gestion du drag & drop est conservée pour le desktop.
+    // ✅ NOUVEAU : Support du drag & drop (desktop uniquement)
     const handleDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -89,6 +103,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     const handleDragLeave = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Vérifier si on quitte vraiment l'élément
         if (!e.currentTarget.contains(e.relatedTarget)) {
             setIsDragOver(false);
         }
@@ -103,12 +118,24 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
 
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            const event = { target: { files: files, value: "" } };
+            // ✅ Créer un événement artificiel pour la compatibilité
+            const event = {
+                target: {
+                    files: files,
+                    value: ""
+                }
+            };
             onChange(event);
         }
     };
 
-    // Effets visuels au toucher pour une meilleure UX mobile.
+    // ✅ NOUVEAU : Détection des erreurs mobiles
+    const handleError = (e) => {
+        console.warn('Erreur de sélection de fichier:', e);
+        setIsSelecting(false);
+    };
+
+    // ✅ NOUVEAU : Support des événements tactiles
     const handleTouchStart = (e) => {
         if (!disabled) {
             e.currentTarget.style.backgroundColor = '#f0f9ff';
@@ -124,46 +151,57 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     return (
         <div className={className}>
             <input
-                id={inputId} // L'ID est assigné ici.
+                ref={fileInputRef}
                 type="file"
                 accept={accept}
                 multiple={multiple}
                 onChange={handleChange}
+                onError={handleError}
                 disabled={disabled}
-                style={{ display: 'none' }} // L'input reste caché.
+                style={{ display: 'none' }}
+                // ✅ NOUVEAU : Attributs pour mobile
                 capture={accept?.includes('image') ? "environment" : undefined}
             />
-            {/* La balise <label> remplace le <div> cliquable. */}
-            <label
-                htmlFor={inputId} // `htmlFor` lie le label à l'input, assurant le déclenchement natif.
+            <button
+                type="button"
+                onClick={handleClick}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
-                className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''}`}
+                disabled={disabled || isSelecting}
+                className={`btn btn-secondary w-full flex-center ${isDragOver ? 'drag-over' : ''} ${isSelecting ? 'selecting' : ''}`}
                 style={{
                     gap: '0.5rem',
-                    minHeight: '56px',
+                    minHeight: '56px', // ✅ Plus grande zone tactile pour mobile
                     border: isDragOver ? '2px solid #3b82f6' : '2px dashed #cbd5e1',
-                    backgroundColor: isDragOver ? '#f0f9ff' : '',
+                    backgroundColor: isDragOver ? '#f0f9ff' : (isSelecting ? '#e0f2fe' : ''),
                     transition: 'all 0.2s ease',
                     cursor: disabled ? 'not-allowed' : 'pointer'
                 }}
+                // ✅ CORRECTION WARNING : Retirer role="button" car redondant
+                aria-label={children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
                 tabIndex={disabled ? -1 : 0}
             >
-                <>
-                    {multiple ? <FileIcon /> : <CameraIcon />}
-                    {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
-                    {isDragOver && !window.matchMedia('(max-width: 768px)').matches && (
-                        <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span>
-                    )}
-                </>
-            </label>
+                {isSelecting ? (
+                    <>
+                        <LoaderIcon />
+                        Sélection...
+                    </>
+                ) : (
+                    <>
+                        {multiple ? <FileIcon /> : <CameraIcon />}
+                        {children || (multiple ? 'Choisir des fichiers' : 'Choisir un fichier')}
+                        {isDragOver && !window.matchMedia('(max-width: 768px)').matches && (
+                            <span style={{fontSize: '0.8rem', opacity: 0.8}}> - Relâchez ici</span>
+                        )}
+                    </>
+                )}
+            </button>
         </div>
     );
 };
-
 
 // --- Icônes pour la vue d'intervention ---
 
