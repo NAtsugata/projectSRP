@@ -63,6 +63,8 @@ function App() {
     const [vaultDocuments, setVaultDocuments] = useState([]);
     const [toast, setToast] = useState(null);
     const [modal, setModal] = useState(null);
+    // MODIFIÉ: Ajout d'un état pour "verrouiller" le rafraîchissement pendant les envois
+    const [isDataProcessing, setIsDataProcessing] = useState(false);
     const navigate = useNavigate();
 
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
@@ -119,21 +121,22 @@ function App() {
         }
     }, [session, showToast]);
 
-    // MODIFIÉ: La gestion du temps réel est ajustée pour la stabilité
+    // MODIFIÉ: Le rafraîchissement temps réel est maintenant conditionnel
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            // L'abonnement temps réel est conservé, mais le rafraîchissement automatique
-            // qui causait les bugs a été désactivé. Le rafraîchissement est maintenant
-            // géré manuellement après chaque action de l'utilisateur.
             const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                console.log('Changement détecté, rafraîchissement global désactivé pour la stabilité:', payload);
-                // La ligne ci-dessous a été volontairement désactivée pour corriger le bug.
-                // refreshData(profile);
+                // Le rafraîchissement automatique ne se produit que si aucune opération (upload, etc.) n'est en cours.
+                if (!isDataProcessing) {
+                    console.log('Changement détecté, rafraîchissement...', payload);
+                    refreshData(profile);
+                } else {
+                    console.log('Changement détecté, mais rafraîchissement ignoré car une opération est en cours.');
+                }
             }).subscribe();
             return () => { supabase.removeChannel(sub); };
         }
-    }, [profile, refreshData]);
+    }, [profile, refreshData, isDataProcessing]);
 
     const handleLogout = async () => {
         const { error } = await authService.signOut();
@@ -143,37 +146,50 @@ function App() {
         navigate('/login');
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
         if (error) { showToast("Erreur mise à jour profil.", "error"); }
         else { showToast("Profil mis à jour."); await refreshData(profile); }
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
+    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-        if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
-        else { showToast("Intervention ajoutée."); await refreshData(profile); }
-    };
-
-    const handleUpdateInterventionReport = async (interventionId, report) => {
-        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-        const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
-        if (error) {
-            showToast("Erreur sauvegarde rapport.", "error");
-        } else {
-            if (newStatus === 'Terminée') {
-                showToast("Rapport sauvegardé et intervention clôturée.");
+        setIsDataProcessing(true);
+        try {
+            const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
+            if (error) {
+                showToast(`Erreur création intervention: ${error.message}`, "error");
             } else {
-                showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
+                showToast("Intervention ajoutée.");
+                await refreshData(profile);
             }
-            navigate('/planning');
-            await refreshData(profile);
+        } finally {
+            setIsDataProcessing(false);
         }
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
+    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
+    const handleUpdateInterventionReport = async (interventionId, report) => {
+        setIsDataProcessing(true);
+        try {
+            const newStatus = report.departureTime ? 'Terminée' : 'En cours';
+            const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+            if (error) {
+                showToast("Erreur sauvegarde rapport.", "error");
+            } else {
+                if (newStatus === 'Terminée') {
+                    showToast("Rapport sauvegardé et intervention clôturée.");
+                } else {
+                    showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
+                }
+                navigate('/planning');
+                await refreshData(profile);
+            }
+        } finally {
+            setIsDataProcessing(false);
+        }
+    };
+
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
             title: "Supprimer l'intervention ?",
@@ -186,14 +202,12 @@ function App() {
         });
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleArchiveIntervention = async (id) => {
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
         if (error) { showToast("Erreur archivage.", "error"); }
         else { showToast("Intervention archivée."); await refreshData(profile); }
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleUpdateLeaveStatus = (id, status) => {
         if (status === 'Rejeté') {
             showConfirmationModal({
@@ -215,7 +229,6 @@ function App() {
         }
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleDeleteLeaveRequest = (id) => {
         showConfirmationModal({
             title: "Supprimer la demande ?",
@@ -228,24 +241,27 @@ function App() {
         });
     };
 
-    // MODIFIÉ: Ajout d'un rafraîchissement manuel après l'action.
     const handleSubmitLeaveRequest = async (requestData) => {
         const { error } = await leaveService.createLeaveRequest(requestData);
         if (error) { showToast("Erreur envoi demande.", "error"); }
         else { showToast("Demande de congé envoyée."); await refreshData(profile); }
     };
 
+    // MODIFIÉ: Encadrement de l'opération avec le verrou de traitement
     const handleSendDocument = async ({ file, userId, name }) => {
+        setIsDataProcessing(true);
         try {
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
             if (uploadError) throw uploadError;
             const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
             if (dbError) throw dbError;
-            await refreshData(profile);
             showToast("Document envoyé avec succès.");
+            await refreshData(profile);
         } catch (error) {
             console.error("Erreur lors de l'envoi du document:", error);
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
+        } finally {
+            setIsDataProcessing(false);
         }
     };
 
@@ -266,6 +282,7 @@ function App() {
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
+        setIsDataProcessing(true);
         try {
             const { error } = await interventionService.addBriefingDocuments(interventionId, files);
             if (error) {
@@ -276,6 +293,8 @@ function App() {
         } catch (error) {
             showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
             throw error;
+        } finally {
+            setIsDataProcessing(false);
         }
     };
 
