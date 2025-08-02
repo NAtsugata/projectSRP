@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
 // CORRIGÉ: On importe bien 'storageService' qui était manquant
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
@@ -141,17 +141,35 @@ function App() {
     // ✅ NOUVEAU : Flag pour éviter les refreshs en cascade
     const [isManualRefresh, setIsManualRefresh] = useState(false);
 
+    // ✅ CORRECTION BOUCLE INFINIE : Ref pour tracker les refreshs
+    const refreshTimeoutRef = useRef(null);
+    const lastRefreshRef = useRef(0);
+
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
     const showConfirmationModal = useCallback((config) => setModal(config), []);
 
-    // ✅ FONCTION PRINCIPALE CORRIGÉE : Chargement optimisé mobile
+    // ✅ CORRECTION BOUCLE INFINIE : Fonction stable avec deps fixes
     const refreshData = useCallback(async (userProfile, isManual = false) => {
         if (!userProfile) return;
+
+        // ✅ PROTECTION ANTI-SPAM : Éviter les refreshs trop rapprochés
+        const now = Date.now();
+        if (!isManual && (now - lastRefreshRef.current) < 5000) {
+            console.log('🚫 Refresh trop récent, ignoré');
+            return;
+        }
+        lastRefreshRef.current = now;
 
         // ✅ NOUVEAU : Éviter les refreshs en cascade sur mobile admin
         if (isMobile && userProfile.is_admin && isManualRefresh && !isManual) {
             console.log('🚫 Refresh temps réel ignoré sur mobile admin - refresh manuel en cours');
             return;
+        }
+
+        // ✅ Annuler le refresh précédent s'il y en a un
+        if (refreshTimeoutRef.current) {
+            clearTimeout(refreshTimeoutRef.current);
+            refreshTimeoutRef.current = null;
         }
 
         try {
@@ -192,7 +210,7 @@ function App() {
                 }
 
                 // 2. Attendre 400ms puis charger utilisateurs
-                setTimeout(async () => {
+                refreshTimeoutRef.current = setTimeout(async () => {
                     setLoadingState(prev => ({ ...prev, users: 'loading' }));
                     try {
                         const profilesRes = await profileService.getAllProfiles();
@@ -207,7 +225,7 @@ function App() {
                 }, 400);
 
                 // 3. Attendre 800ms puis charger congés
-                setTimeout(async () => {
+                refreshTimeoutRef.current = setTimeout(async () => {
                     setLoadingState(prev => ({ ...prev, leaves: 'loading' }));
                     try {
                         const leavesRes = await leaveService.getLeaveRequests(null);
@@ -222,7 +240,7 @@ function App() {
                 }, 800);
 
                 // 4. Attendre 1200ms puis charger coffre-fort
-                setTimeout(async () => {
+                refreshTimeoutRef.current = setTimeout(async () => {
                     setLoadingState(prev => ({ ...prev, vault: 'loading' }));
                     try {
                         const vaultRes = await vaultService.getVaultDocuments();
@@ -298,7 +316,7 @@ function App() {
             });
             setIsManualRefresh(false);
         }
-    }, [showToast, isMobile, isManualRefresh]);
+    }, [showToast]); // ✅ CORRECTION : Dépendances fixes - pas de isMobile ou isManualRefresh
 
     useEffect(() => {
         const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => { setSession(sessionData); });
@@ -324,43 +342,48 @@ function App() {
         }
     }, [session, showToast]);
 
+    // ✅ CORRECTION BOUCLE INFINIE : useEffect séparé et stable
     useEffect(() => {
-        if (profile) {
-            // ✅ Premier chargement manuel
-            refreshData(profile, true);
+        if (!profile) return;
 
-            // ✅ OPTIMISATION : Désactiver temps réel sur mobile admin pendant les interactions
-            if (isMobile && profile.is_admin) {
-                console.log('📱 Mobile admin détecté - Temps réel désactivé pour optimiser les performances');
-                return; // Pas de subscription temps réel sur mobile admin
-            }
+        console.log('🔄 Setup initial des données pour:', profile.full_name);
 
-            // ✅ Temps réel seulement pour desktop ou employés
-            const updateInterval = 10000; // 10s standard
+        // ✅ Premier chargement manuel
+        refreshData(profile, true);
 
-            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' },
-                // ✅ Debounce pour éviter trop de mises à jour
-                debounce(() => {
-                    refreshData(profile, false);
-                }, updateInterval)
-            ).subscribe();
-
-            return () => { supabase.removeChannel(sub); };
+        // ✅ OPTIMISATION : Désactiver temps réel sur mobile admin pendant les interactions
+        if (isMobile && profile.is_admin) {
+            console.log('📱 Mobile admin détecté - Temps réel désactivé pour optimiser les performances');
+            return; // Pas de subscription temps réel sur mobile admin
         }
-    }, [profile, refreshData, isMobile]);
 
-    // ✅ FONCTION UTILITAIRE : Debounce
-    const debounce = (func, wait) => {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
+        // ✅ Temps réel seulement pour desktop ou employés
+        console.log('⏰ Setup temps réel pour:', profile.full_name);
+
+        // ✅ FONCTION DEBOUNCE STABLE
+        const debouncedRefresh = (() => {
+            let timeout;
+            return () => {
                 clearTimeout(timeout);
-                func(...args);
+                timeout = setTimeout(() => {
+                    refreshData(profile, false);
+                }, 5000); // 5s de debounce
             };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+        })();
+
+        const sub = supabase.channel('public-changes').on('postgres_changes', {
+            event: '*',
+            schema: 'public'
+        }, debouncedRefresh).subscribe();
+
+        return () => {
+            console.log('🔄 Nettoyage subscription temps réel');
+            supabase.removeChannel(sub);
+            if (refreshTimeoutRef.current) {
+                clearTimeout(refreshTimeoutRef.current);
+            }
         };
-    };
+    }, [profile?.id, isMobile, profile?.is_admin]); // ✅ Deps stables
 
     const handleLogout = async () => {
         const { error } = await authService.signOut();
@@ -376,9 +399,7 @@ function App() {
         else {
             showToast("Profil mis à jour.");
             // ✅ Refresh manuel uniquement si nécessaire
-            if (!isMobile || !profile.is_admin) {
-                refreshData(profile, true);
-            }
+            refreshData(profile, true);
         }
     };
 
@@ -413,7 +434,8 @@ function App() {
                 showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
             }
             navigate('/planning');
-            await refreshData(profile, true);
+            // ✅ Refresh après update
+            refreshData(profile, true);
         }
     };
 
