@@ -1,7 +1,26 @@
-// src/components/FileUploader.js
 import React, { useState, useRef } from 'react';
 
-export default function FileUploader({ onUploadComplete, multiple = false, disabled = false, children = "Choisir un fichier" }) {
+/**
+ * Un composant de téléversement de fichiers robuste et réutilisable.
+ *
+ * @param {object} props
+ * @param {(fileInfo: {name: string, url: string, type: string}) => void} [props.onFileUploadSuccess] - Callback pour chaque fichier téléversé avec succès.
+ * @param {(errorInfo: {name: string, message: string}) => void} [props.onFileUploadError] - Callback pour chaque fichier qui a échoué.
+ * @param {(isUploading: boolean) => void} [props.onQueueStateChange] - Callback qui se déclenche au début et à la fin du traitement de la file d'attente.
+ * @param {boolean} [props.multiple=false] - Autorise la sélection de plusieurs fichiers.
+ * @param {boolean} [props.disabled=false] - Désactive le bouton.
+ * @param {React.ReactNode} [props.children="Choisir un fichier"] - Le contenu du bouton.
+ * @param {string} [props.className="btn btn-primary"] - Classes CSS pour styliser le label/bouton.
+ */
+export default function FileUploader({
+    onFileUploadSuccess,
+    onFileUploadError,
+    onQueueStateChange,
+    multiple = false,
+    disabled = false,
+    children = "Choisir un fichier",
+    className = "btn btn-primary"
+}) {
     const [isUploading, setIsUploading] = useState(false);
     const inputFileRef = useRef(null);
 
@@ -11,46 +30,68 @@ export default function FileUploader({ onUploadComplete, multiple = false, disab
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
+        if (onQueueStateChange) onQueueStateChange(true);
 
-        const uploadPromises = Array.from(files).map(file => {
-            return fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-                method: 'POST',
-                body: file,
-            }).then(response => {
+        // Traiter les fichiers séquentiellement pour plus de robustesse sur mobile
+        for (const file of files) {
+            try {
+                // Utilise l'API /api/upload comme dans la version originale
+                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                    method: 'POST',
+                    body: file,
+                    headers: {
+                        'Content-Type': file.type || 'application/octet-stream'
+                    }
+                });
+
                 if (!response.ok) {
-                    console.error('API Response:', response);
-                    throw new Error(`Échec pour ${file.name}`);
+                    // Tente de récupérer un message d'erreur clair depuis le serveur
+                    const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+                    throw new Error(errorBody.message || `Erreur serveur: ${response.status}`);
                 }
-                return response.json();
-            });
-        });
 
-        try {
-            const uploadedBlobs = await Promise.all(uploadPromises);
-            const newUrls = uploadedBlobs.map(blob => blob.url);
-            if (onUploadComplete) {
-                onUploadComplete(newUrls);
+                const result = await response.json();
+
+                // Appelle le callback de succès pour ce fichier spécifique
+                if (onFileUploadSuccess) {
+                    onFileUploadSuccess({
+                        name: file.name,
+                        url: result.url,
+                        type: file.type
+                    });
+                }
+            } catch (err) {
+                console.error(`Échec du téléversement pour ${file.name}:`, err);
+                // Appelle le callback d'erreur pour ce fichier spécifique
+                if (onFileUploadError) {
+                    onFileUploadError({
+                        name: file.name,
+                        message: err.message
+                    });
+                }
             }
-        } catch (err) {
-            console.error("Erreur lors de l'upload:", err);
-        } finally {
-            setIsUploading(false);
-            if (inputFileRef.current) {
-                inputFileRef.current.value = '';
-            }
+        }
+
+        // Tous les fichiers ont été traités
+        setIsUploading(false);
+        if (onQueueStateChange) onQueueStateChange(false);
+
+        // Réinitialise l'input pour permettre de resélectionner le même fichier
+        if (inputFileRef.current) {
+            inputFileRef.current.value = '';
         }
     };
 
-    // On utilise un label stylisé qui déclenche l'input caché
+    // On utilise un label stylisé qui déclenche l'input qui, lui, est caché.
     return (
-        <label className={`btn btn-primary ${disabled || isUploading ? 'disabled' : ''}`}>
+        <label className={`${className} ${disabled || isUploading ? 'disabled' : ''}`}>
             <input
                 type="file"
                 multiple={multiple}
                 onChange={handleFileChange}
                 disabled={disabled || isUploading}
                 ref={inputFileRef}
-                style={{ display: 'none' }} // L'input est caché
+                style={{ display: 'none' }} // L'input est invisible
             />
             {isUploading ? 'Envoi en cours...' : children}
         </label>
