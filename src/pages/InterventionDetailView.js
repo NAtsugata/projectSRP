@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
-// ✅ CustomFileInput a été retiré des imports car il n'est plus utilisé ici.
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
 
 // Le composant SignatureModal reste inchangé, il est bien conçu.
@@ -53,7 +52,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
 
-    // ✅ NOUVEAU: Référence pour l'input de fichier caché
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -164,8 +162,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         <div>
             {showSignatureModal && <SignatureModal onSave={handleSaveSignatureFromModal} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
             <style>{`
-                .document-list-detailed, .upload-queue-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-                .document-list-detailed li, .upload-queue-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; min-height: 60px; }
+                .document-list-detailed, .upload-queue-list, .document-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+                .document-list-detailed li, .upload-queue-list li, .document-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; min-height: 60px; }
+                .document-list li span { flex-grow: 1; }
                 .document-thumbnail { width: 40px; height: 40px; object-fit: cover; border-radius: 0.25rem; background-color: #e9ecef; }
                 .upload-status-icon { width: 24px; height: 24px; flex-shrink: 0; }
                 .upload-status-icon.success { color: #28a745; } .upload-status-icon.error { color: #dc3545; }
@@ -181,7 +180,39 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
-                {/* ... Autres sections ... */}
+
+                {/* ✅ AFFICHAGE RESTAURÉ */}
+                <div className="section">
+                    <h3>Documents de préparation</h3>
+                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
+                        <ul className="document-list">
+                            {intervention.intervention_briefing_documents.map(doc => (
+                                <li key={doc.id}>
+                                    <span>{doc.file_name}</span>
+                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary"><DownloadIcon/> Voir</a>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-muted">Aucun document de préparation.</p>}
+                </div>
+
+                <div className="section">
+                    <h3>Pointage</h3>
+                    <div className="grid-2-cols">
+                        <button onClick={() => handleReportChange('arrivalTime', new Date().toISOString())} className="btn btn-success" disabled={!!report.arrivalTime || isAdmin}>Arrivée sur site</button>
+                        <button onClick={() => handleReportChange('departureTime', new Date().toISOString())} className="btn btn-danger" disabled={!report.arrivalTime || !!report.departureTime || isAdmin}>Départ du site</button>
+                    </div>
+                    <div className="time-display">
+                        <p>Heure d'arrivée: <span>{formatTime(report.arrivalTime)}</span></p>
+                        <p>Heure de départ: <span>{formatTime(report.departureTime)}</span></p>
+                    </div>
+                </div>
+
+                <div className="section">
+                    <h3>Rapport de chantier</h3>
+                    <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails de l'intervention..." rows="4" className="form-control" readOnly={isAdmin}></textarea>
+                </div>
+
                 <div className="section">
                     <h3>Photos et Documents du Rapport</h3>
                     <ul className="document-list-detailed">
@@ -215,7 +246,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                             </ul>
                         </div>
                     )}
-                    {/* ✅ NOUVELLE MÉTHODE DE SÉLECTION DE FICHIER */}
+
                     {!isAdmin && (
                         <div className="mt-4">
                             <input
@@ -238,7 +269,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
                 </div>
-                {/* ... Section signature ... */}
+
                 <div className="section">
                     <h3>Signature du client</h3>
                     {isAdmin && report.signature ? <img src={report.signature} alt="Signature client" style={{border: '1px solid #ccc', borderRadius: '0.375rem', maxWidth: '100%'}} /> : (
