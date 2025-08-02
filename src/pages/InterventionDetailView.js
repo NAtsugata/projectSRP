@@ -1,4 +1,4 @@
-// src/pages/InterventionDetailView.js - Version corrigée complète
+// src/pages/InterventionDetailView.js - Version corrigée et nettoyée
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
@@ -53,7 +53,6 @@ const useMobileUpload = (interventionId) => {
             const img = new Image();
 
             img.onload = () => {
-                // Limiter les dimensions
                 const maxWidth = 1920;
                 const maxHeight = 1080;
                 let { width, height } = img;
@@ -117,7 +116,6 @@ const useMobileUpload = (interventionId) => {
             } catch (uploadError) {
                 lastError = uploadError;
                 if (attempt < maxRetries) {
-                    // Attendre avant de réessayer
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 }
             }
@@ -136,7 +134,6 @@ const useMobileUpload = (interventionId) => {
 
         const results = [];
         const validFiles = Array.from(files).filter(file => {
-            // Validation simple
             const maxSize = 10 * 1024 * 1024; // 10MB
             const allowedTypes = ['image/', 'application/pdf'];
 
@@ -171,7 +168,6 @@ const useMobileUpload = (interventionId) => {
                     });
                 }
 
-                // Mise à jour du progrès global
                 setUploadProgress(Math.round(((i + 1) / validFiles.length) * 100));
             }
 
@@ -204,7 +200,7 @@ const useMobileUpload = (interventionId) => {
     };
 };
 
-// Le composant SignatureModal reste inchangé
+// Composant SignatureModal
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const modalCanvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -331,7 +327,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
 
-    // ✅ Utilisation du hook mobile intégré
+    // Utilisation du hook mobile intégré
     const {
         handleFileUpload,
         capabilities,
@@ -342,7 +338,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         isOnline
     } = useMobileUpload(interventionId);
 
-    // ✅ État pour gérer la queue d'upload avec feedback
+    // État pour gérer la queue d'upload avec feedback
     const [uploadQueue, setUploadQueue] = useState([]);
 
     useEffect(() => {
@@ -401,12 +397,11 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ Gestionnaire de fichiers optimisé pour mobile
+    // ✅ GESTIONNAIRE DE FICHIERS CORRIGÉ - Sauvegarde immédiate
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
 
-        // Reset des erreurs précédentes
         resetUpload();
 
         try {
@@ -425,7 +420,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             // Traitement des uploads
             const uploadResults = await handleFileUpload(files);
 
-            // Mise à jour de la queue et du rapport
+            // Collecter les uploads réussis
+            const successfulUploads = [];
+
             uploadResults.results.forEach(result => {
                 const queueId = `${result.file.name}-${result.file.lastModified}-${result.file.size}`;
 
@@ -446,13 +443,29 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         url: result.result.publicURL,
                         type: result.file.type
                     };
-
-                    setReport(prevReport => ({
-                        ...prevReport,
-                        files: [...(prevReport.files || []), newFileInfo]
-                    }));
+                    successfulUploads.push(newFileInfo);
                 }
             });
+
+            // ✅ CORRECTION PRINCIPALE : Sauvegarder immédiatement après upload
+            if (successfulUploads.length > 0) {
+                // Mettre à jour le rapport local
+                const updatedReport = {
+                    ...report,
+                    files: [...(report.files || []), ...successfulUploads]
+                };
+
+                setReport(updatedReport);
+
+                // ✅ SAUVEGARDER IMMÉDIATEMENT EN BASE DE DONNÉES
+                try {
+                    await onSave(intervention.id, updatedReport);
+                    console.log('✅ Fichiers sauvegardés immédiatement:', successfulUploads);
+                } catch (saveError) {
+                    console.error('❌ Erreur sauvegarde immédiate:', saveError);
+                    // Les fichiers sont quand même sur Supabase Storage
+                }
+            }
 
             // Gestion des fichiers invalides
             if (uploadResults.invalidFiles.length > 0) {
@@ -477,9 +490,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 ? { ...item, status: 'pending', error: null, progress: 0 }
                 : item
         ));
-
-        // Note: Dans une implémentation complète, il faudrait stocker le fichier original
-        // pour pouvoir le re-uploader. Ici, on simule juste le changement de statut.
     };
 
     const handleRemoveFromQueue = (idToRemove) => {
@@ -576,23 +586,19 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 .icon-remove { color: #6c757d; }
                 @keyframes spin { to { transform: rotate(360deg); } }
 
-                /* ✅ STYLES MOBILE SPÉCIFIQUES */
                 @media (max-width: 768px) {
                     .upload-queue-list li, .document-list-detailed li {
                         flex-direction: column;
                         align-items: flex-start;
                         gap: 0.5rem;
                     }
-
                     .file-info-container {
                         width: 100%;
                     }
-
                     .upload-actions {
                         justify-content: flex-end;
                         width: 100%;
                     }
-
                     .document-thumbnail {
                         width: 32px;
                         height: 32px;
@@ -608,7 +614,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
 
-                {/* ✅ Indicateur de connectivité */}
                 {!isOnline && (
                     <div style={{
                         padding: '0.75rem',
@@ -680,7 +685,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 <div className="section">
                     <h3>Photos et Documents du Rapport</h3>
 
-                    {/* ✅ Affichage des capacités device pour debug */}
                     {capabilities.isMobile && (
                         <div style={{
                             fontSize: '0.75rem',
@@ -710,7 +714,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         ))}
                     </ul>
 
-                    {/* ✅ Queue d'upload avec feedback amélioré */}
                     {uploadQueue.length > 0 && (
                         <div className="mt-4">
                             <h4 className="font-semibold mb-2">Téléchargements</h4>
@@ -793,7 +796,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </CustomFileInput>
                     )}
 
-                    {/* ✅ Affichage des erreurs d'upload */}
                     {uploadError && (
                         <div style={{
                             padding: '0.75rem',

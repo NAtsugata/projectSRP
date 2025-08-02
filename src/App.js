@@ -147,25 +147,36 @@ function App() {
         else { showToast("Intervention ajoutée."); }
     };
 
-    // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
     const handleUpdateInterventionReport = async (interventionId, report) => {
-        // Détermine le nouveau statut en fonction du rapport
-        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
+    // Détermine le nouveau statut en fonction du rapport
+    const newStatus = report.departureTime ? 'Terminée' :
+                     report.arrivalTime ? 'En cours' :
+                     'À venir';
 
-        const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
+    // ✅ CORRECTION : Toujours sauvegarder le rapport, même sans changement de statut
+    const { error } = await interventionService.updateIntervention(interventionId, {
+        report,
+        status: newStatus
+    });
 
-        if (error) {
-            showToast("Erreur sauvegarde rapport.", "error");
+    if (error) {
+        showToast("Erreur sauvegarde rapport.", "error");
+        console.error("Erreur sauvegarde:", error);
+    } else {
+        // Messages adaptatifs selon le contexte
+        if (report.departureTime && newStatus === 'Terminée') {
+            showToast("Rapport sauvegardé et intervention clôturée.");
+        } else if (report.arrivalTime && newStatus === 'En cours') {
+            showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
         } else {
-            if (newStatus === 'Terminée') {
-                showToast("Rapport sauvegardé et intervention clôturée.");
-            } else {
-                showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
-            }
-            navigate('/planning');
-            await refreshData(profile);
+            // ✅ NOUVEAU : Message pour sauvegarde de fichiers
+            showToast("Rapport et fichiers sauvegardés.");
         }
-    };
+
+        // ✅ IMPORTANT : Rafraîchir les données pour voir les changements
+        await refreshData(profile);
+    }
+};
 
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
