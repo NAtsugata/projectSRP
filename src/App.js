@@ -72,6 +72,8 @@ function App() {
     const refreshData = useCallback(async (userProfile) => {
         if (!userProfile) return;
         try {
+            console.log('🔄 Rafraîchissement des données pour:', userProfile.full_name);
+
             const isAdmin = userProfile.is_admin;
             const userId = userProfile.id;
             const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
@@ -83,34 +85,47 @@ function App() {
 
             if (profilesRes.error) throw profilesRes.error;
             setUsers(profilesRes.data || []);
+            console.log('✅ Profils chargés:', (profilesRes.data || []).length);
+
             if (interventionsRes.error) throw interventionsRes.error;
             setInterventions(interventionsRes.data || []);
+            console.log('✅ Interventions chargées:', (interventionsRes.data || []).length);
+
             if (leavesRes.error) throw leavesRes.error;
             setLeaveRequests(leavesRes.data || []);
+            console.log('✅ Demandes de congé chargées:', (leavesRes.data || []).length);
+
             if (vaultRes.error) throw vaultRes.error;
             setVaultDocuments(vaultRes.data || []);
+            console.log('✅ Documents coffre-fort chargés:', (vaultRes.data || []).length);
 
         } catch (error) {
-            console.error('Erreur chargement données:', error);
+            console.error('❌ Erreur chargement données:', error);
             showToast(`Erreur de chargement: ${error.message}`, "error");
         }
     }, [showToast]);
 
     useEffect(() => {
-        const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => { setSession(sessionData); });
+        const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => {
+            console.log('🔐 Changement d\'état d\'authentification:', _event);
+            setSession(sessionData);
+        });
         return () => subscription.unsubscribe();
     }, []);
 
     useEffect(() => {
         if (session?.user) {
             setLoading(true);
+            console.log('👤 Chargement du profil pour:', session.user.email);
+
             profileService.getProfile(session.user.id)
                 .then(({ data: userProfile, error }) => {
                     if (error) {
-                        console.error("Error fetching profile:", error);
+                        console.error("❌ Error fetching profile:", error);
                         showToast("Impossible de récupérer le profil.", "error");
                         authService.signOut();
                     } else {
+                        console.log('✅ Profil chargé:', userProfile?.full_name);
                         setProfile(userProfile);
                     }
                 }).finally(() => { setLoading(false); });
@@ -123,47 +138,138 @@ function App() {
     useEffect(() => {
         if (profile) {
             refreshData(profile);
-            const sub = supabase.channel('public-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => refreshData(profile)).subscribe();
-            return () => { supabase.removeChannel(sub); };
+
+            // ✅ AMÉLIORATION: Listener temps réel plus spécifique
+            const sub = supabase
+                .channel('public-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'interventions'
+                }, (payload) => {
+                    console.log('🔄 Changement détecté dans interventions:', payload);
+                    refreshData(profile);
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'leave_requests'
+                }, (payload) => {
+                    console.log('🔄 Changement détecté dans leave_requests:', payload);
+                    refreshData(profile);
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'vault_documents'
+                }, (payload) => {
+                    console.log('🔄 Changement détecté dans vault_documents:', payload);
+                    refreshData(profile);
+                })
+                .subscribe();
+
+            return () => {
+                console.log('🔌 Déconnexion des listeners temps réel');
+                supabase.removeChannel(sub);
+            };
         }
     }, [profile, refreshData]);
 
     const handleLogout = async () => {
+        console.log('🚪 Déconnexion en cours...');
         const { error } = await authService.signOut();
         if (error) {
             showToast("Erreur lors de la déconnexion.", "error");
+        } else {
+            console.log('✅ Déconnexion réussie');
         }
         navigate('/login');
     };
 
     const handleUpdateUser = async (updatedUserData) => {
+        console.log('👤 Mise à jour utilisateur:', updatedUserData.full_name);
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
-        if (error) { showToast("Erreur mise à jour profil.", "error"); }
-        else { showToast("Profil mis à jour."); }
-    };
-    const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-        if (error) { showToast(`Erreur création intervention: ${error.message}`, "error"); }
-        else { showToast("Intervention ajoutée."); }
-    };
-
-    // MODIFIÉ: La fonction gère maintenant le statut de manière dynamique
-    const handleUpdateInterventionReport = async (interventionId, report) => {
-        // Détermine le nouveau statut en fonction du rapport
-        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-
-        const { error } = await interventionService.updateIntervention(interventionId, { report, status: newStatus });
-
         if (error) {
-            showToast("Erreur sauvegarde rapport.", "error");
+            console.error('❌ Erreur mise à jour profil:', error);
+            showToast("Erreur mise à jour profil.", "error");
         } else {
+            console.log('✅ Profil mis à jour avec succès');
+            showToast("Profil mis à jour.");
+        }
+    };
+
+    const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
+        console.log('➕ Création intervention:', interventionData.client);
+        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
+        if (error) {
+            console.error('❌ Erreur création intervention:', error);
+            showToast(`Erreur création intervention: ${error.message}`, "error");
+        } else {
+            console.log('✅ Intervention créée avec succès');
+            showToast("Intervention ajoutée.");
+        }
+    };
+
+    // ✅ CORRECTION PRINCIPALE: Fonction de gestion des rapports améliorée
+    const handleUpdateInterventionReport = async (interventionId, report) => {
+        try {
+            console.log('🔄 Sauvegarde du rapport d\'intervention:', interventionId);
+            console.log('📄 Données du rapport:', {
+                notesLength: report.notes?.length || 0,
+                filesCount: report.files?.length || 0,
+                hasArrival: !!report.arrivalTime,
+                hasDeparture: !!report.departureTime,
+                hasSignature: !!report.signature
+            });
+
+            // Détermine le nouveau statut en fonction du rapport
+            const newStatus = report.departureTime ? 'Terminée' : 'En cours';
+
+            // ✅ CORRECTION: S'assurer que tous les champs sont correctement sérialisés
+            const sanitizedReport = {
+                notes: report.notes || '',
+                files: Array.isArray(report.files) ? report.files : [],
+                arrivalTime: report.arrivalTime || null,
+                departureTime: report.departureTime || null,
+                signature: report.signature || null
+            };
+
+            console.log('💾 Sauvegarde avec statut:', newStatus);
+            console.log('📁 Fichiers à sauvegarder:', sanitizedReport.files.map(f => f.name));
+
+            // ✅ SAUVEGARDE EN BASE DE DONNÉES
+            const { error } = await interventionService.updateIntervention(interventionId, {
+                report: sanitizedReport,
+                status: newStatus
+            });
+
+            if (error) {
+                console.error('❌ Erreur sauvegarde intervention:', error);
+                showToast("Erreur sauvegarde rapport: " + error.message, "error");
+                throw error;
+            }
+
+            // ✅ SUCCÈS
+            console.log('✅ Rapport sauvegardé avec succès');
+
             if (newStatus === 'Terminée') {
                 showToast("Rapport sauvegardé et intervention clôturée.");
             } else {
                 showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
             }
+
+            // ✅ NAVIGATION ET REFRESH
             navigate('/planning');
+
+            // ✅ FORCER LE REFRESH DES DONNÉES
             await refreshData(profile);
+
+            console.log('🔄 Données rafraîchies après sauvegarde');
+
+        } catch (error) {
+            console.error('❌ Erreur complète lors de la sauvegarde:', error);
+            showToast("Erreur lors de la sauvegarde: " + (error.message || 'Erreur inconnue'), "error");
+            throw error;
         }
     };
 
@@ -172,17 +278,31 @@ function App() {
             title: "Supprimer l'intervention ?",
             message: "Cette action est irréversible.",
             onConfirm: async () => {
+                console.log('🗑️ Suppression intervention:', id);
                 const { error } = await interventionService.deleteIntervention(id);
-                if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Intervention supprimée."); }
+                if (error) {
+                    console.error('❌ Erreur suppression:', error);
+                    showToast("Erreur suppression.", "error");
+                } else {
+                    console.log('✅ Intervention supprimée');
+                    showToast("Intervention supprimée.");
+                }
             }
         });
     };
+
     const handleArchiveIntervention = async (id) => {
+        console.log('📦 Archivage intervention:', id);
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
-        if (error) { showToast("Erreur archivage.", "error"); }
-        else { showToast("Intervention archivée."); }
+        if (error) {
+            console.error('❌ Erreur archivage:', error);
+            showToast("Erreur archivage.", "error");
+        } else {
+            console.log('✅ Intervention archivée');
+            showToast("Intervention archivée.");
+        }
     };
+
     const handleUpdateLeaveStatus = (id, status) => {
         if (status === 'Rejeté') {
             showConfirmationModal({
@@ -191,71 +311,110 @@ function App() {
                 showInput: true,
                 inputLabel: "Motif du refus",
                 onConfirm: async (reason) => {
+                    console.log('❌ Rejet demande congé:', id, 'Motif:', reason);
                     const { error } = await leaveService.updateRequestStatus(id, status, reason);
-                    if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                    else { showToast("Statut de la demande mis à jour."); }
+                    if (error) {
+                        console.error('❌ Erreur mise à jour congé:', error);
+                        showToast("Erreur mise à jour congé.", "error");
+                    } else {
+                        console.log('✅ Demande rejetée');
+                        showToast("Statut de la demande mis à jour.");
+                    }
                 }
             });
         } else {
+            console.log('✅ Approbation demande congé:', id);
             leaveService.updateRequestStatus(id, status).then(({error}) => {
-                if (error) { showToast("Erreur mise à jour congé.", "error"); }
-                else { showToast("Statut de la demande mis à jour."); }
+                if (error) {
+                    console.error('❌ Erreur mise à jour congé:', error);
+                    showToast("Erreur mise à jour congé.", "error");
+                } else {
+                    console.log('✅ Demande approuvée');
+                    showToast("Statut de la demande mis à jour.");
+                }
             });
         }
     };
+
     const handleDeleteLeaveRequest = (id) => {
         showConfirmationModal({
             title: "Supprimer la demande ?",
             message: "Cette action est irréversible.",
             onConfirm: async () => {
+                console.log('🗑️ Suppression demande congé:', id);
                 const { error } = await leaveService.deleteLeaveRequest(id);
-                if (error) { showToast("Erreur suppression.", "error"); }
-                else { showToast("Demande supprimée."); }
+                if (error) {
+                    console.error('❌ Erreur suppression:', error);
+                    showToast("Erreur suppression.", "error");
+                } else {
+                    console.log('✅ Demande supprimée');
+                    showToast("Demande supprimée.");
+                }
             }
         });
     };
+
     const handleSubmitLeaveRequest = async (requestData) => {
+        console.log('📝 Soumission demande congé:', requestData);
         const { error } = await leaveService.createLeaveRequest(requestData);
-        if (error) { showToast("Erreur envoi demande.", "error"); }
-        else { showToast("Demande de congé envoyée."); }
+        if (error) {
+            console.error('❌ Erreur envoi demande:', error);
+            showToast("Erreur envoi demande.", "error");
+        } else {
+            console.log('✅ Demande envoyée');
+            showToast("Demande de congé envoyée.");
+        }
     };
+
     const handleSendDocument = async ({ file, userId, name }) => {
         try {
+            console.log('📎 Envoi document:', name, 'pour utilisateur:', userId);
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
             if (uploadError) throw uploadError;
+
             const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
             if (dbError) throw dbError;
+
             await refreshData(profile);
+            console.log('✅ Document envoyé avec succès');
             showToast("Document envoyé avec succès.");
         } catch (error) {
-            console.error("Erreur lors de l'envoi du document:", error);
+            console.error("❌ Erreur lors de l'envoi du document:", error);
             showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
         }
     };
+
     const handleDeleteDocument = async (documentId) => {
         showConfirmationModal({
             title: "Supprimer ce document ?",
             message: "Cette action est irréversible et supprimera le fichier définitivement.",
             onConfirm: async () => {
+                console.log('🗑️ Suppression document:', documentId);
                 const { error } = await vaultService.deleteVaultDocument(documentId);
                 if (error) {
+                    console.error('❌ Erreur suppression document:', error);
                     showToast("Erreur lors de la suppression : " + error.message, "error");
                 } else {
+                    console.log('✅ Document supprimé');
                     showToast("Document supprimé.");
                     await refreshData(profile);
                 }
             }
         });
     };
+
     const handleAddBriefingDocuments = async (interventionId, files) => {
         try {
+            console.log('📋 Ajout documents préparation pour intervention:', interventionId);
             const { error } = await interventionService.addBriefingDocuments(interventionId, files);
             if (error) {
                 throw error;
             }
+            console.log('✅ Documents de préparation ajoutés');
             showToast("Documents de préparation ajoutés avec succès.");
             await refreshData(profile);
         } catch (error) {
+            console.error('❌ Erreur ajout documents préparation:', error);
             showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
             throw error;
         }
@@ -265,7 +424,7 @@ function App() {
         return (
             <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Chargement...</p>
+                <p>Chargement de votre espace...</p>
             </div>
         );
     }

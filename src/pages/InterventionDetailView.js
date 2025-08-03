@@ -1,4 +1,4 @@
-// src/pages/InterventionDetailView.js - Version corrigée et nettoyée
+// src/pages/InterventionDetailView.js - Version corrigée pour la synchronisation des fichiers
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
@@ -341,6 +341,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     // État pour gérer la queue d'upload avec feedback
     const [uploadQueue, setUploadQueue] = useState([]);
 
+    // ✅ FIX 1: État pour forcer le rafraîchissement de la liste des fichiers
+    const [fileListKey, setFileListKey] = useState(0);
+
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
@@ -356,7 +359,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             const savedReport = window.sessionStorage.getItem(storageKey);
             if (savedReport) {
                 try {
-                    setReport(JSON.parse(savedReport));
+                    const parsedReport = JSON.parse(savedReport);
+                    setReport(parsedReport);
                 } catch (e) {
                     setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
                 }
@@ -366,15 +370,18 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         }
     }, [intervention, storageKey]);
 
+    // ✅ FIX 2: Synchronisation forcée avec la base de données après chaque changement
     useEffect(() => {
-        if (report) {
+        if (report && intervention) {
             try {
                 window.sessionStorage.setItem(storageKey, JSON.stringify(report));
+                // Force le refresh de la liste de fichiers pour s'assurer qu'elle soit à jour
+                setFileListKey(prev => prev + 1);
             } catch (error) {
                 console.error("Failed to save report to sessionStorage", error);
             }
         }
-    }, [report, storageKey]);
+    }, [report, storageKey, intervention]);
 
     useEffect(() => {
         const canvas = signatureCanvasRef.current;
@@ -397,7 +404,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ GESTIONNAIRE DE FICHIERS CORRIGÉ - Sauvegarde immédiate
+    // ✅ FIX 3: GESTIONNAIRE DE FICHIERS ENTIÈREMENT REVU
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
@@ -405,6 +412,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         resetUpload();
 
         try {
+            console.log('🚀 Début de l\'upload de', files.length, 'fichier(s)');
+
             // Mise à jour de la queue avec les nouveaux fichiers
             const newQueueItems = Array.from(files).map(file => ({
                 id: `${file.name}-${file.lastModified}-${file.size}`,
@@ -420,7 +429,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             // Traitement des uploads
             const uploadResults = await handleFileUpload(files);
 
-            // Collecter les uploads réussis
+            // ✅ FIX PRINCIPAL: Collecter tous les uploads réussis et mettre à jour immédiatement
             const successfulUploads = [];
 
             uploadResults.results.forEach(result => {
@@ -437,43 +446,58 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         : item
                 ));
 
-                if (result.success && !result.stored) {
+                if (result.success && result.result && result.result.publicURL) {
                     const newFileInfo = {
                         name: result.file.name,
                         url: result.result.publicURL,
                         type: result.file.type
                     };
                     successfulUploads.push(newFileInfo);
+                    console.log('✅ Upload réussi:', newFileInfo);
                 }
             });
 
-            // ✅ CORRECTION PRINCIPALE : Sauvegarder immédiatement après upload
+            // ✅ CORRECTION CRITIQUE: Mise à jour immédiate ET sauvegarde en base
             if (successfulUploads.length > 0) {
-                // Mettre à jour le rapport local
+                console.log('💾 Sauvegarde de', successfulUploads.length, 'nouveau(x) fichier(s)');
+
+                // Mettre à jour le rapport local avec TOUS les fichiers (anciens + nouveaux)
                 const updatedReport = {
                     ...report,
                     files: [...(report.files || []), ...successfulUploads]
                 };
 
+                // ✅ MISE À JOUR SYNCHRONE DU STATE LOCAL
                 setReport(updatedReport);
 
-                // ✅ SAUVEGARDER IMMÉDIATEMENT EN BASE DE DONNÉES
+                // ✅ SAUVEGARDE IMMÉDIATE EN BASE DE DONNÉES
                 try {
                     await onSave(intervention.id, updatedReport);
-                    console.log('✅ Fichiers sauvegardés immédiatement:', successfulUploads);
+                    console.log('✅ Rapport sauvegardé en base avec', updatedReport.files.length, 'fichier(s) total');
+
+                    // ✅ FORCE LE REFRESH DE L'AFFICHAGE
+                    setFileListKey(prev => prev + 1);
+
+                    // ✅ NETTOYAGE DU SESSIONSTORAGE ET RECHARGEMENT
+                    window.sessionStorage.setItem(storageKey, JSON.stringify(updatedReport));
+
                 } catch (saveError) {
                     console.error('❌ Erreur sauvegarde immédiate:', saveError);
-                    // Les fichiers sont quand même sur Supabase Storage
+                    // Même en cas d'erreur de sauvegarde, les fichiers sont sur Supabase Storage
+                    // On peut réessayer manuellement
                 }
             }
 
             // Gestion des fichiers invalides
             if (uploadResults.invalidFiles.length > 0) {
-                console.warn('Fichiers rejetés:', uploadResults.invalidFiles);
+                console.warn('⚠️ Fichiers rejetés:', uploadResults.invalidFiles.map(f => f.name));
             }
 
+            // Reset de l'input pour permettre de re-sélectionner le même fichier
+            event.target.value = '';
+
         } catch (error) {
-            console.error('Erreur lors de l\'upload:', error);
+            console.error('❌ Erreur lors de l\'upload:', error);
             setUploadQueue(prev => prev.map(item => ({
                 ...item,
                 status: 'error',
@@ -496,11 +520,40 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         setUploadQueue(prev => prev.filter(item => item.id !== idToRemove));
     };
 
-    const handleSave = () => {
+    // ✅ FIX 4: Fonction de sauvegarde finale améliorée
+    const handleSave = async () => {
         if (!intervention) return;
-        const finalReport = { ...report };
-        window.sessionStorage.removeItem(storageKey);
-        onSave(intervention.id, finalReport);
+
+        try {
+            console.log('🔄 Sauvegarde finale du rapport avec', (report.files || []).length, 'fichier(s)');
+
+            const finalReport = { ...report };
+
+            // Nettoyer le storage local
+            window.sessionStorage.removeItem(storageKey);
+
+            // Sauvegarder en base
+            await onSave(intervention.id, finalReport);
+
+            console.log('✅ Rapport final sauvegardé avec succès');
+
+        } catch (error) {
+            console.error('❌ Erreur lors de la sauvegarde finale:', error);
+        }
+    };
+
+    // ✅ FIX 5: Fonction de rafraîchissement manuel
+    const handleRefreshFiles = () => {
+        console.log('🔄 Rafraîchissement manuel de la liste des fichiers');
+        setFileListKey(prev => prev + 1);
+
+        // Re-synchroniser avec l'intervention depuis la props
+        if (intervention && intervention.report) {
+            setReport(prev => ({
+                ...prev,
+                files: intervention.report.files || []
+            }));
+        }
     };
 
     const handleGoBack = () => navigate('/planning');
@@ -584,6 +637,10 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 .upload-actions .icon { width: 20px; height: 20px; }
                 .icon-retry { color: #007bff; }
                 .icon-remove { color: #6c757d; }
+                .refresh-button {
+                    background: none; border: none; cursor: pointer; color: #007bff;
+                    font-size: 0.875rem; text-decoration: underline; margin-left: 1rem;
+                }
                 @keyframes spin { to { transform: rotate(360deg); } }
 
                 @media (max-width: 768px) {
@@ -683,7 +740,12 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 </div>
 
                 <div className="section">
-                    <h3>Photos et Documents du Rapport</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <h3>Photos et Documents du Rapport</h3>
+                        <button onClick={handleRefreshFiles} className="refresh-button">
+                            🔄 Actualiser
+                        </button>
+                    </div>
 
                     {capabilities.isMobile && (
                         <div style={{
@@ -699,9 +761,10 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
-                    <ul className="document-list-detailed">
+                    {/* ✅ FIX 6: Liste des fichiers avec key pour forcer le re-render */}
+                    <ul key={fileListKey} className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
-                            <li key={idx}>
+                            <li key={`${file.url}-${idx}-${fileListKey}`}>
                                 {file.type && file.type.startsWith('image/') ?
                                     <img src={file.url} alt={`Aperçu de ${file.name}`} className="document-thumbnail" /> :
                                     <FileTextIcon className="document-icon" />
@@ -712,11 +775,17 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                                 </a>
                             </li>
                         ))}
+                        {/* ✅ Message de debug pour le développement */}
+                        {(report.files || []).length === 0 && (
+                            <li style={{ fontStyle: 'italic', color: '#6b7280' }}>
+                                Aucun fichier ajouté pour le moment
+                            </li>
+                        )}
                     </ul>
 
                     {uploadQueue.length > 0 && (
                         <div className="mt-4">
-                            <h4 className="font-semibold mb-2">Téléchargements</h4>
+                            <h4 className="font-semibold mb-2">Téléchargements en cours</h4>
                             <ul className="upload-queue-list">
                                 {uploadQueue.map((item) => (
                                     <li key={item.id}>
@@ -820,6 +889,23 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                             >
                                 Réessayer
                             </button>
+                        </div>
+                    )}
+
+                    {/* ✅ DEBUG: Affichage des informations de débogage en mode développement */}
+                    {process.env.NODE_ENV === 'development' && (
+                        <div style={{
+                            marginTop: '1rem',
+                            padding: '0.5rem',
+                            backgroundColor: '#f3f4f6',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem',
+                            color: '#6b7280'
+                        }}>
+                            🔧 Debug: {(report.files || []).length} fichier(s) dans le rapport |
+                            Queue: {uploadQueue.length} |
+                            Key: {fileListKey} |
+                            Intervention ID: {intervention.id}
                         </div>
                     )}
                 </div>
