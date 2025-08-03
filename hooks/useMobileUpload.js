@@ -1,67 +1,46 @@
-// Créez ce fichier : src/hooks/useMobileUpload.js
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { storageService } from '../lib/supabase';
 
-// ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE
-export const useDeviceCapabilities = () => {
-    const [capabilities, setCapabilities] = useState({
-        hasCamera: false,
-        supportsFileAPI: false,
-        supportsDragDrop: false,
-        isMobile: false,
-        isIOS: false,
-        isAndroid: false,
-        supportsCapture: false
+/**
+ * Un hook React complet pour gérer les uploads de fichiers sur mobile,
+ * avec gestion de la compression, des tentatives multiples,
+ * du mode hors-ligne (détection) et du suivi de la progression par fichier.
+ * @param {string} interventionId - L'ID de l'intervention pour l'upload.
+ */
+export const useMobileUpload = (interventionId) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [fileStatuses, setFileStatuses] = useState({});
+    const [error, setError] = useState(null);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+    // Détection des capacités du device (ex: mobile, caméra, etc.)
+    const [capabilities] = useState(() => {
+        const userAgent = navigator.userAgent;
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        return {
+            isMobile,
+            isIOS: /iPad|iPhone|iPod/.test(userAgent),
+            isAndroid: /Android/.test(userAgent),
+            hasCamera: 'mediaDevices' in navigator,
+            supportsFileAPI: 'FileReader' in window,
+        };
     });
 
+    // Gestion de l'état en ligne/hors ligne
     useEffect(() => {
-        const checkCapabilities = async () => {
-            const userAgent = navigator.userAgent;
-            const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-            const isAndroid = /Android/.test(userAgent);
-
-            let hasCamera = false;
-            try {
-                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    await navigator.mediaDevices.getUserMedia({ video: true });
-                    hasCamera = true;
-                }
-            } catch (error) {
-                hasCamera = false;
-            }
-
-            setCapabilities({
-                hasCamera,
-                supportsFileAPI: 'FileReader' in window && 'File' in window,
-                supportsDragDrop: 'ondrop' in window && !isMobile,
-                isMobile,
-                isIOS,
-                isAndroid,
-                supportsCapture: isMobile && ('capture' in document.createElement('input'))
-            });
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
         };
-
-        checkCapabilities();
     }, []);
 
-    return capabilities;
-};
-
-// ✅ HOOK POUR COMPRESSION D'IMAGES OPTIMISÉE MOBILE
-export const useImageCompression = () => {
-    const compressImage = useCallback(async (file, options = {}) => {
-        if (!file || !file.type.startsWith('image/')) {
-            return file;
-        }
-
-        const {
-            maxSizeMB = 1,
-            maxWidthOrHeight = 1920,
-            quality = 0.8,
-            outputFormat = 'jpeg'
-        } = options;
+    // Fonction de compression d'image optimisée
+    const compressImage = useCallback(async (file) => {
+        if (!file.type.startsWith('image/')) return file;
 
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -69,358 +48,140 @@ export const useImageCompression = () => {
             const img = new Image();
 
             img.onload = () => {
-                // Calcul des nouvelles dimensions
+                const maxWidth = capabilities.isMobile ? 1280 : 1920;
+                const maxHeight = capabilities.isMobile ? 720 : 1080;
                 let { width, height } = img;
 
-                if (width > height) {
-                    if (width > maxWidthOrHeight) {
-                        height = (height * maxWidthOrHeight) / width;
-                        width = maxWidthOrHeight;
-                    }
-                } else {
-                    if (height > maxWidthOrHeight) {
-                        width = (width * maxWidthOrHeight) / height;
-                        height = maxWidthOrHeight;
-                    }
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                if (ratio < 1) {
+                    width *= ratio;
+                    height *= ratio;
                 }
 
                 canvas.width = width;
                 canvas.height = height;
-
-                // Dessin de l'image redimensionnée
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'medium';
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Conversion en Blob
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob && blob.size <= maxSizeMB * 1024 * 1024) {
-                            const compressedFile = new File([blob], file.name, {
-                                type: `image/${outputFormat}`,
-                                lastModified: Date.now()
-                            });
-                            resolve(compressedFile);
-                        } else {
-                            // Si toujours trop gros, réduire la qualité
-                            canvas.toBlob(
-                                (smallerBlob) => {
-                                    const finalFile = new File([smallerBlob], file.name, {
-                                        type: `image/${outputFormat}`,
-                                        lastModified: Date.now()
-                                    });
-                                    resolve(finalFile);
-                                },
-                                `image/${outputFormat}`,
-                                quality * 0.7
-                            );
-                        }
-                    },
-                    `image/${outputFormat}`,
-                    quality
-                );
+                const quality = capabilities.isMobile ? 0.75 : 0.85;
+                canvas.toBlob((blob) => {
+                    resolve(blob && blob.size < file.size ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
+                }, 'image/jpeg', quality);
             };
-
             img.onerror = () => resolve(file);
             img.src = URL.createObjectURL(file);
         });
-    }, []);
+    }, [capabilities.isMobile]);
 
-    return { compressImage };
-};
+    // Upload d'un fichier unique avec tentatives et suivi du temps
+    const uploadSingleFile = useCallback(async (file, fileId) => {
+        const maxRetries = 2;
+        let lastError;
+        const startTime = Date.now();
 
-// ✅ HOOK POUR UPLOADS RÉSILIENTS AVEC RETRY
-export const useResilientUpload = () => {
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [error, setError] = useState(null);
+        // Met à jour le temps écoulé toutes les secondes
+        const timerInterval = setInterval(() => {
+            setFileStatuses(prev => ({
+                ...prev,
+                [fileId]: {
+                    ...prev[fileId],
+                    elapsedTime: Math.round((Date.now() - startTime) / 1000)
+                }
+            }));
+        }, 1000);
 
-    const uploadWithRetry = useCallback(async (file, interventionId, options = {}) => {
-        const {
-            maxRetries = 3,
-            folder = 'report',
-            compressionOptions = {}
-        } = options;
+        try {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const result = await storageService.uploadInterventionFile(file, interventionId, 'report');
+                    if (result.error) throw result.error;
+                    
+                    // Succès
+                    setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'completed', progress: 100 } }));
+                    return result;
+                } catch (uploadError) {
+                    lastError = uploadError;
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
+                }
+            }
+            throw lastError;
+        } catch (finalError) {
+            // Échec final
+            setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'error', error: finalError.message } }));
+            throw finalError;
+        } finally {
+            clearInterval(timerInterval);
+        }
+    }, [interventionId]);
+
+    // Fonction principale pour gérer l'upload de plusieurs fichiers en parallèle
+    const handleFileUpload = useCallback(async (files) => {
+        if (!files || files.length === 0) return { results: [], invalidFiles: [] };
 
         setIsUploading(true);
         setError(null);
-        setUploadProgress(0);
 
-        // Compression si c'est une image
-        let fileToUpload = file;
-        if (file.type.startsWith('image/') && compressionOptions.enabled !== false) {
-            try {
-                const { compressImage } = useImageCompression();
-                fileToUpload = await compressImage(file, compressionOptions);
-            } catch (compressionError) {
-                console.warn('Compression failed, using original file:', compressionError);
-            }
+        const validFiles = [];
+        const invalidFilesInfo = [];
+        for (const file of Array.from(files)) {
+            const maxSize = 15 * 1024 * 1024; // 15MB
+            if (file.size <= maxSize) validFiles.push(file);
+            else invalidFilesInfo.push(file);
         }
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                setUploadProgress(attempt === 1 ? 10 : (attempt - 1) * 25);
+        const initialStatuses = {};
+        validFiles.forEach((file, index) => {
+            const fileId = `${file.name}-${file.lastModified}-${index}`;
+            initialStatuses[fileId] = { id: fileId, name: file.name, size: file.size, status: 'pending', progress: 0, elapsedTime: 0 };
+        });
+        setFileStatuses(initialStatuses);
+        
+        // Délai pour permettre à l'UI de se mettre à jour et d'afficher l'état "pending"
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-                const result = await storageService.uploadInterventionFile(
-                    fileToUpload,
-                    interventionId,
-                    folder
-                );
+        try {
+            const CONCURRENT_UPLOADS = capabilities.isMobile ? 2 : 4;
+            const results = [];
 
-                if (result.error) {
-                    throw result.error;
+            const processFile = async (file, index) => {
+                const fileId = `${file.name}-${file.lastModified}-${index}`;
+                try {
+                    let fileToUpload = file;
+                    if (file.type.startsWith('image/')) {
+                        setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'compressing', progress: 25 } }));
+                        fileToUpload = await compressImage(file);
+                    }
+                    setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'uploading', progress: 50 } }));
+                    const result = await uploadSingleFile(fileToUpload, fileId);
+                    return { file, fileId, success: true, result };
+                } catch (error) {
+                    return { file, fileId, success: false, error: error.message };
                 }
+            };
 
-                setUploadProgress(100);
-                setIsUploading(false);
-                return result;
-
-            } catch (uploadError) {
-                console.error(`Upload attempt ${attempt} failed:`, uploadError);
-
-                if (attempt === maxRetries) {
-                    setError(uploadError.message || 'Échec de l\'upload après plusieurs tentatives');
-                    setIsUploading(false);
-                    throw uploadError;
-                }
-
-                // Backoff exponentiel avec jitter
-                const baseDelay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-                const jitter = Math.random() * 0.1 * baseDelay;
-                const delay = baseDelay + jitter;
-
-                setUploadProgress(attempt * 20);
-                await new Promise(resolve => setTimeout(resolve, delay));
+            for (let i = 0; i < validFiles.length; i += CONCURRENT_UPLOADS) {
+                const batch = validFiles.slice(i, i + CONCURRENT_UPLOADS);
+                const batchPromises = batch.map((file, batchIndex) => processFile(file, i + batchIndex));
+                results.push(...await Promise.all(batchPromises));
             }
+
+            return { results, invalidFiles: invalidFilesInfo };
+        } catch (generalError) {
+            setError(generalError.message);
+            return { results: [], invalidFiles: invalidFilesInfo };
+        } finally {
+            setIsUploading(false);
         }
-    }, []);
+    }, [capabilities.isMobile, compressImage, uploadSingleFile]);
 
     const reset = useCallback(() => {
         setIsUploading(false);
-        setUploadProgress(0);
+        setFileStatuses({});
         setError(null);
     }, []);
 
-    return {
-        uploadWithRetry,
-        isUploading,
-        uploadProgress,
-        error,
-        reset
-    };
+    return { handleFileUpload, capabilities, isUploading, fileStatuses, error, reset, isOnline };
 };
-
-// ✅ HOOK POUR STOCKAGE OFFLINE ET SYNCHRONISATION
-export const useOfflineUpload = () => {
-    const [pendingUploads, setPendingUploads] = useState([]);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
-
-    const storeForLaterUpload = useCallback(async (file, metadata) => {
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const uploadItem = {
-                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                file: arrayBuffer,
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                metadata,
-                timestamp: Date.now(),
-                status: 'pending'
-            };
-
-            // Stockage en localStorage pour simplicité (en production, utilisez IndexedDB)
-            const existing = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-            const updated = [...existing, uploadItem];
-            localStorage.setItem('pendingUploads', JSON.stringify(updated));
-
-            setPendingUploads(updated);
-            return uploadItem.id;
-        } catch (error) {
-            console.error('Failed to store file for later upload:', error);
-            throw error;
-        }
-    }, []);
-
-    const processPendingUploads = useCallback(async () => {
-        if (!isOnline) return;
-
-        const pending = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-        const stillPending = [];
-
-        for (const item of pending) {
-            if (item.status !== 'pending') continue;
-
-            try {
-                const file = new File([item.file], item.fileName, {
-                    type: item.fileType
-                });
-
-                const result = await storageService.uploadInterventionFile(
-                    file,
-                    item.metadata.interventionId,
-                    item.metadata.folder
-                );
-
-                if (!result.error) {
-                    // Upload réussi, supprimer de la liste
-                    continue;
-                }
-            } catch (error) {
-                console.error('Failed to upload pending file:', error);
-            }
-
-            // Conserver en cas d'échec
-            stillPending.push(item);
-        }
-
-        localStorage.setItem('pendingUploads', JSON.stringify(stillPending));
-        setPendingUploads(stillPending);
-    }, [isOnline]);
-
-    const clearPendingUploads = useCallback(() => {
-        localStorage.removeItem('pendingUploads');
-        setPendingUploads([]);
-    }, []);
-
-    // Auto-traitement quand on revient en ligne
-    useEffect(() => {
-        if (isOnline && pendingUploads.length > 0) {
-            processPendingUploads();
-        }
-    }, [isOnline, pendingUploads.length, processPendingUploads]);
-
-    return {
-        storeForLaterUpload,
-        processPendingUploads,
-        clearPendingUploads,
-        pendingUploads,
-        isOnline
-    };
-};
-
-// ✅ HOOK POUR VALIDATION ET PRÉPARATION DES FICHIERS
-export const useFileValidation = () => {
-    const validateFile = useCallback((file, options = {}) => {
-        const {
-            maxSize = 10 * 1024 * 1024, // 10MB par défaut
-            allowedTypes = ['image/*', 'application/pdf'],
-            maxFiles = 10
-        } = options;
-
-        const errors = [];
-
-        // Vérification de la taille
-        if (file.size > maxSize) {
-            errors.push(`Le fichier est trop volumineux (max: ${Math.round(maxSize / 1024 / 1024)}MB)`);
-        }
-
-        // Vérification du type
-        const isAllowed = allowedTypes.some(type => {
-            if (type.endsWith('/*')) {
-                return file.type.startsWith(type.slice(0, -1));
-            }
-            return file.type === type;
-        });
-
-        if (!isAllowed) {
-            errors.push(`Type de fichier non autorisé: ${file.type}`);
-        }
-
-        // Vérification du nom de fichier
-        if (file.name.length > 255) {
-            errors.push('Nom de fichier trop long');
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
-    }, []);
-
-    const prepareFiles = useCallback((fileList, options = {}) => {
-        const files = Array.from(fileList);
-        const validated = files.map(file => ({
-            file,
-            validation: validateFile(file, options)
-        }));
-
-        const validFiles = validated
-            .filter(item => item.validation.isValid)
-            .map(item => item.file);
-
-        const invalidFiles = validated
-            .filter(item => !item.validation.isValid);
-
-        return {
-            validFiles,
-            invalidFiles,
-            totalSize: validFiles.reduce((sum, file) => sum + file.size, 0)
-        };
-    }, [validateFile]);
-
-    return {
-        validateFile,
-        prepareFiles
-    };
-};
-
-// ✅ HOOK PRINCIPAL QUI COMBINE TOUT
-export const useMobileUpload = (interventionId, options = {}) => {
-    const capabilities = useDeviceCapabilities();
-    const { compressImage } = useImageCompression();
-    const { uploadWithRetry, isUploading, uploadProgress, error, reset } = useResilientUpload();
-    const { storeForLaterUpload, isOnline } = useOfflineUpload();
-    const { prepareFiles } = useFileValidation();
-
-    const handleFileUpload = useCallback(async (files, uploadOptions = {}) => {
-        if (!files || files.length === 0) return;
-
-        const { validFiles, invalidFiles } = prepareFiles(files, options);
-
-        if (invalidFiles.length > 0) {
-            console.warn('Some files were rejected:', invalidFiles);
-        }
-
-        const results = [];
-
-        for (const file of validFiles) {
-            try {
-                if (isOnline) {
-                    const result = await uploadWithRetry(file, interventionId, uploadOptions);
-                    results.push({
-                        file,
-                        success: true,
-                        result
-                    });
-                } else {
-                    const id = await storeForLaterUpload(file, {
-                        interventionId,
-                        folder: uploadOptions.folder || 'report'
-                    });
-                    results.push({
-                        file,
-                        success: true,
-                        stored: true,
-                        id
-                    });
-                }
-            } catch (uploadError) {
-                results.push({
-                    file,
-                    success: false,
-                    error: uploadError.message
-                });
-            }
-        }
