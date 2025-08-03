@@ -210,10 +210,53 @@ function App() {
         }
     };
 
-    // ✅ CORRECTION PRINCIPALE: Fonction de gestion des rapports améliorée
+    // ✅ NOUVELLE FONCTION: Sauvegarde silencieuse SANS changement de statut
+    const handleUpdateInterventionReportSilent = async (interventionId, report) => {
+        try {
+            console.log('💾 Sauvegarde silencieuse du rapport (SANS changement de statut)');
+            console.log('📄 Données du rapport:', {
+                notesLength: report.notes?.length || 0,
+                filesCount: report.files?.length || 0,
+                hasArrival: !!report.arrivalTime,
+                hasDeparture: !!report.departureTime,
+                hasSignature: !!report.signature
+            });
+
+            // ✅ CORRECTION: S'assurer que tous les champs sont correctement sérialisés
+            const sanitizedReport = {
+                notes: report.notes || '',
+                files: Array.isArray(report.files) ? report.files : [],
+                arrivalTime: report.arrivalTime || null,
+                departureTime: report.departureTime || null,
+                signature: report.signature || null
+            };
+
+            console.log('📁 Fichiers à sauvegarder:', sanitizedReport.files.map(f => f.name));
+
+            // ✅ SAUVEGARDE EN BASE DE DONNÉES SANS CHANGEMENT DE STATUT
+            const { error } = await interventionService.updateIntervention(interventionId, {
+                report: sanitizedReport
+                // ❌ PAS de changement de statut ici !
+            });
+
+            if (error) {
+                console.error('❌ Erreur sauvegarde silencieuse:', error);
+                throw error;
+            }
+
+            console.log('✅ Rapport sauvegardé silencieusement (intervention reste ouverte)');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Erreur lors de la sauvegarde silencieuse:', error);
+            return { success: false, error };
+        }
+    };
+
+    // ✅ CORRECTION PRINCIPALE: Fonction de gestion des rapports améliorée POUR LA FERMETURE
     const handleUpdateInterventionReport = async (interventionId, report) => {
         try {
-            console.log('🔄 Sauvegarde du rapport d\'intervention:', interventionId);
+            console.log('🔒 SAUVEGARDE FINALE avec clôture potentielle:', interventionId);
             console.log('📄 Données du rapport:', {
                 notesLength: report.notes?.length || 0,
                 filesCount: report.files?.length || 0,
@@ -234,23 +277,23 @@ function App() {
                 signature: report.signature || null
             };
 
-            console.log('💾 Sauvegarde avec statut:', newStatus);
+            console.log('💾 Sauvegarde finale avec statut:', newStatus);
             console.log('📁 Fichiers à sauvegarder:', sanitizedReport.files.map(f => f.name));
 
-            // ✅ SAUVEGARDE EN BASE DE DONNÉES
+            // ✅ SAUVEGARDE EN BASE DE DONNÉES AVEC CHANGEMENT DE STATUT
             const { error } = await interventionService.updateIntervention(interventionId, {
                 report: sanitizedReport,
                 status: newStatus
             });
 
             if (error) {
-                console.error('❌ Erreur sauvegarde intervention:', error);
+                console.error('❌ Erreur sauvegarde finale:', error);
                 showToast("Erreur sauvegarde rapport: " + error.message, "error");
                 throw error;
             }
 
             // ✅ SUCCÈS
-            console.log('✅ Rapport sauvegardé avec succès');
+            console.log('✅ Rapport sauvegardé avec succès et intervention clôturée si nécessaire');
 
             if (newStatus === 'Terminée') {
                 showToast("Rapport sauvegardé et intervention clôturée.");
@@ -264,10 +307,10 @@ function App() {
             // ✅ FORCER LE REFRESH DES DONNÉES
             await refreshData(profile);
 
-            console.log('🔄 Données rafraîchies après sauvegarde');
+            console.log('🔄 Données rafraîchies après sauvegarde finale');
 
         } catch (error) {
-            console.error('❌ Erreur complète lors de la sauvegarde:', error);
+            console.error('❌ Erreur complète lors de la sauvegarde finale:', error);
             showToast("Erreur lors de la sauvegarde: " + (error.message || 'Erreur inconnue'), "error");
             throw error;
         }
@@ -449,6 +492,7 @@ function App() {
                                     element={<InterventionDetailView
                                         interventions={interventions}
                                         onSave={handleUpdateInterventionReport}
+                                        onSaveSilent={handleUpdateInterventionReportSilent}
                                         isAdmin={profile.is_admin}
                                         onAddBriefingDocuments={handleAddBriefingDocuments}
                                     />}
@@ -476,6 +520,7 @@ function App() {
                                     element={<InterventionDetailView
                                         interventions={interventions}
                                         onSave={handleUpdateInterventionReport}
+                                        onSaveSilent={handleUpdateInterventionReportSilent}
                                         isAdmin={profile.is_admin}
                                     />}
                                 />

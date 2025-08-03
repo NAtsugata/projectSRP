@@ -1,7 +1,7 @@
-// src/pages/InterventionDetailView.js - Version corrigée pour la synchronisation des fichiers
+// src/pages/InterventionDetailView.js - Version corrigée pour éviter la fermeture automatique
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { storageService } from '../lib/supabase';
+import { storageService, interventionService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
 
@@ -404,7 +404,32 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ FIX 3: GESTIONNAIRE DE FICHIERS ENTIÈREMENT REVU
+    // ✅ CORRECTION PRINCIPALE: Sauvegarde SANS fermeture automatique
+    const saveReportSilently = async (updatedReport) => {
+        try {
+            console.log('💾 Sauvegarde silencieuse du rapport (SANS changement de statut)');
+
+            // ✅ IMPORTANT: On ne change PAS le statut lors de la sauvegarde silencieuse
+            const { error } = await interventionService.updateIntervention(interventionId, {
+                report: updatedReport
+                // ❌ PAS de changement de statut ici !
+            });
+
+            if (error) {
+                console.error('❌ Erreur sauvegarde silencieuse:', error);
+                throw error;
+            }
+
+            console.log('✅ Rapport sauvegardé silencieusement (intervention reste ouverte)');
+            return true;
+
+        } catch (error) {
+            console.error('❌ Erreur lors de la sauvegarde silencieuse:', error);
+            return false;
+        }
+    };
+
+    // ✅ FIX 3: GESTIONNAIRE DE FICHIERS CORRIGÉ - Sauvegarde SANS fermeture
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
@@ -429,7 +454,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             // Traitement des uploads
             const uploadResults = await handleFileUpload(files);
 
-            // ✅ FIX PRINCIPAL: Collecter tous les uploads réussis et mettre à jour immédiatement
+            // Collecter tous les uploads réussis
             const successfulUploads = [];
 
             uploadResults.results.forEach(result => {
@@ -457,7 +482,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 }
             });
 
-            // ✅ CORRECTION CRITIQUE: Mise à jour immédiate ET sauvegarde en base
+            // ✅ CORRECTION CRITIQUE: Mise à jour locale ET sauvegarde silencieuse
             if (successfulUploads.length > 0) {
                 console.log('💾 Sauvegarde de', successfulUploads.length, 'nouveau(x) fichier(s)');
 
@@ -470,22 +495,17 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 // ✅ MISE À JOUR SYNCHRONE DU STATE LOCAL
                 setReport(updatedReport);
 
-                // ✅ SAUVEGARDE IMMÉDIATE EN BASE DE DONNÉES
-                try {
-                    await onSave(intervention.id, updatedReport);
-                    console.log('✅ Rapport sauvegardé en base avec', updatedReport.files.length, 'fichier(s) total');
+                // ✅ SAUVEGARDE SILENCIEUSE (sans fermer l'intervention)
+                const saveSuccess = await saveReportSilently(updatedReport);
 
-                    // ✅ FORCE LE REFRESH DE L'AFFICHAGE
-                    setFileListKey(prev => prev + 1);
-
-                    // ✅ NETTOYAGE DU SESSIONSTORAGE ET RECHARGEMENT
-                    window.sessionStorage.setItem(storageKey, JSON.stringify(updatedReport));
-
-                } catch (saveError) {
-                    console.error('❌ Erreur sauvegarde immédiate:', saveError);
-                    // Même en cas d'erreur de sauvegarde, les fichiers sont sur Supabase Storage
-                    // On peut réessayer manuellement
+                if (saveSuccess) {
+                    console.log('✅ Fichiers ajoutés et sauvegardés (intervention reste ouverte)');
+                } else {
+                    console.warn('⚠️ Fichiers uploadés mais erreur de sauvegarde en base');
                 }
+
+                // ✅ FORCE LE REFRESH DE L'AFFICHAGE
+                setFileListKey(prev => prev + 1);
             }
 
             // Gestion des fichiers invalides
@@ -520,22 +540,22 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         setUploadQueue(prev => prev.filter(item => item.id !== idToRemove));
     };
 
-    // ✅ FIX 4: Fonction de sauvegarde finale améliorée
+    // ✅ FIX 4: Fonction de sauvegarde finale SÉPARÉE (avec fermeture)
     const handleSave = async () => {
         if (!intervention) return;
 
         try {
-            console.log('🔄 Sauvegarde finale du rapport avec', (report.files || []).length, 'fichier(s)');
+            console.log('🔒 SAUVEGARDE FINALE ET CLÔTURE du rapport');
 
             const finalReport = { ...report };
 
             // Nettoyer le storage local
             window.sessionStorage.removeItem(storageKey);
 
-            // Sauvegarder en base
+            // ✅ MAINTENANT on appelle la fonction qui PEUT fermer l'intervention
             await onSave(intervention.id, finalReport);
 
-            console.log('✅ Rapport final sauvegardé avec succès');
+            console.log('✅ Rapport final sauvegardé et intervention clôturée si nécessaire');
 
         } catch (error) {
             console.error('❌ Erreur lors de la sauvegarde finale:', error);
@@ -761,6 +781,22 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
+                    {/* ✅ Message d'info sur le comportement */}
+                    {!isAdmin && (
+                        <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#e0f7fa',
+                            border: '1px solid #b2ebf2',
+                            borderRadius: '0.375rem',
+                            marginBottom: '1rem',
+                            fontSize: '0.875rem',
+                            color: '#00695c'
+                        }}>
+                            💡 Les fichiers sont automatiquement sauvegardés lors de l'upload.
+                            L'intervention ne sera fermée qu'en cliquant sur "Sauvegarder et Clôturer".
+                        </div>
+                    )}
+
                     {/* ✅ FIX 6: Liste des fichiers avec key pour forcer le re-render */}
                     <ul key={fileListKey} className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
@@ -775,7 +811,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                                 </a>
                             </li>
                         ))}
-                        {/* ✅ Message de debug pour le développement */}
                         {(report.files || []).length === 0 && (
                             <li style={{ fontStyle: 'italic', color: '#6b7280' }}>
                                 Aucun fichier ajouté pour le moment
@@ -950,10 +985,15 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         onClick={handleSave}
                         disabled={isUploading || uploadQueue.some(item => item.status === 'pending')}
                         className="btn btn-primary w-full mt-4"
+                        style={{
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            padding: '1rem'
+                        }}
                     >
                         {isUploading || uploadQueue.some(item => item.status === 'pending') ?
                             'Attendre la fin des envois...' :
-                            'Sauvegarder et Clôturer'
+                            '🔒 Sauvegarder et Clôturer l\'intervention'
                         }
                     </button>
                 )}
