@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { storageService } from '../lib/supabase';
 
 /**
@@ -12,6 +12,14 @@ export const useMobileUpload = (interventionId) => {
     const [fileStatuses, setFileStatuses] = useState({});
     const [error, setError] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const timerIntervalsRef = useRef({}); // Pour gérer les chronomètres de manière sûre
+
+    // S'assure que tous les chronomètres sont arrêtés si le composant est démonté
+    useEffect(() => {
+        return () => {
+            Object.values(timerIntervalsRef.current).forEach(clearInterval);
+        };
+    }, []);
 
     // Détection des capacités du device (ex: mobile, caméra, etc.)
     const [capabilities] = useState(() => {
@@ -82,22 +90,30 @@ export const useMobileUpload = (interventionId) => {
 
         // Met à jour le temps écoulé toutes les secondes
         const timerInterval = setInterval(() => {
-            setFileStatuses(prev => ({
-                ...prev,
-                [fileId]: {
-                    ...prev[fileId],
-                    elapsedTime: Math.round((Date.now() - startTime) / 1000)
+            setFileStatuses(prev => {
+                // Vérifie si le fichier est toujours dans la liste avant de mettre à jour
+                if (!prev[fileId]) {
+                    clearInterval(timerIntervalsRef.current[fileId]);
+                    delete timerIntervalsRef.current[fileId];
+                    return prev;
                 }
-            }));
+                return {
+                    ...prev,
+                    [fileId]: {
+                        ...prev[fileId],
+                        elapsedTime: Math.round((Date.now() - startTime) / 1000)
+                    }
+                };
+            });
         }, 1000);
+        timerIntervalsRef.current[fileId] = timerInterval;
 
         try {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const result = await storageService.uploadInterventionFile(file, interventionId, 'report');
                     if (result.error) throw result.error;
-                    
-                    // Succès
+
                     setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'completed', progress: 100 } }));
                     return result;
                 } catch (uploadError) {
@@ -109,11 +125,11 @@ export const useMobileUpload = (interventionId) => {
             }
             throw lastError;
         } catch (finalError) {
-            // Échec final
             setFileStatuses(prev => ({ ...prev, [fileId]: { ...prev[fileId], status: 'error', error: finalError.message } }));
             throw finalError;
         } finally {
-            clearInterval(timerInterval);
+            clearInterval(timerIntervalsRef.current[fileId]);
+            delete timerIntervalsRef.current[fileId];
         }
     }, [interventionId]);
 
@@ -138,8 +154,7 @@ export const useMobileUpload = (interventionId) => {
             initialStatuses[fileId] = { id: fileId, name: file.name, size: file.size, status: 'pending', progress: 0, elapsedTime: 0 };
         });
         setFileStatuses(initialStatuses);
-        
-        // Délai pour permettre à l'UI de se mettre à jour et d'afficher l'état "pending"
+
         await new Promise(resolve => setTimeout(resolve, 50));
 
         try {
@@ -177,11 +192,37 @@ export const useMobileUpload = (interventionId) => {
         }
     }, [capabilities.isMobile, compressImage, uploadSingleFile]);
 
+    // ✅ NOUVELLE FONCTION pour supprimer un fichier de la liste
+    const removeFileFromQueue = useCallback((fileIdToRemove) => {
+        setFileStatuses(prev => {
+            const newStatuses = { ...prev };
+            delete newStatuses[fileIdToRemove];
+            return newStatuses;
+        });
+        // Arrête le chronomètre associé s'il existe
+        if (timerIntervalsRef.current[fileIdToRemove]) {
+            clearInterval(timerIntervalsRef.current[fileIdToRemove]);
+            delete timerIntervalsRef.current[fileIdToRemove];
+        }
+    }, []);
+
     const reset = useCallback(() => {
         setIsUploading(false);
         setFileStatuses({});
         setError(null);
+        // Arrête tous les chronomètres en cours
+        Object.values(timerIntervalsRef.current).forEach(clearInterval);
+        timerIntervalsRef.current = {};
     }, []);
 
-    return { handleFileUpload, capabilities, isUploading, fileStatuses, error, reset, isOnline };
+    return {
+        handleFileUpload,
+        capabilities,
+        isUploading,
+        fileStatuses,
+        error,
+        reset,
+        isOnline,
+        removeFileFromQueue // ✅ Exporte la nouvelle fonction
+    };
 };

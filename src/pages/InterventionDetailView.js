@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, XCircleIcon } from '../components/SharedUI';
-import { useMobileUpload } from '../hooks/useMobileUpload'; // ✅ Import du hook externe
+import { useMobileUpload } from '../hooks/useMobileUpload';
 
 // Composant d'image optimisé avec lazy loading (inchangé)
 const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
-    const imgRef = useRef(null);
 
     useEffect(() => {
         if (!src) return;
@@ -19,17 +18,17 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     }, [src]);
 
     if (error) return <div className={className} style={{ ...style, backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>❌</div>;
-    
+
     return (
         <div style={{ position: 'relative', display: 'inline-block' }}>
             {loading && <div style={{ width: style?.width || 40, height: style?.height || 40, backgroundColor: '#f3f4f6', borderRadius: '0.25rem', animation: 'pulse 1.5s ease-in-out infinite' }} />}
-            <img ref={imgRef} src={src} alt={alt} className={className} style={{ ...style, display: loading ? 'none' : 'block' }} onClick={onClick} />
+            <img src={src} alt={alt} className={className} style={{ ...style, display: loading ? 'none' : 'block' }} onClick={onClick} />
         </div>
     );
 };
 
 
-// Composant SignatureModal (simplifié et inchangé)
+// Composant SignatureModal (inchangé)
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const modalCanvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -73,15 +72,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // ✅ Utilisation du hook externe et amélioré
+    // ✅ Récupération de la nouvelle fonction 'removeFileFromQueue'
     const {
         handleFileUpload,
         capabilities,
         isUploading,
-        fileStatuses, // ✅ Source de vérité unique pour l'UI d'upload
+        fileStatuses,
         error: uploadError,
         reset: resetUpload,
-        isOnline
+        isOnline,
+        removeFileFromQueue
     } = useMobileUpload(interventionId);
 
     const [fileListKey, setFileListKey] = useState(0);
@@ -127,7 +127,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
     };
 
-    // ✅ Gestionnaire d'upload simplifié qui utilise le hook
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
@@ -147,7 +146,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 saveReportSilently(updatedReport);
                 setFileListKey(prev => prev + 1);
             }
-            
+
             if (invalidFiles.length > 0) {
                 alert(`${invalidFiles.length} fichier(s) ont été ignorés car trop volumineux.`);
             }
@@ -168,7 +167,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             setIsSaving(false);
         }
     };
-    
+
     const handleGoBack = () => navigate('/planning');
     const handleClearSignature = () => {
         const canvas = signatureCanvasRef.current;
@@ -177,7 +176,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         handleReportChange('signature', null);
     };
 
-    // ✅ Calcul du progrès global basé sur le nouvel état
     const globalProgress = useMemo(() => {
         const statuses = Object.values(fileStatuses);
         if (statuses.length === 0) return 0;
@@ -203,8 +201,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
                 <div className="section">
                     <h3>Photos et Documents du Rapport</h3>
-                    
-                    {/* Liste des fichiers uploadés (inchangée) */}
+
                     <ul key={fileListKey} className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
                             <li key={`${file.url}-${idx}`}>
@@ -215,12 +212,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         ))}
                     </ul>
 
-                    {/* ✅ Affichage de la file d'attente d'upload, maintenant piloté par fileStatuses */}
                     {Object.keys(fileStatuses).length > 0 && (
                         <div className="mt-4">
                             <h4 className="font-semibold mb-2">Upload en cours...</h4>
                             {isUploading && <div style={{ width: '100%', height: '6px', backgroundColor: '#e5e7eb', borderRadius: '3px', marginBottom: '1rem', overflow: 'hidden' }}><div style={{ width: `${globalProgress}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }} /></div>}
-                            
+
                             <ul className="upload-queue-list">
                                 {Object.values(fileStatuses).map((item) => {
                                     const { id, name, size, status, error, elapsedTime } = item;
@@ -235,7 +231,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                                 <span className="file-name">{name}</span>
                                                 <span style={{fontSize: '0.75rem', color: '#6b7280'}}>{Math.round(size / 1024)}KB</span>
 
-                                                {/* ✅ Affichage du statut et du temps écoulé */}
                                                 {(status === 'compressing' || status === 'uploading') && (
                                                     <span style={{fontSize: '0.75rem', color: '#3b82f6'}}>
                                                         {status === 'uploading' ? 'Upload...' : 'Compression...'}
@@ -245,9 +240,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                                 {status === 'completed' && <span style={{fontSize: '0.75rem', color: '#16a34a'}}>✅ Terminé</span>}
                                                 {error && <span className="error-message">{error}</span>}
                                             </div>
-                                            
+
+                                            {/* ✅ CORRECTION: Utilisation de la nouvelle fonction pour la suppression */}
                                             {status !== 'pending' && status !== 'uploading' && status !== 'compressing' && (
-                                                <button onClick={() => setFileStatuses(prev => { const copy = {...prev}; delete copy[id]; return copy; })} title="Retirer"><XCircleIcon className="icon icon-remove" /></button>
+                                                <button onClick={() => removeFileFromQueue(id)} title="Retirer"><XCircleIcon className="icon icon-remove" /></button>
                                             )}
                                         </li>
                                     );
