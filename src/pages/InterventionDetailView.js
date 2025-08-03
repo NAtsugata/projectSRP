@@ -1,9 +1,86 @@
-// src/pages/InterventionDetailView.js - Version corrigée pour éviter la fermeture automatique
+// src/pages/InterventionDetailView.js - Version avec indicateurs de chargement
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService, interventionService } from '../lib/supabase';
 import { CustomFileInput } from '../components/SharedUI';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
+
+// Composant de skeleton pour le chargement des images
+const ImageSkeleton = ({ width = 40, height = 40 }) => (
+    <div
+        style={{
+            width: `${width}px`,
+            height: `${height}px`,
+            backgroundColor: '#f3f4f6',
+            borderRadius: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'pulse 1.5s ease-in-out infinite'
+        }}
+    >
+        <div style={{ width: '16px', height: '16px', opacity: 0.3 }}>
+            📷
+        </div>
+    </div>
+);
+
+// Composant d'image avec chargement
+const ImageWithLoading = ({ src, alt, className, style, onClick }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    const handleLoad = () => {
+        setLoading(false);
+    };
+
+    const handleError = () => {
+        setLoading(false);
+        setError(true);
+    };
+
+    if (error) {
+        return (
+            <div
+                className={className}
+                style={{
+                    ...style,
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#dc2626',
+                    fontSize: '0.75rem'
+                }}
+            >
+                ❌
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+            {loading && (
+                <ImageSkeleton
+                    width={style?.width || 40}
+                    height={style?.height || 40}
+                />
+            )}
+            <img
+                src={src}
+                alt={alt}
+                className={className}
+                style={{
+                    ...style,
+                    display: loading ? 'none' : 'block'
+                }}
+                onLoad={handleLoad}
+                onError={handleError}
+                onClick={onClick}
+            />
+        </div>
+    );
+};
 
 // Hook mobile simplifié intégré directement
 const useMobileUpload = (interventionId) => {
@@ -204,85 +281,98 @@ const useMobileUpload = (interventionId) => {
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const modalCanvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const canvas = modalCanvasRef.current;
-        if (!canvas) return;
+        const initCanvas = async () => {
+            const canvas = modalCanvasRef.current;
+            if (!canvas) return;
 
-        const isMobile = window.innerWidth < 768;
-        canvas.width = isMobile ? window.innerWidth * 0.95 : window.innerWidth * 0.9;
-        canvas.height = isMobile ? window.innerHeight * 0.6 : window.innerHeight * 0.7;
+            setIsLoading(true);
 
-        const ctx = canvas.getContext('2d');
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = isMobile ? 4 : 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+            const isMobile = window.innerWidth < 768;
+            canvas.width = isMobile ? window.innerWidth * 0.95 : window.innerWidth * 0.9;
+            canvas.height = isMobile ? window.innerHeight * 0.6 : window.innerHeight * 0.7;
 
-        if (existingSignature) {
-            const img = new Image();
-            img.onload = () => ctx.drawImage(img, 0, 0);
-            img.src = existingSignature;
-        }
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = isMobile ? 4 : 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
 
-        let drawing = false;
-        let lastPos = null;
+            if (existingSignature) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                    setIsLoading(false);
+                };
+                img.onerror = () => setIsLoading(false);
+                img.src = existingSignature;
+            } else {
+                setIsLoading(false);
+            }
 
-        const getPos = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) * (canvas.width / rect.width),
-                y: (clientY - rect.top) * (canvas.height / rect.height)
+            let drawing = false;
+            let lastPos = null;
+
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (clientX - rect.left) * (canvas.width / rect.width),
+                    y: (clientY - rect.top) * (canvas.height / rect.height)
+                };
+            };
+
+            const startDrawing = (e) => {
+                e.preventDefault();
+                drawing = true;
+                setIsDrawing(true);
+                lastPos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(lastPos.x, lastPos.y);
+            };
+
+            const stopDrawing = (e) => {
+                e.preventDefault();
+                drawing = false;
+                lastPos = null;
+            };
+
+            const draw = (e) => {
+                if (!drawing) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                if (lastPos) {
+                    ctx.beginPath();
+                    ctx.moveTo(lastPos.x, lastPos.y);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                }
+                lastPos = pos;
+            };
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseleave', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+
+            return () => {
+                canvas.removeEventListener('mousedown', startDrawing);
+                canvas.removeEventListener('mouseup', stopDrawing);
+                canvas.removeEventListener('mousemove', draw);
+                canvas.removeEventListener('mouseleave', stopDrawing);
+                canvas.removeEventListener('touchstart', startDrawing);
+                canvas.removeEventListener('touchend', stopDrawing);
+                canvas.removeEventListener('touchmove', draw);
             };
         };
 
-        const startDrawing = (e) => {
-            e.preventDefault();
-            drawing = true;
-            setIsDrawing(true);
-            lastPos = getPos(e);
-            ctx.beginPath();
-            ctx.moveTo(lastPos.x, lastPos.y);
-        };
-
-        const stopDrawing = (e) => {
-            e.preventDefault();
-            drawing = false;
-            lastPos = null;
-        };
-
-        const draw = (e) => {
-            if (!drawing) return;
-            e.preventDefault();
-            const pos = getPos(e);
-            if (lastPos) {
-                ctx.beginPath();
-                ctx.moveTo(lastPos.x, lastPos.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-            }
-            lastPos = pos;
-        };
-
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseleave', stopDrawing);
-        canvas.addEventListener('touchstart', startDrawing, { passive: false });
-        canvas.addEventListener('touchend', stopDrawing, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-
-        return () => {
-            canvas.removeEventListener('mousedown', startDrawing);
-            canvas.removeEventListener('mouseup', stopDrawing);
-            canvas.removeEventListener('mousemove', draw);
-            canvas.removeEventListener('mouseleave', stopDrawing);
-            canvas.removeEventListener('touchstart', startDrawing);
-            canvas.removeEventListener('touchend', stopDrawing);
-            canvas.removeEventListener('touchmove', draw);
-        };
+        initCanvas();
     }, [existingSignature]);
 
     const handleSaveSignature = () => {
@@ -304,11 +394,40 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         <div className="modal-overlay">
             <div className="modal-content signature-modal-content">
                 <h3>Veuillez signer ci-dessous</h3>
-                <canvas ref={modalCanvasRef} className="signature-canvas-fullscreen"></canvas>
+
+                {isLoading && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '300px',
+                        flexDirection: 'column',
+                        gap: '1rem'
+                    }}>
+                        <LoaderIcon className="animate-spin" style={{ width: '32px', height: '32px' }} />
+                        <span>Préparation de la signature...</span>
+                    </div>
+                )}
+
+                <canvas
+                    ref={modalCanvasRef}
+                    className="signature-canvas-fullscreen"
+                    style={{ display: isLoading ? 'none' : 'block' }}
+                />
+
                 <div className="modal-footer">
-                    <button type="button" onClick={handleClear} className="btn btn-secondary">Effacer</button>
-                    <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
-                    <button type="button" onClick={handleSaveSignature} className="btn btn-primary" disabled={!isDrawing && !existingSignature}>
+                    <button type="button" onClick={handleClear} className="btn btn-secondary" disabled={isLoading}>
+                        Effacer
+                    </button>
+                    <button type="button" onClick={onCancel} className="btn btn-secondary">
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSaveSignature}
+                        className="btn btn-primary"
+                        disabled={isLoading || (!isDrawing && !existingSignature)}
+                    >
                         Valider la Signature
                     </button>
                 </div>
@@ -317,7 +436,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-export default function InterventionDetailView({ interventions, onSave, isAdmin }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
@@ -326,6 +445,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     const storageKey = 'srp-intervention-report-' + interventionId;
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [documentsLoading, setDocumentsLoading] = useState(true);
 
     // Utilisation du hook mobile intégré
     const {
@@ -341,7 +462,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
     // État pour gérer la queue d'upload avec feedback
     const [uploadQueue, setUploadQueue] = useState([]);
 
-    // ✅ FIX 1: État pour forcer le rafraîchissement de la liste des fichiers
+    // État pour forcer le rafraîchissement de la liste des fichiers
     const [fileListKey, setFileListKey] = useState(0);
 
     useEffect(() => {
@@ -349,6 +470,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         if (foundIntervention) {
             setIntervention(foundIntervention);
             setLoading(false);
+            // Simuler un délai de chargement des documents
+            setTimeout(() => setDocumentsLoading(false), 500);
         } else if (interventions.length > 0) {
             navigate('/planning');
         }
@@ -370,12 +493,10 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         }
     }, [intervention, storageKey]);
 
-    // ✅ FIX 2: Synchronisation forcée avec la base de données après chaque changement
     useEffect(() => {
         if (report && intervention) {
             try {
                 window.sessionStorage.setItem(storageKey, JSON.stringify(report));
-                // Force le refresh de la liste de fichiers pour s'assurer qu'elle soit à jour
                 setFileListKey(prev => prev + 1);
             } catch (error) {
                 console.error("Failed to save report to sessionStorage", error);
@@ -404,20 +525,16 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
     const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ CORRECTION PRINCIPALE: Sauvegarde SANS fermeture automatique
+    // Sauvegarde SANS fermeture automatique
     const saveReportSilently = async (updatedReport) => {
         try {
             console.log('💾 Sauvegarde silencieuse du rapport (SANS changement de statut)');
 
-            // ✅ IMPORTANT: On ne change PAS le statut lors de la sauvegarde silencieuse
-            const { error } = await interventionService.updateIntervention(interventionId, {
-                report: updatedReport
-                // ❌ PAS de changement de statut ici !
-            });
+            const result = await onSaveSilent(interventionId, updatedReport);
 
-            if (error) {
-                console.error('❌ Erreur sauvegarde silencieuse:', error);
-                throw error;
+            if (!result.success) {
+                console.error('❌ Erreur sauvegarde silencieuse:', result.error);
+                throw result.error;
             }
 
             console.log('✅ Rapport sauvegardé silencieusement (intervention reste ouverte)');
@@ -429,7 +546,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         }
     };
 
-    // ✅ FIX 3: GESTIONNAIRE DE FICHIERS CORRIGÉ - Sauvegarde SANS fermeture
+    // GESTIONNAIRE DE FICHIERS CORRIGÉ - Sauvegarde SANS fermeture
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
@@ -482,7 +599,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 }
             });
 
-            // ✅ CORRECTION CRITIQUE: Mise à jour locale ET sauvegarde silencieuse
+            // Mise à jour locale ET sauvegarde silencieuse
             if (successfulUploads.length > 0) {
                 console.log('💾 Sauvegarde de', successfulUploads.length, 'nouveau(x) fichier(s)');
 
@@ -492,10 +609,10 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     files: [...(report.files || []), ...successfulUploads]
                 };
 
-                // ✅ MISE À JOUR SYNCHRONE DU STATE LOCAL
+                // MISE À JOUR SYNCHRONE DU STATE LOCAL
                 setReport(updatedReport);
 
-                // ✅ SAUVEGARDE SILENCIEUSE (sans fermer l'intervention)
+                // SAUVEGARDE SILENCIEUSE (sans fermer l'intervention)
                 const saveSuccess = await saveReportSilently(updatedReport);
 
                 if (saveSuccess) {
@@ -504,7 +621,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     console.warn('⚠️ Fichiers uploadés mais erreur de sauvegarde en base');
                 }
 
-                // ✅ FORCE LE REFRESH DE L'AFFICHAGE
+                // FORCE LE REFRESH DE L'AFFICHAGE
                 setFileListKey(prev => prev + 1);
             }
 
@@ -540,10 +657,11 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         setUploadQueue(prev => prev.filter(item => item.id !== idToRemove));
     };
 
-    // ✅ FIX 4: Fonction de sauvegarde finale SÉPARÉE (avec fermeture)
+    // Fonction de sauvegarde finale SÉPARÉE (avec fermeture)
     const handleSave = async () => {
         if (!intervention) return;
 
+        setIsSaving(true);
         try {
             console.log('🔒 SAUVEGARDE FINALE ET CLÔTURE du rapport');
 
@@ -552,17 +670,19 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
             // Nettoyer le storage local
             window.sessionStorage.removeItem(storageKey);
 
-            // ✅ MAINTENANT on appelle la fonction qui PEUT fermer l'intervention
+            // MAINTENANT on appelle la fonction qui PEUT fermer l'intervention
             await onSave(intervention.id, finalReport);
 
             console.log('✅ Rapport final sauvegardé et intervention clôturée si nécessaire');
 
         } catch (error) {
             console.error('❌ Erreur lors de la sauvegarde finale:', error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    // ✅ FIX 5: Fonction de rafraîchissement manuel
+    // Fonction de rafraîchissement manuel
     const handleRefreshFiles = () => {
         console.log('🔄 Rafraîchissement manuel de la liste des fichiers');
         setFileListKey(prev => prev + 1);
@@ -598,7 +718,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
         return (
             <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Chargement...</p>
+                <p>Chargement de l'intervention...</p>
             </div>
         );
     }
@@ -644,7 +764,9 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 .document-list li span { flex-grow: 1; }
                 .document-thumbnail {
                     width: 40px; height: 40px; object-fit: cover; border-radius: 0.25rem; background-color: #e9ecef;
+                    cursor: pointer; transition: transform 0.2s ease;
                 }
+                .document-thumbnail:hover { transform: scale(1.1); }
                 .upload-status-icon { width: 24px; height: 24px; flex-shrink: 0; }
                 .upload-status-icon.success { color: #28a745; }
                 .upload-status-icon.error { color: #dc3545; }
@@ -661,7 +783,27 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                     background: none; border: none; cursor: pointer; color: #007bff;
                     font-size: 0.875rem; text-decoration: underline; margin-left: 1rem;
                 }
+
+                /* Animations de chargement */
                 @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+
+                /* Skeleton loading pour les documents */
+                .document-skeleton {
+                    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                    background-size: 200% 100%;
+                    animation: loading-skeleton 1.5s infinite;
+                    border-radius: 0.375rem;
+                    height: 60px;
+                }
+
+                @keyframes loading-skeleton {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
 
                 @media (max-width: 768px) {
                     .upload-queue-list li, .document-list-detailed li {
@@ -707,7 +849,12 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
 
                 <div className="section">
                     <h3>Documents de préparation</h3>
-                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
+                    {documentsLoading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div className="document-skeleton"></div>
+                            <div className="document-skeleton"></div>
+                        </div>
+                    ) : (intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
                         <ul className="document-list">
                             {intervention.intervention_briefing_documents.map(doc => (
                                 <li key={doc.id}>
@@ -731,14 +878,14 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                             className="btn btn-success"
                             disabled={!!report.arrivalTime || isAdmin}
                         >
-                            Arrivée sur site
+                            {report.arrivalTime ? '✅ Arrivé' : '🕐 Arrivée sur site'}
                         </button>
                         <button
                             onClick={() => handleReportChange('departureTime', new Date().toISOString())}
                             className="btn btn-danger"
                             disabled={!report.arrivalTime || !!report.departureTime || isAdmin}
                         >
-                            Départ du site
+                            {report.departureTime ? '✅ Parti' : '🚪 Départ du site'}
                         </button>
                     </div>
                     <div className="time-display">
@@ -762,8 +909,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 <div className="section">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <h3>Photos et Documents du Rapport</h3>
-                        <button onClick={handleRefreshFiles} className="refresh-button">
-                            🔄 Actualiser
+                        <button onClick={handleRefreshFiles} className="refresh-button" disabled={isUploading}>
+                            {isUploading ? <LoaderIcon className="animate-spin" /> : '🔄'} Actualiser
                         </button>
                     </div>
 
@@ -781,7 +928,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
-                    {/* ✅ Message d'info sur le comportement */}
+                    {/* Message d'info sur le comportement */}
                     {!isAdmin && (
                         <div style={{
                             padding: '0.75rem',
@@ -797,14 +944,21 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
-                    {/* ✅ FIX 6: Liste des fichiers avec key pour forcer le re-render */}
+                    {/* Liste des fichiers avec chargement des images */}
                     <ul key={fileListKey} className="document-list-detailed">
                         {(report.files || []).map((file, idx) => (
                             <li key={`${file.url}-${idx}-${fileListKey}`}>
-                                {file.type && file.type.startsWith('image/') ?
-                                    <img src={file.url} alt={`Aperçu de ${file.name}`} className="document-thumbnail" /> :
+                                {file.type && file.type.startsWith('image/') ? (
+                                    <ImageWithLoading
+                                        src={file.url}
+                                        alt={`Aperçu de ${file.name}`}
+                                        className="document-thumbnail"
+                                        style={{ width: 40, height: 40 }}
+                                        onClick={() => window.open(file.url, '_blank')}
+                                    />
+                                ) : (
                                     <FileTextIcon className="document-icon" />
-                                }
+                                )}
                                 <span>{file.name}</span>
                                 <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
                                     Voir
@@ -818,9 +972,17 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         )}
                     </ul>
 
+                    {/* Queue d'upload avec indicateurs de progression */}
                     {uploadQueue.length > 0 && (
                         <div className="mt-4">
-                            <h4 className="font-semibold mb-2">Téléchargements en cours</h4>
+                            <h4 className="font-semibold mb-2">
+                                Téléchargements en cours
+                                {isUploading && (
+                                    <span style={{ fontSize: '0.875rem', color: '#6b7280', marginLeft: '0.5rem' }}>
+                                        ({uploadProgress}%)
+                                    </span>
+                                )}
+                            </h4>
                             <ul className="upload-queue-list">
                                 {uploadQueue.map((item) => (
                                     <li key={item.id}>
@@ -833,6 +995,16 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                                             {item.size && (
                                                 <span style={{fontSize: '0.75rem', color: '#6b7280'}}>
                                                     {Math.round(item.size / 1024)}KB
+                                                </span>
+                                            )}
+                                            {item.status === 'pending' && (
+                                                <span style={{fontSize: '0.75rem', color: '#3b82f6'}}>
+                                                    Envoi en cours...
+                                                </span>
+                                            )}
+                                            {item.status === 'success' && (
+                                                <span style={{fontSize: '0.75rem', color: '#16a34a'}}>
+                                                    ✅ Envoyé avec succès
                                                 </span>
                                             )}
                                             {item.error && <span className="error-message">{item.error}</span>}
@@ -860,6 +1032,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                                                 <button
                                                     onClick={() => handleRetryUpload(item)}
                                                     title="Réessayer"
+                                                    disabled={isUploading}
                                                 >
                                                     <RefreshCwIcon className="icon icon-retry" />
                                                 </button>
@@ -879,6 +1052,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
+                    {/* Input de fichiers avec état de chargement */}
                     {!isAdmin && (
                         <CustomFileInput
                             accept="image/*,application/pdf"
@@ -927,7 +1101,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                         </div>
                     )}
 
-                    {/* ✅ DEBUG: Affichage des informations de débogage en mode développement */}
+                    {/* Debug info en mode développement */}
                     {process.env.NODE_ENV === 'development' && (
                         <div style={{
                             marginTop: '1rem',
@@ -940,7 +1114,8 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                             🔧 Debug: {(report.files || []).length} fichier(s) dans le rapport |
                             Queue: {uploadQueue.length} |
                             Key: {fileListKey} |
-                            Intervention ID: {intervention.id}
+                            Intervention ID: {intervention.id} |
+                            Uploading: {isUploading ? 'Oui' : 'Non'}
                         </div>
                     )}
                 </div>
@@ -948,13 +1123,14 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 <div className="section">
                     <h3>Signature du client</h3>
                     {isAdmin && report.signature ? (
-                        <img
+                        <ImageWithLoading
                             src={report.signature}
                             alt="Signature client"
                             style={{
                                 border: '1px solid #ccc',
                                 borderRadius: '0.375rem',
-                                maxWidth: '100%'
+                                maxWidth: '100%',
+                                height: 'auto'
                             }}
                         />
                     ) : (
@@ -972,6 +1148,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                                 <button
                                     onClick={() => setShowSignatureModal(true)}
                                     className="btn btn-secondary btn-sm"
+                                    disabled={isSaving}
                                 >
                                     <ExpandIcon /> Agrandir
                                 </button>
@@ -983,19 +1160,50 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin 
                 {!isAdmin && (
                     <button
                         onClick={handleSave}
-                        disabled={isUploading || uploadQueue.some(item => item.status === 'pending')}
+                        disabled={isUploading || uploadQueue.some(item => item.status === 'pending') || isSaving}
                         className="btn btn-primary w-full mt-4"
                         style={{
                             fontSize: '1rem',
                             fontWeight: 'bold',
-                            padding: '1rem'
+                            padding: '1rem',
+                            position: 'relative'
                         }}
                     >
-                        {isUploading || uploadQueue.some(item => item.status === 'pending') ?
-                            'Attendre la fin des envois...' :
+                        {isSaving ? (
+                            <>
+                                <LoaderIcon className="animate-spin" style={{ marginRight: '0.5rem' }} />
+                                Sauvegarde en cours...
+                            </>
+                        ) : isUploading || uploadQueue.some(item => item.status === 'pending') ? (
+                            <>
+                                <LoaderIcon className="animate-spin" style={{ marginRight: '0.5rem' }} />
+                                Attendre la fin des envois...
+                            </>
+                        ) : (
                             '🔒 Sauvegarder et Clôturer l\'intervention'
-                        }
+                        )}
                     </button>
+                )}
+
+                {/* Indicateur de progression global */}
+                {(isUploading || isSaving) && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        backgroundColor: '#e5e7eb',
+                        zIndex: 9999
+                    }}>
+                        <div style={{
+                            height: '100%',
+                            backgroundColor: isSaving ? '#22c55e' : '#3b82f6',
+                            width: isSaving ? '100%' : `${uploadProgress}%`,
+                            transition: 'width 0.3s ease',
+                            animation: isSaving ? 'pulse 1s infinite' : 'none'
+                        }} />
+                    </div>
                 )}
             </div>
         </div>
