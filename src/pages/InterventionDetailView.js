@@ -1,91 +1,165 @@
-// src/pages/InterventionDetailView.js - Version optimisée mobile
+// src/pages/InterventionDetailView.js - VERSION CORRIGÉE ET FONCTIONNELLE
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMobileFileManager, MobileOptimizedImage, UploadQueue } from '../hooks/useMobileFileManager';
-import MobileFileInput from '../components/MobileFileInput';
-import { ChevronLeftIcon, DownloadIcon, FileTextIcon, ExpandIcon, RefreshCwIcon } from '../components/SharedUI';
+import { storageService } from '../lib/supabase';
+import { CustomFileInput } from '../components/SharedUI';
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
+
+// ✅ COMPOSANT D'IMAGE OPTIMISÉ MOBILE
+const OptimizedImage = ({ src, alt, className, style, onClick }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const imgRef = useRef(null);
+
+    useEffect(() => {
+        if (!src) return;
+
+        const img = new Image();
+        img.onload = () => setLoading(false);
+        img.onerror = () => {
+            setLoading(false);
+            setError(true);
+        };
+
+        // ✅ LAZY LOADING avec Intersection Observer
+        if ('IntersectionObserver' in window && imgRef.current) {
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            img.src = src;
+                            observer.disconnect();
+                        }
+                    });
+                },
+                { rootMargin: '50px' }
+            );
+
+            observer.observe(imgRef.current);
+            return () => observer.disconnect();
+        } else {
+            // Fallback pour navigateurs anciens
+            img.src = src;
+        }
+    }, [src]);
+
+    if (loading) {
+        return (
+            <div
+                ref={imgRef}
+                className={className}
+                style={{
+                    ...style,
+                    backgroundColor: '#f3f4f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '0.25rem'
+                }}
+            >
+                <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #e5e7eb',
+                    borderTop: '2px solid #3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                }} />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div
+                className={className}
+                style={{
+                    ...style,
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#dc2626',
+                    fontSize: '0.75rem'
+                }}
+            >
+                ❌
+            </div>
+        );
+    }
+
+    return (
+        <img
+            ref={imgRef}
+            src={src}
+            alt={alt}
+            className={className}
+            style={{
+                ...style,
+                display: loading ? 'none' : 'block'
+            }}
+            onClick={onClick}
+            loading="lazy"
+        />
+    );
+};
 
 // ✅ COMPOSANT DE SIGNATURE OPTIMISÉ
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const modalCanvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false);
 
     useEffect(() => {
         const canvas = modalCanvasRef.current;
         if (!canvas) return;
 
-        // ✅ ADAPTATION MOBILE-FIRST
         const isMobile = window.innerWidth < 768;
-        const rect = canvas.getBoundingClientRect();
-
-        // Dimensions optimisées pour mobile
-        canvas.width = isMobile ? window.innerWidth * 0.95 : Math.min(window.innerWidth * 0.8, 800);
-        canvas.height = isMobile ? window.innerHeight * 0.5 : Math.min(window.innerHeight * 0.6, 400);
+        canvas.width = isMobile ? window.innerWidth * 0.95 : window.innerWidth * 0.9;
+        canvas.height = isMobile ? window.innerHeight * 0.6 : window.innerHeight * 0.7;
 
         const ctx = canvas.getContext('2d');
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = isMobile ? 3 : 2;
+        ctx.lineWidth = isMobile ? 4 : 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Chargement signature existante
         if (existingSignature) {
             const img = new Image();
-            img.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
+            img.onload = () => ctx.drawImage(img, 0, 0);
             img.src = existingSignature;
         }
 
         let drawing = false;
         let lastPos = null;
 
-        // ✅ FONCTION UNIFIÉE POUR OBTENIR LA POSITION
         const getPos = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-
-            let clientX, clientY;
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
             };
         };
 
-        // ✅ GESTION UNIFIÉE DU DÉBUT DE TRACÉ
         const startDrawing = (e) => {
             e.preventDefault();
             drawing = true;
             setIsDrawing(true);
-            setHasInteracted(true);
             lastPos = getPos(e);
             ctx.beginPath();
             ctx.moveTo(lastPos.x, lastPos.y);
         };
 
-        // ✅ GESTION UNIFIÉE DE LA FIN DE TRACÉ
         const stopDrawing = (e) => {
             e.preventDefault();
             drawing = false;
             lastPos = null;
         };
 
-        // ✅ GESTION UNIFIÉE DU TRACÉ
         const draw = (e) => {
             if (!drawing) return;
             e.preventDefault();
-
             const pos = getPos(e);
             if (lastPos) {
                 ctx.beginPath();
@@ -96,27 +170,15 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
             lastPos = pos;
         };
 
-        // ✅ ÉVÉNEMENTS SOURIS (DESKTOP)
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseleave', stopDrawing);
-
-        // ✅ ÉVÉNEMENTS TACTILES (MOBILE)
         canvas.addEventListener('touchstart', startDrawing, { passive: false });
         canvas.addEventListener('touchend', stopDrawing, { passive: false });
         canvas.addEventListener('touchmove', draw, { passive: false });
 
-        // ✅ PRÉVENTION DU SCROLL SUR MOBILE
-        const preventScroll = (e) => {
-            if (e.target === canvas) {
-                e.preventDefault();
-            }
-        };
-        document.addEventListener('touchmove', preventScroll, { passive: false });
-
         return () => {
-            // Nettoyage des événements
             canvas.removeEventListener('mousedown', startDrawing);
             canvas.removeEventListener('mouseup', stopDrawing);
             canvas.removeEventListener('mousemove', draw);
@@ -124,7 +186,6 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
             canvas.removeEventListener('touchstart', startDrawing);
             canvas.removeEventListener('touchend', stopDrawing);
             canvas.removeEventListener('touchmove', draw);
-            document.removeEventListener('touchmove', preventScroll);
         };
     }, [existingSignature]);
 
@@ -140,87 +201,28 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             setIsDrawing(false);
-            setHasInteracted(false);
         }
     };
 
     return (
-        <div className="modal-overlay" style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 50,
-            padding: '1rem'
-        }}>
-            <div style={{
-                backgroundColor: 'white',
-                borderRadius: '0.75rem',
-                padding: '1rem',
-                width: '100%',
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-            }}>
-                <h3 style={{ margin: 0, textAlign: 'center' }}>
-                    Signature du client
-                </h3>
-
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '200px'
-                }}>
-                    <canvas
-                        ref={modalCanvasRef}
-                        style={{
-                            border: '2px dashed #cbd5e1',
-                            borderRadius: '0.5rem',
-                            backgroundColor: '#fafafa',
-                            cursor: 'crosshair',
-                            touchAction: 'none',
-                            maxWidth: '100%',
-                            maxHeight: '100%'
-                        }}
-                    />
-                </div>
-
-                <div style={{
-                    display: 'flex',
-                    flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-                    gap: '0.75rem',
-                    justifyContent: 'center'
-                }}>
-                    <button
-                        type="button"
-                        onClick={handleClear}
-                        className="btn btn-secondary"
-                        style={{ minWidth: '100px' }}
-                    >
+        <div className="modal-overlay">
+            <div className="modal-content signature-modal-content">
+                <h3>Veuillez signer ci-dessous</h3>
+                <canvas ref={modalCanvasRef} className="signature-canvas-fullscreen" />
+                <div className="modal-footer">
+                    <button type="button" onClick={handleClear} className="btn btn-secondary">
                         Effacer
                     </button>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="btn btn-secondary"
-                        style={{ minWidth: '100px' }}
-                    >
+                    <button type="button" onClick={onCancel} className="btn btn-secondary">
                         Annuler
                     </button>
                     <button
                         type="button"
                         onClick={handleSaveSignature}
                         className="btn btn-primary"
-                        disabled={!hasInteracted && !existingSignature}
-                        style={{ minWidth: '100px' }}
+                        disabled={!isDrawing && !existingSignature}
                     >
-                        Valider
+                        Valider la Signature
                     </button>
                 </div>
             </div>
@@ -228,29 +230,35 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// ✅ COMPOSANT PRINCIPAL OPTIMISÉ
+// ✅ COMPOSANT PRINCIPAL CORRIGÉ
 export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
     const [loading, setLoading] = useState(true);
+    const signatureCanvasRef = useRef(null);
+    const storageKey = 'srp-intervention-report-' + interventionId;
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [uploadErrors, setUploadErrors] = useState([]);
 
-    // ✅ HOOK MOBILE OPTIMISÉ
-    const {
-        uploadState,
-        handleFileUpload,
-        displayState,
-        preloadImage,
-        deviceInfo,
-        reset: resetUpload
-    } = useMobileFileManager(interventionId);
+    // ✅ ÉTAT D'UPLOAD SIMPLIFIÉ ET FONCTIONNEL
+    const [uploadState, setUploadState] = useState({
+        isUploading: false,
+        uploadQueue: [],
+        uploadProgress: 0,
+        uploadError: null
+    });
 
-    const storageKey = `srp-intervention-report-${interventionId}`;
-    const signatureCanvasRef = useRef(null);
+    const [fileListKey, setFileListKey] = useState(0);
+
+    // ✅ DÉTECTION DEVICE SIMPLE
+    const deviceInfo = {
+        isMobile: /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+        isAndroid: /Android/.test(navigator.userAgent),
+        hasCamera: 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices
+    };
 
     // ✅ CHARGEMENT OPTIMISÉ
     useEffect(() => {
@@ -263,7 +271,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
     }, [interventions, interventionId, navigate]);
 
-    // ✅ GESTION DU RAPPORT
     useEffect(() => {
         if (intervention) {
             const savedReport = window.sessionStorage.getItem(storageKey);
@@ -272,112 +279,281 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     const parsedReport = JSON.parse(savedReport);
                     setReport(parsedReport);
                 } catch (e) {
-                    setReport(intervention.report || {
-                        notes: '',
-                        files: [],
-                        arrivalTime: null,
-                        departureTime: null,
-                        signature: null
-                    });
+                    setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
                 }
             } else {
-                setReport(intervention.report || {
-                    notes: '',
-                    files: [],
-                    arrivalTime: null,
-                    departureTime: null,
-                    signature: null
-                });
+                setReport(intervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
             }
         }
     }, [intervention, storageKey]);
 
-    // ✅ SAUVEGARDE AUTO
     useEffect(() => {
         if (report && intervention) {
             try {
                 window.sessionStorage.setItem(storageKey, JSON.stringify(report));
+                setFileListKey(prev => prev + 1);
             } catch (error) {
-                console.error("Erreur sauvegarde sessionStorage:", error);
+                console.error("Failed to save report to sessionStorage", error);
             }
         }
     }, [report, storageKey, intervention]);
 
-    // ✅ PRÉCHARGEMENT DES IMAGES
     useEffect(() => {
-        if (report?.files) {
-            report.files.forEach(file => {
-                if (file.type?.startsWith('image/')) {
-                    preloadImage(file.url);
-                }
-            });
+        const canvas = signatureCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+
+        if (report && report.signature) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = report.signature;
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-    }, [report?.files, preloadImage]);
+    }, [report, report?.signature]);
 
-    // ✅ GESTION DES CHANGEMENTS DE RAPPORT
-    const handleReportChange = (field, value) => {
-        setReport(prev => ({ ...prev, [field]: value }));
-    };
+    const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
-    // ✅ SAUVEGARDE SILENCIEUSE
+    // ✅ SAUVEGARDE SILENCIEUSE CORRIGÉE
     const saveReportSilently = async (updatedReport) => {
         try {
             const result = await onSaveSilent(interventionId, updatedReport);
-            return result?.success || false;
+            if (!result?.success) {
+                throw result?.error || new Error('Sauvegarde silencieuse échouée');
+            }
+            return true;
         } catch (error) {
             console.error('❌ Erreur sauvegarde silencieuse:', error);
             return false;
         }
     };
 
-    // ✅ GESTION UPLOAD OPTIMISÉE
+    // ✅ COMPRESSION D'IMAGE SIMPLE ET EFFICACE
+    const compressImage = async (file) => {
+        if (!file.type.startsWith('image/')) return file;
+
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = () => {
+                // ✅ COMPRESSION ADAPTÉE AU MOBILE
+                const maxWidth = deviceInfo.isMobile ? 1280 : 1920;
+                const maxHeight = deviceInfo.isMobile ? 720 : 1080;
+                let { width, height } = img;
+
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                if (ratio < 1) {
+                    width *= ratio;
+                    height *= ratio;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const quality = deviceInfo.isMobile ? 0.7 : 0.8;
+                canvas.toBlob((blob) => {
+                    if (blob && blob.size < file.size) {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        console.log(`✅ Image compressée: ${Math.round(file.size/1024)}KB → ${Math.round(blob.size/1024)}KB`);
+                        resolve(compressedFile);
+                    } else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', quality);
+            };
+
+            img.onerror = () => resolve(file);
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
+    // ✅ GESTIONNAIRE D'UPLOAD CORRIGÉ ET FONCTIONNEL
     const handleFileSelect = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !intervention) return;
 
-        setUploadErrors([]);
-        resetUpload();
+        console.log(`🚀 Début upload de ${files.length} fichier(s)`);
+
+        setUploadState({
+            isUploading: true,
+            uploadQueue: Array.from(files).map((file, index) => ({
+                id: `${file.name}-${index}`,
+                name: file.name,
+                size: file.size,
+                status: 'pending',
+                progress: 0,
+                error: null
+            })),
+            uploadProgress: 0,
+            uploadError: null
+        });
 
         try {
-            await handleFileUpload(files, (successfulFiles, invalidFiles) => {
-                // ✅ MISE À JOUR DU RAPPORT
-                if (successfulFiles.length > 0) {
-                    const updatedReport = {
-                        ...report,
-                        files: [...(report.files || []), ...successfulFiles]
-                    };
+            // ✅ VALIDATION DES FICHIERS
+            const validFiles = [];
+            const invalidFiles = [];
 
-                    setReport(updatedReport);
-                    saveReportSilently(updatedReport);
+            for (const file of Array.from(files)) {
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                const allowedTypes = ['image/', 'application/pdf'];
+
+                if (file.size <= maxSize && allowedTypes.some(type => file.type.startsWith(type))) {
+                    validFiles.push(file);
+                } else {
+                    invalidFiles.push({ file, reason: file.size > maxSize ? 'Trop volumineux' : 'Type non supporté' });
                 }
+            }
 
-                // ✅ GESTION DES ERREURS
-                if (invalidFiles.length > 0) {
-                    const errorMessages = invalidFiles.map(item =>
-                        `${item.file.name}: ${item.reason}`
+            if (invalidFiles.length > 0) {
+                console.warn('❌ Fichiers rejetés:', invalidFiles);
+                setUploadState(prev => ({
+                    ...prev,
+                    uploadError: `${invalidFiles.length} fichier(s) rejeté(s): ${invalidFiles.map(f => f.reason).join(', ')}`
+                }));
+            }
+
+            console.log(`✅ ${validFiles.length} fichier(s) valide(s) à traiter`);
+
+            // ✅ TRAITEMENT SÉQUENTIEL FIABLE
+            const successfulUploads = [];
+            let processedCount = 0;
+
+            for (const file of validFiles) {
+                const fileIndex = processedCount;
+
+                try {
+                    // Mise à jour de l'état: compression
+                    setUploadState(prev => ({
+                        ...prev,
+                        uploadQueue: prev.uploadQueue.map((item, i) =>
+                            i === fileIndex ? { ...item, status: 'compressing', progress: 10 } : item
+                        ),
+                        uploadProgress: Math.round((processedCount / validFiles.length) * 100)
+                    }));
+
+                    // ✅ COMPRESSION
+                    let fileToUpload = file;
+                    if (file.type.startsWith('image/')) {
+                        fileToUpload = await compressImage(file);
+                    }
+
+                    // Mise à jour de l'état: upload
+                    setUploadState(prev => ({
+                        ...prev,
+                        uploadQueue: prev.uploadQueue.map((item, i) =>
+                            i === fileIndex ? { ...item, status: 'uploading', progress: 50 } : item
+                        )
+                    }));
+
+                    // ✅ UPLOAD
+                    const result = await storageService.uploadInterventionFile(
+                        fileToUpload,
+                        interventionId,
+                        'report'
                     );
-                    setUploadErrors(errorMessages);
+
+                    if (result.error) {
+                        throw result.error;
+                    }
+
+                    // ✅ SUCCÈS
+                    const newFileInfo = {
+                        name: file.name,
+                        url: result.publicURL,
+                        type: file.type
+                    };
+                    successfulUploads.push(newFileInfo);
+
+                    // Mise à jour de l'état: terminé
+                    setUploadState(prev => ({
+                        ...prev,
+                        uploadQueue: prev.uploadQueue.map((item, i) =>
+                            i === fileIndex ? { ...item, status: 'completed', progress: 100 } : item
+                        )
+                    }));
+
+                    console.log(`✅ Fichier ${fileIndex + 1}/${validFiles.length} uploadé: ${file.name}`);
+
+                } catch (error) {
+                    console.error(`❌ Erreur upload ${file.name}:`, error);
+
+                    // Mise à jour de l'état: erreur
+                    setUploadState(prev => ({
+                        ...prev,
+                        uploadQueue: prev.uploadQueue.map((item, i) =>
+                            i === fileIndex ? { ...item, status: 'error', progress: 0, error: error.message } : item
+                        )
+                    }));
                 }
-            });
+
+                processedCount++;
+
+                // Mise à jour du progrès global
+                setUploadState(prev => ({
+                    ...prev,
+                    uploadProgress: Math.round((processedCount / validFiles.length) * 100)
+                }));
+            }
+
+            // ✅ FINALISATION
+            if (successfulUploads.length > 0) {
+                const updatedReport = {
+                    ...report,
+                    files: [...(report.files || []), ...successfulUploads]
+                };
+
+                setReport(updatedReport);
+
+                // Sauvegarde silencieuse en arrière-plan
+                saveReportSilently(updatedReport);
+
+                setFileListKey(prev => prev + 1);
+
+                console.log(`🎉 Upload terminé: ${successfulUploads.length}/${validFiles.length} fichier(s) réussi(s)`);
+            }
+
+            // ✅ NETTOYAGE
+            setTimeout(() => {
+                setUploadState(prev => ({
+                    ...prev,
+                    isUploading: false
+                }));
+            }, 1000);
+
+            // Reset de l'input
+            event.target.value = '';
 
         } catch (error) {
-            console.error('❌ Erreur upload:', error);
-            setUploadErrors(['Erreur lors de l\'upload des fichiers']);
+            console.error('❌ Erreur générale upload:', error);
+            setUploadState(prev => ({
+                ...prev,
+                isUploading: false,
+                uploadError: `Erreur générale: ${error.message}`
+            }));
         }
     };
 
-    // ✅ GESTION DES ERREURS D'UPLOAD
-    const handleUploadError = (errors) => {
-        setUploadErrors(errors);
+    const handleRemoveFromQueue = (idToRemove) => {
+        setUploadState(prev => ({
+            ...prev,
+            uploadQueue: prev.uploadQueue.filter(item => item.id !== idToRemove)
+        }));
     };
 
-    // ✅ SUPPRESSION D'ÉLÉMENTS DE LA QUEUE
-    const handleRemoveQueueItem = (itemId) => {
-        // Cette fonction sera gérée par le hook useMobileFileManager
-        console.log('Suppression item queue:', itemId);
-    };
-
-    // ✅ SAUVEGARDE FINALE
     const handleSave = async () => {
         if (!intervention) return;
 
@@ -393,26 +569,34 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
     };
 
-    // ✅ GESTION SIGNATURE
-    const handleSaveSignatureFromModal = (signatureDataUrl) => {
-        setReport(prev => ({ ...prev, signature: signatureDataUrl }));
-        setShowSignatureModal(false);
+    const handleRefreshFiles = () => {
+        setFileListKey(prev => prev + 1);
+        if (intervention && intervention.report) {
+            setReport(prev => ({
+                ...prev,
+                files: intervention.report.files || []
+            }));
+        }
     };
+
+    const handleGoBack = () => navigate('/planning');
 
     const handleClearSignature = () => {
         if (signatureCanvasRef.current) {
             const canvas = signatureCanvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            setReport(prev => ({ ...prev, signature: null }));
+            setReport(prev => ({...prev, signature: null}));
         }
     };
 
-    // ✅ UTILITAIRES
-    const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR') : 'N/A';
-    const handleGoBack = () => navigate('/planning');
+    const handleSaveSignatureFromModal = (signatureDataUrl) => {
+        setReport(prev => ({...prev, signature: signatureDataUrl}));
+        setShowSignatureModal(false);
+    };
 
-    // ✅ ÉTATS DE CHARGEMENT
+    const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR') : 'N/A';
+
     if (loading || (!intervention && interventions.length === 0)) {
         return (
             <div className="loading-container">
@@ -444,7 +628,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
     return (
         <div>
-            {/* ✅ MODAL SIGNATURE */}
             {showSignatureModal && (
                 <SignatureModal
                     onSave={handleSaveSignatureFromModal}
@@ -453,126 +636,47 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 />
             )}
 
-            {/* ✅ STYLES CSS */}
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-                .mobile-file-input-container {
-                    width: 100%;
-                }
 
                 .document-list-optimized {
-                    list-style: none;
-                    padding: 0;
-                    margin: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
+                    list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem;
                 }
 
                 .document-item-optimized {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 0.75rem;
-                    background-color: #f8f9fa;
-                    border-radius: 0.375rem;
-                    border: 1px solid #dee2e6;
-                    min-height: 60px;
-                    transition: background-color 0.2s ease;
+                    display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem;
+                    background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; min-height: 60px;
                 }
 
-                .document-item-optimized:hover {
-                    background-color: #e9ecef;
+                .upload-queue-container {
+                    margin-top: 1rem; padding: 1rem; background-color: #f8f9fa; border-radius: 0.5rem;
                 }
 
-                .document-thumbnail-optimized {
-                    width: 40px;
-                    height: 40px;
-                    object-fit: cover;
-                    border-radius: 0.25rem;
-                    cursor: pointer;
-                    transition: transform 0.2s ease;
-                    background-color: #e9ecef;
+                .upload-queue-item {
+                    display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem;
+                    margin-bottom: 0.5rem; background-color: white; border-radius: 0.25rem;
                 }
 
-                .document-thumbnail-optimized:hover {
-                    transform: scale(1.1);
+                .upload-progress-bar {
+                    width: 100%; height: 4px; background-color: #e5e7eb; border-radius: 2px; overflow: hidden;
                 }
 
-                .signature-canvas-small {
-                    border: 2px dashed #cbd5e1;
-                    border-radius: 0.5rem;
-                    width: 100%;
-                    height: 150px;
-                    background-color: #f8fafc;
-                    touch-action: none;
-                    cursor: crosshair;
-                }
-
-                .error-banner {
-                    padding: 0.75rem;
-                    background-color: #fee2e2;
-                    border: 1px solid #fecaca;
-                    border-radius: 0.375rem;
-                    margin: 0.75rem 0;
-                }
-
-                .error-list {
-                    list-style: none;
-                    padding: 0;
-                    margin: 0.5rem 0 0 0;
-                }
-
-                .error-item {
-                    font-size: 0.875rem;
-                    color: #b91c1c;
-                    margin-bottom: 0.25rem;
+                .upload-progress-fill {
+                    height: 100%; background-color: #3b82f6; transition: width 0.3s ease;
                 }
 
                 @media (max-width: 768px) {
-                    .document-item-optimized {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 0.5rem;
-                    }
-
-                    .document-thumbnail-optimized {
-                        width: 32px;
-                        height: 32px;
-                    }
-
-                    .signature-canvas-small {
-                        height: 120px;
-                    }
+                    .document-item-optimized { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
                 }
             `}</style>
 
-            {/* ✅ BOUTON RETOUR */}
             <button onClick={handleGoBack} className="back-button">
                 <ChevronLeftIcon /> Retour
             </button>
 
-            {/* ✅ CONTENU PRINCIPAL */}
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
-
-                {/* ✅ INDICATEUR CONNEXION */}
-                {!navigator.onLine && (
-                    <div style={{
-                        padding: '0.75rem',
-                        backgroundColor: '#fff3cd',
-                        border: '1px solid #ffeaa7',
-                        borderRadius: '0.375rem',
-                        marginBottom: '1rem',
-                        fontSize: '0.875rem',
-                        color: '#856404'
-                    }}>
-                        📡 Mode hors-ligne - Les uploads seront synchronisés au retour de la connexion
-                    </div>
-                )}
 
                 {/* ✅ INDICATEUR MOBILE */}
                 {deviceInfo.isMobile && (
@@ -582,28 +686,24 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         border: '1px solid #b2ebf2',
                         borderRadius: '0.375rem',
                         marginBottom: '1rem',
-                        fontSize: '0.75rem',
+                        fontSize: '0.875rem',
                         color: '#00695c',
                         textAlign: 'center'
                     }}>
                         📱 Mode mobile optimisé
-                        {deviceInfo.hasCamera && ' • Caméra disponible'}
-                        {deviceInfo.isIOS && ' • iOS'}
-                        {deviceInfo.isAndroid && ' • Android'}
+                        {deviceInfo.hasCamera && ' • 📷 Caméra disponible'}
                     </div>
                 )}
 
-                {/* ✅ DOCUMENTS DE PRÉPARATION */}
                 <div className="section">
                     <h3>Documents de préparation</h3>
-                    {(intervention.intervention_briefing_documents?.length > 0) ? (
-                        <ul className="document-list-optimized">
+                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
+                        <ul className="document-list">
                             {intervention.intervention_briefing_documents.map(doc => (
-                                <li key={doc.id} className="document-item-optimized">
-                                    <FileTextIcon style={{ width: '20px', height: '20px', flexShrink: 0 }} />
-                                    <span style={{ flex: 1 }}>{doc.file_name}</span>
+                                <li key={doc.id}>
+                                    <span>{doc.file_name}</span>
                                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-                                        <DownloadIcon /> Voir
+                                        <DownloadIcon/> Voir
                                     </a>
                                 </li>
                             ))}
@@ -613,7 +713,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
                 </div>
 
-                {/* ✅ POINTAGE */}
                 <div className="section">
                     <h3>Pointage</h3>
                     <div className="grid-2-cols">
@@ -638,7 +737,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     </div>
                 </div>
 
-                {/* ✅ RAPPORT DE CHANTIER */}
                 <div className="section">
                     <h3>Rapport de chantier</h3>
                     <textarea
@@ -652,43 +750,23 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     />
                 </div>
 
-                {/* ✅ PHOTOS ET DOCUMENTS */}
                 <div className="section">
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '1rem'
-                    }}>
-                        <h3 style={{ margin: 0 }}>Photos et Documents</h3>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="refresh-button"
-                            disabled={uploadState.isUploading}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#3b82f6',
-                                fontSize: '0.875rem',
-                                textDecoration: 'underline'
-                            }}
-                        >
-                            <RefreshCwIcon style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
-                            Actualiser
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <h3>Photos et Documents du Rapport</h3>
+                        <button onClick={handleRefreshFiles} className="refresh-button" disabled={uploadState.isUploading}>
+                            🔄 Actualiser
                         </button>
                     </div>
 
-                    {/* ✅ LISTE DES FICHIERS OPTIMISÉE */}
-                    <ul className="document-list-optimized">
+                    {/* ✅ LISTE DES FICHIERS */}
+                    <ul key={fileListKey} className="document-list-optimized">
                         {(report.files || []).map((file, idx) => (
-                            <li key={`${file.url}-${idx}`} className="document-item-optimized">
+                            <li key={`${file.url}-${idx}-${fileListKey}`} className="document-item-optimized">
                                 {file.type && file.type.startsWith('image/') ? (
-                                    <MobileOptimizedImage
+                                    <OptimizedImage
                                         src={file.url}
                                         alt={`Aperçu de ${file.name}`}
-                                        className="document-thumbnail-optimized"
-                                        style={{ width: 40, height: 40 }}
+                                        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem', cursor: 'pointer' }}
                                         onClick={() => window.open(file.url, '_blank')}
                                     />
                                 ) : (
@@ -702,13 +780,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                 }}>
                                     {file.name}
                                 </span>
-                                <a
-                                    href={file.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn btn-primary"
-                                    style={{ flexShrink: 0 }}
-                                >
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
                                     Voir
                                 </a>
                             </li>
@@ -725,31 +797,138 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         )}
                     </ul>
 
-                    {/* ✅ QUEUE D'UPLOAD */}
-                    <UploadQueue
-                        uploadState={uploadState}
-                        onRemoveItem={handleRemoveQueueItem}
-                    />
+                    {/* ✅ QUEUE D'UPLOAD AMÉLIORÉE */}
+                    {uploadState.uploadQueue.length > 0 && (
+                        <div className="upload-queue-container">
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: '1rem'
+                            }}>
+                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>
+                                    {uploadState.isUploading ? 'Upload en cours' : 'Upload terminé'}
+                                </h4>
+                                {uploadState.isUploading && (
+                                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                        {uploadState.uploadProgress}%
+                                    </span>
+                                )}
+                            </div>
 
-                    {/* ✅ ERREURS D'UPLOAD */}
-                    {uploadErrors.length > 0 && (
-                        <div className="error-banner">
-                            <strong>❌ Erreurs de validation :</strong>
-                            <ul className="error-list">
-                                {uploadErrors.map((error, index) => (
-                                    <li key={index} className="error-item">• {error}</li>
+                            {/* Barre de progression globale */}
+                            {uploadState.isUploading && (
+                                <div className="upload-progress-bar" style={{ marginBottom: '1rem' }}>
+                                    <div
+                                        className="upload-progress-fill"
+                                        style={{ width: `${uploadState.uploadProgress}%` }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Liste des fichiers en cours d'upload */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {uploadState.uploadQueue.map((item, index) => (
+                                    <div key={item.id} className="upload-queue-item">
+                                        {/* Icône de statut */}
+                                        <div style={{ width: '20px', height: '20px', flexShrink: 0 }}>
+                                            {item.status === 'pending' && '⏳'}
+                                            {item.status === 'compressing' && (
+                                                <LoaderIcon style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
+                                            )}
+                                            {item.status === 'uploading' && (
+                                                <LoaderIcon style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
+                                            )}
+                                            {item.status === 'completed' && <CheckCircleIcon style={{ width: '20px', height: '20px', color: '#22c55e' }} />}
+                                            {item.status === 'error' && <AlertTriangleIcon style={{ width: '20px', height: '20px', color: '#ef4444' }} />}
+                                        </div>
+
+                                        {/* Info fichier */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                fontSize: '0.875rem',
+                                                fontWeight: '500',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {item.name}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                color: '#6b7280',
+                                                marginTop: '0.25rem'
+                                            }}>
+                                                {Math.round(item.size / 1024)}KB
+                                                {item.status === 'compressing' && ' • Compression...'}
+                                                {item.status === 'uploading' && ` • Upload... ${item.progress}%`}
+                                                {item.status === 'completed' && ' • ✅ Terminé'}
+                                                {item.error && ` • ❌ ${item.error}`}
+                                            </div>
+
+                                            {/* Barre de progression individuelle */}
+                                            {(item.status === 'uploading' || item.status === 'compressing') && item.progress > 0 && (
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '3px',
+                                                    backgroundColor: '#e5e7eb',
+                                                    borderRadius: '2px',
+                                                    marginTop: '0.25rem',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{
+                                                        width: `${item.progress}%`,
+                                                        height: '100%',
+                                                        backgroundColor: '#3b82f6',
+                                                        transition: 'width 0.3s ease'
+                                                    }} />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Bouton de suppression */}
+                                        {!uploadState.isUploading && (
+                                            <button
+                                                onClick={() => handleRemoveFromQueue(item.id)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: '0.25rem',
+                                                    color: '#6b7280',
+                                                    fontSize: '1.25rem'
+                                                }}
+                                            >
+                                                <XCircleIcon style={{ width: '16px', height: '16px' }} />
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ✅ MESSAGE D'ERREUR D'UPLOAD */}
+                    {uploadState.uploadError && (
+                        <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#fee2e2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '0.375rem',
+                            marginTop: '0.75rem',
+                            fontSize: '0.875rem',
+                            color: '#b91c1c'
+                        }}>
+                            ❌ {uploadState.uploadError}
                             <button
-                                onClick={() => setUploadErrors([])}
+                                onClick={() => setUploadState(prev => ({ ...prev, uploadError: null }))}
                                 style={{
+                                    marginLeft: '0.5rem',
                                     background: 'none',
                                     border: 'none',
                                     color: '#b91c1c',
                                     textDecoration: 'underline',
-                                    cursor: 'pointer',
-                                    fontSize: '0.875rem',
-                                    marginTop: '0.5rem'
+                                    cursor: 'pointer'
                                 }}
                             >
                                 Masquer
@@ -757,29 +936,29 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </div>
                     )}
 
-                    {/* ✅ INPUT DE FICHIERS OPTIMISÉ MOBILE */}
+                    {/* ✅ INPUT DE FICHIERS OPTIMISÉ */}
                     {!isAdmin && (
-                        <MobileFileInput
+                        <CustomFileInput
                             accept="image/*,application/pdf"
                             onChange={handleFileSelect}
-                            onError={handleUploadError}
                             disabled={uploadState.isUploading}
                             multiple
-                            maxFiles={10}
-                            maxSize={deviceInfo.isMobile ? 8 * 1024 * 1024 : 10 * 1024 * 1024}
                             className="mt-4"
                         >
                             {uploadState.isUploading ? (
-                                <>Upload en cours... ({uploadState.globalProgress}%)</>
+                                <>
+                                    <LoaderIcon style={{ animation: 'spin 1s linear infinite' }} />
+                                    Upload en cours... ({uploadState.uploadProgress}%)
+                                </>
                             ) : (
                                 <>
                                     {deviceInfo.isMobile ?
                                         '📷 Prendre/Sélectionner plusieurs photos' :
-                                        '📁 Sélectionner plusieurs fichiers'
+                                        '📁 Sélectionner plusieurs fichiers (Photo/PDF)'
                                     }
                                 </>
                             )}
-                        </MobileFileInput>
+                        </CustomFileInput>
                     )}
 
                     {/* ✅ INFORMATIONS DE DEBUG (DEV UNIQUEMENT) */}
@@ -793,19 +972,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                             color: '#6b7280'
                         }}>
                             🔧 Debug: {(report.files || []).length} fichier(s) |
-                            Queue: {uploadState.queue.length} |
+                            Queue: {uploadState.uploadQueue.length} |
                             Device: {deviceInfo.isMobile ? 'Mobile' : 'Desktop'} |
                             Caméra: {deviceInfo.hasCamera ? 'Oui' : 'Non'} |
-                            WebP: {deviceInfo.supportsWebP ? 'Oui' : 'Non'}
+                            Upload: {uploadState.isUploading ? 'En cours' : 'Arrêté'}
                         </div>
                     )}
                 </div>
 
-                {/* ✅ SIGNATURE DU CLIENT */}
                 <div className="section">
                     <h3>Signature du client</h3>
                     {isAdmin && report.signature ? (
-                        <MobileOptimizedImage
+                        <OptimizedImage
                             src={report.signature}
                             alt="Signature client"
                             style={{
@@ -820,7 +998,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         <div className="signature-container">
                             <canvas
                                 ref={signatureCanvasRef}
-                                className="signature-canvas-small"
+                                className="signature-canvas"
                                 width="300"
                                 height="150"
                             />
@@ -828,36 +1006,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                marginTop: '0.75rem',
-                                flexWrap: 'wrap',
-                                gap: '0.5rem'
+                                marginTop: '0.75rem'
                             }}>
-                                <button
-                                    onClick={handleClearSignature}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#6b7280',
-                                        textDecoration: 'underline',
-                                        cursor: 'pointer',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
+                                <button onClick={handleClearSignature} className="text-muted-link">
                                     Effacer
                                 </button>
                                 <button
                                     onClick={() => setShowSignatureModal(true)}
                                     className="btn btn-secondary"
                                     disabled={isSaving}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        fontSize: '0.875rem'
-                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                 >
-                                    <ExpandIcon />
-                                    {deviceInfo.isMobile ? 'Agrandir' : 'Signature plein écran'}
+                                    <ExpandIcon /> Agrandir
                                 </button>
                             </div>
                         </div>
@@ -866,64 +1026,32 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
                 {/* ✅ BOUTON DE SAUVEGARDE FINAL */}
                 {!isAdmin && (
-                    <div style={{ marginTop: '2rem' }}>
-                        <button
-                            onClick={handleSave}
-                            disabled={uploadState.isUploading || isSaving}
-                            className="btn btn-primary w-full"
-                            style={{
-                                fontSize: '1rem',
-                                fontWeight: 'bold',
-                                padding: '1rem',
-                                position: 'relative',
-                                minHeight: '56px'
-                            }}
-                        >
-                            {isSaving ? (
-                                <>
-                                    <div style={{
-                                        width: '20px',
-                                        height: '20px',
-                                        border: '2px solid #ffffff',
-                                        borderTop: '2px solid transparent',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite',
-                                        marginRight: '0.5rem'
-                                    }} />
-                                    Sauvegarde en cours...
-                                </>
-                            ) : uploadState.isUploading ? (
-                                <>
-                                    <div style={{
-                                        width: '20px',
-                                        height: '20px',
-                                        border: '2px solid #ffffff',
-                                        borderTop: '2px solid transparent',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite',
-                                        marginRight: '0.5rem'
-                                    }} />
-                                    Upload en cours ({uploadState.globalProgress}%)...
-                                </>
-                            ) : (
-                                <>
-                                    🔒 Sauvegarder et Clôturer l'intervention
-                                </>
-                            )}
-                        </button>
-
-                        {/* ✅ INFORMATIONS CONTEXTUELLES */}
-                        <div style={{
-                            fontSize: '0.75rem',
-                            color: '#6b7280',
-                            textAlign: 'center',
-                            marginTop: '0.75rem',
-                            fontStyle: 'italic'
-                        }}>
-                            {uploadState.isUploading && 'Veuillez attendre la fin de l\'upload avant de sauvegarder'}
-                            {!uploadState.isUploading && !isSaving && deviceInfo.isMobile && 'Sauvegarde optimisée mobile'}
-                        </div>
-                    </div>
+                    <button
+                        onClick={handleSave}
+                        disabled={uploadState.isUploading || isSaving}
+                        className="btn btn-primary w-full mt-4"
+                        style={{
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            padding: '1rem',
+                            position: 'relative',
+                            minHeight: '56px'
+                        }}
+                    >
+                        {isSaving ? (
+                            <>
+                                <LoaderIcon style={{ animation: 'spin 1s linear infinite', marginRight: '0.5rem' }} />
+                                Sauvegarde en cours...
+                            </>
+                        ) : uploadState.isUploading ? (
+                            <>
+                                <LoaderIcon style={{ animation: 'spin 1s linear infinite', marginRight: '0.5rem' }} />
+                                Upload en cours ({uploadState.uploadProgress}%)...
+                            </>
+                        ) : (
+                            '🔒 Sauvegarder et Clôturer l\'intervention'
+                        )}
+                    </button>
                 )}
 
                 {/* ✅ BARRE DE PROGRESSION GLOBALE FIXE */}
@@ -940,14 +1068,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         <div style={{
                             height: '100%',
                             backgroundColor: isSaving ? '#22c55e' : '#3b82f6',
-                            width: isSaving ? '100%' : `${uploadState.globalProgress}%`,
+                            width: isSaving ? '100%' : `${uploadState.uploadProgress}%`,
                             transition: 'width 0.3s ease',
                             animation: isSaving ? 'pulse 1s infinite' : 'none'
                         }} />
                     </div>
                 )}
 
-                {/* ✅ OVERLAY DE CHARGEMENT POUR MOBILE */}
+                {/* ✅ OVERLAY DE CHARGEMENT MOBILE */}
                 {(uploadState.isUploading || isSaving) && deviceInfo.isMobile && (
                     <div style={{
                         position: 'fixed',
@@ -964,27 +1092,24 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         gap: '0.75rem',
                         fontSize: '0.875rem'
                     }}>
-                        <div style={{
+                        <LoaderIcon style={{
                             width: '20px',
                             height: '20px',
-                            border: '2px solid #ffffff',
-                            borderTop: '2px solid transparent',
-                            borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
                             flexShrink: 0
                         }} />
                         <div style={{ flex: 1 }}>
                             {isSaving ?
                                 'Sauvegarde finale en cours...' :
-                                `Upload en cours... ${uploadState.globalProgress}%`
+                                `Upload en cours... ${uploadState.uploadProgress}%`
                             }
                             <div style={{
                                 fontSize: '0.75rem',
                                 opacity: 0.8,
                                 marginTop: '0.25rem'
                             }}>
-                                {uploadState.queue.length > 0 &&
-                                    `${uploadState.queue.filter(q => q.status === 'completed').length}/${uploadState.queue.length} fichiers traités`
+                                {uploadState.uploadQueue.length > 0 &&
+                                    `${uploadState.uploadQueue.filter(q => q.status === 'completed').length}/${uploadState.uploadQueue.length} fichiers traités`
                                 }
                             </div>
                         </div>
