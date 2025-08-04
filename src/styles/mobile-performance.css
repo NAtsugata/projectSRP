@@ -1,0 +1,444 @@
+/* src/styles/mobile-performance.css - CSS optimisé pour les performances mobile */
+
+/* ✅ OPTIMISATIONS GÉNÉRALES MOBILE */
+* {
+    /* Optimisation GPU */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+
+    /* Optimisation du rendu de texte */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* ✅ RÉDUCTION DES REPAINTS POUR LES ÉLÉMENTS ANIMÉS */
+.loading-spinner,
+.upload-progress-bar,
+.signature-canvas,
+.mobile-optimized-image {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+}
+
+/* ✅ OPTIMISATION DES IMAGES MOBILES */
+.mobile-optimized-image {
+    /* Améliore le rendu des images sur mobile */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+
+    /* Préchargement optimisé */
+    loading: lazy;
+    decoding: async;
+
+    /* Transition GPU-accélérée */
+    transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.mobile-optimized-image:hover {
+    transform: scale(1.05) translateZ(0);
+}
+
+/* ✅ OPTIMISATION DES LISTES DE FICHIERS */
+.document-list-optimized {
+    /* Optimisation du scroll sur mobile */
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+
+    /* Réduction du layout shift */
+    contain: layout style;
+}
+
+.document-item-optimized {
+    /* Optimisation des éléments de liste */
+    contain: layout style paint;
+    transform: translateZ(0);
+
+    /* Transitions optimisées */
+    transition: background-color 0.15s ease-out;
+}
+
+/* ✅ OPTIMISATION DE LA SIGNATURE CANVAS */
+.signature-canvas,
+.signature-canvas-fullscreen {
+    /* Force l'accélération GPU */
+    transform: translateZ(0);
+    will-change: contents;
+
+    /* Optimisation tactile */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+
+    /* Améliore la réactivité du dessin */
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* ✅ OPTIMISATION DES UPLOAD QUEUES */
+.upload-queue-container {
+    /* Réduction du coût de rendu */
+    contain: layout style;
+    transform: translateZ(0);
+}
+
+.upload-progress-bar {
+    /* Transition GPU-accélérée */
+    transform: translateZ(0);
+    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* ✅ OPTIMISATION DES MODALES SUR MOBILE */
+.modal-overlay {
+    /* Améliore les performances d'affichage */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+
+    /* Force la composition GPU */
+    transform: translateZ(0);
+    will-change: opacity;
+}
+
+.modal-content {
+    /* Optimisation de l'animation d'ouverture */
+    transform: translateZ(0);
+    will-change: transform, opacity;
+
+    /* Améliore le scroll interne */
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+}
+
+/* ✅ OPTIMISATIONS SPÉCIFIQUES IOS */
+@supports (-webkit-touch-callout: none) {
+    /* Corrections spécifiques iOS */
+    .mobile-file-input input[type="file"] {
+        font-size: 16px !important;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .form-control,
+    textarea {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        border-radius: 0;
+    }
+
+    /* Évite le zoom automatique */
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+        transform: translateZ(0);
+    }
+
+    /* Optimisation du Canvas sur iOS */
+    canvas {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+    }
+}
+
+/* ✅ OPTIMISATIONS SPÉCIFIQUES ANDROID */
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+    /* Corrections spécifiques Android Chrome */
+    .mobile-optimized-image {
+        /* Améliore le rendu des images sur Android */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+
+    /* Optimisation des inputs fichier sur Android */
+    .mobile-file-input input[type="file"] {
+        font-size: 16px;
+        -webkit-appearance: none;
+    }
+
+    /* Améliore les performances du Canvas */
+    canvas {
+        /* Force l'accélération matérielle */
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR CONNEXIONS LENTES */
+@media (prefers-reduced-data) {
+    /* Réduit les animations coûteuses */
+    .mobile-optimized-image,
+    .upload-progress-bar,
+    .loading-spinner {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* Simplifie les effets visuels */
+    .modal-overlay {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    /* Désactive les ombres portées */
+    .card-white,
+    .modal-content,
+    .document-item-optimized {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR DEVICES À MÉMOIRE LIMITÉE */
+@media (max-device-memory: 2GB) {
+    /* Réduit la complexité visuelle */
+    .document-list-optimized {
+        contain: strict;
+    }
+
+    .document-item-optimized {
+        contain: strict;
+        /* Réduit le nombre de layers */
+        transform: none;
+    }
+
+    /* Simplifie les animations */
+    .mobile-optimized-image:hover {
+        transform: none;
+    }
+
+    /* Optimise les Canvas */
+    canvas {
+        /* Réduit la qualité pour améliorer les performances */
+        image-rendering: auto;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR ÉCRANS HAUTE DENSITÉ */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Améliore le rendu sur les écrans Retina */
+    .mobile-optimized-image {
+        image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* Optimise les Canvas haute résolution */
+    canvas {
+        /* Assure un rendu net sur les écrans haute densité */
+        image-rendering: pixelated;
+    }
+
+    /* Améliore les icônes SVG */
+    svg {
+        shape-rendering: geometricPrecision;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR LES TRÈS PETITS ÉCRANS */
+@media (max-width: 320px) {
+    /* Réduit l'espacement pour optimiser l'espace */
+    .document-item-optimized {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    .mobile-optimized-image,
+    .document-thumbnail-optimized {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    /* Simplifie les modales */
+    .modal-content {
+        padding: 0.75rem;
+        margin: 0.5rem;
+    }
+
+    /* Optimise les Canvas */
+    .signature-canvas-small {
+        height: 100px;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR L'ORIENTATION PAYSAGE SUR MOBILE */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    /* Réduit la hauteur des éléments */
+    .signature-canvas-small {
+        height: 80px;
+    }
+
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    /* Optimise l'utilisation de l'espace */
+    .document-item-optimized {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR LA RÉDUCTION DES MOUVEMENTS */
+@media (prefers-reduced-motion: reduce) {
+    /* Désactive toutes les animations */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Simplifie les effets visuels */
+    .mobile-optimized-image:hover,
+    .document-thumbnail-optimized:hover {
+        transform: none !important;
+    }
+
+    .loading-spinner {
+        animation: none !important;
+        /* Remplace par un indicateur statique */
+        background: linear-gradient(90deg, #3b82f6 25%, transparent 50%, #3b82f6 75%);
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR LE MODE SOMBRE */
+@media (prefers-color-scheme: dark) {
+    /* Améliore les performances en mode sombre */
+    .mobile-optimized-image {
+        /* Réduit la luminosité pour économiser la batterie sur OLED */
+        filter: brightness(0.9);
+    }
+
+    .signature-canvas,
+    .signature-canvas-small {
+        background-color: #1f2937;
+        border-color: #4b5563;
+    }
+
+    .document-item-optimized {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .modal-overlay {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR LE CONTRASTE ÉLEVÉ */
+@media (prefers-contrast: high) {
+    /* Améliore l'accessibilité */
+    .mobile-optimized-image,
+    .document-thumbnail-optimized {
+        border: 2px solid currentColor;
+    }
+
+    .signature-canvas,
+    .signature-canvas-small {
+        border-width: 3px;
+        border-style: solid;
+    }
+
+    .upload-progress-bar {
+        border: 1px solid currentColor;
+    }
+}
+
+/* ✅ OPTIMISATIONS POUR LES APPAREILS TACTILES */
+@media (hover: none) and (pointer: coarse) {
+    /* Optimisations spécifiques aux écrans tactiles */
+    .mobile-optimized-image:hover,
+    .document-thumbnail-optimized:hover,
+    .document-item-optimized:hover {
+        /* Désactive les effets hover qui n'ont pas de sens sur tactile */
+        transform: none !important;
+        background-color: inherit !important;
+    }
+
+    /* Améliore les zones tactiles */
+    .mobile-file-input,
+    .btn,
+    .document-thumbnail-optimized {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Optimise les Canvas pour le tactile */
+    canvas {
+        touch-action: none;
+        -webkit-touch-callout: none;
+    }
+}
+
+/* ✅ CLASSE UTILITAIRE POUR LE LAZY LOADING */
+.lazy-load-placeholder {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Désactive l'animation shimmer pour économiser les ressources */
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data) {
+    .lazy-load-placeholder {
+        animation: none;
+        background: #f0f0f0;
+    }
+}
+
+/* ✅ OPTIMISATION DE LA MÉMOIRE - GARBAGE COLLECTION */
+.document-item-optimized.removed,
+.mobile-optimized-image.removed {
+    /* Aide le garbage collector en supprimant les références */
+    transform: none;
+    will-change: auto;
+    contain: none;
+}
+
+/* ✅ STYLES POUR LA GESTION D'ERREUR */
+.upload-error-state {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+
+    /* Évite les reflows lors de l'affichage d'erreurs */
+    min-height: 2.5rem;
+    contain: layout;
+}
+
+/* ✅ OPTIMISATIONS FINALES DE PERFORMANCE */
+.performance-critical {
+    /* Pour les éléments critiques qui changent souvent */
+    contain: strict;
+    will-change: contents;
+    transform: translateZ(0);
+}
+
+/* ✅ MEDIA QUERY POUR TRÈS FAIBLE BANDE PASSANTE */
+@media (max-bandwidth: 1Mbps) {
+    /* Simplifications drastiques pour connexions très lentes */
+    * {
+        animation: none !important;
+        transition: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        filter: none !important;
+    }
+
+    .mobile-optimized-image {
+        /* Force le loading différé */
+        loading: lazy;
+        /* Réduit la qualité */
+        image-rendering: auto;
+    }
+}
