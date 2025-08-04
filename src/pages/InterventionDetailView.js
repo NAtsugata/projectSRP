@@ -1,4 +1,4 @@
-// src/pages/InterventionDetailView.js - VERSION COMPLÈTE, RESTAURÉE ET FIABILISÉE
+// src/pages/InterventionDetailView.js - VERSION FINALE, FIABILISÉE ET FONCTIONNELLE
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
@@ -200,7 +200,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
     useEffect(() => {
         if (report && intervention) {
-            window.sessionStorage.setItem(storageKey, JSON.stringify(report));
+            // ✅ Sécurisation de la sauvegarde en session pour éviter les crashs
+            try {
+                window.sessionStorage.setItem(storageKey, JSON.stringify(report));
+            } catch (error) {
+                console.warn("Impossible de sauvegarder le rapport en session :", error);
+            }
         }
     }, [report, storageKey, intervention]);
 
@@ -281,16 +286,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
 
         const successfulUploads = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const fileId = queueItems[i].id;
+        for (const file of files) {
+            const fileId = queueItems.find(item => item.name === file.name)?.id;
+            if (!fileId) continue;
 
             try {
                 updateQueueItem(fileId, { status: 'compressing', progress: 5 });
                 const compressedFile = await compressImage(file);
 
                 const onProgress = (percent) => {
-                    updateQueueItem(fileId, { status: 'uploading', progress: percent });
+                    // La progression de l'upload va de 5% à 95%
+                    const uploadProgress = 5 + Math.round(percent * 0.9);
+                    updateQueueItem(fileId, { status: 'uploading', progress: uploadProgress });
                 };
 
                 const result = await storageService.uploadInterventionFile(compressedFile, interventionId, 'report', onProgress);
