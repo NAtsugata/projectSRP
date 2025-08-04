@@ -1,41 +1,67 @@
-// src/hooks/useMobileFileManager.js - Hook optimisé pour la gestion des fichiers mobile
-import { useState, useCallback, useEffect, useRef } from 'react';
+// Créez ce fichier : src/hooks/useMobileUpload.js
+
+import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
 
-// ✅ HOOK PRINCIPAL - Gestion optimisée des fichiers mobile
-export const useMobileFileManager = (interventionId) => {
-    const [uploadState, setUploadState] = useState({
-        isUploading: false,
-        queue: [],
-        completed: [],
-        errors: [],
-        globalProgress: 0
+// ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE
+export const useDeviceCapabilities = () => {
+    const [capabilities, setCapabilities] = useState({
+        hasCamera: false,
+        supportsFileAPI: false,
+        supportsDragDrop: false,
+        isMobile: false,
+        isIOS: false,
+        isAndroid: false,
+        supportsCapture: false
     });
 
-    const [displayState, setDisplayState] = useState({
-        loadedImages: new Set(),
-        imageLoadErrors: new Set(),
-        isRefreshing: false
-    });
+    useEffect(() => {
+        const checkCapabilities = async () => {
+            const userAgent = navigator.userAgent;
+            const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+            const isAndroid = /Android/.test(userAgent);
 
-    // Référence pour éviter les fuites mémoire
-    const abortController = useRef(null);
-    const imageCache = useRef(new Map());
+            let hasCamera = false;
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                    hasCamera = true;
+                }
+            } catch (error) {
+                hasCamera = false;
+            }
 
-    // ✅ DÉTECTION DEVICE OPTIMISÉE
-    const deviceInfo = useRef({
-        isMobile: /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-        isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-        isAndroid: /Android/.test(navigator.userAgent),
-        hasCamera: 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices,
-        supportsWebP: document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0,
-        connectionType: navigator.connection?.effectiveType || '4g',
-        memoryLimit: navigator.deviceMemory || 4
-    }).current;
+            setCapabilities({
+                hasCamera,
+                supportsFileAPI: 'FileReader' in window && 'File' in window,
+                supportsDragDrop: 'ondrop' in window && !isMobile,
+                isMobile,
+                isIOS,
+                isAndroid,
+                supportsCapture: isMobile && ('capture' in document.createElement('input'))
+            });
+        };
 
-    // ✅ COMPRESSION ADAPTATIVE selon le device
-    const compressFile = useCallback(async (file) => {
-        if (!file.type.startsWith('image/')) return file;
+        checkCapabilities();
+    }, []);
+
+    return capabilities;
+};
+
+// ✅ HOOK POUR COMPRESSION D'IMAGES OPTIMISÉE MOBILE
+export const useImageCompression = () => {
+    const compressImage = useCallback(async (file, options = {}) => {
+        if (!file || !file.type.startsWith('image/')) {
+            return file;
+        }
+
+        const {
+            maxSizeMB = 1,
+            maxWidthOrHeight = 1920,
+            quality = 0.8,
+            outputFormat = 'jpeg'
+        } = options;
 
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -43,567 +69,358 @@ export const useMobileFileManager = (interventionId) => {
             const img = new Image();
 
             img.onload = () => {
-                // ✅ COMPRESSION ADAPTATIVE selon le device et la connexion
-                let maxWidth, maxHeight, quality;
-
-                if (deviceInfo.isMobile) {
-                    // Mobile : compression plus agressive
-                    maxWidth = deviceInfo.connectionType === '2g' ? 800 : 1280;
-                    maxHeight = deviceInfo.connectionType === '2g' ? 600 : 720;
-                    quality = deviceInfo.connectionType === '2g' ? 0.5 : 0.7;
-                } else {
-                    // Desktop : compression standard
-                    maxWidth = 1920;
-                    maxHeight = 1080;
-                    quality = 0.8;
-                }
-
+                // Calcul des nouvelles dimensions
                 let { width, height } = img;
-                const ratio = Math.min(maxWidth / width, maxHeight / height);
 
-                if (ratio < 1) {
-                    width *= ratio;
-                    height *= ratio;
+                if (width > height) {
+                    if (width > maxWidthOrHeight) {
+                        height = (height * maxWidthOrHeight) / width;
+                        width = maxWidthOrHeight;
+                    }
+                } else {
+                    if (height > maxWidthOrHeight) {
+                        width = (width * maxWidthOrHeight) / height;
+                        height = maxWidthOrHeight;
+                    }
                 }
 
                 canvas.width = width;
                 canvas.height = height;
 
-                // ✅ OPTIMISATION RENDU
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = deviceInfo.memoryLimit >= 4 ? 'high' : 'medium';
+                // Dessin de l'image redimensionnée
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // ✅ FORMAT ADAPTATIF
-                const outputFormat = deviceInfo.supportsWebP ? 'image/webp' : 'image/jpeg';
-
-                canvas.toBlob((blob) => {
-                    if (blob && blob.size < file.size) {
-                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, `.${outputFormat.split('/')[1]}`), {
-                            type: outputFormat,
-                            lastModified: Date.now()
-                        });
-                        resolve(compressedFile);
-                    } else {
-                        resolve(file);
-                    }
-                }, outputFormat, quality);
+                // Conversion en Blob
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob && blob.size <= maxSizeMB * 1024 * 1024) {
+                            const compressedFile = new File([blob], file.name, {
+                                type: `image/${outputFormat}`,
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            // Si toujours trop gros, réduire la qualité
+                            canvas.toBlob(
+                                (smallerBlob) => {
+                                    const finalFile = new File([smallerBlob], file.name, {
+                                        type: `image/${outputFormat}`,
+                                        lastModified: Date.now()
+                                    });
+                                    resolve(finalFile);
+                                },
+                                `image/${outputFormat}`,
+                                quality * 0.7
+                            );
+                        }
+                    },
+                    `image/${outputFormat}`,
+                    quality
+                );
             };
 
             img.onerror = () => resolve(file);
             img.src = URL.createObjectURL(file);
         });
-    }, [deviceInfo]);
+    }, []);
 
-    // ✅ UPLOAD AVEC RETRY ET PROGRESSION DÉTAILLÉE
-    const uploadSingleFile = useCallback(async (file, fileId, onProgress) => {
-        const maxRetries = deviceInfo.connectionType === '2g' ? 3 : 2;
-        let attempt = 0;
+    return { compressImage };
+};
 
-        while (attempt < maxRetries) {
+// ✅ HOOK POUR UPLOADS RÉSILIENTS AVEC RETRY
+export const useResilientUpload = () => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [error, setError] = useState(null);
+
+    const uploadWithRetry = useCallback(async (file, interventionId, options = {}) => {
+        const {
+            maxRetries = 3,
+            folder = 'report',
+            compressionOptions = {}
+        } = options;
+
+        setIsUploading(true);
+        setError(null);
+        setUploadProgress(0);
+
+        // Compression si c'est une image
+        let fileToUpload = file;
+        if (file.type.startsWith('image/') && compressionOptions.enabled !== false) {
             try {
-                attempt++;
+                const { compressImage } = useImageCompression();
+                fileToUpload = await compressImage(file, compressionOptions);
+            } catch (compressionError) {
+                console.warn('Compression failed, using original file:', compressionError);
+            }
+        }
 
-                // Simulation de progression pour l'UX
-                onProgress(fileId, 'uploading', attempt * 20);
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                setUploadProgress(attempt === 1 ? 10 : (attempt - 1) * 25);
 
                 const result = await storageService.uploadInterventionFile(
-                    file,
+                    fileToUpload,
                     interventionId,
-                    'report'
+                    folder
                 );
 
-                if (result.error) throw result.error;
-
-                onProgress(fileId, 'completed', 100);
-                return result;
-
-            } catch (error) {
-                if (attempt >= maxRetries) {
-                    onProgress(fileId, 'error', 0, error.message);
-                    throw error;
+                if (result.error) {
+                    throw result.error;
                 }
 
-                // Backoff exponentiel adaptatif
-                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                setUploadProgress(100);
+                setIsUploading(false);
+                return result;
+
+            } catch (uploadError) {
+                console.error(`Upload attempt ${attempt} failed:`, uploadError);
+
+                if (attempt === maxRetries) {
+                    setError(uploadError.message || 'Échec de l\'upload après plusieurs tentatives');
+                    setIsUploading(false);
+                    throw uploadError;
+                }
+
+                // Backoff exponentiel avec jitter
+                const baseDelay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+                const jitter = Math.random() * 0.1 * baseDelay;
+                const delay = baseDelay + jitter;
+
+                setUploadProgress(attempt * 20);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
-    }, [interventionId, deviceInfo]);
-
-    // ✅ GESTIONNAIRE D'UPLOAD PRINCIPAL
-    const handleFileUpload = useCallback(async (files, onComplete) => {
-        if (!files?.length) return;
-
-        // Annuler tout upload en cours
-        if (abortController.current) {
-            abortController.current.abort();
-        }
-        abortController.current = new AbortController();
-
-        setUploadState(prev => ({
-            ...prev,
-            isUploading: true,
-            queue: [],
-            completed: [],
-            errors: [],
-            globalProgress: 0
-        }));
-
-        try {
-            // ✅ VALIDATION ET PRÉPARATION
-            const validFiles = [];
-            const invalidFiles = [];
-
-            for (const file of Array.from(files)) {
-                const maxSize = deviceInfo.connectionType === '2g' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
-
-                if (file.size <= maxSize && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
-                    validFiles.push(file);
-                } else {
-                    invalidFiles.push({ file, reason: file.size > maxSize ? 'Fichier trop volumineux' : 'Type non supporté' });
-                }
-            }
-
-            // ✅ INITIALISATION DE LA QUEUE
-            const queueItems = validFiles.map((file, index) => ({
-                id: `${file.name}-${file.lastModified}-${index}`,
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                status: 'pending',
-                progress: 0,
-                error: null
-            }));
-
-            setUploadState(prev => ({
-                ...prev,
-                queue: queueItems
-            }));
-
-            // ✅ TRAITEMENT AVEC LIMITATION DE CONCURRENCE
-            const concurrentUploads = deviceInfo.isMobile ?
-                (deviceInfo.connectionType === '2g' ? 1 : 2) : 3;
-
-            const results = [];
-            const updateProgress = (fileId, status, progress, error = null) => {
-                setUploadState(prev => {
-                    const updatedQueue = prev.queue.map(item =>
-                        item.id === fileId ? { ...item, status, progress, error } : item
-                    );
-
-                    const globalProgress = Math.round(
-                        updatedQueue.reduce((sum, item) => sum + item.progress, 0) / updatedQueue.length
-                    );
-
-                    return {
-                        ...prev,
-                        queue: updatedQueue,
-                        globalProgress
-                    };
-                });
-            };
-
-            // ✅ TRAITEMENT PAR LOTS
-            for (let i = 0; i < validFiles.length; i += concurrentUploads) {
-                const batch = validFiles.slice(i, i + concurrentUploads);
-                const batchPromises = batch.map(async (file, batchIndex) => {
-                    const fileId = queueItems[i + batchIndex].id;
-
-                    try {
-                        // Compression
-                        updateProgress(fileId, 'compressing', 10);
-                        const compressedFile = await compressFile(file);
-
-                        // Upload
-                        updateProgress(fileId, 'uploading', 20);
-                        const result = await uploadSingleFile(compressedFile, fileId, updateProgress);
-
-                        return {
-                            fileId,
-                            success: true,
-                            result,
-                            originalFile: file
-                        };
-                    } catch (error) {
-                        return {
-                            fileId,
-                            success: false,
-                            error: error.message,
-                            originalFile: file
-                        };
-                    }
-                });
-
-                const batchResults = await Promise.all(batchPromises);
-                results.push(...batchResults);
-
-                // Pause entre les lots pour éviter la surcharge
-                if (i + concurrentUploads < validFiles.length) {
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-            }
-
-            // ✅ FINALISATION
-            const successful = results.filter(r => r.success);
-            const failed = results.filter(r => !r.success);
-
-            setUploadState(prev => ({
-                ...prev,
-                isUploading: false,
-                completed: successful,
-                errors: failed,
-                globalProgress: 100
-            }));
-
-            // Callback avec résultats
-            if (onComplete) {
-                const fileInfos = successful.map(result => ({
-                    name: result.originalFile.name,
-                    url: result.result.publicURL,
-                    type: result.originalFile.type
-                }));
-
-                onComplete(fileInfos, invalidFiles);
-            }
-
-        } catch (error) {
-            console.error('❌ Erreur upload global:', error);
-            setUploadState(prev => ({
-                ...prev,
-                isUploading: false,
-                errors: [{ error: error.message }]
-            }));
-        }
-    }, [compressFile, uploadSingleFile, deviceInfo, interventionId]);
-
-    // ✅ GESTION OPTIMISÉE DES IMAGES
-    const preloadImage = useCallback((url) => {
-        return new Promise((resolve) => {
-            if (imageCache.current.has(url)) {
-                resolve(imageCache.current.get(url));
-                return;
-            }
-
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-
-            img.onload = () => {
-                imageCache.current.set(url, img);
-                setDisplayState(prev => ({
-                    ...prev,
-                    loadedImages: new Set([...prev.loadedImages, url])
-                }));
-                resolve(img);
-            };
-
-            img.onerror = () => {
-                setDisplayState(prev => ({
-                    ...prev,
-                    imageLoadErrors: new Set([...prev.imageLoadErrors, url])
-                }));
-                resolve(null);
-            };
-
-            img.src = url;
-        });
     }, []);
 
-    // ✅ RESET ET NETTOYAGE
     const reset = useCallback(() => {
-        if (abortController.current) {
-            abortController.current.abort();
-        }
-
-        setUploadState({
-            isUploading: false,
-            queue: [],
-            completed: [],
-            errors: [],
-            globalProgress: 0
-        });
-
-        setDisplayState({
-            loadedImages: new Set(),
-            imageLoadErrors: new Set(),
-            isRefreshing: false
-        });
-
-        // Nettoyage du cache
-        imageCache.current.clear();
-    }, []);
-
-    // ✅ CLEANUP à la désactivation
-    useEffect(() => {
-        return () => {
-            if (abortController.current) {
-                abortController.current.abort();
-            }
-            // Libération mémoire
-            imageCache.current.clear();
-        };
+        setIsUploading(false);
+        setUploadProgress(0);
+        setError(null);
     }, []);
 
     return {
-        // État d'upload
-        uploadState,
-        handleFileUpload,
-
-        // État d'affichage
-        displayState,
-        preloadImage,
-
-        // Utilitaires
-        deviceInfo,
-        reset,
-
-        // Cache et optimisations
-        imageCache: imageCache.current
+        uploadWithRetry,
+        isUploading,
+        uploadProgress,
+        error,
+        reset
     };
 };
 
-// ✅ COMPOSANT D'IMAGE OPTIMISÉ POUR MOBILE
-export const MobileOptimizedImage = ({ src, alt, className, style, onClick, placeholder = true }) => {
-    const [loadState, setLoadState] = useState('loading');
-    const [imageSrc, setImageSrc] = useState(null);
-    const imgRef = useRef(null);
+// ✅ HOOK POUR STOCKAGE OFFLINE ET SYNCHRONISATION
+export const useOfflineUpload = () => {
+    const [pendingUploads, setPendingUploads] = useState([]);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     useEffect(() => {
-        if (!src) return;
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
 
-        setLoadState('loading');
-        const img = new Image();
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
 
-        img.onload = () => {
-            setImageSrc(src);
-            setLoadState('loaded');
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
         };
+    }, []);
 
-        img.onerror = () => {
-            setLoadState('error');
-        };
+    const storeForLaterUpload = useCallback(async (file, metadata) => {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const uploadItem = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                file: arrayBuffer,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                metadata,
+                timestamp: Date.now(),
+                status: 'pending'
+            };
 
-        // Lazy loading avec Intersection Observer
-        if ('IntersectionObserver' in window && imgRef.current) {
-            const observer = new IntersectionObserver(
-                (entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            img.src = src;
-                            observer.disconnect();
-                        }
-                    });
-                },
-                { rootMargin: '50px' }
-            );
+            // Stockage en localStorage pour simplicité (en production, utilisez IndexedDB)
+            const existing = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
+            const updated = [...existing, uploadItem];
+            localStorage.setItem('pendingUploads', JSON.stringify(updated));
 
-            observer.observe(imgRef.current);
-            return () => observer.disconnect();
-        } else {
-            // Fallback pour navigateurs anciens
-            img.src = src;
+            setPendingUploads(updated);
+            return uploadItem.id;
+        } catch (error) {
+            console.error('Failed to store file for later upload:', error);
+            throw error;
         }
-    }, [src]);
+    }, []);
 
-    const containerStyle = {
-        ...style,
-        position: 'relative',
-        display: 'inline-block',
-        backgroundColor: loadState === 'error' ? '#fee2e2' : '#f3f4f6',
-        borderRadius: '0.25rem',
-        overflow: 'hidden'
+    const processPendingUploads = useCallback(async () => {
+        if (!isOnline) return;
+
+        const pending = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
+        const stillPending = [];
+
+        for (const item of pending) {
+            if (item.status !== 'pending') continue;
+
+            try {
+                const file = new File([item.file], item.fileName, {
+                    type: item.fileType
+                });
+
+                const result = await storageService.uploadInterventionFile(
+                    file,
+                    item.metadata.interventionId,
+                    item.metadata.folder
+                );
+
+                if (!result.error) {
+                    // Upload réussi, supprimer de la liste
+                    continue;
+                }
+            } catch (error) {
+                console.error('Failed to upload pending file:', error);
+            }
+
+            // Conserver en cas d'échec
+            stillPending.push(item);
+        }
+
+        localStorage.setItem('pendingUploads', JSON.stringify(stillPending));
+        setPendingUploads(stillPending);
+    }, [isOnline]);
+
+    const clearPendingUploads = useCallback(() => {
+        localStorage.removeItem('pendingUploads');
+        setPendingUploads([]);
+    }, []);
+
+    // Auto-traitement quand on revient en ligne
+    useEffect(() => {
+        if (isOnline && pendingUploads.length > 0) {
+            processPendingUploads();
+        }
+    }, [isOnline, pendingUploads.length, processPendingUploads]);
+
+    return {
+        storeForLaterUpload,
+        processPendingUploads,
+        clearPendingUploads,
+        pendingUploads,
+        isOnline
     };
-
-    if (loadState === 'loading' && placeholder) {
-        return (
-            <div ref={imgRef} style={containerStyle} className={className}>
-                <div style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    animation: 'pulse 1.5s ease-in-out infinite'
-                }}>
-                    <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid #e5e7eb',
-                        borderTop: '2px solid #3b82f6',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                    }} />
-                </div>
-            </div>
-        );
-    }
-
-    if (loadState === 'error') {
-        return (
-            <div style={containerStyle} className={className}>
-                <div style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#dc2626',
-                    fontSize: '0.75rem'
-                }}>
-                    ❌
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <img
-            ref={imgRef}
-            src={imageSrc}
-            alt={alt}
-            className={className}
-            style={{
-                ...style,
-                display: loadState === 'loaded' ? 'block' : 'none'
-            }}
-            onClick={onClick}
-            loading="lazy"
-        />
-    );
 };
 
-// ✅ COMPOSANT DE QUEUE D'UPLOAD OPTIMISÉ
-export const UploadQueue = ({ uploadState, onRemoveItem }) => {
-    if (!uploadState.queue.length) return null;
+// ✅ HOOK POUR VALIDATION ET PRÉPARATION DES FICHIERS
+export const useFileValidation = () => {
+    const validateFile = useCallback((file, options = {}) => {
+        const {
+            maxSize = 10 * 1024 * 1024, // 10MB par défaut
+            allowedTypes = ['image/*', 'application/pdf'],
+            maxFiles = 10
+        } = options;
 
-    return (
-        <div style={{ marginTop: '1rem' }}>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem'
-            }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>
-                    Upload en cours
-                </h4>
-                {uploadState.isUploading && (
-                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                        {uploadState.globalProgress}%
-                    </span>
-                )}
-            </div>
+        const errors = [];
 
-            {/* Barre de progression globale */}
-            {uploadState.isUploading && (
-                <div style={{
-                    width: '100%',
-                    height: '4px',
-                    backgroundColor: '#e5e7eb',
-                    borderRadius: '2px',
-                    marginBottom: '1rem',
-                    overflow: 'hidden'
-                }}>
-                    <div style={{
-                        width: `${uploadState.globalProgress}%`,
-                        height: '100%',
-                        backgroundColor: '#3b82f6',
-                        transition: 'width 0.3s ease',
-                        borderRadius: '2px'
-                    }} />
-                </div>
-            )}
+        // Vérification de la taille
+        if (file.size > maxSize) {
+            errors.push(`Le fichier est trop volumineux (max: ${Math.round(maxSize / 1024 / 1024)}MB)`);
+        }
 
-            {/* Liste des fichiers */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-                maxHeight: '200px',
-                overflowY: 'auto'
-            }}>
-                {uploadState.queue.map((item) => (
-                    <div key={item.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '0.375rem',
-                        border: '1px solid #dee2e6'
-                    }}>
-                        {/* Icône de statut */}
-                        <div style={{ width: '20px', height: '20px', flexShrink: 0 }}>
-                            {item.status === 'pending' && '⏳'}
-                            {item.status === 'compressing' && '🔄'}
-                            {item.status === 'uploading' && '📤'}
-                            {item.status === 'completed' && '✅'}
-                            {item.status === 'error' && '❌'}
-                        </div>
+        // Vérification du type
+        const isAllowed = allowedTypes.some(type => {
+            if (type.endsWith('/*')) {
+                return file.type.startsWith(type.slice(0, -1));
+            }
+            return file.type === type;
+        });
 
-                        {/* Info fichier */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                            }}>
-                                {item.name}
-                            </div>
-                            <div style={{
-                                fontSize: '0.75rem',
-                                color: '#6b7280',
-                                marginTop: '0.25rem'
-                            }}>
-                                {Math.round(item.size / 1024)}KB
-                                {item.status === 'uploading' && ` • ${item.progress}%`}
-                                {item.status === 'compressing' && ' • Compression...'}
-                                {item.error && ` • ${item.error}`}
-                            </div>
+        if (!isAllowed) {
+            errors.push(`Type de fichier non autorisé: ${file.type}`);
+        }
 
-                            {/* Barre de progression individuelle */}
-                            {(item.status === 'uploading' || item.status === 'compressing') && (
-                                <div style={{
-                                    width: '100%',
-                                    height: '2px',
-                                    backgroundColor: '#e5e7eb',
-                                    borderRadius: '1px',
-                                    marginTop: '0.25rem',
-                                    overflow: 'hidden'
-                                }}>
-                                    <div style={{
-                                        width: `${item.progress}%`,
-                                        height: '100%',
-                                        backgroundColor: '#3b82f6',
-                                        transition: 'width 0.3s ease'
-                                    }} />
-                                </div>
-                            )}
-                        </div>
+        // Vérification du nom de fichier
+        if (file.name.length > 255) {
+            errors.push('Nom de fichier trop long');
+        }
 
-                        {/* Action de suppression */}
-                        {item.status !== 'uploading' && item.status !== 'compressing' && onRemoveItem && (
-                            <button
-                                onClick={() => onRemoveItem(item.id)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '0.25rem',
-                                    color: '#6b7280',
-                                    fontSize: '1.25rem'
-                                }}
-                            >
-                                ×
-                            </button>
-                        )}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }, []);
+
+    const prepareFiles = useCallback((fileList, options = {}) => {
+        const files = Array.from(fileList);
+        const validated = files.map(file => ({
+            file,
+            validation: validateFile(file, options)
+        }));
+
+        const validFiles = validated
+            .filter(item => item.validation.isValid)
+            .map(item => item.file);
+
+        const invalidFiles = validated
+            .filter(item => !item.validation.isValid);
+
+        return {
+            validFiles,
+            invalidFiles,
+            totalSize: validFiles.reduce((sum, file) => sum + file.size, 0)
+        };
+    }, [validateFile]);
+
+    return {
+        validateFile,
+        prepareFiles
+    };
 };
 
-export default useMobileFileManager;
+// ✅ HOOK PRINCIPAL QUI COMBINE TOUT
+export const useMobileUpload = (interventionId, options = {}) => {
+    const capabilities = useDeviceCapabilities();
+    const { compressImage } = useImageCompression();
+    const { uploadWithRetry, isUploading, uploadProgress, error, reset } = useResilientUpload();
+    const { storeForLaterUpload, isOnline } = useOfflineUpload();
+    const { prepareFiles } = useFileValidation();
+
+    const handleFileUpload = useCallback(async (files, uploadOptions = {}) => {
+        if (!files || files.length === 0) return;
+
+        const { validFiles, invalidFiles } = prepareFiles(files, options);
+
+        if (invalidFiles.length > 0) {
+            console.warn('Some files were rejected:', invalidFiles);
+        }
+
+        const results = [];
+
+        for (const file of validFiles) {
+            try {
+                if (isOnline) {
+                    const result = await uploadWithRetry(file, interventionId, uploadOptions);
+                    results.push({
+                        file,
+                        success: true,
+                        result
+                    });
+                } else {
+                    const id = await storeForLaterUpload(file, {
+                        interventionId,
+                        folder: uploadOptions.folder || 'report'
+                    });
+                    results.push({
+                        file,
+                        success: true,
+                        stored: true,
+                        id
+                    });
+                }
+            } catch (uploadError) {
+                results.push({
+                    file,
+                    success: false,
+                    error: uploadError.message
+                });
+            }
+        }
