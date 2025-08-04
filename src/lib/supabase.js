@@ -154,17 +154,10 @@ export const storageService = {
         return { publicURL: null, error: uploadResult.error };
       }
 
-      // ✅ URL PUBLIQUE AVEC OPTIMISATIONS
+      // ✅ URL PUBLIQUE SANS TRANSFORMATION (CORRIGÉ)
       const { data } = supabase.storage
         .from('intervention-files')
-        .getPublicUrl(filePath, {
-          transform: file.type.startsWith('image/') && deviceInfo.isMobile ? {
-            width: 800,
-            height: 600,
-            quality: 85,
-            format: 'webp'
-          } : undefined
-        });
+        .getPublicUrl(filePath); // Le deuxième argument avec "transform" a été supprimé
 
       const publicURL = data.publicUrl;
       console.log('✅ Fichier uploadé avec succès:', publicURL);
@@ -199,7 +192,7 @@ export const storageService = {
 
         // ✅ TIMEOUT ADAPTATIF SELON CONNEXION
         const timeoutMs = deviceInfo.isSlowConnection ? 60000 : 30000;
-        
+
         const uploadPromise = supabase.storage
           .from('intervention-files')
           .upload(filePath, file, uploadOptions);
@@ -238,7 +231,7 @@ export const storageService = {
       console.log('🔄 Début upload par chunks...');
 
       // ✅ TAILLE CHUNK ADAPTATIVE
-      const chunkSize = deviceInfo.isMobile ? 
+      const chunkSize = deviceInfo.isMobile ?
         (deviceInfo.isSlowConnection ? 512 * 1024 : 1024 * 1024) : // 512KB ou 1MB mobile
         2 * 1024 * 1024; // 2MB desktop
 
@@ -258,7 +251,7 @@ export const storageService = {
         console.log(`📤 Upload chunk ${chunkIndex + 1}/${totalChunks} (${Math.round(chunk.size / 1024)}KB)`);
 
         const chunkResult = await this.uploadChunkWithRetry(chunkPath, chunk, deviceInfo, chunkIndex, totalChunks);
-        
+
         if (chunkResult.error) {
           // ✅ NETTOYAGE DES CHUNKS EN CAS D'ERREUR
           await this.cleanupChunks(filePath, chunkIndex);
@@ -296,7 +289,7 @@ export const storageService = {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const timeoutMs = deviceInfo.isSlowConnection ? 45000 : 25000;
-        
+
         const uploadPromise = supabase.storage
           .from('intervention-files')
           .upload(chunkPath, chunk, {
@@ -370,7 +363,7 @@ export const storageService = {
   async cleanupChunks(filePath, chunkCount) {
     try {
       console.log('🧹 Nettoyage des chunks temporaires...');
-      
+
       const chunkPaths = [];
       for (let i = 0; i < chunkCount; i++) {
         chunkPaths.push(`${filePath}.chunk${i}`);
@@ -431,7 +424,7 @@ export const storageService = {
           console.log(`📤 Upload vault tentative ${attempt}/${maxRetries}`);
 
           const timeoutMs = deviceInfo.isSlowConnection ? 60000 : 30000;
-          
+
           const uploadPromise = supabase.storage
             .from('vault-files')
             .upload(filePath, file, uploadOptions);
@@ -482,16 +475,16 @@ export const storageService = {
   // ✅ SUPPRESSION VAULT OPTIMISÉE
   async deleteVaultFile(filePath) {
     console.log('🗑️ Suppression fichier vault:', filePath);
-    
+
     try {
       const { error } = await supabase.storage.from('vault-files').remove([filePath]);
-      
+
       if (error) {
         console.error('❌ Erreur suppression fichier vault:', error);
       } else {
         console.log('✅ Fichier vault supprimé avec succès');
       }
-      
+
       return { error };
     } catch (error) {
       console.error('❌ Erreur générale suppression vault:', error);
@@ -526,7 +519,7 @@ export const storageService = {
       const batchSize = 10;
       for (let i = 0; i < filePaths.length; i += batchSize) {
         const batch = filePaths.slice(i, i + batchSize);
-        
+
         const { error: removeError } = await supabase.storage
           .from('intervention-files')
           .remove(batch);
@@ -966,7 +959,7 @@ export const monitoringService = {
   // ✅ LOG D'UPLOAD POUR DEBUG
   logUpload(fileName, fileSize, method, duration, success, error = null) {
     const deviceInfo = getDeviceInfo();
-    
+
     const logData = {
       timestamp: new Date().toISOString(),
       fileName,
@@ -983,7 +976,7 @@ export const monitoringService = {
     };
 
     console.log('📊 Upload Log:', logData);
-    
+
     // En mode développement, on peut stocker en localStorage pour debug
     if (process.env.NODE_ENV === 'development') {
       try {
@@ -1023,7 +1016,7 @@ export const monitoringService = {
   // ✅ STATISTIQUES D'UPLOAD
   getUploadStats() {
     const logs = this.getUploadLogs();
-    
+
     if (logs.length === 0) {
       return {
         totalUploads: 0,
@@ -1068,7 +1061,7 @@ export const initializeSupabase = async () => {
 
     // ✅ VÉRIFICATION DE LA CONNEXION
     const { data, error } = await supabase.from('profiles').select('count').limit(1);
-    
+
     if (error) {
       console.error('❌ Erreur connexion Supabase:', error);
       return { success: false, error };
@@ -1100,7 +1093,7 @@ export const initializeSupabase = async () => {
 
     // ✅ VÉRIFICATION DEVICE ET CONNEXION
     const deviceInfo = getDeviceInfo();
-    
+
     console.log('✅ Supabase initialisé avec succès');
     console.log('📊 Info device:', deviceInfo);
     console.log('🪣 État buckets:', bucketChecks);
