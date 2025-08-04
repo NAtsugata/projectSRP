@@ -1,4 +1,4 @@
-// src/pages/InterventionDetailView.js - VERSION FINALE, FIABILISÉE ET FONCTIONNELLE
+// src/pages/InterventionDetailView.js - VERSION COMPLÈTE, RESTAURÉE ET FIABILISÉE
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
@@ -269,7 +269,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
         setUploadState({ isUploading: true, queue: queueItems, globalProgress: 0, error: null });
 
-        // ✅ Fonction interne pour mettre à jour l'état de la file d'attente de manière fiable
         const updateQueueItem = (fileId, updates) => {
             setUploadState(prev => {
                 const newQueue = prev.queue.map(item =>
@@ -381,6 +380,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
 
+                {/* ✅ SECTION DOCUMENTS DE PRÉPARATION RESTAURÉE */}
+                <div className="section">
+                    <h3>Documents de préparation</h3>
+                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
+                        <ul className="document-list">
+                            {intervention.intervention_briefing_documents.map(doc => (
+                                <li key={doc.id}>
+                                    <span>{doc.file_name}</span>
+                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                                        <DownloadIcon/> Voir
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-muted">Aucun document de préparation.</p>
+                    )}
+                </div>
+
+                {/* ✅ SECTION POINTAGE RESTAURÉE */}
                 <div className="section">
                     <h3>Pointage</h3>
                     <div className="grid-2-cols">
@@ -452,6 +471,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
                 </div>
 
+                {/* ✅ SECTION SIGNATURE RESTAURÉE */}
                 <div className="section">
                     <h3>Signature du client</h3>
                     <div className="signature-container">
