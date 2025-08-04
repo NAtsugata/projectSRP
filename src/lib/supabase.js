@@ -1,4 +1,4 @@
-// src/lib/supabase.js - VERSION COMPLÈTE OPTIMISÉE MOBILE
+// src/lib/supabase.js - VERSION SIMPLIFIÉE ET FIABLE POUR MOBILE
 import React from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,11 +12,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
-  // ✅ OPTIMISATIONS RÉSEAU MOBILE
   global: {
     headers: {
       'X-Client-Info': 'supabase-js-mobile',
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-cache' // Assure que les données sont toujours fraîches
     }
   },
   db: {
@@ -92,10 +91,10 @@ export const profileService = {
 // ✅ FONCTION DE NETTOYAGE NOMS DE FICHIERS AMÉLIORÉE
 const sanitizeFileName = (fileName) => {
   const cleaned = fileName
-    .replace(/[^a-zA-Z0-9._-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100);
+    .replace(/[^a-zA-Z0-9._-]/g, '-') // Remplace les caractères non autorisés
+    .replace(/-+/g, '-') // Remplace les tirets multiples
+    .replace(/^-|-$/g, '') // Supprime les tirets au début/fin
+    .substring(0, 100); // Limite la longueur
   console.log('🧹 Nom de fichier nettoyé:', fileName, '->', cleaned);
   return cleaned;
 };
@@ -104,60 +103,50 @@ const sanitizeFileName = (fileName) => {
 const getDeviceInfo = () => {
   const userAgent = navigator.userAgent;
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  
+
   return {
     isMobile: /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
     isIOS: /iPad|iPhone|iPod/.test(userAgent),
     isAndroid: /Android/.test(userAgent),
     connectionType: connection?.effectiveType || '4g',
-    downlink: connection?.downlink || 10,
     isSlowConnection: connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g',
-    saveData: connection?.saveData || false
   };
 };
 
-// ✅ SERVICE DE STOCKAGE OPTIMISÉ MOBILE
+// ✅ SERVICE DE STOCKAGE SIMPLIFIÉ ET FIABLE
 export const storageService = {
-  // ✅ UPLOAD INTERVENTION PRINCIPAL OPTIMISÉ
+  /**
+   * ✅ UPLOAD PRINCIPAL OPTIMISÉ
+   * La stratégie est maintenant de TOUJOURS compresser les images côté client avant d'appeler cette fonction.
+   * Cela rend l'upload beaucoup plus rapide et fiable sur mobile, sans avoir besoin d'un système de chunks complexe.
+   */
   async uploadInterventionFile(file, interventionId, folder = 'report') {
     try {
-      console.log('📤 Upload intervention file:', {
+      const deviceInfo = getDeviceInfo();
+      console.log(`📤 Upload intervention file sur ${deviceInfo.isMobile ? 'Mobile' : 'Desktop'}:`, {
         fileName: file.name,
-        size: Math.round(file.size / 1024) + 'KB',
+        size: Math.round(file.size / 1024) + 'KB', // La taille devrait être déjà réduite par la compression
         type: file.type,
-        interventionId,
-        folder
       });
 
-      const deviceInfo = getDeviceInfo();
       const cleanFileName = sanitizeFileName(file.name);
       const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `${interventionId}/${folder}/${fileName}`;
 
       console.log('🗂️ Chemin de stockage:', filePath);
 
-      // ✅ STRATÉGIE D'UPLOAD ADAPTATIVE
-      let uploadResult;
-      const fileSize = file.size;
-      const sizeMB = fileSize / (1024 * 1024);
-
-      if (sizeMB > 6 || (deviceInfo.isMobile && deviceInfo.isSlowConnection)) {
-        console.log('🔄 Upload resumable activé (fichier:', Math.round(sizeMB), 'MB)');
-        uploadResult = await this.uploadWithChunks(filePath, file, deviceInfo);
-      } else {
-        console.log('⚡ Upload standard optimisé');
-        uploadResult = await this.uploadStandard(filePath, file, deviceInfo);
-      }
+      // ✅ Utilise TOUJOURS l'upload standard, qui est maintenant rapide grâce à la compression en amont.
+      const uploadResult = await this.uploadStandardWithRetry(filePath, file, deviceInfo, 'intervention-files');
 
       if (uploadResult.error) {
         console.error('❌ Erreur upload:', uploadResult.error);
         return { publicURL: null, error: uploadResult.error };
       }
 
-      // ✅ URL PUBLIQUE SANS TRANSFORMATION (CORRIGÉ)
+      // ✅ URL PUBLIQUE SANS TRANSFORMATION
       const { data } = supabase.storage
         .from('intervention-files')
-        .getPublicUrl(filePath); // Le deuxième argument avec "transform" a été supprimé
+        .getPublicUrl(filePath);
 
       const publicURL = data.publicUrl;
       console.log('✅ Fichier uploadé avec succès:', publicURL);
@@ -169,14 +158,17 @@ export const storageService = {
     }
   },
 
-  // ✅ UPLOAD STANDARD AVEC RETRY
-  async uploadStandard(filePath, file, deviceInfo) {
+  /**
+   * ✅ UPLOAD STANDARD FIABLE AVEC RETRY
+   * Gère les tentatives multiples en cas d'échec réseau.
+   */
+  async uploadStandardWithRetry(filePath, file, deviceInfo, bucket) {
     const maxRetries = 3;
     let lastError;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`📤 Upload standard tentative ${attempt}/${maxRetries}`);
+        console.log(`📤 Tentative d'upload ${attempt}/${maxRetries} vers le bucket ${bucket}...`);
 
         const uploadOptions = {
           cacheControl: '3600',
@@ -190,267 +182,49 @@ export const storageService = {
           }
         };
 
-        // ✅ TIMEOUT ADAPTATIF SELON CONNEXION
-        const timeoutMs = deviceInfo.isSlowConnection ? 60000 : 30000;
-
-        const uploadPromise = supabase.storage
-          .from('intervention-files')
+        const { data, error } = await supabase.storage
+          .from(bucket)
           .upload(filePath, file, uploadOptions);
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Upload timeout')), timeoutMs)
-        );
+        if (error) throw error; // Relance l'erreur pour être attrapée par le catch
 
-        const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
-
-        if (!error) {
-          console.log('✅ Upload standard réussi');
-          return { data, error: null };
-        } else {
-          throw error;
-        }
+        console.log('✅ Upload standard réussi');
+        return { data, error: null };
 
       } catch (error) {
         console.warn(`⚠️ Tentative ${attempt} échouée:`, error.message);
         lastError = error;
 
         if (attempt < maxRetries) {
+          // Délai exponentiel avant de réessayer (1s, 2s, 4s...)
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`🔄 Retry dans ${delay}ms...`);
+          console.log(`🔄 Nouvel essai dans ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
 
+    console.error(`❌ Échec de l'upload après ${maxRetries} tentatives.`);
     return { data: null, error: lastError };
-  },
-
-  // ✅ UPLOAD PAR CHUNKS POUR GROS FICHIERS
-  async uploadWithChunks(filePath, file, deviceInfo) {
-    try {
-      console.log('🔄 Début upload par chunks...');
-
-      // ✅ TAILLE CHUNK ADAPTATIVE
-      const chunkSize = deviceInfo.isMobile ?
-        (deviceInfo.isSlowConnection ? 512 * 1024 : 1024 * 1024) : // 512KB ou 1MB mobile
-        2 * 1024 * 1024; // 2MB desktop
-
-      const totalChunks = Math.ceil(file.size / chunkSize);
-      console.log(`📦 Upload en ${totalChunks} chunks de ${Math.round(chunkSize / 1024)}KB`);
-
-      const uploadedChunks = [];
-      let uploadedSize = 0;
-
-      // ✅ UPLOAD SÉQUENTIEL DES CHUNKS AVEC RETRY
-      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-        const start = chunkIndex * chunkSize;
-        const end = Math.min(start + chunkSize, file.size);
-        const chunk = file.slice(start, end);
-        const chunkPath = `${filePath}.chunk${chunkIndex}`;
-
-        console.log(`📤 Upload chunk ${chunkIndex + 1}/${totalChunks} (${Math.round(chunk.size / 1024)}KB)`);
-
-        const chunkResult = await this.uploadChunkWithRetry(chunkPath, chunk, deviceInfo, chunkIndex, totalChunks);
-
-        if (chunkResult.error) {
-          // ✅ NETTOYAGE DES CHUNKS EN CAS D'ERREUR
-          await this.cleanupChunks(filePath, chunkIndex);
-          throw chunkResult.error;
-        }
-
-        uploadedChunks.push(chunkResult.data);
-        uploadedSize += chunk.size;
-
-        const progress = Math.round((uploadedSize / file.size) * 100);
-        console.log(`✅ Chunk ${chunkIndex + 1} OK - Progrès: ${progress}%`);
-      }
-
-      // ✅ ASSEMBLAGE FINAL
-      console.log('🔗 Assemblage des chunks...');
-      const finalResult = await this.assembleChunks(filePath, file, uploadedChunks, deviceInfo);
-
-      // ✅ NETTOYAGE DES CHUNKS TEMPORAIRES
-      await this.cleanupChunks(filePath, totalChunks);
-
-      console.log('✅ Upload par chunks terminé avec succès');
-      return finalResult;
-
-    } catch (error) {
-      console.error('❌ Erreur upload par chunks:', error);
-      return { data: null, error };
-    }
-  },
-
-  // ✅ UPLOAD CHUNK INDIVIDUEL AVEC RETRY
-  async uploadChunkWithRetry(chunkPath, chunk, deviceInfo, chunkIndex, totalChunks) {
-    const maxRetries = 3;
-    let lastError;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const timeoutMs = deviceInfo.isSlowConnection ? 45000 : 25000;
-
-        const uploadPromise = supabase.storage
-          .from('intervention-files')
-          .upload(chunkPath, chunk, {
-            cacheControl: '3600',
-            upsert: true,
-            contentType: 'application/octet-stream',
-            metadata: {
-              chunkIndex: chunkIndex,
-              totalChunks: totalChunks,
-              chunkSize: chunk.size
-            }
-          });
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Chunk ${chunkIndex + 1} timeout`)), timeoutMs)
-        );
-
-        const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
-
-        if (!error) {
-          return { data, error: null };
-        } else {
-          throw error;
-        }
-
-      } catch (error) {
-        console.warn(`⚠️ Chunk ${chunkIndex + 1} tentative ${attempt} échouée:`, error.message);
-        lastError = error;
-
-        if (attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-
-    return { data: null, error: lastError };
-  },
-
-  // ✅ ASSEMBLAGE DES CHUNKS
-  async assembleChunks(filePath, originalFile, uploadedChunks, deviceInfo) {
-    try {
-      // ✅ POUR CETTE VERSION, ON FAIT UN UPLOAD FINAL COMPLET
-      // En production, il faudrait une fonction côté serveur pour assembler
-      console.log('🔧 Assemblage final du fichier...');
-
-      const { data, error } = await supabase.storage
-        .from('intervention-files')
-        .upload(filePath, originalFile, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: originalFile.type,
-          metadata: {
-            uploadedFrom: deviceInfo.isMobile ? 'mobile' : 'desktop',
-            originalSize: originalFile.size,
-            uploadMethod: 'chunked',
-            chunksCount: uploadedChunks.length,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-      return { data, error };
-
-    } catch (error) {
-      console.error('❌ Erreur assemblage chunks:', error);
-      return { data: null, error };
-    }
-  },
-
-  // ✅ NETTOYAGE DES CHUNKS TEMPORAIRES
-  async cleanupChunks(filePath, chunkCount) {
-    try {
-      console.log('🧹 Nettoyage des chunks temporaires...');
-
-      const chunkPaths = [];
-      for (let i = 0; i < chunkCount; i++) {
-        chunkPaths.push(`${filePath}.chunk${i}`);
-      }
-
-      if (chunkPaths.length > 0) {
-        const { error } = await supabase.storage
-          .from('intervention-files')
-          .remove(chunkPaths);
-
-        if (error) {
-          console.warn('⚠️ Erreur nettoyage chunks (non critique):', error);
-        } else {
-          console.log('✅ Chunks temporaires nettoyés');
-        }
-      }
-
-    } catch (error) {
-      console.warn('⚠️ Erreur nettoyage chunks:', error);
-    }
   },
 
   // ✅ UPLOAD VAULT OPTIMISÉ
   async uploadVaultFile(file, userId) {
     try {
+      const deviceInfo = getDeviceInfo();
       console.log('📤 Upload fichier coffre-fort:', {
         fileName: file.name,
         size: Math.round(file.size / 1024) + 'KB',
         userId
       });
 
-      const deviceInfo = getDeviceInfo();
       const cleanFileName = sanitizeFileName(file.name);
       const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `${userId}/${fileName}`;
 
       console.log('🗂️ Chemin de stockage vault:', filePath);
 
-      const uploadOptions = {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-        metadata: {
-          uploadedFrom: deviceInfo.isMobile ? 'mobile' : 'desktop',
-          userId: userId,
-          originalSize: file.size,
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      // ✅ UPLOAD AVEC RETRY POUR VAULT
-      const maxRetries = 3;
-      let uploadResult;
-      let lastError;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`📤 Upload vault tentative ${attempt}/${maxRetries}`);
-
-          const timeoutMs = deviceInfo.isSlowConnection ? 60000 : 30000;
-
-          const uploadPromise = supabase.storage
-            .from('vault-files')
-            .upload(filePath, file, uploadOptions);
-
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Upload vault timeout')), timeoutMs)
-          );
-
-          uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-
-          if (!uploadResult.error) {
-            break; // Succès
-          } else {
-            throw uploadResult.error;
-          }
-
-        } catch (error) {
-          console.warn(`⚠️ Upload vault tentative ${attempt} échouée:`, error.message);
-          lastError = error;
-
-          if (attempt < maxRetries) {
-            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
-        }
-      }
+      const uploadResult = await this.uploadStandardWithRetry(filePath, file, deviceInfo, 'vault-files');
 
       if (uploadResult.error) {
         console.error('❌ Erreur upload vault:', uploadResult.error);
@@ -540,11 +314,6 @@ export const storageService = {
       return { error };
     }
   },
-
-  // ✅ FONCTION UTILITAIRE - INFO CONNEXION
-  getConnectionInfo() {
-    return getDeviceInfo();
-  }
 }
 
 // ✅ SERVICE INTERVENTIONS OPTIMISÉ
