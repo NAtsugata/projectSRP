@@ -323,9 +323,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
 
         if (successfulUploads.length > 0) {
-            const updatedReport = { ...report, files: [...(report.files || []), ...successfulUploads] };
-            setReport(updatedReport);
-            saveReportSilently(updatedReport);
+            setReport(prevReport => {
+                const updatedReport = { ...prevReport, files: [...(prevReport.files || []), ...successfulUploads] };
+                saveReportSilently(updatedReport);
+                return updatedReport;
+            });
             setFileListKey(Date.now());
         }
 
