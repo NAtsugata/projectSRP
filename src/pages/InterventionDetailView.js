@@ -61,7 +61,7 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     if (loadState === 'error') {
         return <div className={className} style={{...style, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fee2e2' }}><XCircleIcon /></div>;
     }
-    return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style, display: 'block'}} onClick={onClick} loading="lazy" />;
+    return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style, display: 'block' }} onClick={onClick} loading="lazy" />;
 };
 
 // =================================================================================
@@ -101,7 +101,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 
         const startDrawing = (e) => { e.preventDefault(); drawing = true; setIsDrawing(true); lastPos = getPos(e); ctx.beginPath(); ctx.moveTo(lastPos.x, lastPos.y); };
         const stopDrawing = (e) => { e.preventDefault(); drawing = false; lastPos = null; };
-        const draw = (e) => { if (!drawing) return; e.preventDefault(); const pos = getPos(e); if(lastPos) { ctx.lineTo(pos.x, pos.y); ctx.stroke(); } lastPos = pos; };
+        const draw = (e) => { if (!drawing) return; e.preventDefault(); const pos = getPos(e); if (lastPos) { ctx.lineTo(pos.x, pos.y); ctx.stroke(); } lastPos = pos; };
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
@@ -157,7 +157,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const signatureCanvasRef = useRef(null);
     const storageKey = `srp-intervention-report-${interventionId}`;
 
-    // ✅ Références pour les inputs cachés
     const cameraInputRef = useRef(null);
     const libraryInputRef = useRef(null);
 
@@ -208,7 +207,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
     },);
 
-    // ✅ PIPELINE DE TRAITEMENT DE FICHIER ROBUSTE
     const processAndUploadFiles = useCallback(async (files) => {
         if (!files.length ||!intervention) return;
 
@@ -245,7 +243,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             try {
                 let fileToProcess = file;
 
-                // Étape 1: Conversion HEIC
                 const isHeic = /\.(heic|heif)$/i.test(file.name) |
 
 | file.type === 'image/heic' |
@@ -257,7 +254,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     fileToProcess = new File(, file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
                 }
 
-                // Étape 2: Compression
                 if (fileToProcess.type.startsWith('image/')) {
                     updateQueueItem(fileId, { status: 'compressing', progress: 5 });
                     fileToProcess = await imageCompression(fileToProcess, {
@@ -267,9 +263,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     });
                 }
 
-                // Étape 3: Envoi
                 const onProgress = (percent) => {
-                    const uploadProgress = 10 + Math.round(percent * 0.85); // La progression va de 10% à 95%
+                    const uploadProgress = 10 + Math.round(percent * 0.85);
                     updateQueueItem(fileId, { status: 'uploading', progress: uploadProgress });
                 };
 
@@ -311,7 +306,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
     const handleFileChangeEvent = (event) => {
         processAndUploadFiles(Array.from(event.target.files));
-        event.target.value = ''; // Permet de re-sélectionner le même fichier
+        event.target.value = '';
     };
 
     const handleSave = async () => {
@@ -461,7 +456,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {/* ✅ NOUVELLE ARCHITECTURE D'ENVOI */}
                     {!isAdmin && (
                         <div className="grid-2-cols" style={{ marginTop: '1rem' }}>
-                            {/* Input caché pour la caméra */}
                             <input
                                 type="file"
                                 ref={cameraInputRef}
@@ -470,7 +464,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                 capture="environment"
                                 style={{ display: 'none' }}
                             />
-                            {/* Input caché pour la bibliothèque */}
                             <input
                                 type="file"
                                 ref={libraryInputRef}
@@ -480,11 +473,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                 style={{ display: 'none' }}
                             />
 
-                            {/* Bouton visible pour la caméra */}
                             <button onClick={() => cameraInputRef.current.click()} disabled={uploadState.isUploading} className="btn btn-secondary">
                                 <CameraIcon /> Prendre une photo
                             </button>
-                            {/* Bouton visible pour la bibliothèque */}
                             <button onClick={() => libraryInputRef.current.click()} disabled={uploadState.isUploading} className="btn btn-secondary">
                                 <LibraryIcon /> Choisir des fichiers
                             </button>
