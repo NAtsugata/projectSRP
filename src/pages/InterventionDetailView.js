@@ -323,6 +323,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }
 
         if (successfulUploads.length > 0) {
+            // ✅ Utilisation de la mise à jour fonctionnelle de l'état pour éviter les race conditions
             setReport(prevReport => {
                 const updatedReport = { ...prevReport, files: [...(prevReport.files || []), ...successfulUploads] };
                 saveReportSilently(updatedReport);
@@ -340,7 +341,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }, 3000);
 
         event.target.value = '';
-    }, [intervention, report, compressImage, interventionId, saveReportSilently]);
+    }, [intervention, compressImage, interventionId, saveReportSilently]);
 
     const handleSave = async () => {
         if (!intervention) return;
