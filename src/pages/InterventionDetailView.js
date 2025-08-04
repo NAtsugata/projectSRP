@@ -234,33 +234,44 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
         return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.onload = () => {
-                const maxWidth = deviceInfo.isMobile ? 1280 : 1920;
-                let { width, height } = img;
-                if (width > maxWidth) {
-                    height *= maxWidth / width;
-                    width = maxWidth;
-                }
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => {
-                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
-                    console.log(`✅ Image compressée: ${Math.round(file.size/1024)}KB → ${Math.round(compressedFile.size/1024)}KB`);
-                    resolve(compressedFile);
-                }, 'image/jpeg', 0.8);
-            };
-            img.onerror = () => resolve(file);
-            img.src = URL.createObjectURL(file);
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const maxWidth = deviceInfo.isMobile ? 1280 : 1920;
+                    let { width, height } = img;
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+                        console.log(`✅ Image compressée: ${Math.round(file.size/1024)}KB → ${Math.round(compressedFile.size/1024)}KB`);
+                        resolve(compressedFile);
+                    }, 'image/jpeg', 0.8);
+                };
+                img.onerror = () => {
+                    console.warn(`[compressImage] Erreur de chargement de l'image ${file.name}, envoi du fichier original.`);
+                    resolve(file);
+                };
+                img.src = URL.createObjectURL(file);
+            } catch (error) {
+                console.error(`[compressImage] Erreur critique lors de la compression de ${file.name}, envoi du fichier original.`, error);
+                resolve(file);
+            }
         });
     }, [deviceInfo.isMobile]);
 
     const handleFileSelect = useCallback(async (event) => {
         const files = Array.from(event.target.files);
         if (!files.length || !intervention) return;
+
+        console.log(`[handleFileSelect] Démarrage du traitement pour ${files.length} fichier(s).`);
+        files.forEach(f => console.log(`[handleFileSelect] Fichier détecté: ${f.name}, Type: ${f.type}, Taille: ${f.size}`));
 
         const queueItems = files.map((file, index) => ({
             id: `${file.name}-${Date.now()}-${index}`,
@@ -285,7 +296,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
 
         const successfulUploads = [];
-        // ✅ Utilisation d'une boucle `for...of` pour un traitement séquentiel fiable
         for (const [index, file] of files.entries()) {
             const fileId = queueItems[index].id;
 
@@ -294,7 +304,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 const compressedFile = await compressImage(file);
 
                 const onProgress = (percent) => {
-                    const uploadProgress = 5 + Math.round(percent * 0.9); // La progression de l'upload va de 5% à 95%
+                    const uploadProgress = 5 + Math.round(percent * 0.9);
                     updateQueueItem(fileId, { status: 'uploading', progress: uploadProgress });
                 };
 
@@ -324,7 +334,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             setUploadState(prev => ({
                 ...prev,
                 isUploading: false,
-                queue: prev.queue.filter(item => item.status === 'error') // Garde les erreurs pour inspection
+                queue: prev.queue.filter(item => item.status === 'error')
             }));
         }, 3000);
 
@@ -376,7 +386,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
             <style>{`
                 .spinning { animation: spin 1s linear infinite; }
-                @keyframes spin { to { transform: rotate(3D); } }
+                @keyframes spin { to { transform: rotate(360deg); } }
             `}</style>
 
             <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
@@ -468,7 +478,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
 
                     {!isAdmin && (
-                        <CustomFileInput onChange={handleFileSelect} disabled={uploadState.isUploading} multiple>
+                        // ✅ CORRECTION : Ajout de l'attribut `accept` pour autoriser tous les types de fichiers
+                        <CustomFileInput
+                            onChange={handleFileSelect}
+                            disabled={uploadState.isUploading}
+                            multiple
+                            accept="image/*,application/pdf,text/plain"
+                        >
                             {uploadState.isUploading ? <><LoaderIcon className="spinning" /> Envoi en cours...</> : '📷 Ajouter des fichiers'}
                         </CustomFileInput>
                     )}
