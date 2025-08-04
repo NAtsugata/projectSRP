@@ -200,7 +200,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
     useEffect(() => {
         if (report && intervention) {
-            // ✅ Sécurisation de la sauvegarde en session pour éviter les crashs
             try {
                 window.sessionStorage.setItem(storageKey, JSON.stringify(report));
             } catch (error) {
@@ -286,17 +285,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
 
         const successfulUploads = [];
-        for (const file of files) {
-            const fileId = queueItems.find(item => item.name === file.name)?.id;
-            if (!fileId) continue;
+        // ✅ Utilisation d'une boucle `for...of` pour un traitement séquentiel fiable
+        for (const [index, file] of files.entries()) {
+            const fileId = queueItems[index].id;
 
             try {
                 updateQueueItem(fileId, { status: 'compressing', progress: 5 });
                 const compressedFile = await compressImage(file);
 
                 const onProgress = (percent) => {
-                    // La progression de l'upload va de 5% à 95%
-                    const uploadProgress = 5 + Math.round(percent * 0.9);
+                    const uploadProgress = 5 + Math.round(percent * 0.9); // La progression de l'upload va de 5% à 95%
                     updateQueueItem(fileId, { status: 'uploading', progress: uploadProgress });
                 };
 
@@ -326,7 +324,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             setUploadState(prev => ({
                 ...prev,
                 isUploading: false,
-                queue: prev.queue.filter(item => item.status === 'error')
+                queue: prev.queue.filter(item => item.status === 'error') // Garde les erreurs pour inspection
             }));
         }, 3000);
 
@@ -378,7 +376,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
             <style>{`
                 .spinning { animation: spin 1s linear infinite; }
-                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes spin { to { transform: rotate(3D); } }
             `}</style>
 
             <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
@@ -387,7 +385,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.service} - {intervention.address}</p>
 
-                {/* ✅ SECTION DOCUMENTS DE PRÉPARATION RESTAURÉE */}
                 <div className="section">
                     <h3>Documents de préparation</h3>
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
@@ -406,7 +403,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
                 </div>
 
-                {/* ✅ SECTION POINTAGE RESTAURÉE */}
                 <div className="section">
                     <h3>Pointage</h3>
                     <div className="grid-2-cols">
@@ -478,7 +474,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
                 </div>
 
-                {/* ✅ SECTION SIGNATURE RESTAURÉE */}
                 <div className="section">
                     <h3>Signature du client</h3>
                     <div className="signature-container">
