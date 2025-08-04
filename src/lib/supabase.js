@@ -1,4 +1,4 @@
-// src/lib/supabase.js - VERSION SIMPLIFIÉE ET FIABLE POUR MOBILE
+// src/lib/supabase.js - VERSION FIABLE AVEC SUIVI DE PROGRESSION TEMPS RÉEL
 import React from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -117,15 +117,14 @@ const getDeviceInfo = () => {
 export const storageService = {
   /**
    * ✅ UPLOAD PRINCIPAL OPTIMISÉ
-   * La stratégie est maintenant de TOUJOURS compresser les images côté client avant d'appeler cette fonction.
-   * Cela rend l'upload beaucoup plus rapide et fiable sur mobile, sans avoir besoin d'un système de chunks complexe.
+   * Accepte maintenant un callback `onProgress` pour le suivi en temps réel.
    */
-  async uploadInterventionFile(file, interventionId, folder = 'report') {
+  async uploadInterventionFile(file, interventionId, folder = 'report', onProgress) {
     try {
       const deviceInfo = getDeviceInfo();
       console.log(`📤 Upload intervention file sur ${deviceInfo.isMobile ? 'Mobile' : 'Desktop'}:`, {
         fileName: file.name,
-        size: Math.round(file.size / 1024) + 'KB', // La taille devrait être déjà réduite par la compression
+        size: Math.round(file.size / 1024) + 'KB',
         type: file.type,
       });
 
@@ -135,15 +134,13 @@ export const storageService = {
 
       console.log('🗂️ Chemin de stockage:', filePath);
 
-      // ✅ Utilise TOUJOURS l'upload standard, qui est maintenant rapide grâce à la compression en amont.
-      const uploadResult = await this.uploadStandardWithRetry(filePath, file, deviceInfo, 'intervention-files');
+      const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'intervention-files', onProgress);
 
       if (uploadResult.error) {
         console.error('❌ Erreur upload:', uploadResult.error);
         return { publicURL: null, error: uploadResult.error };
       }
 
-      // ✅ URL PUBLIQUE SANS TRANSFORMATION
       const { data } = supabase.storage
         .from('intervention-files')
         .getPublicUrl(filePath);
@@ -159,10 +156,10 @@ export const storageService = {
   },
 
   /**
-   * ✅ UPLOAD STANDARD FIABLE AVEC RETRY
-   * Gère les tentatives multiples en cas d'échec réseau.
+   * ✅ NOUVELLE FONCTION D'UPLOAD AVEC PROGRESSION ET RETRY
+   * Utilise XMLHttpRequest pour suivre la progression de l'envoi.
    */
-  async uploadStandardWithRetry(filePath, file, deviceInfo, bucket) {
+  async uploadWithProgressAndRetry(filePath, file, bucket, onProgress) {
     const maxRetries = 3;
     let lastError;
 
@@ -170,33 +167,66 @@ export const storageService = {
       try {
         console.log(`📤 Tentative d'upload ${attempt}/${maxRetries} vers le bucket ${bucket}...`);
 
-        const uploadOptions = {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type || 'application/octet-stream',
-          metadata: {
-            uploadedFrom: deviceInfo.isMobile ? 'mobile' : 'desktop',
-            originalSize: file.size,
-            timestamp: new Date().toISOString(),
-            connectionType: deviceInfo.connectionType
+        const result = await new Promise(async (resolve, reject) => {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            return reject(sessionError);
           }
-        };
+          if (!session) {
+            return reject(new Error("User not authenticated."));
+          }
 
-        const { data, error } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, file, uploadOptions);
+          const url = `${supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
 
-        if (error) throw error; // Relance l'erreur pour être attrapée par le catch
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', url, true);
 
-        console.log('✅ Upload standard réussi');
-        return { data, error: null };
+          xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+          xhr.setRequestHeader('x-upsert', 'false');
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 100);
+              if (onProgress) {
+                onProgress(percentComplete);
+              }
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve({ data: JSON.parse(xhr.responseText), error: null });
+              } catch (e) {
+                resolve({ data: xhr.responseText, error: null });
+              }
+            } else {
+              let errorResponse;
+              try {
+                errorResponse = JSON.parse(xhr.responseText);
+              } catch(e) {
+                errorResponse = { message: xhr.statusText || `Upload failed with status ${xhr.status}` };
+              }
+              reject(errorResponse);
+            }
+          };
+
+          xhr.onerror = () => {
+            reject({ message: 'Upload failed due to a network error.' });
+          };
+
+          xhr.send(file);
+        });
+
+        console.log('✅ Upload réussi');
+        return { data: result.data, error: null };
 
       } catch (error) {
         console.warn(`⚠️ Tentative ${attempt} échouée:`, error.message);
         lastError = error;
 
         if (attempt < maxRetries) {
-          // Délai exponentiel avant de réessayer (1s, 2s, 4s...)
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
           console.log(`🔄 Nouvel essai dans ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -209,9 +239,8 @@ export const storageService = {
   },
 
   // ✅ UPLOAD VAULT OPTIMISÉ
-  async uploadVaultFile(file, userId) {
+  async uploadVaultFile(file, userId, onProgress) {
     try {
-      const deviceInfo = getDeviceInfo();
       console.log('📤 Upload fichier coffre-fort:', {
         fileName: file.name,
         size: Math.round(file.size / 1024) + 'KB',
@@ -224,7 +253,7 @@ export const storageService = {
 
       console.log('🗂️ Chemin de stockage vault:', filePath);
 
-      const uploadResult = await this.uploadStandardWithRetry(filePath, file, deviceInfo, 'vault-files');
+      const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'vault-files', onProgress);
 
       if (uploadResult.error) {
         console.error('❌ Erreur upload vault:', uploadResult.error);
@@ -289,7 +318,6 @@ export const storageService = {
       const filePaths = files.map(file => `${folderPath}/${file.name}`);
       console.log('🗑️ Suppression de', filePaths.length, 'fichier(s)');
 
-      // ✅ SUPPRESSION PAR BATCH POUR ÉVITER LES TIMEOUTS
       const batchSize = 10;
       for (let i = 0; i < filePaths.length; i += batchSize) {
         const batch = filePaths.slice(i, i + batchSize);
@@ -352,7 +380,6 @@ export const interventionService = {
         briefingFiles: briefingFiles.length
       });
 
-      // Création de l'intervention
       const { data: interventionData, error: interventionError } = await supabase
         .from('interventions')
         .insert([{
@@ -373,7 +400,6 @@ export const interventionService = {
       const interventionId = interventionData.id;
       console.log('✅ Intervention créée avec ID:', interventionId);
 
-      // Assignation des utilisateurs
       if (assignedUserIds.length > 0) {
         const assignments = assignedUserIds.map(userId => ({
           intervention_id: interventionId,
@@ -392,7 +418,6 @@ export const interventionService = {
         console.log('✅ Utilisateurs assignés:', assignedUserIds.length);
       }
 
-      // Ajout des documents de préparation
       if (briefingFiles.length > 0) {
         const { error: briefingError } = await this.addBriefingDocuments(interventionId, briefingFiles);
         if (briefingError) {
@@ -420,7 +445,6 @@ export const interventionService = {
         isArchived: updates.is_archived
       });
 
-      // ✅ SANITISATION DES DONNÉES
       const sanitizedUpdates = { ...updates };
 
       if (updates.report) {
@@ -431,21 +455,6 @@ export const interventionService = {
           departureTime: updates.report.departureTime || null,
           signature: updates.report.signature || null
         };
-
-        console.log('📄 Rapport sanitisé:', {
-          notesLength: sanitizedUpdates.report.notes.length,
-          filesCount: sanitizedUpdates.report.files.length,
-          hasArrival: !!sanitizedUpdates.report.arrivalTime,
-          hasDeparture: !!sanitizedUpdates.report.departureTime,
-          hasSignature: !!sanitizedUpdates.report.signature
-        });
-
-        if (sanitizedUpdates.report.files.length > 0) {
-          console.log('📁 Fichiers dans le rapport:');
-          sanitizedUpdates.report.files.forEach((file, index) => {
-            console.log(`  ${index + 1}. ${file.name} (${file.type}) - ${file.url}`);
-          });
-        }
       }
 
       const result = await supabase
@@ -471,13 +480,11 @@ export const interventionService = {
     try {
       console.log('🗑️ Suppression intervention:', id);
 
-      // Supprimer d'abord les fichiers du storage
       const { error: storageError } = await storageService.deleteInterventionFolder(id);
       if (storageError) {
         console.error(`⚠️ Impossible de supprimer le dossier de stockage pour l'intervention ${id}:`, storageError);
       }
 
-      // Puis supprimer l'intervention de la base
       const result = await supabase.from('interventions').delete().eq('id', id);
 
       if (result.error) {
@@ -683,7 +690,6 @@ export const vaultService = {
     try {
       console.log('🗑️ Suppression document coffre-fort:', documentId);
 
-      // Récupérer d'abord le chemin du fichier
       const { data: doc, error: fetchError } = await supabase
         .from('vault_documents')
         .select('file_path')
@@ -695,14 +701,12 @@ export const vaultService = {
         return { error: fetchError || new Error("Document not found") };
       }
 
-      // Supprimer le fichier du storage
       const { error: storageError } = await storageService.deleteVaultFile(doc.file_path);
       if (storageError) {
         console.error("❌ Impossible de supprimer le fichier du stockage:", storageError);
         return { error: storageError };
       }
 
-      // Supprimer l'entrée de la base de données
       const result = await supabase
         .from('vault_documents')
         .delete()
@@ -725,7 +729,6 @@ export const vaultService = {
 
 // ✅ UTILITAIRES DE MONITORING ET DEBUG
 export const monitoringService = {
-  // ✅ LOG D'UPLOAD POUR DEBUG
   logUpload(fileName, fileSize, method, duration, success, error = null) {
     const deviceInfo = getDeviceInfo();
 
@@ -740,86 +743,10 @@ export const monitoringService = {
       device: {
         isMobile: deviceInfo.isMobile,
         connectionType: deviceInfo.connectionType,
-        downlink: deviceInfo.downlink
       }
     };
 
     console.log('📊 Upload Log:', logData);
-
-    // En mode développement, on peut stocker en localStorage pour debug
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        const logs = JSON.parse(localStorage.getItem('upload_logs') || '[]');
-        logs.push(logData);
-        // Garde seulement les 50 derniers logs
-        const recentLogs = logs.slice(-50);
-        localStorage.setItem('upload_logs', JSON.stringify(recentLogs));
-      } catch (e) {
-        console.warn('⚠️ Erreur sauvegarde log:', e);
-      }
-    }
-
-    return logData;
-  },
-
-  // ✅ RÉCUPÉRATION DES LOGS POUR DEBUG
-  getUploadLogs() {
-    try {
-      return JSON.parse(localStorage.getItem('upload_logs') || '[]');
-    } catch (e) {
-      console.warn('⚠️ Erreur lecture logs:', e);
-      return [];
-    }
-  },
-
-  // ✅ NETTOYAGE DES LOGS
-  clearUploadLogs() {
-    try {
-      localStorage.removeItem('upload_logs');
-      console.log('✅ Logs de debug nettoyés');
-    } catch (e) {
-      console.warn('⚠️ Erreur nettoyage logs:', e);
-    }
-  },
-
-  // ✅ STATISTIQUES D'UPLOAD
-  getUploadStats() {
-    const logs = this.getUploadLogs();
-
-    if (logs.length === 0) {
-      return {
-        totalUploads: 0,
-        successRate: 0,
-        avgDuration: 0,
-        avgFileSize: 0,
-        methodsUsed: [],
-        deviceBreakdown: {}
-      };
-    }
-
-    const successful = logs.filter(l => l.success);
-    const methodsCount = {};
-    const deviceTypes = {};
-
-    logs.forEach(log => {
-      methodsCount[log.uploadMethod] = (methodsCount[log.uploadMethod] || 0) + 1;
-      const deviceType = log.device.isMobile ? 'mobile' : 'desktop';
-      deviceTypes[deviceType] = (deviceTypes[deviceType] || 0) + 1;
-    });
-
-    return {
-      totalUploads: logs.length,
-      successRate: Math.round((successful.length / logs.length) * 100),
-      avgDuration: Math.round(logs.reduce((sum, l) => sum + l.durationMs, 0) / logs.length),
-      avgFileSize: Math.round(logs.reduce((sum, l) => sum + l.fileSizeMB, 0) / logs.length * 100) / 100,
-      methodsUsed: Object.entries(methodsCount).map(([method, count]) => ({ method, count })),
-      deviceBreakdown: deviceTypes,
-      recentErrors: logs.filter(l => !l.success).slice(-5).map(l => ({
-        fileName: l.fileName,
-        error: l.error,
-        timestamp: l.timestamp
-      }))
-    };
   }
 }
 
@@ -828,7 +755,6 @@ export const initializeSupabase = async () => {
   try {
     console.log('🚀 Initialisation Supabase optimisée...');
 
-    // ✅ VÉRIFICATION DE LA CONNEXION
     const { data, error } = await supabase.from('profiles').select('count').limit(1);
 
     if (error) {
@@ -836,7 +762,6 @@ export const initializeSupabase = async () => {
       return { success: false, error };
     }
 
-    // ✅ VÉRIFICATION DES BUCKETS
     const buckets = ['intervention-files', 'vault-files'];
     const bucketChecks = [];
 
@@ -860,7 +785,6 @@ export const initializeSupabase = async () => {
       }
     }
 
-    // ✅ VÉRIFICATION DEVICE ET CONNEXION
     const deviceInfo = getDeviceInfo();
 
     console.log('✅ Supabase initialisé avec succès');
@@ -871,13 +795,6 @@ export const initializeSupabase = async () => {
       success: true,
       deviceInfo,
       buckets: bucketChecks,
-      optimizationsActive: {
-        chunkedUpload: true,
-        retryLogic: true,
-        adaptiveCompression: true,
-        connectionDetection: true,
-        mobileOptimizations: deviceInfo.isMobile
-      }
     };
 
   } catch (error) {
@@ -892,16 +809,8 @@ export const useSupabasePerformance = () => {
 
   React.useEffect(() => {
     const deviceInfo = getDeviceInfo();
-    const uploadStats = monitoringService.getUploadStats();
-
     setPerformanceData({
       device: deviceInfo,
-      uploads: uploadStats,
-      recommendations: {
-        useChunkedUpload: deviceInfo.isSlowConnection || deviceInfo.isMobile,
-        maxFileSize: deviceInfo.isSlowConnection ? 5 : (deviceInfo.isMobile ? 10 : 20),
-        compressionLevel: deviceInfo.isMobile ? 'high' : 'medium'
-      }
     });
   }, []);
 
