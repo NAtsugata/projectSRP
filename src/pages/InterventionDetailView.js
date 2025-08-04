@@ -271,7 +271,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         if (!files.length || !intervention) return;
 
         console.log(`[handleFileSelect] Démarrage du traitement pour ${files.length} fichier(s).`);
-        files.forEach(f => console.log(`[handleFileSelect] Fichier détecté: ${f.name}, Type: ${f.type}, Taille: ${f.size}`));
 
         const queueItems = files.map((file, index) => ({
             id: `${file.name}-${Date.now()}-${index}`,
@@ -478,7 +477,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     )}
 
                     {!isAdmin && (
-                        // ✅ CORRECTION : Ajout de l'attribut `accept` pour autoriser tous les types de fichiers
                         <CustomFileInput
                             onChange={handleFileSelect}
                             disabled={uploadState.isUploading}
