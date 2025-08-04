@@ -453,7 +453,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </div>
                     )}
 
-                    {/* ✅ NOUVELLE ARCHITECTURE D'ENVOI */}
                     {!isAdmin && (
                         <div className="grid-2-cols" style={{ marginTop: '1rem' }}>
                             <input
