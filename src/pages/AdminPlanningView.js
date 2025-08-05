@@ -40,8 +40,14 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
+        console.log('📎 Fichiers sélectionnés:', files.length);
+
         const newFiles = Array.from(files);
-        setBriefingFiles(prevFiles => [...prevFiles, ...newFiles]);
+        setBriefingFiles(prevFiles => {
+            const updated = [...prevFiles, ...newFiles];
+            console.log('📋 Total fichiers briefing:', updated.length);
+            return updated;
+        });
         setUploadErrors([]); // Reset des erreurs
     }, []);
 

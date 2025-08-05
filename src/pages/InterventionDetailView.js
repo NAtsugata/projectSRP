@@ -359,101 +359,96 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
         const successfulUploads = [];
 
-        // Upload séquentiel pour mobile, parallèle pour desktop
-        const uploadBatchSize = isMobile ? 1 : 3;
+        // Upload séquentiel
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const queueItem = queueItems[i];
 
-        for (let i = 0; i < files.length; i += uploadBatchSize) {
-            const batch = Array.from(files).slice(i, i + uploadBatchSize);
-            const batchPromises = batch.map(async (file, batchIndex) => {
-                const queueItem = queueItems[i + batchIndex];
+            try {
+                console.log(`📤 Upload ${i+1}/${files.length}: ${file.name}`);
 
-                try {
-                    // Mise à jour: compression
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id
-                                ? { ...item, status: 'compressing', progress: 5 }
-                                : item
-                        )
-                    }));
+                // Mise à jour: compression
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id
+                            ? { ...item, status: 'compressing', progress: 5 }
+                            : item
+                    )
+                }));
 
-                    let fileToUpload = file;
-                    if (file.type.startsWith('image/')) {
-                        fileToUpload = await compressImage(file);
-                    }
-
-                    // Mise à jour: upload
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id
-                                ? { ...item, status: 'uploading', progress: 20 }
-                                : item
-                        )
-                    }));
-
-                    // Upload avec progression
-                    const result = await storageService.uploadInterventionFile(
-                        fileToUpload,
-                        interventionId,
-                        'report',
-                        (progress) => {
-                            setUploadState(prev => ({
-                                ...prev,
-                                queue: prev.queue.map(item =>
-                                    item.id === queueItem.id
-                                        ? { ...item, progress }
-                                        : item
-                                ),
-                                globalProgress: Math.round(
-                                    prev.queue.reduce((sum, item) => sum + item.progress, 0) / prev.queue.length
-                                )
-                            }));
-                        }
-                    );
-
-                    if (result.error) throw result.error;
-
-                    // Succès
-                    successfulUploads.push({
-                        name: file.name,
-                        url: result.publicURL,
-                        type: file.type
-                    });
-
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id
-                                ? { ...item, status: 'completed', progress: 100 }
-                                : item
-                        )
-                    }));
-
-                    return { success: true };
-
-                } catch (error) {
-                    console.error(`❌ Erreur upload ${file.name}:`, error);
-
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id
-                                ? { ...item, status: 'error', error: error.message, progress: 0 }
-                                : item
-                        )
-                    }));
-
-                    return { success: false, error };
+                let fileToUpload = file;
+                if (file.type.startsWith('image/')) {
+                    fileToUpload = await compressImage(file);
                 }
-            });
 
-            await Promise.all(batchPromises);
+                // Mise à jour: upload
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id
+                            ? { ...item, status: 'uploading', progress: 20 }
+                            : item
+                    )
+                }));
+
+                // Upload avec progression
+                const result = await storageService.uploadInterventionFile(
+                    fileToUpload,
+                    interventionId,
+                    'report',
+                    (progress) => {
+                        setUploadState(prev => ({
+                            ...prev,
+                            queue: prev.queue.map(item =>
+                                item.id === queueItem.id
+                                    ? { ...item, progress }
+                                    : item
+                            ),
+                            globalProgress: Math.round(
+                                prev.queue.reduce((sum, item) => sum + item.progress, 0) / prev.queue.length
+                            )
+                        }));
+                    }
+                );
+
+                if (result.error) throw result.error;
+
+                console.log(`✅ Upload réussi: ${file.name} -> ${result.publicURL}`);
+
+                // Succès
+                successfulUploads.push({
+                    name: file.name,
+                    url: result.publicURL,
+                    type: file.type
+                });
+
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id
+                            ? { ...item, status: 'completed', progress: 100 }
+                            : item
+                    )
+                }));
+
+            } catch (error) {
+                console.error(`❌ Erreur upload ${file.name}:`, error);
+
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id
+                            ? { ...item, status: 'error', error: error.message, progress: 0 }
+                            : item
+                    )
+                }));
+            }
         }
 
         // Mise à jour du rapport
         if (successfulUploads.length > 0) {
+            console.log(`💾 Ajout de ${successfulUploads.length} fichier(s) au rapport`);
             setReport(prev => {
                 const updated = {
                     ...prev,
@@ -474,7 +469,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             }));
         }, 3000);
 
-    }, [intervention, interventionId, compressImage, saveReportSilently, isMobile]);
+    }, [intervention, interventionId, compressImage, saveReportSilently]);
 
     // Gestion des erreurs d'upload
     const handleUploadError = useCallback((errors) => {
