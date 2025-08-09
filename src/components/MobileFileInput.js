@@ -20,8 +20,10 @@ const MobileFileInput = ({
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Détection du device avec garde pour environnements sans navigator
-  const userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+      const userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+      const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+      const isAndroid = /Android/.test(userAgent);
 
   // Gestion du changement de fichier
   const handleFileChange = (event) => {
@@ -57,23 +59,31 @@ const MobileFileInput = ({
       onError(errors);
     }
 
-    // Si on a des fichiers valides, on appelle onChange
-    if (validFiles.length > 0 && onChange) {
-      // On recrée un FileList-like object
-      const dt = new DataTransfer();
-      validFiles.forEach(file => dt.items.add(file));
+         // Si on a des fichiers valides, on appelle onChange
+         if (validFiles.length > 0 && onChange) {
+           let filesToSend;
+           // Certains navigateurs anciens ou mobiles ne supportent pas DataTransfer
+           if (typeof DataTransfer !== 'undefined') {
+             const dt = new DataTransfer();
+             validFiles.forEach(file => dt.items.add(file));
+             filesToSend = dt.files;
+           } else {
+             // Fallback : utiliser directement le tableau
+             // eslint-disable-next-line no-undef
+             filesToSend = validFiles;
+           }
 
-      // On crée un événement simulé
-      const newEvent = {
-        target: {
-          files: dt.files
-        },
-        preventDefault: () => {},
-        stopPropagation: () => {}
-      };
+           // On crée un événement simulé
+           const newEvent = {
+             target: {
+               files: filesToSend
+             },
+             preventDefault: () => {},
+             stopPropagation: () => {}
+           };
 
-      onChange(newEvent);
-    }
+           onChange(newEvent);
+         }
 
     // Reset de l'input pour permettre re-sélection du même fichier
     if (inputRef.current) {
@@ -147,24 +157,29 @@ const MobileFileInput = ({
         touchAction: 'manipulation'
       }}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        onChange={handleFileChange}
-        disabled={disabled}
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          width: '100%',
-          height: '100%',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          fontSize: '16px', // Évite le zoom iOS
-          left: 0,
-          top: 0
-        }}
-      />
+          <input
+             ref={inputRef}
+             type="file"
+             accept={accept}
+             multiple={multiple}
+             onChange={handleFileChange}
+             disabled={disabled}
+             {...(isMobile && accept && accept.includes('image')
+               ? (isAndroid
+                   ? { capture: 'environment' }
+                   : (isIOS ? { capture: true } : {}))
+               : {})}
+             style={{
+               position: 'absolute',
+               opacity: 0,
+               width: '100%',
+               height: '100%',
+               cursor: disabled ? 'not-allowed' : 'pointer',
+               fontSize: '16px', // Évite le zoom iOS
+               left: 0,
+               top: 0
+             }}
+           />
 
       {/* Contenu du bouton */}
       <span style={{ pointerEvents: 'none' }}>
