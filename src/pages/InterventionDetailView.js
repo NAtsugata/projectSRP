@@ -102,22 +102,14 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         canvas.height = isMobile ? window.innerHeight * 0.5 : 300;
 
         const ctx = canvas.getContext('2d');
-        // Couleur du tracé
         ctx.strokeStyle = '#000';
         ctx.lineWidth = isMobile ? 3 : 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // ✅ Remplir le fond en blanc pour éviter un arrière-plan transparent ou noir
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         if (existingSignature) {
             const img = new Image();
             img.onload = () => {
-                // Re-remplit le fond en blanc avant de dessiner la signature existante
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 setHasDrawn(true);
             };
@@ -196,9 +188,6 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         if (canvas) {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Remplit de nouveau le fond en blanc après effacement
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
             setHasDrawn(false);
         }
     };
@@ -248,18 +237,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const signatureCanvasRef = useRef(null);
     const storageKey = `srp-intervention-report-${interventionId}`;
 
-    // ✅ Initialiser le canevas de signature avec un fond blanc dès le montage
-    useEffect(() => {
-        if (signatureCanvasRef.current) {
-            const canvas = signatureCanvasRef.current;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-    }, []);
-
-    // Détection mobile
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // Détection mobile avec garde pour éviter les erreurs lorsque `navigator` n'est pas défini
+    const isMobile = typeof navigator !== 'undefined'
+        ? /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '')
+        : false;
 
     // Initialisation
     useEffect(() => {
@@ -528,9 +509,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             const canvas = signatureCanvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Remplit de nouveau le fond en blanc pour éviter un fond noir
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         handleReportChange('signature', null);
     };
