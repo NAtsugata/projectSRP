@@ -195,6 +195,8 @@ function App() {
         } else {
             console.log('✅ Profil mis à jour avec succès');
             showToast("Profil mis à jour.");
+            // Rafraîchit la liste des utilisateurs pour refléter le nouveau nom
+            await refreshData(profile);
         }
     };
 
@@ -207,6 +209,8 @@ function App() {
         } else {
             console.log('✅ Intervention créée avec succès');
             showToast("Intervention ajoutée.");
+            // Rafraîchit la liste des interventions pour qu'elle apparaisse immédiatement
+            await refreshData(profile);
         }
     };
 
@@ -329,6 +333,10 @@ function App() {
                 } else {
                     console.log('✅ Intervention supprimée');
                     showToast("Intervention supprimée.");
+                    // Rafraîchit la liste des interventions pour refléter la suppression
+                    if (profile) {
+                        await refreshData(profile);
+                    }
                 }
             }
         });
@@ -343,6 +351,10 @@ function App() {
         } else {
             console.log('✅ Intervention archivée');
             showToast("Intervention archivée.");
+            // Rafraîchit la liste des interventions pour refléter l'archivage
+            if (profile) {
+                await refreshData(profile);
+            }
         }
     };
 
