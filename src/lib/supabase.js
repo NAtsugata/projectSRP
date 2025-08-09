@@ -47,17 +47,31 @@ export const authService = {
   },
   async signOut() {
     console.log('🚪 Déconnexion en cours...');
-    // On attend la réponse de Supabase avant de vider les stockages locaux.
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('❌ Erreur lors de la déconnexion:', error);
-    } else {
+    try {
+      // Vérifie d'abord s'il existe une session active
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Aucune session active : on nettoie localStorage et sessionStorage et on retourne sans erreur
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('ℹ️ Aucune session active ; nettoyage local effectué');
+        return { error: null };
+      }
+
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Erreur lors de la déconnexion:', error);
+        return { error };
+      }
       // Nettoyage seulement si la déconnexion a réussi
       localStorage.clear();
       sessionStorage.clear();
       console.log('✅ Déconnexion réussie - Storage nettoyé');
+      return { error: null };
+    } catch (e) {
+      console.error('❌ Erreur inattendue lors de la déconnexion:', e);
+      return { error: e };
     }
-    return { error };
   },
   onAuthStateChange(callback) {
     return supabase.auth.onAuthStateChange(callback);
@@ -178,83 +192,38 @@ export const storageService = {
    * Utilise XMLHttpRequest pour suivre la progression de l'envoi.
    */
   async uploadWithProgressAndRetry(filePath, file, bucket, onProgress) {
+    // Utilise l'API officielle Supabase pour uploader les fichiers. Les entêtes d'authentification
+    // et l'apikey sont automatiquement gérés par le client Supabase. On conserve néanmoins
+    // la logique de retry et on simule une progression pour l'UX.
     const maxRetries = 3;
     let lastError;
-
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`📤 Tentative d'upload ${attempt}/${maxRetries} vers le bucket ${bucket}...`);
-
-        const result = await new Promise(async (resolve, reject) => {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) {
-            return reject(sessionError);
-          }
-          if (!session) {
-            return reject(new Error("User not authenticated."));
-          }
-
-          const url = `${supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
-
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', url, true);
-
-          // Autorisation basée sur le token et clef Anon pour l'API REST
-          xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-          xhr.setRequestHeader('apikey', supabaseKey);
-          xhr.setRequestHeader('x-upsert', 'false');
-          xhr.setRequestHeader('Content-Type', (file && file.type) ? file.type : 'application/octet-stream');
-          xhr.setRequestHeader('Cache-Control', 'no-cache');
-
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percentComplete = Math.round((event.loaded / event.total) * 100);
-              if (onProgress) {
-                onProgress(percentComplete);
-              }
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                resolve({ data: JSON.parse(xhr.responseText), error: null });
-              } catch (e) {
-                resolve({ data: xhr.responseText, error: null });
-              }
-            } else {
-              let errorResponse;
-              try {
-                errorResponse = JSON.parse(xhr.responseText);
-              } catch(e) {
-                errorResponse = { message: xhr.statusText || `Upload failed with status ${xhr.status}` };
-              }
-              reject(errorResponse);
-            }
-          };
-
-          xhr.onerror = () => {
-            reject({ message: 'Upload failed due to a network error.' });
-          };
-
-          xhr.send(file);
-        });
-
-        console.log('✅ Upload réussi');
-        return { data: result.data, error: null };
-
+        // Débute la progression à 0
+        if (onProgress) onProgress(0);
+        // Utilise l'API Supabase native pour uploader le fichier. Cette méthode ajoute
+        // automatiquement le bearer token et l'apikey et gère les CORS.
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .upload(filePath, file, { upsert: false });
+        if (error) {
+          throw error;
+        }
+        // Fin de progression
+        if (onProgress) onProgress(100);
+        console.log('✅ Upload réussi via supabase.storage.from().upload');
+        return { data, error: null };
       } catch (error) {
-        console.warn(`⚠️ Tentative ${attempt} échouée:`, error.message);
+        console.warn(`⚠️ Tentative ${attempt} échouée:`, error.message || error);
         lastError = error;
-
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
           console.log(`🔄 Nouvel essai dans ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
-
     console.error(`❌ Échec de l'upload après ${maxRetries} tentatives.`);
     return { data: null, error: lastError };
   },

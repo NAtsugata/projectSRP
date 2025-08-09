@@ -237,10 +237,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const signatureCanvasRef = useRef(null);
     const storageKey = `srp-intervention-report-${interventionId}`;
 
-    // Détection mobile avec garde pour éviter les erreurs lorsque `navigator` n'est pas défini
-    const isMobile = typeof navigator !== 'undefined'
-        ? /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '')
-        : false;
+    // Détection mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     // Initialisation
     useEffect(() => {
