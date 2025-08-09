@@ -1,4 +1,14 @@
 // src/lib/supabase.js - VERSION FIABLE AVEC SUIVI DE PROGRESSION TEMPS RÉEL
+// Ce fichier configure le client Supabase et expose plusieurs services
+// (authentification, profils, interventions, stockage, etc.) avec des
+// améliorations spécifiquement conçues pour fonctionner de manière fiable
+// sur les navigateurs mobiles comme sur desktop. Il s'agit d'une
+// adaptation du code fourni par l'utilisateur avec des corrections
+// visant à éviter des erreurs lorsque ``navigator`` ou ``window`` ne sont
+// pas définis (environnements SSR/tests), à sécuriser l'upload REST
+// (ajout de l'entête ``apikey``), à améliorer la suppression récursive
+// de dossiers et à effectuer un ping plus fiable lors de l'initialisation.
+
 import React from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -37,12 +47,14 @@ export const authService = {
   },
   async signOut() {
     console.log('🚪 Déconnexion en cours...');
+    // On attend la réponse de Supabase avant de vider les stockages locaux.
     const { error } = await supabase.auth.signOut();
-    localStorage.clear();
-    sessionStorage.clear();
     if (error) {
       console.error('❌ Erreur lors de la déconnexion:', error);
     } else {
+      // Nettoyage seulement si la déconnexion a réussi
+      localStorage.clear();
+      sessionStorage.clear();
       console.log('✅ Déconnexion réussie - Storage nettoyé');
     }
     return { error };
@@ -95,14 +107,20 @@ const sanitizeFileName = (fileName) => {
     .replace(/-+/g, '-') // Remplace les tirets multiples
     .replace(/^-|-$/g, '') // Supprime les tirets au début/fin
     .substring(0, 100); // Limite la longueur
-  console.log('🧹 Nom de fichier nettoyé:', fileName, '->', cleaned);
-  return cleaned;
+  // Si la chaîne est vide, on utilise un nom par défaut
+  const safe = cleaned || 'fichier';
+  console.log('🧹 Nom de fichier nettoyé:', fileName, '->', safe);
+  return safe;
 };
 
 // ✅ DÉTECTION CONNEXION ET DEVICE
 const getDeviceInfo = () => {
-  const userAgent = navigator.userAgent;
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  // Vérifie que l'objet navigator est disponible (SSR/tests)
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return { isMobile: false, isIOS: false, isAndroid: false, connectionType: '4g', isSlowConnection: false };
+  }
+  const userAgent = navigator.userAgent || '';
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
 
   return {
     isMobile: /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
@@ -181,9 +199,12 @@ export const storageService = {
           const xhr = new XMLHttpRequest();
           xhr.open('POST', url, true);
 
+          // Autorisation basée sur le token et clef Anon pour l'API REST
           xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+          xhr.setRequestHeader('apikey', supabaseKey);
           xhr.setRequestHeader('x-upsert', 'false');
-          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.setRequestHeader('Content-Type', (file && file.type) ? file.type : 'application/octet-stream');
+          xhr.setRequestHeader('Cache-Control', 'no-cache');
 
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
@@ -301,21 +322,34 @@ export const storageService = {
       console.log('🗑️ Suppression dossier intervention:', interventionId);
       const folderPath = interventionId.toString();
 
-      const { data: files, error: listError } = await supabase.storage
-        .from('intervention-files')
-        .list(folderPath, { recursive: true });
+      // Fonction récursive listant tous les fichiers d'un dossier (sous-dossiers inclus)
+      const listAll = async (prefix = '') => {
+        const paths = [];
+        const { data, error } = await supabase.storage.from('intervention-files').list(prefix);
+        if (error) {
+          throw error;
+        }
+        for (const item of data) {
+          if (item.name && item.metadata && item.metadata.size >= 0) {
+            // fichier
+            const p = prefix ? `${prefix}/${item.name}` : item.name;
+            paths.push(p);
+          } else if (item.name && !item.metadata) {
+            // dossier
+            const dir = prefix ? `${prefix}/${item.name}` : item.name;
+            const sub = await listAll(dir);
+            paths.push(...sub);
+          }
+        }
+        return paths;
+      };
 
-      if (listError) {
-        console.error("❌ Erreur lors du listage des fichiers à supprimer:", listError);
-        return { error: listError };
-      }
-
-      if (!files || files.length === 0) {
-        console.log('ℹ️ Aucun fichier à supprimer pour l\'intervention:', interventionId);
+      const filePaths = await listAll(folderPath);
+      if (!filePaths.length) {
+        console.log('ℹ️ Aucun fichier à supprimer pour:', folderPath);
         return { error: null };
       }
 
-      const filePaths = files.map(file => `${folderPath}/${file.name}`);
       console.log('🗑️ Suppression de', filePaths.length, 'fichier(s)');
 
       const batchSize = 10;
@@ -755,7 +789,11 @@ export const initializeSupabase = async () => {
   try {
     console.log('🚀 Initialisation Supabase optimisée...');
 
-    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    // On effectue un HEAD avec compte sur la table profiles pour vérifier la
+    // connectivité, sans récupérer de données.
+    const { error } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true });
 
     if (error) {
       console.error('❌ Erreur connexion Supabase:', error);
