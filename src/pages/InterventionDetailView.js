@@ -107,6 +107,10 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
+        // Remplit le fond en blanc pour éviter un canvas noir par défaut
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         if (existingSignature) {
             const img = new Image();
             img.onload = () => {
@@ -187,7 +191,10 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
+            // Efface le contenu puis remet un fond blanc pour éviter un canevas noir
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             setHasDrawn(false);
         }
     };
@@ -237,8 +244,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const signatureCanvasRef = useRef(null);
     const storageKey = `srp-intervention-report-${interventionId}`;
 
-    // Détection mobile
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // Détection mobile sécurisée (pour éviter les erreurs si navigator n'est pas défini)
+    const ua = typeof navigator !== 'undefined' && navigator.userAgent ? navigator.userAgent : '';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
 
     // Initialisation
     useEffect(() => {
@@ -506,8 +514,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         if (signatureCanvasRef.current) {
             const canvas = signatureCanvasRef.current;
             const ctx = canvas.getContext('2d');
+            // Efface le canvas puis réinitialise le fond en blanc
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+        // Réinitialise la valeur de signature dans le rapport
         handleReportChange('signature', null);
     };
 
