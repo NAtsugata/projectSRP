@@ -314,36 +314,23 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
                     <div className="form-group">
                         <label>Assigner à :</label>
-                        {/* Utilisation de flex-wrap pour éviter que les éléments ne se superposent sur mobile */}
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '0.5rem',
-                                marginTop: '0.5rem'
-                            }}
-                        >
-                            {users
-                                .filter((u) => !u.is_admin)
-                                .map((u) => (
-                                    <label
-                                        key={u.id}
-                                        className="flex items-center gap-2"
-                                        style={{
-                                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                                            flex: '1 1 150px',
-                                            minWidth: '150px'
-                                        }}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={assignedUsers.includes(u.id)}
-                                            onChange={() => handleUserAssignmentChange(u.id)}
-                                            disabled={isSubmitting}
-                                        />
-                                        <span>{u.full_name}</span>
-                                    </label>
-                                ))}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                            gap: '0.5rem',
+                            marginTop: '0.5rem'
+                        }}>
+                            {users.filter(u => !u.is_admin).map(u => (
+                                <label key={u.id} className="flex items-center gap-2" style={{cursor: isSubmitting ? 'not-allowed' : 'pointer'}}>
+                                    <input
+                                        type="checkbox"
+                                        checked={assignedUsers.includes(u.id)}
+                                        onChange={() => handleUserAssignmentChange(u.id)}
+                                        disabled={isSubmitting}
+                                    />
+                                    <span>{u.full_name}</span>
+                                </label>
+                            ))}
                         </div>
                     </div>
 

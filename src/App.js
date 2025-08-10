@@ -195,8 +195,6 @@ function App() {
         } else {
             console.log('✅ Profil mis à jour avec succès');
             showToast("Profil mis à jour.");
-            // Rafraîchir les données pour mettre à jour la liste des employés
-            await refreshData(profile);
         }
     };
 
@@ -209,8 +207,6 @@ function App() {
         } else {
             console.log('✅ Intervention créée avec succès');
             showToast("Intervention ajoutée.");
-            // Rafraîchir les interventions pour que la nouvelle apparaisse immédiatement
-            await refreshData(profile);
         }
     };
 
@@ -333,8 +329,6 @@ function App() {
                 } else {
                     console.log('✅ Intervention supprimée');
                     showToast("Intervention supprimée.");
-                    // Rafraîchir les données pour retirer l'intervention de la liste
-                    await refreshData(profile);
                 }
             }
         });
@@ -349,8 +343,6 @@ function App() {
         } else {
             console.log('✅ Intervention archivée');
             showToast("Intervention archivée.");
-            // Rafraîchir les données pour que l'intervention archivée disparaisse de la liste active
-            await refreshData(profile);
         }
     };
 

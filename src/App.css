@@ -1,6 +1,39 @@
 /* --- Mobile-First Responsive CSS for SRP App --- */
 
 /* Reset and Base Styles */
+/*
+  ================================================================
+  Modern UI Theme
+
+  Cette feuille de style définit une palette de couleurs moderne et des
+  composants de base réutilisables pour donner à l'application un look
+  plus contemporain. Les variables CSS permettent d'ajuster facilement
+  les couleurs et les rayons de bordure. Les cartes, boutons, listes
+  et formulaires ont été revus pour offrir davantage d'espace blanc,
+  des ombres douces et des interactions subtiles sur hover. L'ensemble
+  respecte une approche mobile-first et responsive.
+  ================================================================
+*/
+
+/* --- Variables CSS pour la palette de couleurs --- */
+:root {
+    --color-primary: #4f46e5;       /* Indigo 600 */
+    --color-primary-dark: #4338ca;  /* Indigo 700 */
+    --color-secondary: #6b7280;     /* Gray 500 */
+    --color-secondary-dark: #4b5563;/* Gray 600 */
+    --color-success: #10b981;       /* Emerald 500 */
+    --color-success-dark: #059669;  /* Emerald 600 */
+    --color-danger: #ef4444;        /* Red 500 */
+    --color-danger-dark: #dc2626;   /* Red 600 */
+    --color-warning: #f59e0b;       /* Amber 500 */
+    --color-background: #f5f5f7;    /* Light gray background */
+    --color-card-bg: #ffffff;       /* White for cards */
+    --color-muted: #6b7280;         /* Muted text */
+    --border-radius: 0.75rem;       /* Larger radius for cards */
+    --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); /* Soft shadow */
+}
+
+/* --- Réinitialisation et base --- */
 * {
     box-sizing: border-box;
 }
@@ -10,45 +43,47 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #f8fafc;
-    color: #334155;
+    background-color: var(--color-background);
+    color: #1e293b; /* Darker text for better contrast */
     overflow-x: hidden;
     /* Prevent zoom on iOS */
     -webkit-text-size-adjust: 100%;
 }
 
+/* Conteneur principal */
 .app-container {
     min-height: 100vh;
     overflow-x: hidden;
     width: 100%;
     position: relative;
+    background-color: var(--color-background);
 }
 
 /* Main Content - Mobile First */
 .main-content {
     max-width: 1280px;
     margin: 0 auto;
-    padding: 1rem; /* Mobile first - smaller padding */
+    padding: 1.5rem;
     width: 100%;
 }
 
-/* Typography - Mobile Optimized */
+/* Typography */
 .view-title {
-    font-size: 1.75rem; /* Smaller on mobile */
-    font-weight: bold;
+    font-size: 1.75rem;
+    font-weight: 700;
     color: #1e293b;
     margin-bottom: 1.5rem;
-    line-height: 1.2;
+    line-height: 1.25;
     word-wrap: break-word;
 }
 
 /* Cards */
 .card-white {
-    background-color: white;
-    padding: 1rem; /* Reduced padding on mobile */
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    margin-bottom: 1rem;
+    background-color: var(--color-card-bg);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 1.5rem;
     width: 100%;
 }
 
@@ -109,62 +144,86 @@ body {
     padding: 1rem;
 }
 
-/* Buttons - Mobile Optimized */
+/* Boutons */
 .btn {
-    padding: 0.875rem 1.25rem; /* Larger touch targets */
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 0.5rem;
-    font-size: 1rem; /* Larger font on mobile */
+    border-radius: var(--border-radius);
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 44px; /* iOS recommended touch target */
+    min-height: 44px;
     text-decoration: none;
-    box-sizing: border-box;
-    touch-action: manipulation; /* ✅ Améliore la réactivité tactile */
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); /* ✅ Feedback tactile iOS */
+    touch-action: manipulation;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
 }
 
-.btn-primary { background-color: #3b82f6; color: white; }
-.btn-primary:hover:not(:disabled) { background-color: #2563eb; }
-.btn-secondary { background-color: #6b7280; color: white; }
-.btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
-.btn-success { background-color: #22c55e; color: white; }
-.btn-success:hover:not(:disabled) { background-color: #16a34a; }
-.btn-danger { background-color: #ef4444; color: white; }
-.btn-danger:hover:not(:disabled) { background-color: #dc2626; }
 
+/* Couleurs spécifiques pour les boutons */
+.btn-primary {
+    background-color: var(--color-primary);
+    color: #ffffff;
+}
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+}
+.btn-secondary {
+    background-color: var(--color-secondary);
+    color: #ffffff;
+}
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-secondary-dark);
+}
+.btn-success {
+    background-color: var(--color-success);
+    color: #ffffff;
+}
+.btn-success:hover:not(:disabled) {
+    background-color: var(--color-success-dark);
+}
+.btn-danger {
+    background-color: var(--color-danger);
+    color: #ffffff;
+}
+.btn-danger:hover:not(:disabled) {
+    background-color: var(--color-danger-dark);
+}
+
+/* État disabled pour les boutons */
 .btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    filter: grayscale(0.3);
 }
 
+/* Boutons icônes */
 .btn-icon {
     background: none;
     border: none;
-    padding: 0.75rem; /* Larger touch area */
+    padding: 0.75rem;
     cursor: pointer;
-    color: #64748b;
+    color: var(--color-secondary);
     border-radius: 50%;
     min-height: 44px;
     min-width: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    touch-action: manipulation; /* ✅ Optimisation mobile */
+    touch-action: manipulation;
+    transition: background-color 0.2s, color 0.2s;
 }
-
 .btn-icon:hover:not(:disabled) {
     background-color: #f1f5f9;
-    color: #3b82f6;
+    color: var(--color-primary);
 }
 
+/* Boutons icônes danger (supprimer) */
 .btn-icon-danger {
-    color: #64748b;
+    color: var(--color-secondary);
     background: none;
     border: none;
     padding: 0.75rem;
@@ -175,12 +234,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    touch-action: manipulation; /* ✅ Optimisation mobile */
+    touch-action: manipulation;
+    transition: background-color 0.2s, color 0.2s;
 }
-
 .btn-icon-danger:hover:not(:disabled) {
     background-color: #fee2e2;
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .btn-icon-success {
@@ -239,7 +298,8 @@ body {
 /* Header & Navigation - Mobile First */
 .app-header {
     background-color: white;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e5e7eb;
     position: sticky;
     top: 0;
     z-index: 30;
@@ -302,7 +362,7 @@ body {
 }
 
 .nav-label {
-    display: none; /* Hidden by default on mobile */
+    display: none; /* hidden by default on mobile, see media queries */
     white-space: nowrap;
 }
 
@@ -485,7 +545,7 @@ body {
     font-size: 1rem;
     color: #64748b;
     padding: 0.75rem;
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed #d1d5db;
     border-radius: 0.5rem;
     background-color: white;
 }
@@ -508,7 +568,7 @@ body {
 
 /* Signature Canvas - Mobile Optimized */
 .signature-canvas {
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed #d1d5db;
     border-radius: 0.5rem;
     width: 100%;
     height: 200px;
@@ -1613,5 +1673,67 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .upload-queue-list li {
         animation: none;
+    }
+}
+
+/* --- Responsive Enhancements for Modern UI --- */
+@media (min-width: 640px) {
+    /* Afficher les labels de navigation et aligner horizontalement */
+    .nav-label {
+        display: inline;
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+    .nav-button {
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .main-nav {
+        justify-content: flex-start;
+        gap: 1rem;
+    }
+    .view-title {
+        font-size: 2rem;
+    }
+    .card-white {
+        padding: 2rem;
+    }
+    .form-group label {
+        font-size: 1rem;
+    }
+    .form-control {
+        font-size: 1rem;
+        padding: 0.875rem 1rem;
+    }
+}
+
+@media (min-width: 768px) {
+    /* Deux colonnes sur les écrans moyens */
+    .grid-2-cols {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    /* Ajustement des listes pour aligner le contenu sur une ligne */
+    .document-list li {
+        flex-direction: row;
+        align-items: center;
+    }
+    .document-list > * + * {
+        border-top: none;
+        margin-top: 0;
+        margin-left: 1rem;
+    }
+    .document-list li .file-info {
+        flex-grow: 1;
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Trois colonnes sur les grands écrans */
+    .grid-2-cols {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .nav-button {
+        font-size: 0.875rem;
     }
 }
