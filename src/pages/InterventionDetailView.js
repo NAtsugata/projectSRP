@@ -205,7 +205,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 };
 
 // Composant de chargement inline, plus stable
-const InlineUploader = ({ interventionId, onUploadComplete }) => {
+const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
@@ -246,7 +246,7 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
         for (let i = 0; i < files.length; i++) {
             try {
                 const fileToUpload = await compressImage(files[i]);
-                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
+                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, folder, (progress) => {
                     setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
                 });
                 if (result.error) throw result.error;
@@ -258,10 +258,10 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
         }
 
         if (successfulUploads.length > 0) {
-            await onUploadComplete(successfulUploads);
+            await onUploadComplete(files); // On passe les fichiers originaux pour la logique parente
         }
         setUploadState(p => ({ ...p, isUploading: false }));
-    }, [interventionId, compressImage, onUploadComplete]);
+    }, [interventionId, compressImage, onUploadComplete, folder]);
 
     return (
         <div className="mobile-uploader-panel">
@@ -305,16 +305,17 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
 };
 
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onAddBriefingDocuments }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState(null);
-    const [adminNotes, setAdminNotes] = useState(''); // ✅ NOUVEAU : État pour les notes de l'admin
+    const [adminNotes, setAdminNotes] = useState('');
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showUploader, setShowUploader] = useState(false);
+    const [showBriefingUploader, setShowBriefingUploader] = useState(false); // ✅ NOUVEAU
     const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
@@ -324,7 +325,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             setReport(foundIntervention.report || {
                 notes: '', files: [], arrivalTime: null, departureTime: null, signature: null
             });
-            // ✅ NOUVEAU : Initialise les notes de l'admin
             setAdminNotes(foundIntervention.admin_notes || '');
             setLoading(false);
         } else if (interventions.length > 0) {
@@ -340,7 +340,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         if (!intervention) return;
         setIsSaving(true);
         try {
-            // ✅ NOUVEAU : Prépare les données à sauvegarder, incluant les notes de l'admin
             const saveData = {
                 ...report,
                 admin_notes: adminNotes
@@ -370,6 +369,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         refreshData();
     };
 
+    // ✅ NOUVEAU : Gère l'upload des documents de préparation
+    const handleBriefingUploadComplete = async (files) => {
+        await onAddBriefingDocuments(interventionId, files);
+        setShowBriefingUploader(false); // Ferme l'uploader après l'envoi
+    };
+
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
     if (loading || !intervention || !report) {
@@ -384,11 +389,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.address}</p>
 
-                {/* ✅ CORRECTION : Section des documents de préparation restaurée */}
                 <div className="section">
                     <h3>📋 Documents de préparation</h3>
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
-                        <ul className="document-list-optimized">
+                        <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {intervention.intervention_briefing_documents.map(doc => (
                                 <li key={doc.id} className="document-item-optimized">
                                     <FileTextIcon />
@@ -404,8 +408,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                 </li>
                             ))}
                         </ul>
-                    ) : (
-                        <p className="text-muted">Aucun document de préparation</p>
+                    ) : <p className="text-muted">Aucun document de préparation.</p>}
+
+                    {/* ✅ NOUVEAU : Bouton et panneau d'upload pour les admins */}
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => setShowBriefingUploader(!showBriefingUploader)}
+                                className={`btn w-full ${showBriefingUploader ? 'btn-secondary' : 'btn-primary'}`}
+                            >
+                                {showBriefingUploader ? 'Fermer' : '➕ Ajouter des documents'}
+                            </button>
+
+                            {showBriefingUploader && (
+                                <InlineUploader
+                                    interventionId={interventionId}
+                                    onUploadComplete={handleBriefingUploadComplete}
+                                    folder="briefing"
+                                />
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -425,16 +447,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
                 </div>
 
-                {/* ✅ NOUVEAU : Section pour les notes de l'administrateur */}
-                {isAdmin && (
+                {/* ✅ CORRECTION : Section des notes admin visible par tous, éditable par l'admin */}
+                {(isAdmin || adminNotes) && (
                     <div className="section">
-                        <h3>🔒 Notes Administrateur (visibles uniquement par les admins)</h3>
+                        <h3>🔒 Notes de l'administration</h3>
                         <textarea
                             value={adminNotes}
                             onChange={e => setAdminNotes(e.target.value)}
-                            placeholder="Ajouter des notes confidentielles ou des remarques..."
+                            placeholder={isAdmin ? "Ajouter des notes..." : "Aucune note de l'administration."}
                             rows="4"
                             className="form-control"
+                            readOnly={!isAdmin}
                         />
                     </div>
                 )}
