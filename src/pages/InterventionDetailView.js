@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon } from '../components/SharedUI';
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
+import MobileFileInput from '../components/MobileFileInput';
+import { storageService } from '../lib/supabase';
 
-// ... (Les composants OptimizedImage et SignatureModal ne changent pas et peuvent être gardés ici)
+
+// ... (Les composants OptimizedImage et SignatureModal ne changent pas)
 const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     const [loadState, setLoadState] = useState('loading');
     const imgRef = useRef(null);
@@ -204,7 +207,108 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 };
 
 
-export default function InterventionDetailView({ interventions, onSave, isAdmin, dataVersion, refreshData }) {
+// ✅ NOUVEAU : Composant de chargement intégré
+const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
+    const [uploadState, setUploadState] = useState({
+        isUploading: false,
+        queue: [],
+        error: null
+    });
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    const compressImage = useCallback(async (file) => {
+        if (!file.type.startsWith('image/')) return file;
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                const maxWidth = 1280, maxHeight = 720;
+                let { width, height } = img;
+                if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                } else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
+                }, 'image/jpeg', 0.8);
+            };
+            img.onerror = () => resolve(file);
+            img.src = URL.createObjectURL(file);
+        });
+    }, []);
+
+    const handleFileSelect = useCallback(async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
+        setUploadState({ isUploading: true, queue: queueItems, error: null });
+
+        const successfulUploads = [];
+        for (let i = 0; i < files.length; i++) {
+            try {
+                const fileToUpload = await compressImage(files[i]);
+                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
+                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
+                });
+                if (result.error) throw result.error;
+                successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
+                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
+            } catch (error) {
+                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
+            }
+        }
+
+        if (successfulUploads.length > 0) {
+            await onUploadComplete(successfulUploads);
+        }
+        setUploadState(p => ({ ...p, isUploading: false }));
+    }, [interventionId, compressImage, onUploadComplete]);
+
+    const handleUploadError = useCallback((errors) => {
+        setUploadState(p => ({ ...p, error: errors.join(' • ') }));
+    }, []);
+
+    const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
+
+    return (
+        <div className="mobile-uploader-panel">
+            <h4>Ajouter des fichiers</h4>
+            {!allDone && (
+                 <MobileFileInput onChange={handleFileSelect} disabled={uploadState.isUploading} multiple accept="image/*,application/pdf" maxSize={isMobile ? 5242880 : 10485760} onError={handleUploadError}>
+                    {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+                </MobileFileInput>
+            )}
+
+            {uploadState.queue.length > 0 && (
+                <div className="upload-queue-container">
+                    {uploadState.queue.map(item => (
+                        <div key={item.id} className={`upload-queue-item status-${item.status}`}>
+                            <div style={{width: '24px', flexShrink: 0}}>
+                                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
+                                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
+                                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
+                            </div>
+                            <div style={{flexGrow: 1, minWidth: 0}}>
+                                <div className="file-name">{item.name}</div>
+                                {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>}
+                                {item.error && <div className="error-message">{item.error}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {allDone && (
+                <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
+            )}
+        </div>
+    );
+};
+
+
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const [intervention, setIntervention] = useState(null);
@@ -212,6 +316,7 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin,
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [showUploader, setShowUploader] = useState(false); // ✅ NOUVEAU : État pour afficher/cacher l'uploader
     const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
@@ -248,6 +353,17 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin,
     const handleSaveSignatureFromModal = (signatureDataUrl) => {
         handleReportChange('signature', signatureDataUrl);
         setShowSignatureModal(false);
+    };
+
+    // ✅ NOUVEAU : Gère la fin de l'upload
+    const handleUploadComplete = async (uploadedFiles) => {
+        const updatedReport = {
+            ...report,
+            files: [...(report.files || []), ...uploadedFiles]
+        };
+        setReport(updatedReport);
+        await onSaveSilent(intervention.id, updatedReport);
+        refreshData();
     };
 
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -287,7 +403,6 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin,
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {report.files.map((file, idx) => (
                                 <li key={`${file.url}-${idx}`} className="document-item-optimized">
-                                    {/* ✅ CORRECTION : Affiche une icône si ce n'est pas une image */}
                                     {file.type && file.type.startsWith('image/') ? (
                                         <OptimizedImage src={file.url} alt={file.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} />
                                     ) : (
@@ -301,10 +416,20 @@ export default function InterventionDetailView({ interventions, onSave, isAdmin,
                             ))}
                         </ul>
                     ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
+
+                    {/* ✅ NOUVEAU : Affiche l'uploader si showUploader est vrai, sinon affiche le bouton */}
                     {!isAdmin && (
-                        <button onClick={() => navigate(`/planning/${interventionId}/upload`)} className="btn btn-primary w-full">
-                            📷 Ajouter photos/documents
-                        </button>
+                        showUploader ? (
+                            <MobileUploader
+                                interventionId={interventionId}
+                                onUploadComplete={handleUploadComplete}
+                                onClose={() => setShowUploader(false)}
+                            />
+                        ) : (
+                            <button onClick={() => setShowUploader(true)} className="btn btn-primary w-full">
+                                📷 Ajouter photos/documents
+                            </button>
+                        )
                     )}
                 </div>
                 <div className="section">
