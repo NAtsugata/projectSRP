@@ -204,7 +204,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// ✅ NOUVEAU : Version corrigée du sélecteur de fichiers, intégrée ici
+// Version corrigée du sélecteur de fichiers
 const CorrectedMobileFileInput = ({
   onChange,
   accept = "image/*,application/pdf",
@@ -244,10 +244,8 @@ const CorrectedMobileFileInput = ({
     }
 
     if (validFiles.length > 0 && onChange) {
-      const dataTransfer = new DataTransfer();
-      validFiles.forEach(file => dataTransfer.items.add(file));
-      const newEvent = { target: { files: dataTransfer.files } };
-      onChange(newEvent);
+      // ✅ CORRECTION : On passe directement le tableau de fichiers valides
+      onChange(validFiles);
     }
 
     if (inputRef.current) {
@@ -273,7 +271,6 @@ const CorrectedMobileFileInput = ({
          multiple={multiple}
          onChange={handleFileChange}
          disabled={disabled}
-         // La suppression de l'attribut "capture" est la correction clé
          style={{
            position: 'absolute', opacity: 0, width: '100%', height: '100%',
            cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '16px',
@@ -320,8 +317,7 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         });
     }, []);
 
-    const handleFileSelect = useCallback(async (event) => {
-        const files = Array.from(event.target.files);
+    const handleFileSelect = useCallback(async (files) => { // ✅ CORRECTION : Accepte directement un tableau de fichiers
         if (files.length === 0) return;
 
         const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
