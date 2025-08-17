@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Link, useNavigate, Navigate, Outlet } from 'react-router-dom';
-// CORRIGÉ: On importe bien 'storageService' qui était manquant
+import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import './App.css';
 
@@ -23,14 +22,17 @@ import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 
 // --- Composant de Layout (structure de la page) ---
+// ✅ NOUVEAU : Structure optimisée pour le mobile
 const AppLayout = ({ profile, handleLogout }) => {
+    const location = useLocation(); // Hook pour connaître la page active
     const navItems = profile.is_admin ?
         [{ id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> }, { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> }, { id: 'leaves', label: 'Congés', icon: <SunIcon /> }, { id: 'users', label: 'Employés', icon: <UsersIcon /> }, { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> }] :
         [{ id: 'planning', label: 'Planning', icon: <BriefcaseIcon/> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'leaves', label: 'Congés', icon: <SunIcon/> }, { id: 'vault', label: 'Coffre-fort', icon: <LockIcon/> }];
 
     return (
         <div className="app-container">
-            <header className="app-header">
+            {/* --- Barre de navigation pour Desktop --- */}
+            <header className="app-header desktop-nav">
                 <div className="header-content">
                     <div className="flex-center" style={{gap: '0.75rem'}}>
                         <UserIcon />
@@ -38,7 +40,7 @@ const AppLayout = ({ profile, handleLogout }) => {
                     </div>
                     <nav className="main-nav">
                         {navItems.map(item => (
-                            <Link key={item.id} to={`/${item.id}`} className="nav-button">
+                            <Link key={item.id} to={`/${item.id}`} className={`nav-button ${location.pathname.startsWith('/' + item.id) ? 'active' : ''}`}>
                                 {item.icon} <span className="nav-label">{item.label}</span>
                             </Link>
                         ))}
@@ -46,12 +48,34 @@ const AppLayout = ({ profile, handleLogout }) => {
                     </nav>
                 </div>
             </header>
+
+            {/* --- Contenu principal de la page --- */}
             <main className="main-content">
                 <Outlet />
             </main>
+
+            {/* --- Barre d'onglets pour Mobile --- */}
+            <footer className="mobile-nav">
+                 <div className="mobile-nav-header">
+                    <div className="flex-center" style={{gap: '0.5rem'}}>
+                        <UserIcon />
+                        <span>{profile.full_name || 'Utilisateur'}</span>
+                    </div>
+                    <button onClick={handleLogout} className="btn-icon-logout"><LogOutIcon /></button>
+                </div>
+                <div className="mobile-nav-icons">
+                    {navItems.map(item => (
+                        <Link key={item.id} to={`/${item.id}`} className={`mobile-nav-button ${location.pathname.startsWith('/' + item.id) ? 'active' : ''}`}>
+                            {item.icon}
+                            <span className="mobile-nav-label">{item.label}</span>
+                        </Link>
+                    ))}
+                </div>
+            </footer>
         </div>
     );
 };
+
 
 // --- Application principale ---
 function App() {
@@ -66,14 +90,14 @@ function App() {
     const [modal, setModal] = useState(null);
     const navigate = useNavigate();
 
+    const [dataVersion, setDataVersion] = useState(Date.now());
+
     const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
     const showConfirmationModal = useCallback((config) => setModal(config), []);
 
     const refreshData = useCallback(async (userProfile) => {
         if (!userProfile) return;
         try {
-            console.log('🔄 Rafraîchissement des données pour:', userProfile.full_name);
-
             const isAdmin = userProfile.is_admin;
             const userId = userProfile.id;
             const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
@@ -85,19 +109,17 @@ function App() {
 
             if (profilesRes.error) throw profilesRes.error;
             setUsers(profilesRes.data || []);
-            console.log('✅ Profils chargés:', (profilesRes.data || []).length);
 
             if (interventionsRes.error) throw interventionsRes.error;
             setInterventions(interventionsRes.data || []);
-            console.log('✅ Interventions chargées:', (interventionsRes.data || []).length);
 
             if (leavesRes.error) throw leavesRes.error;
             setLeaveRequests(leavesRes.data || []);
-            console.log('✅ Demandes de congé chargées:', (leavesRes.data || []).length);
 
             if (vaultRes.error) throw vaultRes.error;
             setVaultDocuments(vaultRes.data || []);
-            console.log('✅ Documents coffre-fort chargés:', (vaultRes.data || []).length);
+
+            setDataVersion(Date.now());
 
         } catch (error) {
             console.error('❌ Erreur chargement données:', error);
@@ -107,7 +129,6 @@ function App() {
 
     useEffect(() => {
         const { data: { subscription } } = authService.onAuthStateChange((_event, sessionData) => {
-            console.log('🔐 Changement d\'état d\'authentification:', _event);
             setSession(sessionData);
         });
         return () => subscription.unsubscribe();
@@ -116,16 +137,12 @@ function App() {
     useEffect(() => {
         if (session?.user) {
             setLoading(true);
-            console.log('👤 Chargement du profil pour:', session.user.email);
-
             profileService.getProfile(session.user.id)
                 .then(({ data: userProfile, error }) => {
                     if (error) {
-                        console.error("❌ Error fetching profile:", error);
                         showToast("Impossible de récupérer le profil.", "error");
                         authService.signOut();
                     } else {
-                        console.log('✅ Profil chargé:', userProfile?.full_name);
                         setProfile(userProfile);
                     }
                 }).finally(() => { setLoading(false); });
@@ -137,138 +154,68 @@ function App() {
 
     useEffect(() => {
         if (profile) {
-            refreshData(profile);
+            const initialLoad = async () => {
+                await refreshData(profile);
+            };
+            initialLoad();
 
-            // ✅ AMÉLIORATION: Listener temps réel plus spécifique
             const sub = supabase
                 .channel('public-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'interventions'
-                }, (payload) => {
-                    console.log('🔄 Changement détecté dans interventions:', payload);
-                    refreshData(profile);
-                })
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'leave_requests'
-                }, (payload) => {
-                    console.log('🔄 Changement détecté dans leave_requests:', payload);
-                    refreshData(profile);
-                })
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'vault_documents'
-                }, (payload) => {
-                    console.log('🔄 Changement détecté dans vault_documents:', payload);
+                .on('postgres_changes', { event: '*', schema: 'public' }, () => {
                     refreshData(profile);
                 })
                 .subscribe();
 
             return () => {
-                console.log('🔌 Déconnexion des listeners temps réel');
                 supabase.removeChannel(sub);
             };
         }
-    }, [profile, refreshData]);
+    }, [profile, refreshData, supabase]);
 
     const handleLogout = async () => {
-        console.log('🚪 Déconnexion en cours...');
-        const { error } = await authService.signOut();
-        if (error) {
-            showToast("Erreur lors de la déconnexion.", "error");
-        } else {
-            console.log('✅ Déconnexion réussie');
-        }
+        await authService.signOut();
         navigate('/login');
     };
 
     const handleUpdateUser = async (updatedUserData) => {
-        console.log('👤 Mise à jour utilisateur:', updatedUserData.full_name);
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
-        if (error) {
-            console.error('❌ Erreur mise à jour profil:', error);
-            showToast("Erreur mise à jour profil.", "error");
-        } else {
-            console.log('✅ Profil mis à jour avec succès');
-            showToast("Profil mis à jour.");
-        }
+        if (error) showToast("Erreur mise à jour profil.", "error");
+        else showToast("Profil mis à jour.");
     };
 
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        console.log('➕ Création intervention:', interventionData.client);
         const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-        if (error) {
-            console.error('❌ Erreur création intervention:', error);
-            showToast(`Erreur création intervention: ${error.message}`, "error");
-        } else {
-            console.log('✅ Intervention créée avec succès');
-            showToast("Intervention ajoutée.");
-        }
+        if (error) showToast(`Erreur création intervention: ${error.message}`, "error");
+        else showToast("Intervention ajoutée.");
     };
 
-    // ✅ NOUVELLE FONCTION: Sauvegarde silencieuse SANS changement de statut
-    const handleUpdateInterventionReportSilent = async (interventionId, report) => {
+    const handleAddBriefingDocuments = async (interventionId, files) => {
         try {
-            console.log('💾 Sauvegarde silencieuse du rapport (SANS changement de statut)');
-            console.log('📄 Données du rapport:', {
-                notesLength: report.notes?.length || 0,
-                filesCount: report.files?.length || 0,
-                hasArrival: !!report.arrivalTime,
-                hasDeparture: !!report.departureTime,
-                hasSignature: !!report.signature
-            });
-
-            // ✅ CORRECTION: S'assurer que tous les champs sont correctement sérialisés
-            const sanitizedReport = {
-                notes: report.notes || '',
-                files: Array.isArray(report.files) ? report.files : [],
-                arrivalTime: report.arrivalTime || null,
-                departureTime: report.departureTime || null,
-                signature: report.signature || null
-            };
-
-            console.log('📁 Fichiers à sauvegarder:', sanitizedReport.files.map(f => f.name));
-
-            // ✅ SAUVEGARDE EN BASE DE DONNÉES SANS CHANGEMENT DE STATUT
-            const { error } = await interventionService.updateIntervention(interventionId, {
-                report: sanitizedReport
-                // ❌ PAS de changement de statut ici !
-            });
-
-            if (error) {
-                console.error('❌ Erreur sauvegarde silencieuse:', error);
-                throw error;
-            }
-
-            console.log('✅ Rapport sauvegardé silencieusement (intervention reste ouverte)');
-            return { success: true };
-
+            const { error } = await interventionService.addBriefingDocuments(interventionId, files);
+            if (error) throw error;
+            showToast("Documents de préparation ajoutés avec succès.");
+            await refreshData(profile);
         } catch (error) {
-            console.error('❌ Erreur lors de la sauvegarde silencieuse:', error);
-            return { success: false, error };
+            showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
+            throw error;
         }
     };
 
-    // ✅ CORRECTION PRINCIPALE: Fonction de gestion des rapports améliorée POUR LA FERMETURE
+    const handleUpdateInterventionReportSilent = async (interventionId, report) => {
+        const sanitizedReport = {
+            notes: report.notes || '',
+            files: Array.isArray(report.files) ? report.files : [],
+            arrivalTime: report.arrivalTime || null,
+            departureTime: report.departureTime || null,
+            signature: report.signature || null
+        };
+        const { error } = await interventionService.updateIntervention(interventionId, { report: sanitizedReport });
+        return { success: !error, error };
+    };
+
     const handleUpdateInterventionReport = async (interventionId, report) => {
         try {
-            console.log('🔒 SAUVEGARDE FINALE avec clôture potentielle:', interventionId);
-            console.log('📄 Données du rapport:', {
-                notesLength: report.notes?.length || 0,
-                filesCount: report.files?.length || 0,
-                hasArrival: !!report.arrivalTime,
-                hasDeparture: !!report.departureTime,
-                hasSignature: !!report.signature
-            });
-
-            // Détermine le nouveau statut en fonction du rapport
             const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-
-            // ✅ CORRECTION: S'assurer que tous les champs sont correctement sérialisés
             const sanitizedReport = {
                 notes: report.notes || '',
                 files: Array.isArray(report.files) ? report.files : [],
@@ -277,40 +224,18 @@ function App() {
                 signature: report.signature || null
             };
 
-            console.log('💾 Sauvegarde finale avec statut:', newStatus);
-            console.log('📁 Fichiers à sauvegarder:', sanitizedReport.files.map(f => f.name));
-
-            // ✅ SAUVEGARDE EN BASE DE DONNÉES AVEC CHANGEMENT DE STATUT
             const { error } = await interventionService.updateIntervention(interventionId, {
                 report: sanitizedReport,
                 status: newStatus
             });
 
-            if (error) {
-                console.error('❌ Erreur sauvegarde finale:', error);
-                showToast("Erreur sauvegarde rapport: " + error.message, "error");
-                throw error;
-            }
+            if (error) throw error;
 
-            // ✅ SUCCÈS
-            console.log('✅ Rapport sauvegardé avec succès et intervention clôturée si nécessaire');
-
-            if (newStatus === 'Terminée') {
-                showToast("Rapport sauvegardé et intervention clôturée.");
-            } else {
-                showToast("Rapport sauvegardé. L'intervention est maintenant 'En cours'.");
-            }
-
-            // ✅ NAVIGATION ET REFRESH
+            showToast(newStatus === 'Terminée' ? "Rapport sauvegardé et intervention clôturée." : "Rapport sauvegardé.");
             navigate('/planning');
-
-            // ✅ FORCER LE REFRESH DES DONNÉES
             await refreshData(profile);
 
-            console.log('🔄 Données rafraîchies après sauvegarde finale');
-
         } catch (error) {
-            console.error('❌ Erreur complète lors de la sauvegarde finale:', error);
             showToast("Erreur lors de la sauvegarde: " + (error.message || 'Erreur inconnue'), "error");
             throw error;
         }
@@ -321,146 +246,17 @@ function App() {
             title: "Supprimer l'intervention ?",
             message: "Cette action est irréversible.",
             onConfirm: async () => {
-                console.log('🗑️ Suppression intervention:', id);
                 const { error } = await interventionService.deleteIntervention(id);
-                if (error) {
-                    console.error('❌ Erreur suppression:', error);
-                    showToast("Erreur suppression.", "error");
-                } else {
-                    console.log('✅ Intervention supprimée');
-                    showToast("Intervention supprimée.");
-                }
+                if (error) showToast("Erreur suppression.", "error");
+                else showToast("Intervention supprimée.");
             }
         });
     };
 
     const handleArchiveIntervention = async (id) => {
-        console.log('📦 Archivage intervention:', id);
         const { error } = await interventionService.updateIntervention(id, { is_archived: true });
-        if (error) {
-            console.error('❌ Erreur archivage:', error);
-            showToast("Erreur archivage.", "error");
-        } else {
-            console.log('✅ Intervention archivée');
-            showToast("Intervention archivée.");
-        }
-    };
-
-    const handleUpdateLeaveStatus = (id, status) => {
-        if (status === 'Rejeté') {
-            showConfirmationModal({
-                title: "Rejeter la demande",
-                message: "Veuillez indiquer le motif du refus.",
-                showInput: true,
-                inputLabel: "Motif du refus",
-                onConfirm: async (reason) => {
-                    console.log('❌ Rejet demande congé:', id, 'Motif:', reason);
-                    const { error } = await leaveService.updateRequestStatus(id, status, reason);
-                    if (error) {
-                        console.error('❌ Erreur mise à jour congé:', error);
-                        showToast("Erreur mise à jour congé.", "error");
-                    } else {
-                        console.log('✅ Demande rejetée');
-                        showToast("Statut de la demande mis à jour.");
-                    }
-                }
-            });
-        } else {
-            console.log('✅ Approbation demande congé:', id);
-            leaveService.updateRequestStatus(id, status).then(({error}) => {
-                if (error) {
-                    console.error('❌ Erreur mise à jour congé:', error);
-                    showToast("Erreur mise à jour congé.", "error");
-                } else {
-                    console.log('✅ Demande approuvée');
-                    showToast("Statut de la demande mis à jour.");
-                }
-            });
-        }
-    };
-
-    const handleDeleteLeaveRequest = (id) => {
-        showConfirmationModal({
-            title: "Supprimer la demande ?",
-            message: "Cette action est irréversible.",
-            onConfirm: async () => {
-                console.log('🗑️ Suppression demande congé:', id);
-                const { error } = await leaveService.deleteLeaveRequest(id);
-                if (error) {
-                    console.error('❌ Erreur suppression:', error);
-                    showToast("Erreur suppression.", "error");
-                } else {
-                    console.log('✅ Demande supprimée');
-                    showToast("Demande supprimée.");
-                }
-            }
-        });
-    };
-
-    const handleSubmitLeaveRequest = async (requestData) => {
-        console.log('📝 Soumission demande congé:', requestData);
-        const { error } = await leaveService.createLeaveRequest(requestData);
-        if (error) {
-            console.error('❌ Erreur envoi demande:', error);
-            showToast("Erreur envoi demande.", "error");
-        } else {
-            console.log('✅ Demande envoyée');
-            showToast("Demande de congé envoyée.");
-        }
-    };
-
-    const handleSendDocument = async ({ file, userId, name }) => {
-        try {
-            console.log('📎 Envoi document:', name, 'pour utilisateur:', userId);
-            const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
-            if (uploadError) throw uploadError;
-
-            const { error: dbError } = await vaultService.createVaultDocument({ userId, name, url: publicURL, path: filePath });
-            if (dbError) throw dbError;
-
-            await refreshData(profile);
-            console.log('✅ Document envoyé avec succès');
-            showToast("Document envoyé avec succès.");
-        } catch (error) {
-            console.error("❌ Erreur lors de l'envoi du document:", error);
-            showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
-        }
-    };
-
-    const handleDeleteDocument = async (documentId) => {
-        showConfirmationModal({
-            title: "Supprimer ce document ?",
-            message: "Cette action est irréversible et supprimera le fichier définitivement.",
-            onConfirm: async () => {
-                console.log('🗑️ Suppression document:', documentId);
-                const { error } = await vaultService.deleteVaultDocument(documentId);
-                if (error) {
-                    console.error('❌ Erreur suppression document:', error);
-                    showToast("Erreur lors de la suppression : " + error.message, "error");
-                } else {
-                    console.log('✅ Document supprimé');
-                    showToast("Document supprimé.");
-                    await refreshData(profile);
-                }
-            }
-        });
-    };
-
-    const handleAddBriefingDocuments = async (interventionId, files) => {
-        try {
-            console.log('📋 Ajout documents préparation pour intervention:', interventionId);
-            const { error } = await interventionService.addBriefingDocuments(interventionId, files);
-            if (error) {
-                throw error;
-            }
-            console.log('✅ Documents de préparation ajoutés');
-            showToast("Documents de préparation ajoutés avec succès.");
-            await refreshData(profile);
-        } catch (error) {
-            console.error('❌ Erreur ajout documents préparation:', error);
-            showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
-            throw error;
-        }
+        if (error) showToast("Erreur archivage.", "error");
+        else showToast("Intervention archivée.");
     };
 
     if (loading) {
@@ -472,8 +268,97 @@ function App() {
         );
     }
 
+    const interventionDetailProps = {
+        interventions,
+        onSave: handleUpdateInterventionReport,
+        onSaveSilent: handleUpdateInterventionReportSilent,
+        isAdmin: profile?.is_admin,
+        onAddBriefingDocuments: handleAddBriefingDocuments,
+        dataVersion,
+        refreshData: () => refreshData(profile)
+    };
+
     return (
         <>
+            {/* ✅ NOUVEAU : Injection des styles pour la responsivité */}
+            <style>{`
+                /* Styles par défaut (Mobile First) */
+                .desktop-nav {
+                    display: none; /* Cache la navigation desktop par défaut */
+                }
+                .mobile-nav {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background-color: #ffffff;
+                    border-top: 1px solid #e5e7eb;
+                    z-index: 1000;
+                    padding-bottom: env(safe-area-inset-bottom, 0); /* Pour les encoches iPhone */
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                }
+                .mobile-nav-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 1rem;
+                    background-color: #f8f9fa;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                }
+                .btn-icon-logout {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #4b5563;
+                }
+                .mobile-nav-icons {
+                    display: flex;
+                    justify-content: space-around;
+                    align-items: center;
+                }
+                .mobile-nav-button {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    flex-grow: 1;
+                    padding: 0.5rem 0.25rem;
+                    color: #6b7280;
+                    text-decoration: none;
+                    transition: color 0.2s ease;
+                }
+                .mobile-nav-button.active {
+                    color: #3b82f6; /* Couleur de l'icône active */
+                }
+                .mobile-nav-button svg {
+                    width: 24px;
+                    height: 24px;
+                }
+                .mobile-nav-label {
+                    font-size: 0.7rem;
+                    margin-top: 2px;
+                }
+                .main-content {
+                    /* Ajoute de l'espace en bas pour ne pas être caché par la nav mobile */
+                    padding-bottom: 100px;
+                }
+
+                /* Styles pour tablettes et desktop (à partir de 768px) */
+                @media (min-width: 768px) {
+                    .desktop-nav {
+                        display: flex; /* Affiche la navigation desktop */
+                    }
+                    .mobile-nav {
+                        display: none; /* Cache la navigation mobile */
+                    }
+                    .main-content {
+                        padding-bottom: 0; /* Retire l'espace en bas */
+                    }
+                }
+            `}</style>
+
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
             {modal && <ConfirmationModal {...modal} onConfirm={(inputValue) => { modal.onConfirm(inputValue); setModal(null); }} onCancel={() => setModal(null)} />}
             <Routes>
@@ -489,26 +374,12 @@ function App() {
                                 <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} />} />
                                 <Route
                                     path="planning/:interventionId"
-                                    element={<InterventionDetailView
-                                        interventions={interventions}
-                                        onSave={handleUpdateInterventionReport}
-                                        onSaveSilent={handleUpdateInterventionReportSilent}
-                                        isAdmin={profile.is_admin}
-                                        onAddBriefingDocuments={handleAddBriefingDocuments}
-                                    />}
+                                    element={<InterventionDetailView {...interventionDetailProps} />}
                                 />
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
-                                <Route path="leaves" element={<AdminLeaveView leaveRequests={leaveRequests} onUpdateRequestStatus={handleUpdateLeaveStatus} onDeleteLeaveRequest={handleDeleteLeaveRequest} />} />
+                                <Route path="leaves" element={<AdminLeaveView leaveRequests={leaveRequests} />} />
                                 <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
-                                <Route
-                                    path="vault"
-                                    element={<AdminVaultView
-                                        users={users}
-                                        vaultDocuments={vaultDocuments}
-                                        onSendDocument={handleSendDocument}
-                                        onDeleteDocument={handleDeleteDocument}
-                                    />}
-                                />
+                                <Route path="vault" element={<AdminVaultView users={users} vaultDocuments={vaultDocuments} />} />
                                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
                             </>
                         ) : (
@@ -517,21 +388,11 @@ function App() {
                                 <Route path="planning" element={<EmployeePlanningView interventions={interventions} />} />
                                 <Route
                                     path="planning/:interventionId"
-                                    element={<InterventionDetailView
-                                        interventions={interventions}
-                                        onSave={handleUpdateInterventionReport}
-                                        onSaveSilent={handleUpdateInterventionReportSilent}
-                                        isAdmin={profile.is_admin}
-                                    />}
+                                    element={<InterventionDetailView {...interventionDetailProps} />}
                                 />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile?.full_name} userId={profile?.id} showToast={showToast} />} />
-                                <Route
-                                    path="vault"
-                                    element={<CoffreNumeriqueView
-                                        vaultDocuments={vaultDocuments.filter(doc => doc.user_id === profile.id)}
-                                    />}
-                                />
+                                <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} />} />
+                                <Route path="vault" element={<CoffreNumeriqueView vaultDocuments={vaultDocuments.filter(doc => doc.user_id === profile.id)} />} />
                                 <Route path="*" element={<Navigate to="/planning" replace />} />
                             </>
                         )}
@@ -540,3 +401,6 @@ function App() {
             </Routes>
         </>
     );
+}
+
+export default App;
