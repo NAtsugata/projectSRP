@@ -204,8 +204,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// Composant de chargement simplifié et autonome
-const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
+// Composant de chargement inline, plus stable
+const InlineUploader = ({ interventionId, onUploadComplete }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
@@ -234,7 +234,6 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
 
     const handleFileChange = useCallback(async (event) => {
         const files = Array.from(event.target.files);
-        // ✅ CORRECTION : Réinitialise l'input immédiatement pour garantir la fiabilité
         if (inputRef.current) {
             inputRef.current.value = "";
         }
@@ -262,34 +261,26 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
             await onUploadComplete(successfulUploads);
         }
         setUploadState(p => ({ ...p, isUploading: false }));
-
     }, [interventionId, compressImage, onUploadComplete]);
-
-    const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
     return (
         <div className="mobile-uploader-panel">
-            <h4>Ajouter des fichiers</h4>
-            {!allDone && (
-                <>
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        multiple
-                        accept="image/*,application/pdf"
-                        onChange={handleFileChange}
-                        disabled={uploadState.isUploading}
-                        style={{ display: 'none' }}
-                    />
-                    <button
-                        onClick={() => inputRef.current.click()}
-                        className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
-                        disabled={uploadState.isUploading}
-                    >
-                        {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                    </button>
-                </>
-            )}
+            <input
+                ref={inputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                disabled={uploadState.isUploading}
+                style={{ display: 'none' }}
+            />
+            <button
+                onClick={() => inputRef.current.click()}
+                className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+                disabled={uploadState.isUploading}
+            >
+                {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+            </button>
 
             {uploadState.queue.length > 0 && (
                 <div className="upload-queue-container">
@@ -309,9 +300,6 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
                     ))}
                 </div>
             )}
-            {allDone && (
-                <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
-            )}
         </div>
     );
 };
@@ -323,6 +311,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [intervention, setIntervention] = useState(null);
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState(null);
+    const [adminNotes, setAdminNotes] = useState(''); // ✅ NOUVEAU : État pour les notes de l'admin
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showUploader, setShowUploader] = useState(false);
@@ -335,6 +324,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             setReport(foundIntervention.report || {
                 notes: '', files: [], arrivalTime: null, departureTime: null, signature: null
             });
+            // ✅ NOUVEAU : Initialise les notes de l'admin
+            setAdminNotes(foundIntervention.admin_notes || '');
             setLoading(false);
         } else if (interventions.length > 0) {
             navigate('/planning');
@@ -349,7 +340,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         if (!intervention) return;
         setIsSaving(true);
         try {
-            await onSave(intervention.id, report);
+            // ✅ NOUVEAU : Prépare les données à sauvegarder, incluant les notes de l'admin
+            const saveData = {
+                ...report,
+                admin_notes: adminNotes
+            };
+            await onSave(intervention.id, saveData);
         } finally {
             setIsSaving(false);
         }
@@ -387,6 +383,32 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.address}</p>
+
+                {/* ✅ CORRECTION : Section des documents de préparation restaurée */}
+                <div className="section">
+                    <h3>📋 Documents de préparation</h3>
+                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
+                        <ul className="document-list-optimized">
+                            {intervention.intervention_briefing_documents.map(doc => (
+                                <li key={doc.id} className="document-item-optimized">
+                                    <FileTextIcon />
+                                    <span className="file-name">{doc.file_name}</span>
+                                    <a
+                                        href={doc.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-sm btn-primary"
+                                    >
+                                        <DownloadIcon /> Voir
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-muted">Aucun document de préparation</p>
+                    )}
+                </div>
+
                 <div className="section">
                     <h3>⏱️ Pointage</h3>
                     <div className="grid-2-cols">
@@ -402,6 +424,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <h3>📝 Rapport de chantier</h3>
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
                 </div>
+
+                {/* ✅ NOUVEAU : Section pour les notes de l'administrateur */}
+                {isAdmin && (
+                    <div className="section">
+                        <h3>🔒 Notes Administrateur (visibles uniquement par les admins)</h3>
+                        <textarea
+                            value={adminNotes}
+                            onChange={e => setAdminNotes(e.target.value)}
+                            placeholder="Ajouter des notes confidentielles ou des remarques..."
+                            rows="4"
+                            className="form-control"
+                        />
+                    </div>
+                )}
+
                 <div className="section">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <h3>📷 Photos et Documents</h3>
@@ -428,20 +465,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {!isAdmin && (
                         <>
                             <button
-                                onClick={() => setShowUploader(true)}
-                                className="btn btn-primary w-full"
-                                style={{ display: showUploader ? 'none' : 'block' }}
+                                onClick={() => setShowUploader(!showUploader)}
+                                className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}
                             >
-                                📷 Ajouter photos/documents
+                                {showUploader ? 'Fermer' : '📷 Ajouter photos/documents'}
                             </button>
 
-                            <div style={{ display: showUploader ? 'block' : 'none' }}>
-                                <MobileUploader
+                            {showUploader && (
+                                <InlineUploader
                                     interventionId={interventionId}
                                     onUploadComplete={handleUploadComplete}
-                                    onClose={() => setShowUploader(false)}
                                 />
-                            </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -459,11 +494,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </div>
                     )}
                 </div>
-                {!isAdmin && (
-                    <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-                        {isSaving ? <><LoaderIcon className="animate-spin" /> Sauvegarde...</> : '🔒 Sauvegarder et Clôturer'}
-                    </button>
-                )}
+
+                <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
+                    {isSaving ? <><LoaderIcon className="animate-spin" /> Sauvegarde...</> : '🔒 Sauvegarder et Clôturer'}
+                </button>
             </div>
         </div>
     );
