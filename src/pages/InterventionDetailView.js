@@ -1,4 +1,4 @@
-// src/pages/InterventionDetailView.js - VERSION OPTIMISÉE MOBILE
+// src/pages/InterventionDetailView.js - VERSION CORRIGÉE POUR LA SYNCHRONISATION
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
@@ -245,22 +245,35 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
             setIntervention(foundIntervention);
-            const savedReport = window.sessionStorage.getItem(storageKey);
-            const initialReport = savedReport ?
-                JSON.parse(savedReport) :
-                (foundIntervention.report || {
+
+            // ✅ CORRECTION : On donne la priorité aux données du serveur
+            const serverReport = foundIntervention.report;
+            const savedDraft = window.sessionStorage.getItem(storageKey);
+
+            // Si le rapport du serveur existe et a du contenu (ex: des fichiers), on l'utilise.
+            // Sinon, on tente de récupérer un brouillon local.
+            if (serverReport && (serverReport.files?.length > 0 || serverReport.notes || serverReport.arrivalTime)) {
+                setReport(serverReport);
+            } else if (savedDraft) {
+                setReport(JSON.parse(savedDraft));
+            } else {
+                // Cas par défaut si tout est vide
+                setReport({
                     notes: '',
                     files: [],
                     arrivalTime: null,
                     departureTime: null,
                     signature: null
                 });
-            setReport(initialReport);
+            }
             setLoading(false);
+
         } else if (interventions.length > 0) {
+            // Si l'intervention n'est pas trouvée dans la liste, on retourne au planning
             navigate('/planning');
         }
-    }, [interventions, interventionId, navigate, storageKey]);
+    }, [interventions, interventionId, navigate, storageKey]); // Les dépendances ne changent pas
+
 
     // Sauvegarde automatique en session
     useEffect(() => {
