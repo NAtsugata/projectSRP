@@ -209,7 +209,7 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
-    const compressImage = useCallback(async (file) => {
+    const compressImage = async (file) => {
         if (!file.type.startsWith('image/')) return file;
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -230,40 +230,43 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
             img.onerror = () => resolve(file);
             img.src = URL.createObjectURL(file);
         });
-    }, []);
+    };
 
-    const handleFileChange = useCallback(async (event) => {
+    const handleFileChange = async (event) => {
         const files = Array.from(event.target.files);
         if (files.length === 0) return;
 
-        const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
-        setUploadState({ isUploading: true, queue: queueItems, error: null });
+        try {
+            const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
+            setUploadState({ isUploading: true, queue: queueItems, error: null });
 
-        const successfulUploads = [];
-        for (let i = 0; i < files.length; i++) {
-            try {
-                const fileToUpload = await compressImage(files[i]);
-                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
-                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
-                });
-                if (result.error) throw result.error;
-                successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
-                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
-            } catch (error) {
-                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
+            const successfulUploads = [];
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    const fileToUpload = await compressImage(files[i]);
+                    const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
+                        setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
+                    });
+                    if (result.error) throw result.error;
+                    successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
+                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
+                } catch (error) {
+                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
+                }
+            }
+
+            if (successfulUploads.length > 0) {
+                await onUploadComplete(successfulUploads);
+            }
+            setUploadState(p => ({ ...p, isUploading: false }));
+
+        } finally {
+            // ✅ CORRECTION : Réinitialise la valeur de l'input pour permettre une nouvelle sélection
+            if(inputRef.current) {
+                inputRef.current.value = "";
             }
         }
-
-        if (successfulUploads.length > 0) {
-            await onUploadComplete(successfulUploads);
-        }
-        setUploadState(p => ({ ...p, isUploading: false }));
-
-        if(inputRef.current) {
-            inputRef.current.value = null;
-        }
-
-    }, [interventionId, compressImage, onUploadComplete]);
+    };
 
     const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
@@ -271,7 +274,6 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         <div className="mobile-uploader-panel">
             <h4>Ajouter des fichiers</h4>
             {!allDone && (
-                // ✅ CORRECTION : Utilisation d'un bouton qui déclenche l'input caché
                 <>
                     <input
                         ref={inputRef}
