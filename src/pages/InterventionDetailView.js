@@ -209,7 +209,7 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
-    const compressImage = async (file) => {
+    const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -230,43 +230,40 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
             img.onerror = () => resolve(file);
             img.src = URL.createObjectURL(file);
         });
-    };
+    }, []);
 
-    const handleFileChange = async (event) => {
+    const handleFileChange = useCallback(async (event) => {
         const files = Array.from(event.target.files);
+        // ✅ CORRECTION : Réinitialise l'input immédiatement pour garantir la fiabilité
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
         if (files.length === 0) return;
 
-        try {
-            const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
-            setUploadState({ isUploading: true, queue: queueItems, error: null });
+        const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
+        setUploadState({ isUploading: true, queue: queueItems, error: null });
 
-            const successfulUploads = [];
-            for (let i = 0; i < files.length; i++) {
-                try {
-                    const fileToUpload = await compressImage(files[i]);
-                    const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
-                        setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
-                    });
-                    if (result.error) throw result.error;
-                    successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
-                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
-                } catch (error) {
-                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
-                }
-            }
-
-            if (successfulUploads.length > 0) {
-                await onUploadComplete(successfulUploads);
-            }
-            setUploadState(p => ({ ...p, isUploading: false }));
-
-        } finally {
-            // ✅ CORRECTION : Réinitialise la valeur de l'input pour permettre une nouvelle sélection
-            if(inputRef.current) {
-                inputRef.current.value = "";
+        const successfulUploads = [];
+        for (let i = 0; i < files.length; i++) {
+            try {
+                const fileToUpload = await compressImage(files[i]);
+                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, 'report', (progress) => {
+                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
+                });
+                if (result.error) throw result.error;
+                successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
+                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
+            } catch (error) {
+                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
             }
         }
-    };
+
+        if (successfulUploads.length > 0) {
+            await onUploadComplete(successfulUploads);
+        }
+        setUploadState(p => ({ ...p, isUploading: false }));
+
+    }, [interventionId, compressImage, onUploadComplete]);
 
     const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
