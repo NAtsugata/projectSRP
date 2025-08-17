@@ -204,8 +204,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// Composant de chargement simplifié et autonome
-const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
+// ✅ NOUVEAU : Composant de chargement repensé en tant que modale pour éviter les sauts de page
+const UploaderModal = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
@@ -234,9 +234,8 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
 
     const handleFileChange = useCallback(async (event) => {
         const files = Array.from(event.target.files);
-        // ✅ CORRECTION : Réinitialise l'input immédiatement pour garantir la fiabilité
         if (inputRef.current) {
-            inputRef.current.value = "";
+            inputRef.current.value = ""; // Réinitialisation immédiate
         }
         if (files.length === 0) return;
 
@@ -262,56 +261,57 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
             await onUploadComplete(successfulUploads);
         }
         setUploadState(p => ({ ...p, isUploading: false }));
-
     }, [interventionId, compressImage, onUploadComplete]);
 
     const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
     return (
-        <div className="mobile-uploader-panel">
-            <h4>Ajouter des fichiers</h4>
-            {!allDone && (
-                <>
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        multiple
-                        accept="image/*,application/pdf"
-                        onChange={handleFileChange}
-                        disabled={uploadState.isUploading}
-                        style={{ display: 'none' }}
-                    />
-                    <button
-                        onClick={() => inputRef.current.click()}
-                        className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
-                        disabled={uploadState.isUploading}
-                    >
-                        {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                    </button>
-                </>
-            )}
+        <div className="uploader-modal-overlay">
+            <div className="mobile-uploader-panel">
+                <h4>Ajouter des fichiers</h4>
+                {!allDone && (
+                    <>
+                        <input
+                            ref={inputRef}
+                            type="file"
+                            multiple
+                            accept="image/*,application/pdf"
+                            onChange={handleFileChange}
+                            disabled={uploadState.isUploading}
+                            style={{ display: 'none' }}
+                        />
+                        <button
+                            onClick={() => inputRef.current.click()}
+                            className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+                            disabled={uploadState.isUploading}
+                        >
+                            {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+                        </button>
+                    </>
+                )}
 
-            {uploadState.queue.length > 0 && (
-                <div className="upload-queue-container">
-                    {uploadState.queue.map(item => (
-                        <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                            <div style={{width: '24px', flexShrink: 0}}>
-                                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
-                                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
-                                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
+                {uploadState.queue.length > 0 && (
+                    <div className="upload-queue-container">
+                        {uploadState.queue.map(item => (
+                            <div key={item.id} className={`upload-queue-item status-${item.status}`}>
+                                <div style={{width: '24px', flexShrink: 0}}>
+                                    {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
+                                    {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
+                                    {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
+                                </div>
+                                <div style={{flexGrow: 1, minWidth: 0}}>
+                                    <div className="file-name">{item.name}</div>
+                                    {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>}
+                                    {item.error && <div className="error-message">{item.error}</div>}
+                                </div>
                             </div>
-                            <div style={{flexGrow: 1, minWidth: 0}}>
-                                <div className="file-name">{item.name}</div>
-                                {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>}
-                                {item.error && <div className="error-message">{item.error}</div>}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-            {allDone && (
-                <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
-            )}
+                        ))}
+                    </div>
+                )}
+                {allDone && (
+                    <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
+                )}
+            </div>
         </div>
     );
 };
@@ -383,6 +383,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     return (
         <div>
             {showSignatureModal && <SignatureModal onSave={handleSaveSignatureFromModal} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
+
+            {/* ✅ CORRECTION : L'uploader est maintenant une modale qui s'affiche par-dessus */}
+            {showUploader && (
+                <UploaderModal
+                    interventionId={interventionId}
+                    onUploadComplete={handleUploadComplete}
+                    onClose={() => setShowUploader(false)}
+                />
+            )}
+
             <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
             <div className="card-white">
                 <h2>{intervention.client}</h2>
@@ -426,23 +436,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
 
                     {!isAdmin && (
-                        <>
-                            <button
-                                onClick={() => setShowUploader(true)}
-                                className="btn btn-primary w-full"
-                                style={{ display: showUploader ? 'none' : 'block' }}
-                            >
-                                📷 Ajouter photos/documents
-                            </button>
-
-                            <div style={{ display: showUploader ? 'block' : 'none' }}>
-                                <MobileUploader
-                                    interventionId={interventionId}
-                                    onUploadComplete={handleUploadComplete}
-                                    onClose={() => setShowUploader(false)}
-                                />
-                            </div>
-                        </>
+                        <button
+                            onClick={() => setShowUploader(true)}
+                            className="btn btn-primary w-full"
+                        >
+                            📷 Ajouter photos/documents
+                        </button>
                     )}
                 </div>
                 <div className="section">
