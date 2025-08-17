@@ -207,7 +207,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 };
 
 
-// ✅ NOUVEAU : Composant de chargement intégré
+// Composant de chargement intégré
 const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({
         isUploading: false,
@@ -316,7 +316,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [report, setReport] = useState(null);
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [showUploader, setShowUploader] = useState(false); // ✅ NOUVEAU : État pour afficher/cacher l'uploader
+    const [showUploader, setShowUploader] = useState(false);
     const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
@@ -355,7 +355,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         setShowSignatureModal(false);
     };
 
-    // ✅ NOUVEAU : Gère la fin de l'upload
     const handleUploadComplete = async (uploadedFiles) => {
         const updatedReport = {
             ...report,
@@ -417,19 +416,25 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </ul>
                     ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
 
-                    {/* ✅ NOUVEAU : Affiche l'uploader si showUploader est vrai, sinon affiche le bouton */}
+                    {/* ✅ CORRECTION : Le bouton et l'uploader sont gérés pour ne pas faire sauter la page */}
                     {!isAdmin && (
-                        showUploader ? (
-                            <MobileUploader
-                                interventionId={interventionId}
-                                onUploadComplete={handleUploadComplete}
-                                onClose={() => setShowUploader(false)}
-                            />
-                        ) : (
-                            <button onClick={() => setShowUploader(true)} className="btn btn-primary w-full">
+                        <>
+                            <button
+                                onClick={() => setShowUploader(true)}
+                                className="btn btn-primary w-full"
+                                style={{ display: showUploader ? 'none' : 'block' }}
+                            >
                                 📷 Ajouter photos/documents
                             </button>
-                        )
+
+                            <div style={{ display: showUploader ? 'block' : 'none' }}>
+                                <MobileUploader
+                                    interventionId={interventionId}
+                                    onUploadComplete={handleUploadComplete}
+                                    onClose={() => setShowUploader(false)}
+                                />
+                            </div>
+                        </>
                     )}
                 </div>
                 <div className="section">
