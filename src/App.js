@@ -179,6 +179,23 @@ function App() {
         }
     };
 
+    // ✅ CORRECTION : Ajout de la fonction manquante
+    const handleAddBriefingDocuments = async (interventionId, files) => {
+        try {
+            console.log('📋 Ajout documents préparation pour intervention:', interventionId);
+            const { error } = await interventionService.addBriefingDocuments(interventionId, files);
+            if (error) {
+                throw error;
+            }
+            showToast("Documents de préparation ajoutés avec succès.");
+            await refreshData(profile); // Rafraîchir les données pour voir les nouveaux docs
+        } catch (error) {
+            console.error('❌ Erreur ajout documents préparation:', error);
+            showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
+            throw error;
+        }
+    };
+
     const handleUpdateInterventionReportSilent = async (interventionId, report) => {
         const sanitizedReport = {
             notes: report.notes || '',
