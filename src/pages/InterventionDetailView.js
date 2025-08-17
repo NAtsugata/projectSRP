@@ -259,7 +259,6 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         }
         setUploadState(p => ({ ...p, isUploading: false }));
 
-        // ✅ CORRECTION : Réinitialise la valeur de l'input pour permettre une nouvelle sélection
         if(inputRef.current) {
             inputRef.current.value = null;
         }
@@ -272,7 +271,8 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         <div className="mobile-uploader-panel">
             <h4>Ajouter des fichiers</h4>
             {!allDone && (
-                <label className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}>
+                // ✅ CORRECTION : Utilisation d'un bouton qui déclenche l'input caché
+                <>
                     <input
                         ref={inputRef}
                         type="file"
@@ -282,8 +282,14 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
                         disabled={uploadState.isUploading}
                         style={{ display: 'none' }}
                     />
-                    {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                </label>
+                    <button
+                        onClick={() => inputRef.current.click()}
+                        className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+                        disabled={uploadState.isUploading}
+                    >
+                        {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+                    </button>
+                </>
             )}
 
             {uploadState.queue.length > 0 && (
