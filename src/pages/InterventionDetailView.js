@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
-import MobileFileInput from '../components/MobileFileInput';
 import { storageService } from '../lib/supabase';
-
 
 // ... (Les composants OptimizedImage et SignatureModal ne changent pas)
 const OptimizedImage = ({ src, alt, className, style, onClick }) => {
@@ -206,6 +204,89 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
+// ✅ NOUVEAU : Version corrigée du sélecteur de fichiers, intégrée ici
+const CorrectedMobileFileInput = ({
+  onChange,
+  accept = "image/*,application/pdf",
+  multiple = false,
+  disabled = false,
+  children,
+  className = "",
+  maxFiles = 10,
+  maxSize = 10 * 1024 * 1024,
+  onError
+}) => {
+  const inputRef = useRef(null);
+
+  const handleFileChange = (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const validFiles = [];
+    const errors = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxSize) {
+        errors.push(`${file.name}: Fichier trop volumineux`);
+        continue;
+      }
+      if (multiple && validFiles.length >= maxFiles) {
+        errors.push(`Nombre maximum de fichiers atteint (${maxFiles})`);
+        break;
+      }
+      validFiles.push(file);
+      if (!multiple) break;
+    }
+
+    if (errors.length > 0 && onError) {
+      onError(errors);
+    }
+
+    if (validFiles.length > 0 && onChange) {
+      const dataTransfer = new DataTransfer();
+      validFiles.forEach(file => dataTransfer.items.add(file));
+      const newEvent = { target: { files: dataTransfer.files } };
+      onChange(newEvent);
+    }
+
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <label className={`btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''} ${className}`}
+        style={{
+            position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '0.5rem', padding: '1rem', border: `2px dashed ${disabled ? '#dee2e6' : '#cbd5e1'}`,
+            borderRadius: '0.5rem', backgroundColor: disabled ? '#f8f9fa' : 'white',
+            cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease',
+            fontSize: '16px', fontWeight: '500', color: disabled ? '#6c757d' : '#495057',
+            textAlign: 'center', userSelect: 'none', WebkitUserSelect: 'none',
+            WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)', touchAction: 'manipulation'
+      }}>
+      <input
+         ref={inputRef}
+         type="file"
+         accept={accept}
+         multiple={multiple}
+         onChange={handleFileChange}
+         disabled={disabled}
+         // La suppression de l'attribut "capture" est la correction clé
+         style={{
+           position: 'absolute', opacity: 0, width: '100%', height: '100%',
+           cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '16px',
+           left: 0, top: 0
+         }}
+       />
+      <span style={{ pointerEvents: 'none' }}>
+        {children}
+      </span>
+    </label>
+  );
+};
+
 
 // Composant de chargement intégré
 const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
@@ -277,9 +358,9 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         <div className="mobile-uploader-panel">
             <h4>Ajouter des fichiers</h4>
             {!allDone && (
-                 <MobileFileInput onChange={handleFileSelect} disabled={uploadState.isUploading} multiple accept="image/*,application/pdf" maxSize={isMobile ? 5242880 : 10485760} onError={handleUploadError}>
+                 <CorrectedMobileFileInput onChange={handleFileSelect} disabled={uploadState.isUploading} multiple accept="image/*,application/pdf" maxSize={isMobile ? 5242880 : 10485760} onError={handleUploadError}>
                     {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                </MobileFileInput>
+                </CorrectedMobileFileInput>
             )}
 
             {uploadState.queue.length > 0 && (
@@ -416,7 +497,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </ul>
                     ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
 
-                    {/* ✅ CORRECTION : Le bouton et l'uploader sont gérés pour ne pas faire sauter la page */}
                     {!isAdmin && (
                         <>
                             <button
