@@ -204,8 +204,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// ✅ NOUVEAU : Composant de chargement inline, plus stable
-const InlineUploader = ({ interventionId, onUploadComplete }) => {
+// Composant de chargement simplifié et autonome
+const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
@@ -234,6 +234,7 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
 
     const handleFileChange = useCallback(async (event) => {
         const files = Array.from(event.target.files);
+        // ✅ CORRECTION : Réinitialise l'input immédiatement pour garantir la fiabilité
         if (inputRef.current) {
             inputRef.current.value = "";
         }
@@ -261,26 +262,34 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
             await onUploadComplete(successfulUploads);
         }
         setUploadState(p => ({ ...p, isUploading: false }));
+
     }, [interventionId, compressImage, onUploadComplete]);
+
+    const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
     return (
         <div className="mobile-uploader-panel">
-            <input
-                ref={inputRef}
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                onChange={handleFileChange}
-                disabled={uploadState.isUploading}
-                style={{ display: 'none' }}
-            />
-            <button
-                onClick={() => inputRef.current.click()}
-                className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
-                disabled={uploadState.isUploading}
-            >
-                {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-            </button>
+            <h4>Ajouter des fichiers</h4>
+            {!allDone && (
+                <>
+                    <input
+                        ref={inputRef}
+                        type="file"
+                        multiple
+                        accept="image/*,application/pdf"
+                        onChange={handleFileChange}
+                        disabled={uploadState.isUploading}
+                        style={{ display: 'none' }}
+                    />
+                    <button
+                        onClick={() => inputRef.current.click()}
+                        className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+                        disabled={uploadState.isUploading}
+                    >
+                        {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+                    </button>
+                </>
+            )}
 
             {uploadState.queue.length > 0 && (
                 <div className="upload-queue-container">
@@ -299,6 +308,9 @@ const InlineUploader = ({ interventionId, onUploadComplete }) => {
                         </div>
                     ))}
                 </div>
+            )}
+            {allDone && (
+                <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
             )}
         </div>
     );
@@ -416,18 +428,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {!isAdmin && (
                         <>
                             <button
-                                onClick={() => setShowUploader(!showUploader)}
-                                className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}
+                                onClick={() => setShowUploader(true)}
+                                className="btn btn-primary w-full"
+                                style={{ display: showUploader ? 'none' : 'block' }}
                             >
-                                {showUploader ? 'Fermer' : '📷 Ajouter photos/documents'}
+                                📷 Ajouter photos/documents
                             </button>
 
-                            {showUploader && (
-                                <InlineUploader
+                            <div style={{ display: showUploader ? 'block' : 'none' }}>
+                                <MobileUploader
                                     interventionId={interventionId}
                                     onUploadComplete={handleUploadComplete}
+                                    onClose={() => setShowUploader(false)}
                                 />
-                            )}
+                            </div>
                         </>
                     )}
                 </div>
