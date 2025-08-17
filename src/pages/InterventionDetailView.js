@@ -204,7 +204,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// ✅ NOUVEAU : Composant de chargement simplifié et autonome
+// Composant de chargement simplifié et autonome
 const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
@@ -258,6 +258,12 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
             await onUploadComplete(successfulUploads);
         }
         setUploadState(p => ({ ...p, isUploading: false }));
+
+        // ✅ CORRECTION : Réinitialise la valeur de l'input pour permettre une nouvelle sélection
+        if(inputRef.current) {
+            inputRef.current.value = null;
+        }
+
     }, [interventionId, compressImage, onUploadComplete]);
 
     const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
