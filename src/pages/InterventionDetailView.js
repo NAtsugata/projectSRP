@@ -204,95 +204,10 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// Version corrigée du sélecteur de fichiers
-const CorrectedMobileFileInput = ({
-  onChange,
-  accept = "image/*,application/pdf",
-  multiple = false,
-  disabled = false,
-  children,
-  className = "",
-  maxFiles = 10,
-  maxSize = 10 * 1024 * 1024,
-  onError
-}) => {
-  const inputRef = useRef(null);
-
-  const handleFileChange = (event) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    const validFiles = [];
-    const errors = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.size > maxSize) {
-        errors.push(`${file.name}: Fichier trop volumineux`);
-        continue;
-      }
-      if (multiple && validFiles.length >= maxFiles) {
-        errors.push(`Nombre maximum de fichiers atteint (${maxFiles})`);
-        break;
-      }
-      validFiles.push(file);
-      if (!multiple) break;
-    }
-
-    if (errors.length > 0 && onError) {
-      onError(errors);
-    }
-
-    if (validFiles.length > 0 && onChange) {
-      // ✅ CORRECTION : On passe directement le tableau de fichiers valides
-      onChange(validFiles);
-    }
-
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
-  };
-
-  return (
-    <label className={`btn btn-secondary w-full flex-center ${disabled ? 'disabled' : ''} ${className}`}
-        style={{
-            position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '0.5rem', padding: '1rem', border: `2px dashed ${disabled ? '#dee2e6' : '#cbd5e1'}`,
-            borderRadius: '0.5rem', backgroundColor: disabled ? '#f8f9fa' : 'white',
-            cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease',
-            fontSize: '16px', fontWeight: '500', color: disabled ? '#6c757d' : '#495057',
-            textAlign: 'center', userSelect: 'none', WebkitUserSelect: 'none',
-            WebkitTapHighlightColor: 'rgba(0, 0, 0, 0.1)', touchAction: 'manipulation'
-      }}>
-      <input
-         ref={inputRef}
-         type="file"
-         accept={accept}
-         multiple={multiple}
-         onChange={handleFileChange}
-         disabled={disabled}
-         style={{
-           position: 'absolute', opacity: 0, width: '100%', height: '100%',
-           cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '16px',
-           left: 0, top: 0
-         }}
-       />
-      <span style={{ pointerEvents: 'none' }}>
-        {children}
-      </span>
-    </label>
-  );
-};
-
-
-// Composant de chargement intégré
+// ✅ NOUVEAU : Composant de chargement simplifié et autonome
 const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
-    const [uploadState, setUploadState] = useState({
-        isUploading: false,
-        queue: [],
-        error: null
-    });
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
+    const inputRef = useRef(null);
 
     const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
@@ -317,7 +232,8 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         });
     }, []);
 
-    const handleFileSelect = useCallback(async (files) => { // ✅ CORRECTION : Accepte directement un tableau de fichiers
+    const handleFileChange = useCallback(async (event) => {
+        const files = Array.from(event.target.files);
         if (files.length === 0) return;
 
         const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
@@ -344,19 +260,24 @@ const MobileUploader = ({ interventionId, onUploadComplete, onClose }) => {
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete]);
 
-    const handleUploadError = useCallback((errors) => {
-        setUploadState(p => ({ ...p, error: errors.join(' • ') }));
-    }, []);
-
     const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
 
     return (
         <div className="mobile-uploader-panel">
             <h4>Ajouter des fichiers</h4>
             {!allDone && (
-                 <CorrectedMobileFileInput onChange={handleFileSelect} disabled={uploadState.isUploading} multiple accept="image/*,application/pdf" maxSize={isMobile ? 5242880 : 10485760} onError={handleUploadError}>
+                <label className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}>
+                    <input
+                        ref={inputRef}
+                        type="file"
+                        multiple
+                        accept="image/*,application/pdf"
+                        onChange={handleFileChange}
+                        disabled={uploadState.isUploading}
+                        style={{ display: 'none' }}
+                    />
                     {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                </CorrectedMobileFileInput>
+                </label>
             )}
 
             {uploadState.queue.length > 0 && (
