@@ -403,26 +403,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     };
 
     const handleBriefingUploadComplete = async (uploadedFiles) => {
-        // ✅ CORRECTION : Mise à jour "optimiste" de l'interface pour un affichage instantané
-        const newDocsForDisplay = uploadedFiles.map(file => ({
-            id: `temp-${Date.now()}-${Math.random()}`,
-            file_name: file.name,
-            file_url: file.url,
-        }));
-
-        setIntervention(prev => ({
-            ...prev,
-            intervention_briefing_documents: [
-                ...(prev.intervention_briefing_documents || []),
-                ...newDocsForDisplay
-            ]
-        }));
-
-        // Sauvegarde en arrière-plan
+        // ✅ CORRECTION : Logique de mise à jour simple et fiable.
+        // On attend que la base de données soit mise à jour.
         await onAddBriefingDocuments(interventionId, uploadedFiles);
 
-        // On ne rafraîchit pas les données ici pour éviter une "race condition"
-        // qui pourrait écraser la mise à jour optimiste.
+        // Ensuite, on rafraîchit les données pour obtenir l'état le plus récent.
+        refreshData();
 
         setShowBriefingUploader(false);
     };
