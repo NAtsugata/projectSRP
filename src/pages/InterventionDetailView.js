@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
 
-// ... (Les composants OptimizedImage et SignatureModal ne changent pas)
+// =================================================================================
+// COMPOSANT IMAGE OPTIMISÉE (Lazy Loading)
+// =================================================================================
 const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     const [loadState, setLoadState] = useState('loading');
     const imgRef = useRef(null);
@@ -76,6 +78,10 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
         />
     );
 };
+
+// =================================================================================
+// MODALE DE SIGNATURE
+// =================================================================================
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -204,7 +210,9 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// Composant de chargement inline, plus stable
+// =================================================================================
+// COMPOSANT D'UPLOAD INLINE
+// =================================================================================
 const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
@@ -258,7 +266,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
         }
 
         if (successfulUploads.length > 0) {
-            await onUploadComplete(files); // On passe les fichiers originaux pour la logique parente
+            // ✅ CORRECTION : On passe `successfulUploads` qui contient les URLs,
+            // et non les `files` originaux.
+            await onUploadComplete(successfulUploads);
         }
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete, folder]);
@@ -304,7 +314,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
     );
 };
 
-
+// =================================================================================
+// COMPOSANT PRINCIPAL DE LA VUE DÉTAILLÉE
+// =================================================================================
 export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onAddBriefingDocuments }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
@@ -315,7 +327,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showUploader, setShowUploader] = useState(false);
-    const [showBriefingUploader, setShowBriefingUploader] = useState(false); // ✅ NOUVEAU
+    const [showBriefingUploader, setShowBriefingUploader] = useState(false);
     const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
@@ -369,10 +381,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         refreshData();
     };
 
-    // ✅ NOUVEAU : Gère l'upload des documents de préparation
     const handleBriefingUploadComplete = async (files) => {
         await onAddBriefingDocuments(interventionId, files);
-        setShowBriefingUploader(false); // Ferme l'uploader après l'envoi
+        setShowBriefingUploader(false);
     };
 
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -410,7 +421,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </ul>
                     ) : <p className="text-muted">Aucun document de préparation.</p>}
 
-                    {/* ✅ NOUVEAU : Bouton et panneau d'upload pour les admins */}
                     {isAdmin && (
                         <>
                             <button
@@ -447,7 +457,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
                 </div>
 
-                {/* ✅ CORRECTION : Section des notes admin visible par tous, éditable par l'admin */}
                 {(isAdmin || adminNotes) && (
                     <div className="section">
                         <h3>🔒 Notes de l'administration</h3>
