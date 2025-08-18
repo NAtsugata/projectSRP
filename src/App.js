@@ -22,14 +22,16 @@ import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 
 // --- Composant de Layout (structure de la page) ---
+// ✅ NOUVEAU : Structure optimisée pour le mobile
 const AppLayout = ({ profile, handleLogout }) => {
-    const location = useLocation();
+    const location = useLocation(); // Hook pour connaître la page active
     const navItems = profile.is_admin ?
         [{ id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> }, { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> }, { id: 'leaves', label: 'Congés', icon: <SunIcon /> }, { id: 'users', label: 'Employés', icon: <UsersIcon /> }, { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> }] :
         [{ id: 'planning', label: 'Planning', icon: <BriefcaseIcon/> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'leaves', label: 'Congés', icon: <SunIcon/> }, { id: 'vault', label: 'Coffre-fort', icon: <LockIcon/> }];
 
     return (
         <div className="app-container">
+            {/* --- Barre de navigation pour Desktop --- */}
             <header className="app-header desktop-nav">
                 <div className="header-content">
                     <div className="flex-center" style={{gap: '0.75rem'}}>
@@ -47,10 +49,12 @@ const AppLayout = ({ profile, handleLogout }) => {
                 </div>
             </header>
 
+            {/* --- Contenu principal de la page --- */}
             <main className="main-content">
                 <Outlet />
             </main>
 
+            {/* --- Barre d'onglets pour Mobile --- */}
             <footer className="mobile-nav">
                  <div className="mobile-nav-header">
                     <div className="flex-center" style={{gap: '0.5rem'}}>
@@ -179,15 +183,10 @@ function App() {
         else showToast("Profil mis à jour.");
     };
 
-    // ✅ CORRECTION : La fonction ne gère plus les fichiers et retourne la nouvelle intervention.
-    const handleAddIntervention = async (interventionData, assignedUserIds) => {
-        const { data, error } = await interventionService.createIntervention(interventionData, assignedUserIds);
-        if (error) {
-            showToast(`Erreur création intervention: ${error.message}`, "error");
-            throw error; // Propage l'erreur pour que le composant puisse la gérer
-        }
-        showToast("Intervention ajoutée.");
-        return data; // Retourne l'objet de la nouvelle intervention
+    const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
+        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
+        if (error) showToast(`Erreur création intervention: ${error.message}`, "error");
+        else showToast("Intervention ajoutée.");
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
@@ -282,7 +281,145 @@ function App() {
     return (
         <>
             <style>{`
-                /* ... (les styles restent inchangés) ... */
+                /* Styles par défaut (Mobile First) */
+                .desktop-nav {
+                    display: none;
+                }
+                .mobile-nav {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background-color: #ffffff;
+                    border-top: 1px solid #e5e7eb;
+                    z-index: 1000;
+                    padding-bottom: env(safe-area-inset-bottom, 0);
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                }
+                .mobile-nav-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 1rem;
+                    background-color: #f8f9fa;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                }
+                .btn-icon-logout {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #4b5563;
+                }
+                .mobile-nav-icons {
+                    display: flex;
+                    justify-content: space-around;
+                    align-items: center;
+                }
+                .mobile-nav-button {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    flex-grow: 1;
+                    padding: 0.5rem 0.25rem;
+                    color: #6b7280;
+                    text-decoration: none;
+                    transition: color 0.2s ease;
+                }
+                .mobile-nav-button.active {
+                    color: #3b82f6;
+                }
+                .mobile-nav-button svg {
+                    width: 24px;
+                    height: 24px;
+                }
+                .mobile-nav-label {
+                    font-size: 0.7rem;
+                    margin-top: 2px;
+                }
+                .main-content {
+                    padding-bottom: 100px;
+                }
+
+                /* Styles pour tablettes et desktop */
+                @media (min-width: 768px) {
+                    .desktop-nav {
+                        display: flex;
+                    }
+                    .mobile-nav {
+                        display: none;
+                    }
+                    .main-content {
+                        padding-bottom: 0;
+                    }
+                }
+
+                /* ✅ NOUVEAU : Styles pour le processus de téléchargement */
+                .section > label[style*="cursor: pointer"] {
+                    background-color: #f7faff !important;
+                    border: 2px dashed #a0c4ff !important;
+                    color: #1c4ed8 !important;
+                    font-weight: 500 !important;
+                    padding: 1.25rem !important;
+                    border-radius: 0.75rem !important;
+                    transition: all 0.2s ease-in-out !important;
+                    text-align: center !important;
+                }
+
+                .section > label[style*="cursor: pointer"]:hover {
+                    background-color: #eef5ff !important;
+                    border-color: #3b82f6 !important;
+                    color: #1e40af !important;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1) !important;
+                }
+
+                .upload-queue-container {
+                    margin-top: 1rem;
+                    padding: 0.5rem;
+                    background-color: #f8f9fa;
+                    border-radius: 0.75rem;
+                    border: 1px solid #e5e7eb;
+                }
+                .upload-queue-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem;
+                    margin-bottom: 0.5rem;
+                    background-color: white;
+                    border-radius: 0.5rem;
+                    border: 1px solid #e5e7eb;
+                    transition: all 0.2s ease;
+                }
+                .upload-queue-item:last-child {
+                    margin-bottom: 0;
+                }
+                .upload-queue-item.status-error {
+                    background-color: #fee2e2;
+                    border-color: #fecaca;
+                    color: #991b1b;
+                }
+                .upload-queue-item.status-completed {
+                    background-color: #dcfce7;
+                    border-color: #bbf7d0;
+                    color: #166534;
+                }
+                .upload-progress-bar {
+                    width: 100%;
+                    height: 6px;
+                    background-color: #e5e7eb;
+                    border-radius: 3px;
+                    overflow: hidden;
+                    margin-top: 0.25rem;
+                }
+                .upload-progress-fill {
+                    height: 100%;
+                    background-color: #3b82f6;
+                    transition: width 0.3s ease;
+                    border-radius: 3px;
+                }
             `}</style>
 
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
@@ -297,17 +434,7 @@ function App() {
                                 <Route index element={<Navigate to="/dashboard" replace />} />
                                 <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route
-                                    path="planning"
-                                    element={<AdminPlanningView
-                                        interventions={interventions}
-                                        users={users}
-                                        onAddIntervention={handleAddIntervention}
-                                        onArchive={handleArchiveIntervention}
-                                        onDelete={handleDeleteIntervention}
-                                        onAddBriefingDocuments={handleAddBriefingDocuments} // ✅ CORRECTION : Ajout de la prop
-                                    />}
-                                />
+                                <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} />} />
                                 <Route
                                     path="planning/:interventionId"
                                     element={<InterventionDetailView {...interventionDetailProps} />}
