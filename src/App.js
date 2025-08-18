@@ -192,12 +192,19 @@ function App() {
         } else {
             showToast("Profil mis à jour avec succès.");
 
+            // On met à jour la liste locale des utilisateurs pour un affichage instantané
+            setUsers(currentUsers =>
+                currentUsers.map(user =>
+                    user.id === updatedUserData.id ? { ...user, ...updates } : user
+                )
+            );
+
             // Si l'utilisateur modifié est l'utilisateur actuel, on met à jour son profil localement
             if (profile && profile.id === updatedUserData.id) {
                 setProfile(prevProfile => ({ ...prevProfile, ...updates }));
             }
 
-            // On rafraîchit la liste des utilisateurs pour voir le changement
+            // On peut garder refreshData pour resynchroniser avec la base de données par sécurité
             await refreshData(profile);
         }
     };
