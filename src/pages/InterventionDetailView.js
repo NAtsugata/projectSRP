@@ -259,6 +259,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                 });
                 if (result.error) throw result.error;
 
+                // ✅ CORRECTION : Logique robuste pour extraire l'URL, quelle que soit la structure de l'objet retourné.
                 const urlSource = result.publicURL || result;
                 const publicUrl = urlSource.publicUrl || urlSource;
 
@@ -350,16 +351,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [showBriefingUploader, setShowBriefingUploader] = useState(false);
     const signatureCanvasRef = useRef(null);
 
-    // ✅ CORRECTION : Logique de chargement et de redirection plus robuste
     useEffect(() => {
-        // Si la liste globale des interventions est vide, on ne fait rien.
-        // Cela empêche la redirection pendant la déconnexion ou le chargement initial.
-        if (interventions.length === 0) {
-            return;
-        }
-
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
-
         if (foundIntervention) {
             setIntervention(foundIntervention);
             setReport(foundIntervention.report || {
@@ -367,8 +360,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             });
             setAdminNotes(foundIntervention.admin_notes || '');
             setLoading(false);
-        } else {
-            // On ne redirige que si la liste est chargée mais que l'ID est introuvable.
+        } else if (interventions.length > 0) {
             navigate('/planning');
         }
     }, [interventions, interventionId, navigate, dataVersion]);
@@ -411,8 +403,27 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     };
 
     const handleBriefingUploadComplete = async (uploadedFiles) => {
+        // ✅ CORRECTION : Mise à jour "optimiste" de l'interface pour un affichage instantané
+        const newDocsForDisplay = uploadedFiles.map(file => ({
+            id: `temp-${Date.now()}-${Math.random()}`,
+            file_name: file.name,
+            file_url: file.url,
+        }));
+
+        setIntervention(prev => ({
+            ...prev,
+            intervention_briefing_documents: [
+                ...(prev.intervention_briefing_documents || []),
+                ...newDocsForDisplay
+            ]
+        }));
+
+        // Sauvegarde en arrière-plan
         await onAddBriefingDocuments(interventionId, uploadedFiles);
-        refreshData();
+
+        // On ne rafraîchit pas les données ici pour éviter une "race condition"
+        // qui pourrait écraser la mise à jour optimiste.
+
         setShowBriefingUploader(false);
     };
 
