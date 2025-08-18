@@ -267,16 +267,13 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
 
         if (successfulUploads.length > 0) {
             try {
-                // ✅ On passe les fichiers avec leurs URLs pour l'affichage
                 await onUploadComplete(successfulUploads);
             } catch (error) {
-                // ✅ Gestion d'erreur si la sauvegarde échoue, pour ne pas bloquer l'interface
                 console.error("Erreur lors de la sauvegarde du rapport:", error);
                 setUploadState(p => ({ ...p, error: "La sauvegarde des fichiers a échoué. Veuillez rafraîchir et réessayer." }));
             }
         }
 
-        // On termine l'état de téléversement seulement après que tout soit fini
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete, folder]);
 
@@ -318,7 +315,6 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                 </div>
             )}
 
-            {/* ✅ Affichage du message d'erreur global */}
             {uploadState.error && (
                 <div className="error-message" style={{ color: '#dc2626', marginTop: '1rem', textAlign: 'center', fontWeight: 500 }}>
                     {uploadState.error}
@@ -392,7 +388,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
         setReport(updatedReport);
         await onSaveSilent(intervention.id, updatedReport);
-        refreshData();
+        // ✅ CORRECTION : On ne rafraîchit pas les données globales ici.
+        // Cela évite d'écraser l'état local avec des données potentiellement
+        // pas encore à jour, ce qui faisait disparaître les images.
+        // L'interface est mise à jour "optimistement" via setReport.
+        setShowUploader(false);
     };
 
     const handleBriefingUploadComplete = async (files) => {
