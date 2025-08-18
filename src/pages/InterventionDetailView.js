@@ -259,12 +259,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                 });
                 if (result.error) throw result.error;
 
-                // ✅ CORRECTION : Logique robuste pour extraire l'URL, quelle que soit la structure de l'objet retourné.
-                const urlSource = result.publicURL || result;
-                const publicUrl = urlSource.publicUrl || urlSource;
+                const publicUrl = result.publicURL?.publicUrl || result.publicURL;
 
                 if (typeof publicUrl !== 'string') {
-                    console.error("L'URL extraite n'est pas une chaîne de caractères. Résultat du service:", result);
                     throw new Error("Format d'URL invalide reçu du service de stockage.");
                 }
 
@@ -458,7 +455,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="btn btn-sm btn-primary"
-                                            download={doc.file_name}
+                                            download={doc.file_name} // ✅ CORRECTION: Force le téléchargement
                                         >
                                             <DownloadIcon /> Voir
                                         </a>
@@ -535,6 +532,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                         </div>
                                     )}
                                     <span className="file-name">{file.name}</span>
+                                    {/* ✅ CORRECTION: Force le téléchargement */}
                                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
                                 </li>
                             ))}
