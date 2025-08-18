@@ -204,8 +204,8 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     );
 };
 
-// Le composant de chargement est maintenant une modale pour éviter les sauts de page
-const UploaderModal = ({ interventionId, onUploadComplete, onClose, folder = 'report' }) => {
+// Composant de chargement inline, plus stable
+const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
     const inputRef = useRef(null);
 
@@ -250,7 +250,6 @@ const UploaderModal = ({ interventionId, onUploadComplete, onClose, folder = 're
                     setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
                 });
                 if (result.error) throw result.error;
-                // ✅ CORRECTION : On s'assure que le type de fichier est bien celui d'origine
                 successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
                 setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
             } catch (error) {
@@ -264,55 +263,43 @@ const UploaderModal = ({ interventionId, onUploadComplete, onClose, folder = 're
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete, folder]);
 
-    const allDone = !uploadState.isUploading && uploadState.queue.length > 0;
-
     return (
-        <div className="uploader-modal-overlay">
-            <div className="mobile-uploader-panel">
-                <h4>Ajouter des fichiers</h4>
-                {!allDone && (
-                    <>
-                        <input
-                            ref={inputRef}
-                            type="file"
-                            multiple
-                            accept="image/*,application/pdf"
-                            onChange={handleFileChange}
-                            disabled={uploadState.isUploading}
-                            style={{ display: 'none' }}
-                        />
-                        <button
-                            onClick={() => inputRef.current.click()}
-                            className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
-                            disabled={uploadState.isUploading}
-                        >
-                            {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-                        </button>
-                    </>
-                )}
+        <div className="mobile-uploader-panel">
+            <input
+                ref={inputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                disabled={uploadState.isUploading}
+                style={{ display: 'none' }}
+            />
+            <button
+                onClick={() => inputRef.current.click()}
+                className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+                disabled={uploadState.isUploading}
+            >
+                {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
+            </button>
 
-                {uploadState.queue.length > 0 && (
-                    <div className="upload-queue-container">
-                        {uploadState.queue.map(item => (
-                            <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                                <div style={{width: '24px', flexShrink: 0}}>
-                                    {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
-                                    {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
-                                    {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
-                                </div>
-                                <div style={{flexGrow: 1, minWidth: 0}}>
-                                    <div className="file-name">{item.name}</div>
-                                    {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>}
-                                    {item.error && <div className="error-message">{item.error}</div>}
-                                </div>
+            {uploadState.queue.length > 0 && (
+                <div className="upload-queue-container">
+                    {uploadState.queue.map(item => (
+                        <div key={item.id} className={`upload-queue-item status-${item.status}`}>
+                            <div style={{width: '24px', flexShrink: 0}}>
+                                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
+                                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
+                                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
                             </div>
-                        ))}
-                    </div>
-                )}
-                {allDone && (
-                    <button onClick={onClose} className="btn btn-secondary w-full" style={{marginTop: '1rem'}}>Fermer</button>
-                )}
-            </div>
+                            <div style={{flexGrow: 1, minWidth: 0}}>
+                                <div className="file-name">{item.name}</div>
+                                {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>}
+                                {item.error && <div className="error-message">{item.error}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -387,6 +374,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         setShowBriefingUploader(false);
     };
 
+    // ✅ CORRECTION : Fonction de détection d'image plus robuste
+    const isImageUrl = (file) => {
+        if (file.type && file.type.startsWith('image/')) {
+            return true;
+        }
+        if (file.url) {
+            return /\.(jpg|jpeg|png|gif|webp)$/i.test(file.url);
+        }
+        return false;
+    };
+
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
     if (loading || !intervention || !report) {
@@ -396,24 +394,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     return (
         <div>
             {showSignatureModal && <SignatureModal onSave={handleSaveSignatureFromModal} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
-
-            {showUploader && (
-                <UploaderModal
-                    interventionId={interventionId}
-                    onUploadComplete={handleUploadComplete}
-                    onClose={() => setShowUploader(false)}
-                    folder="report"
-                />
-            )}
-            {showBriefingUploader && (
-                 <UploaderModal
-                    interventionId={interventionId}
-                    onUploadComplete={handleBriefingUploadComplete}
-                    onClose={() => setShowBriefingUploader(false)}
-                    folder="briefing"
-                />
-            )}
-
             <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
             <div className="card-white">
                 <h2>{intervention.client}</h2>
@@ -441,12 +421,22 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     ) : <p className="text-muted">Aucun document de préparation.</p>}
 
                     {isAdmin && (
-                        <button
-                            onClick={() => setShowBriefingUploader(true)}
-                            className="btn btn-primary w-full"
-                        >
-                            ➕ Ajouter des documents
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowBriefingUploader(!showBriefingUploader)}
+                                className={`btn w-full ${showBriefingUploader ? 'btn-secondary' : 'btn-primary'}`}
+                            >
+                                {showBriefingUploader ? 'Fermer' : '➕ Ajouter des documents'}
+                            </button>
+
+                            {showBriefingUploader && (
+                                <InlineUploader
+                                    interventionId={interventionId}
+                                    onUploadComplete={handleBriefingUploadComplete}
+                                    folder="briefing"
+                                />
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -489,7 +479,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {report.files.map((file, idx) => (
                                 <li key={`${file.url}-${idx}`} className="document-item-optimized">
-                                    {file.type && file.type.startsWith('image/') ? (
+                                    {isImageUrl(file) ? (
                                         <OptimizedImage src={file.url} alt={file.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} />
                                     ) : (
                                         <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9ecef', borderRadius: '0.25rem' }}>
@@ -504,12 +494,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
 
                     {!isAdmin && (
-                        <button
-                            onClick={() => setShowUploader(true)}
-                            className="btn btn-primary w-full"
-                        >
-                            📷 Ajouter photos/documents
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowUploader(!showUploader)}
+                                className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}
+                            >
+                                {showUploader ? 'Fermer' : '📷 Ajouter photos/documents'}
+                            </button>
+
+                            {showUploader && (
+                                <InlineUploader
+                                    interventionId={interventionId}
+                                    onUploadComplete={handleUploadComplete}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
                 <div className="section">
