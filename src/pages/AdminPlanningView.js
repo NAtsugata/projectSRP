@@ -1,13 +1,17 @@
-// src/pages/AdminPlanningView.js - VERSION AVEC UPLOAD STABILISÉ
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+// src/pages/AdminPlanningView.js - VERSION AVEC FORMULAIRE STABLE SUR MOBILE
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GenericStatusBadge } from '../components/SharedUI';
 import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
 
 export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
     const navigate = useNavigate();
-    const [showForm, setShowForm] = useState(false);
+
+    // ✅ CORRECTION : On utilise l'URL pour garder le formulaire ouvert
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+
     const [formValues, setFormValues] = useState({
         client: '',
         address: '',
@@ -16,11 +20,14 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         time: '08:00'
     });
     const [assignedUsers, setAssignedUsers] = useState([]);
-
-    // ✅ ÉTAT STABILISÉ pour gérer la liste des fichiers à envoyer
     const [briefingFiles, setBriefingFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fileError, setFileError] = useState('');
+
+    // Met à jour l'état si l'URL change (ex: bouton retour du navigateur)
+    useEffect(() => {
+        setShowForm(searchParams.get('new') === 'true');
+    }, [searchParams]);
 
     const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
 
@@ -36,19 +43,30 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
     };
 
-    // ✅ GESTION DES FICHIERS FIABILISÉE
+    // ✅ CORRECTION : Fonctions pour ouvrir/fermer le formulaire de manière stable
+    const openForm = () => {
+        setSearchParams({ new: 'true' });
+    };
+
+    const closeForm = () => {
+        setSearchParams({});
+        // Reset des champs du formulaire
+        setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
+        setAssignedUsers([]);
+        setBriefingFiles([]);
+        setFileError('');
+    };
+
     const handleFileChange = useCallback((e) => {
         setFileError('');
         const files = Array.from(e.target.files);
         if (!files.length) return;
 
-        // Validation simple pour l'exemple
         if (briefingFiles.length + files.length > 10) {
             setFileError("Vous ne pouvez pas ajouter plus de 10 fichiers.");
             return;
         }
 
-        // On ajoute un ID unique à chaque fichier pour une gestion stable dans la liste
         const newFilesWithId = files.map(file => ({
             id: `file-${Date.now()}-${Math.random()}`,
             fileObject: file
@@ -66,16 +84,9 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setIsSubmitting(true);
 
         try {
-            // On extrait uniquement les objets File pour la fonction parente
             const filesToUpload = briefingFiles.map(f => f.fileObject);
             await onAddIntervention(formValues, assignedUsers, filesToUpload);
-
-            // Reset du formulaire après succès
-            setShowForm(false);
-            setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
-            setAssignedUsers([]);
-            setBriefingFiles([]);
-            setFileError('');
+            closeForm(); // Ferme et réinitialise le formulaire après succès
         } catch (error) {
             console.error("Erreur lors de la création de l'intervention:", error);
             setFileError(`Erreur: ${error.message}`);
@@ -116,7 +127,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
             <div className="flex-between mb-6">
                 <h3>Gestion du Planning</h3>
-                <button onClick={() => setShowForm(!showForm)} className="btn btn-primary flex-center">
+                <button onClick={showForm ? closeForm : openForm} className="btn btn-primary flex-center">
                     <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
                 </button>
             </div>
@@ -137,7 +148,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
                     </div>
 
-                    {/* ✅ SYSTÈME D'UPLOAD FIABILISÉ */}
+                    {/* Système d'upload fiabilisé */}
                     <div className="form-group">
                         <label>Documents de préparation (optionnel)</label>
                         <input
