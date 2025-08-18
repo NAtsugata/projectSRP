@@ -22,9 +22,8 @@ import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 
 // --- Composant de Layout (structure de la page) ---
-// ✅ NOUVEAU : Structure optimisée pour le mobile
 const AppLayout = ({ profile, handleLogout }) => {
-    const location = useLocation(); // Hook pour connaître la page active
+    const location = useLocation();
     const navItems = profile.is_admin ?
         [{ id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> }, { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> }, { id: 'leaves', label: 'Congés', icon: <SunIcon /> }, { id: 'users', label: 'Employés', icon: <UsersIcon /> }, { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> }] :
         [{ id: 'planning', label: 'Planning', icon: <BriefcaseIcon/> }, {id: 'agenda', label: 'Agenda', icon: <CalendarIcon/>}, { id: 'leaves', label: 'Congés', icon: <SunIcon/> }, { id: 'vault', label: 'Coffre-fort', icon: <LockIcon/> }];
@@ -177,10 +176,22 @@ function App() {
         navigate('/login');
     };
 
+    // --- FONCTION CORRIGÉE ---
     const handleUpdateUser = async (updatedUserData) => {
         const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
-        if (error) showToast("Erreur mise à jour profil.", "error");
-        else showToast("Profil mis à jour.");
+        if (error) {
+            showToast("Erreur mise à jour profil.", "error");
+        } else {
+            showToast("Profil mis à jour.");
+
+            // Si l'utilisateur modifié est l'utilisateur actuel, mettre à jour son profil dans l'état
+            if (profile && profile.id === updatedUserData.id) {
+                setProfile(prevProfile => ({ ...prevProfile, ...updatedUserData }));
+            }
+
+            // Rafraîchir toute la liste des utilisateurs pour voir le changement
+            await refreshData(profile);
+        }
     };
 
     const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
@@ -356,7 +367,7 @@ function App() {
                     }
                 }
 
-                /* ✅ NOUVEAU : Styles pour le processus de téléchargement */
+                /* Styles pour le processus de téléchargement */
                 .section > label[style*="cursor: pointer"] {
                     background-color: #f7faff !important;
                     border: 2px dashed #a0c4ff !important;
