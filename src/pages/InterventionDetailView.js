@@ -11,7 +11,7 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     const imgRef = useRef(null);
 
     useEffect(() => {
-        if (!src) {
+        if (!src || typeof src !== 'string') { // Vérifie aussi que src est une chaîne
             setLoadState('error');
             return;
         }
@@ -258,9 +258,19 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                     setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
                 });
                 if (result.error) throw result.error;
-                successfulUploads.push({ name: files[i].name, url: result.publicURL, type: files[i].type });
+
+                // ✅ CORRECTION : Extrait l'URL de l'objet retourné par le service.
+                // Gère le cas où `result.publicURL` est un objet { publicUrl: '...' } ou directement une chaîne.
+                const publicUrl = result.publicURL?.publicUrl || result.publicURL;
+
+                if (typeof publicUrl !== 'string') {
+                    throw new Error("Format d'URL invalide reçu du service de stockage.");
+                }
+
+                successfulUploads.push({ name: files[i].name, url: publicUrl, type: files[i].type });
                 setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
             } catch (error) {
+                console.error("Erreur d'upload:", error);
                 setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
             }
         }
@@ -388,14 +398,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
         setReport(updatedReport);
         await onSaveSilent(intervention.id, updatedReport);
-        // ✅ CORRECTION : On restaure le rafraîchissement des données pour la mise à jour auto
         refreshData();
-        // ✅ CORRECTION : On ne ferme plus le panneau pour permettre plusieurs ajouts
-        // setShowUploader(false);
     };
 
     const handleBriefingUploadComplete = async (files) => {
         await onAddBriefingDocuments(interventionId, files);
+        refreshData(); // Assure que la liste des documents de prépa est à jour
         setShowBriefingUploader(false);
     };
 
@@ -418,7 +426,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {intervention.intervention_briefing_documents.map(doc => {
-                                // ✅ CORRECTION : Logique d'affichage des images pour les admins
                                 const isImage = doc.file_name && /\.(jpe?g|png|gif|webp)$/i.test(doc.file_name);
                                 return (
                                     <li key={doc.id} className="document-item-optimized">
