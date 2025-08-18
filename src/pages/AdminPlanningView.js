@@ -1,390 +1,254 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'; // ✅ Ajout de useSearchParams
-import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
-import { storageService } from '../lib/supabase';
+// src/pages/AdminPlanningView.js - VERSION AVEC UPLOAD FIABILISÉ
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { GenericStatusBadge } from '../components/SharedUI';
+import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
+import { getAssignedUsersNames } from '../utils/helpers';
+import { storageService } from '../lib/supabase'; // Assurez-vous que ce chemin est correct
 
-// =================================================================================
-// COMPOSANT IMAGE OPTIMISÉE (Lazy Loading)
-// =================================================================================
-const OptimizedImage = ({ src, alt, className, style, onClick }) => {
-    const [loadState, setLoadState] = useState('loading');
-    const imgRef = useRef(null);
+// La prop `onAddBriefingDocuments` est maintenant requise
+export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete, onAddBriefingDocuments }) {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
 
-    useEffect(() => {
-        if (!src || typeof src !== 'string') {
-            setLoadState('error');
-            return;
-        }
-
-        const img = new Image();
-        img.onload = () => setLoadState('loaded');
-        img.onerror = () => setLoadState('error');
-
-        if ('IntersectionObserver' in window && imgRef.current) {
-            const observer = new IntersectionObserver(
-                (entries) => {
-                    if (entries[0].isIntersecting) {
-                        img.src = src;
-                        observer.disconnect();
-                    }
-                },
-                { rootMargin: '50px' }
-            );
-            observer.observe(imgRef.current);
-            return () => observer.disconnect();
-        } else {
-            img.src = src;
-        }
-    }, [src]);
-
-    if (loadState === 'loading') {
-        return (
-            <div ref={imgRef} className={className} style={{...style, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6'}}>
-                <LoaderIcon className="animate-spin" />
-            </div>
-        );
-    }
-
-    if (loadState === 'error') {
-        return (
-            <div className={className} style={{...style, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fee2e2', color: '#dc2626'}}>
-                <XCircleIcon />
-            </div>
-        );
-    }
-
-    return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style, display: 'block'}} onClick={onClick} loading="lazy" />;
-};
-
-// =================================================================================
-// MODALE DE SIGNATURE
-// =================================================================================
-const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
-    const canvasRef = useRef(null);
-    const [hasDrawn, setHasDrawn] = useState(false);
+    const [formValues, setFormValues] = useState({
+        client: '', address: '', service: '', date: '', time: '08:00'
+    });
+    const [assignedUsers, setAssignedUsers] = useState([]);
+    const [briefingFiles, setBriefingFiles] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formError, setFormError] = useState('');
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+        setShowForm(searchParams.get('new') === 'true');
+    }, [searchParams]);
 
-        const isMobile = window.innerWidth < 768;
-        canvas.width = Math.min(window.innerWidth * 0.9, 600);
-        canvas.height = isMobile ? window.innerHeight * 0.5 : 300;
+    const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
 
-        const ctx = canvas.getContext('2d');
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = isMobile ? 3 : 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+    const handleUserAssignmentChange = (userId) => {
+        setAssignedUsers(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
 
-        if (existingSignature) {
-            const img = new Image();
-            img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); setHasDrawn(true); };
-            img.src = existingSignature;
-        }
+    const setDateShortcut = (daysToAdd) => {
+        const date = new Date();
+        date.setDate(date.getDate() + daysToAdd);
+        setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
+    };
 
-        let drawing = false;
-        let lastPos = null;
+    const openForm = () => setSearchParams({ new: 'true' });
 
-        const getPos = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) * (canvas.width / rect.width),
-                y: (clientY - rect.top) * (canvas.height / rect.height)
-            };
-        };
+    const closeForm = () => {
+        setSearchParams({});
+        setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
+        setAssignedUsers([]);
+        setBriefingFiles([]);
+        setFormError('');
+    };
 
-        const startDrawing = (e) => { e.preventDefault(); drawing = true; setHasDrawn(true); lastPos = getPos(e); ctx.beginPath(); ctx.moveTo(lastPos.x, lastPos.y); };
-        const stopDrawing = (e) => { e.preventDefault(); drawing = false; lastPos = null; };
-        const draw = (e) => { if (!drawing) return; e.preventDefault(); const pos = getPos(e); if(lastPos) { ctx.lineTo(pos.x, pos.y); ctx.stroke(); } lastPos = pos; };
+    const handleFileChange = useCallback((e) => {
+        setFormError('');
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
 
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseleave', stopDrawing);
-        canvas.addEventListener('touchstart', startDrawing, { passive: false });
-        canvas.addEventListener('touchend', stopDrawing, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-
-        return () => {
-            canvas.removeEventListener('mousedown', startDrawing);
-            canvas.removeEventListener('mouseup', stopDrawing);
-            canvas.removeEventListener('mousemove', draw);
-            canvas.removeEventListener('mouseleave', stopDrawing);
-            canvas.removeEventListener('touchstart', startDrawing);
-            canvas.removeEventListener('touchend', stopDrawing);
-            canvas.removeEventListener('touchmove', draw);
-        };
-    }, [existingSignature]);
-
-    const handleSave = () => { if (canvasRef.current) { onSave(canvasRef.current.toDataURL('image/png')); } };
-    const handleClear = () => { const canvas = canvasRef.current; if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); setHasDrawn(false); } };
-
-    return (
-        <div className="modal-overlay">
-            <div className="modal-content signature-modal-content">
-                <h3>✍️ Signature du client</h3>
-                <p style={{fontSize: '0.875rem', color: '#6c757d', marginBottom: '1rem'}}>Veuillez faire signer le client ci-dessous</p>
-                <canvas ref={canvasRef} className="signature-canvas-fullscreen" />
-                <div className="modal-footer" style={{marginTop: '1rem'}}>
-                    <button type="button" onClick={handleClear} className="btn btn-secondary">Effacer</button>
-                    <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
-                    <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!hasDrawn}>Valider la signature</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// =================================================================================
-// COMPOSANT D'UPLOAD INLINE
-// =================================================================================
-const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
-    const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
-    const inputRef = useRef(null);
-
-    const compressImage = useCallback(async (file) => {
-        if (!file.type.startsWith('image/')) return file;
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.onload = () => {
-                const maxWidth = 1280, maxHeight = 720;
-                let { width, height } = img;
-                if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                } else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => { resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file); }, 'image/jpeg', 0.8);
-            };
-            img.onerror = () => resolve(file);
-            img.src = URL.createObjectURL(file);
+        setBriefingFiles(prev => {
+            if (prev.length + files.length > 10) {
+                setFormError("Vous ne pouvez pas ajouter plus de 10 fichiers.");
+                return prev;
+            }
+            const newFilesWithId = files.map(file => ({
+                id: `file-${Date.now()}-${Math.random()}`,
+                fileObject: file
+            }));
+            return [...prev, ...newFilesWithId];
         });
     }, []);
 
-    const handleFileChange = useCallback(async (event) => {
-        const files = Array.from(event.target.files);
-        if (inputRef.current) { inputRef.current.value = ""; }
-        if (files.length === 0) return;
-
-        const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
-        setUploadState({ isUploading: true, queue: queueItems, error: null });
-
-        const successfulUploads = [];
-        for (let i = 0; i < files.length; i++) {
-            try {
-                const fileToUpload = await compressImage(files[i]);
-                const result = await storageService.uploadInterventionFile(fileToUpload, interventionId, folder, (progress) => {
-                    setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
-                });
-                if (result.error) throw result.error;
-
-                const urlSource = result.publicURL || result;
-                const publicUrl = urlSource.publicUrl || urlSource;
-
-                if (typeof publicUrl !== 'string') { throw new Error("Format d'URL invalide reçu du service de stockage."); }
-
-                successfulUploads.push({ name: files[i].name, url: publicUrl, type: files[i].type });
-                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
-            } catch (error) {
-                setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'error', error: error.message } : item) }));
-            }
-        }
-
-        if (successfulUploads.length > 0) {
-            try { await onUploadComplete(successfulUploads); }
-            catch (error) { setUploadState(p => ({ ...p, error: "La sauvegarde des fichiers a échoué. Veuillez rafraîchir et réessayer." })); }
-        }
-
-        setUploadState(p => ({ ...p, isUploading: false }));
-    }, [interventionId, compressImage, onUploadComplete, folder]);
-
-    return (
-        <div className="mobile-uploader-panel">
-            <input ref={inputRef} type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} disabled={uploadState.isUploading} style={{ display: 'none' }} />
-            <button onClick={() => inputRef.current.click()} className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`} disabled={uploadState.isUploading}>
-                {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
-            </button>
-            {uploadState.queue.length > 0 && (
-                <div className="upload-queue-container">
-                    {uploadState.queue.map(item => (
-                        <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                            <div style={{width: '24px', flexShrink: 0}}>
-                                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
-                                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
-                                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
-                            </div>
-                            <div style={{flexGrow: 1, minWidth: 0}}>
-                                <div className="file-name">{item.name}</div>
-                                {item.status === 'uploading' && (<div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${item.progress}%`}} /></div>)}
-                                {item.error && <div className="error-message">{item.error}</div>}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-            {uploadState.error && (<div className="error-message" style={{ color: '#dc2626', marginTop: '1rem', textAlign: 'center', fontWeight: 500 }}>{uploadState.error}</div>)}
-        </div>
-    );
-};
-
-// =================================================================================
-// COMPOSANT PRINCIPAL DE LA VUE DÉTAILLÉE
-// =================================================================================
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onAddBriefingDocuments }) {
-    const { interventionId } = useParams();
-    const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-
-    const [intervention, setIntervention] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [report, setReport] = useState(null);
-    const [adminNotes, setAdminNotes] = useState('');
-    const [showSignatureModal, setShowSignatureModal] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-
-    // ✅ CORRECTION : L'état du panneau d'upload est maintenant contrôlé par l'URL
-    const [showUploader, setShowUploader] = useState(searchParams.get('uploader') === 'open');
-    const [showBriefingUploader, setShowBriefingUploader] = useState(false);
-    const [isDataLoaded, setIsDataLoaded] = useState(false);
-    const signatureCanvasRef = useRef(null);
-
-    // Synchronise l'état avec l'URL
-    useEffect(() => {
-        setShowUploader(searchParams.get('uploader') === 'open');
-    }, [searchParams]);
-
-    useEffect(() => {
-        const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
-        if (foundIntervention) {
-            setIntervention(foundIntervention);
-            setReport(foundIntervention.report || { notes: '', files: [], arrivalTime: null, departureTime: null, signature: null });
-            setAdminNotes(foundIntervention.admin_notes || '');
-            setLoading(false);
-            setIsDataLoaded(true);
-        } else if (isDataLoaded) {
-            return;
-        } else if (interventions.length > 0 && !foundIntervention) {
-            navigate('/planning');
-        }
-    }, [interventions, interventionId, navigate, isDataLoaded]);
-
-    const handleReportChange = (field, value) => { setReport(prev => ({ ...prev, [field]: value })); };
-    const handleSave = async () => { if (!intervention) return; setIsSaving(true); try { await onSave(intervention.id, { ...report, admin_notes: adminNotes }); } finally { setIsSaving(false); } };
-    const handleClearSignature = () => { handleReportChange('signature', null); };
-    const handleSaveSignatureFromModal = (signatureDataUrl) => { handleReportChange('signature', signatureDataUrl); setShowSignatureModal(false); };
-    const handleUploadComplete = async (uploadedFiles) => { const updatedReport = { ...report, files: [...(report.files || []), ...uploadedFiles] }; setReport(updatedReport); await onSaveSilent(intervention.id, updatedReport); refreshData(); };
-    const handleBriefingUploadComplete = async (uploadedFiles) => { await onAddBriefingDocuments(interventionId, uploadedFiles); refreshData(); setShowBriefingUploader(false); };
-    const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-
-    // ✅ CORRECTION : Fonctions pour ouvrir/fermer le panneau via l'URL
-    const toggleUploader = () => {
-        const newSearchParams = new URLSearchParams(searchParams);
-        if (showUploader) {
-            newSearchParams.delete('uploader');
-        } else {
-            newSearchParams.set('uploader', 'open');
-        }
-        setSearchParams(newSearchParams);
+    const handleRemoveFile = (fileId) => {
+        setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
     };
 
-    if (loading) { return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement...</p></div>; }
-    if (!intervention) { return ( <div style={{ padding: '1rem' }}><h3>Intervention non trouvée</h3><p>Cette intervention n'existe pas ou a été supprimée.</p><button onClick={() => navigate('/planning')} className="btn btn-primary">Retour au planning</button></div> ); }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!onAddBriefingDocuments) {
+            setFormError("Erreur de configuration : la fonction onAddBriefingDocuments est manquante.");
+            return;
+        }
+        setIsSubmitting(true);
+        setFormError('');
+        let newIntervention = null;
+
+        try {
+            // Étape 1: Créer l'intervention (sans fichiers) et récupérer son ID
+            newIntervention = await onAddIntervention(formValues, assignedUsers);
+            if (!newIntervention || !newIntervention.id) {
+                throw new Error("La création de l'intervention a échoué ou n'a pas retourné d'ID.");
+            }
+
+            // Étape 2: Envoyer les fichiers un par un en utilisant le nouvel ID
+            const filesToUpload = briefingFiles.map(f => f.fileObject);
+            if (filesToUpload.length > 0) {
+                const successfulUploads = [];
+                for (const file of filesToUpload) {
+                    const result = await storageService.uploadInterventionFile(file, newIntervention.id, 'briefing');
+                    if (result.error) throw result.error;
+
+                    const urlSource = result.publicURL || result;
+                    const publicUrl = urlSource.publicUrl || urlSource;
+                    if (typeof publicUrl !== 'string') throw new Error("URL invalide reçue du stockage.");
+
+                    successfulUploads.push({ name: file.name, url: publicUrl, type: file.type });
+                }
+
+                // Étape 3: Lier les fichiers envoyés à l'intervention
+                if (successfulUploads.length > 0) {
+                    await onAddBriefingDocuments(newIntervention.id, successfulUploads);
+                }
+            }
+
+            closeForm(); // Succès, on ferme et réinitialise
+
+        } catch (error) {
+            console.error("Erreur lors du processus de création :", error);
+            if (newIntervention && newIntervention.id) {
+                setFormError(`L'intervention a été créée, mais l'envoi des fichiers a échoué. Modifiez-la pour les ajouter. Erreur: ${error.message}`);
+            } else {
+                setFormError(`Erreur de création : ${error.message}`);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const getStatus = (intervention) => {
+        if (intervention.status === 'Terminée') return 'Terminée';
+        if (intervention.report && intervention.report.arrivalTime) return 'En cours';
+        return intervention.status || 'À venir';
+    };
+
+    const statusColorMap = {
+        "À venir": "status-badge-blue",
+        "En cours": "status-badge-yellow",
+        "Terminée": "status-badge-green"
+    };
+
+    const formatFileSize = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+        return Math.round(bytes / (1024 * 1024) * 10) / 10 + ' MB';
+    };
 
     return (
         <div>
-            {showSignatureModal && <SignatureModal onSave={handleSaveSignatureFromModal} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
-            <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
-            <div className="card-white">
-                <h2>{intervention.client}</h2>
-                <p className="text-muted">{intervention.address}</p>
+            <style>{`
+                .file-preview-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+                .file-preview-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
+                .file-info { flex-grow: 1; min-width: 0; }
+                .file-name { font-size: 0.9rem; font-weight: 500; word-break: break-all; }
+                .file-size { font-size: 0.75rem; color: #6c757d; }
+                .form-error-message { color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: .25rem; padding: .75rem 1.25rem; }
+            `}</style>
 
-                <div className="section">
-                    <h3>📋 Documents de préparation</h3>
-                    {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
-                        <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
-                            {intervention.intervention_briefing_documents.map(doc => {
-                                const isImage = doc.file_name && /\.(jpe?g|png|gif|webp)$/i.test(doc.file_name);
-                                return (
-                                    <li key={doc.id} className="document-item-optimized">
-                                        {isImage && doc.file_url ? <OptimizedImage src={doc.file_url} alt={doc.file_name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} /> : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
-                                        <span className="file-name">{doc.file_name}</span>
-                                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary" download={doc.file_name}><DownloadIcon /> Voir</a>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    ) : <p className="text-muted">Aucun document de préparation.</p>}
-                    {isAdmin && (<>
-                        <button onClick={() => setShowBriefingUploader(!showBriefingUploader)} className={`btn w-full ${showBriefingUploader ? 'btn-secondary' : 'btn-primary'}`}>{showBriefingUploader ? 'Fermer' : '➕ Ajouter des documents'}</button>
-                        {showBriefingUploader && <InlineUploader interventionId={interventionId} onUploadComplete={handleBriefingUploadComplete} folder="briefing" />}
-                    </>)}
-                </div>
-
-                <div className="section">
-                    <h3>⏱️ Pointage</h3>
-                    <div className="grid-2-cols">
-                        <button onClick={() => handleReportChange('arrivalTime', new Date().toISOString())} className="btn btn-success" disabled={!!report.arrivalTime || isAdmin}>{report.arrivalTime ? `✅ Arrivé: ${formatTime(report.arrivalTime)}` : '🕐 Arrivée sur site'}</button>
-                        <button onClick={() => handleReportChange('departureTime', new Date().toISOString())} className="btn btn-danger" disabled={!report.arrivalTime || !!report.departureTime || isAdmin}>{report.departureTime ? `✅ Parti: ${formatTime(report.departureTime)}` : '🚪 Départ du site'}</button>
-                    </div>
-                </div>
-                <div className="section">
-                    <h3>📝 Rapport de chantier</h3>
-                    <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
-                </div>
-
-                {(isAdmin || adminNotes) && (
-                    <div className="section">
-                        <h3>🔒 Notes de l'administration</h3>
-                        <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder={isAdmin ? "Ajouter des notes..." : "Aucune note de l'administration."} rows="4" className="form-control" readOnly={!isAdmin}/>
-                    </div>
-                )}
-
-                <div className="section">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h3>📷 Photos et Documents</h3>
-                        <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
-                    </div>
-                    {report.files && report.files.length > 0 ? (
-                        <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
-                            {report.files.map((file, idx) => (
-                                <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
-                                    {file.type && file.type.startsWith('image/') ? <OptimizedImage src={file.url} alt={file.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} /> : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
-                                    <span className="file-name">{file.name}</span>
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
-                    {!isAdmin && (<>
-                        <button onClick={toggleUploader} className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}>
-                            {showUploader ? 'Fermer' : '📷 Ajouter photos/documents'}
-                        </button>
-                        {showUploader && <InlineUploader interventionId={interventionId} onUploadComplete={handleUploadComplete} />}
-                    </>)}
-                </div>
-                <div className="section">
-                    <h3>✍️ Signature du client</h3>
-                    {report.signature ? (
-                        <div>
-                            <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: '300px', border: '2px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#f8f9fa' }} />
-                            {!isAdmin && <button onClick={handleClearSignature} className="btn btn-sm btn-secondary" style={{marginTop: '0.5rem'}}>Effacer</button>}
-                        </div>
-                    ) : (
-                        <div>
-                            <canvas ref={signatureCanvasRef} width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: '300px', backgroundColor: '#f8fafc', cursor: isAdmin ? 'not-allowed' : 'crosshair' }} />
-                            {!isAdmin && <div style={{marginTop: '0.5rem'}}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>}
-                        </div>
-                    )}
-                </div>
-
-                <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-                    {isSaving ? <><LoaderIcon className="animate-spin" /> Sauvegarde...</> : '🔒 Sauvegarder et Clôturer'}
+            <div className="flex-between mb-6">
+                <h3>Gestion du Planning</h3>
+                <button onClick={showForm ? closeForm : openForm} className="btn btn-primary flex-center">
+                    <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
                 </button>
+            </div>
+
+            {showForm && (
+                <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                    {/* Champs du formulaire */}
+                    <div className="form-group"><label>Client *</label><input name="client" value={formValues.client} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
+                    <div className="form-group"><label>Adresse *</label><input name="address" value={formValues.address} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
+                    <div className="form-group"><label>Service *</label><input name="service" value={formValues.service} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
+                    <div className="grid-2-cols">
+                        <div className="form-group"><label>Date *</label><input name="date" type="date" value={formValues.date} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
+                        <div className="form-group"><label>Heure *</label><input name="time" type="time" value={formValues.time} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button type="button" onClick={() => setDateShortcut(0)} className="btn btn-secondary" disabled={isSubmitting}>Aujourd'hui</button>
+                        <button type="button" onClick={() => setDateShortcut(1)} className="btn btn-secondary" disabled={isSubmitting}>Demain</button>
+                        <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
+                    </div>
+
+                    {/* Système d'upload */}
+                    <div className="form-group">
+                        <label>Documents de préparation (optionnel)</label>
+                        <input id="briefing-file-input" type="file" multiple onChange={handleFileChange} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }} disabled={isSubmitting} />
+                        <button type="button" onClick={() => document.getElementById('briefing-file-input').click()} className="btn btn-secondary w-full" disabled={isSubmitting}>📎 Choisir des fichiers...</button>
+
+                        {briefingFiles.length > 0 && (
+                            <ul className="file-preview-list">
+                                {briefingFiles.map(item => (
+                                    <li key={item.id}>
+                                        <FileTextIcon />
+                                        <div className="file-info">
+                                            <span className="file-name">{item.fileObject.name}</span>
+                                            <span className="file-size">{formatFileSize(item.fileObject.size)}</span>
+                                        </div>
+                                        <button type="button" onClick={() => handleRemoveFile(item.id)} className="btn-icon-danger" disabled={isSubmitting} title="Retirer"><XIcon /></button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* Section d'assignation des utilisateurs */}
+                    <div className="form-group">
+                        <label>Assigner à :</label>
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
+                            {users.filter(u => !u.is_admin).map(u => (
+                                <label key={u.id} className="flex items-center gap-2" style={{cursor: isSubmitting ? 'not-allowed' : 'pointer'}}>
+                                    <input type="checkbox" checked={assignedUsers.includes(u.id)} onChange={() => handleUserAssignmentChange(u.id)} disabled={isSubmitting} />
+                                    <span>{u.full_name}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {formError && <p className="form-error-message">{formError}</p>}
+
+                    <button type="submit" className="btn btn-success w-full flex-center" disabled={isSubmitting}>
+                        {isSubmitting ? <><LoaderIcon className="animate-spin" /> Création en cours...</> : <><PlusIcon /> Créer l'intervention</>}
+                    </button>
+                </form>
+            )}
+
+            {/* Liste des interventions */}
+            <div className="card-white">
+                <h4 style={{marginBottom: '1rem'}}>Interventions planifiées</h4>
+                <ul className="document-list">
+                    {interventions.length > 0 ? interventions.map(int => {
+                        const status = getStatus(int);
+                        return (
+                            <li key={int.id}>
+                                <div style={{flexGrow: 1}}>
+                                    <div className="flex-between items-start">
+                                        <p className="font-semibold">{int.client} - {int.service}</p>
+                                        <GenericStatusBadge status={status} colorMap={statusColorMap} />
+                                    </div>
+                                    <p className="text-muted">Assigné à: {getAssignedUsersNames(int.intervention_assignments)}</p>
+                                    <p className="text-muted">{int.date} à {int.time}</p>
+                                    {int.intervention_briefing_documents?.length > 0 && (
+                                        <p className="text-muted" style={{fontSize: '0.875rem', marginTop: '0.25rem'}}>
+                                            📎 {int.intervention_briefing_documents.length} document(s) joint(s)
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => navigate('/planning/' + int.id)} className="btn-icon" title="Voir les détails"><EditIcon/></button>
+                                    <button onClick={() => onArchive(int.id)} className="btn-icon" title="Archiver"><ArchiveIcon/></button>
+                                    <button onClick={() => onDelete(int.id)} className="btn-icon-danger" title="Supprimer"><TrashIcon/></button>
+                                </div>
+                            </li>
+                        );
+                    }) : (
+                        <li style={{textAlign: 'center', padding: '2rem', color: '#6c757d'}}>Aucune intervention planifiée</li>
+                    )}
+                </ul>
             </div>
         </div>
     );
