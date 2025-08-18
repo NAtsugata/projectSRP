@@ -258,7 +258,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
         }
 
         if (successfulUploads.length > 0) {
-            await onUploadComplete(successfulUploads);
+            await onUploadComplete(files); // On passe les fichiers originaux pour la logique parente
         }
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete, folder]);
@@ -315,7 +315,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showUploader, setShowUploader] = useState(false);
-    const [showBriefingUploader, setShowBriefingUploader] = useState(false);
+    const [showBriefingUploader, setShowBriefingUploader] = useState(false); // ✅ NOUVEAU
     const signatureCanvasRef = useRef(null);
 
     useEffect(() => {
@@ -369,20 +369,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         refreshData();
     };
 
+    // ✅ NOUVEAU : Gère l'upload des documents de préparation
     const handleBriefingUploadComplete = async (files) => {
         await onAddBriefingDocuments(interventionId, files);
-        setShowBriefingUploader(false);
-    };
-
-    // ✅ CORRECTION : Fonction de détection d'image plus robuste
-    const isImageUrl = (file) => {
-        if (file.type && file.type.startsWith('image/')) {
-            return true;
-        }
-        if (file.url) {
-            return /\.(jpg|jpeg|png|gif|webp)$/i.test(file.url);
-        }
-        return false;
+        setShowBriefingUploader(false); // Ferme l'uploader après l'envoi
     };
 
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -420,6 +410,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </ul>
                     ) : <p className="text-muted">Aucun document de préparation.</p>}
 
+                    {/* ✅ NOUVEAU : Bouton et panneau d'upload pour les admins */}
                     {isAdmin && (
                         <>
                             <button
@@ -456,6 +447,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
                 </div>
 
+                {/* ✅ CORRECTION : Section des notes admin visible par tous, éditable par l'admin */}
                 {(isAdmin || adminNotes) && (
                     <div className="section">
                         <h3>🔒 Notes de l'administration</h3>
@@ -479,7 +471,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {report.files.map((file, idx) => (
                                 <li key={`${file.url}-${idx}`} className="document-item-optimized">
-                                    {isImageUrl(file) ? (
+                                    {file.type && file.type.startsWith('image/') ? (
                                         <OptimizedImage src={file.url} alt={file.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} />
                                     ) : (
                                         <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9ecef', borderRadius: '0.25rem' }}>
