@@ -403,7 +403,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     };
 
     const handleBriefingUploadComplete = async (uploadedFiles) => {
-        // Mise à jour "optimiste" de l'interface pour un affichage instantané
+        // ✅ CORRECTION : Mise à jour "optimiste" de l'interface pour un affichage instantané
         const newDocsForDisplay = uploadedFiles.map(file => ({
             id: `temp-${Date.now()}-${Math.random()}`,
             file_name: file.name,
