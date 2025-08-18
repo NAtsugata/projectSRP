@@ -211,7 +211,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 };
 
 // =================================================================================
-// COMPOSANT D'UPLOAD INLINE
+// COMPOSANT D'UPLOAD INLINE (AMÉLIORÉ)
 // =================================================================================
 const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
@@ -266,10 +266,17 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
         }
 
         if (successfulUploads.length > 0) {
-            // ✅ CORRECTION : On passe `successfulUploads` qui contient les URLs,
-            // et non les `files` originaux.
-            await onUploadComplete(successfulUploads);
+            try {
+                // ✅ On passe les fichiers avec leurs URLs pour l'affichage
+                await onUploadComplete(successfulUploads);
+            } catch (error) {
+                // ✅ Gestion d'erreur si la sauvegarde échoue, pour ne pas bloquer l'interface
+                console.error("Erreur lors de la sauvegarde du rapport:", error);
+                setUploadState(p => ({ ...p, error: "La sauvegarde des fichiers a échoué. Veuillez rafraîchir et réessayer." }));
+            }
         }
+
+        // On termine l'état de téléversement seulement après que tout soit fini
         setUploadState(p => ({ ...p, isUploading: false }));
     }, [interventionId, compressImage, onUploadComplete, folder]);
 
@@ -308,6 +315,13 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* ✅ Affichage du message d'erreur global */}
+            {uploadState.error && (
+                <div className="error-message" style={{ color: '#dc2626', marginTop: '1rem', textAlign: 'center', fontWeight: 500 }}>
+                    {uploadState.error}
                 </div>
             )}
         </div>
@@ -479,7 +493,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {report.files && report.files.length > 0 ? (
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {report.files.map((file, idx) => (
-                                <li key={`${file.url}-${idx}`} className="document-item-optimized">
+                                <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
                                     {file.type && file.type.startsWith('image/') ? (
                                         <OptimizedImage src={file.url} alt={file.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} />
                                     ) : (
