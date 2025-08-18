@@ -259,8 +259,6 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                 });
                 if (result.error) throw result.error;
 
-                // ✅ CORRECTION : Extrait l'URL de l'objet retourné par le service.
-                // Gère le cas où `result.publicURL` est un objet { publicUrl: '...' } ou directement une chaîne.
                 const publicUrl = result.publicURL?.publicUrl || result.publicURL;
 
                 if (typeof publicUrl !== 'string') {
@@ -401,9 +399,27 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         refreshData();
     };
 
-    const handleBriefingUploadComplete = async (files) => {
-        await onAddBriefingDocuments(interventionId, files);
-        refreshData(); // Assure que la liste des documents de prépa est à jour
+    const handleBriefingUploadComplete = async (uploadedFiles) => {
+        // ✅ CORRECTION : Met à jour l'état local immédiatement pour un affichage correct
+        const newDocsForDisplay = uploadedFiles.map(file => ({
+            id: `temp-${Date.now()}-${Math.random()}`, // Clé temporaire pour React
+            file_name: file.name,
+            file_url: file.url,
+        }));
+
+        setIntervention(prev => ({
+            ...prev,
+            intervention_briefing_documents: [
+                ...(prev.intervention_briefing_documents || []),
+                ...newDocsForDisplay
+            ]
+        }));
+
+        // Appelle la fonction de sauvegarde en arrière-plan
+        await onAddBriefingDocuments(interventionId, uploadedFiles);
+
+        // Rafraîchit les données pour obtenir les vrais ID de la base de données
+        refreshData();
         setShowBriefingUploader(false);
     };
 
