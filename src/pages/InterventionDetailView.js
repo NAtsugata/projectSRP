@@ -259,6 +259,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                 });
                 if (result.error) throw result.error;
 
+                // ✅ CORRECTION : Logique robuste pour extraire l'URL, quelle que soit la structure de l'objet retourné.
                 const urlSource = result.publicURL || result;
                 const publicUrl = urlSource.publicUrl || urlSource;
 
@@ -420,10 +421,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         // Sauvegarde en arrière-plan
         await onAddBriefingDocuments(interventionId, uploadedFiles);
 
-        // ✅ CORRECTION: On ne rafraîchit plus les données ici pour éviter d'écraser
-        // la mise à jour optimiste. Le rafraîchissement global se fera
-        // naturellement lors de la prochaine navigation ou action majeure.
-        // refreshData();
+        // On ne rafraîchit pas les données ici pour éviter une "race condition"
+        // qui pourrait écraser la mise à jour optimiste.
 
         setShowBriefingUploader(false);
     };
