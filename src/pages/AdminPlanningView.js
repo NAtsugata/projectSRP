@@ -1,21 +1,19 @@
-// src/pages/AdminPlanningView.js - VERSION AVEC AFFICHAGE FICHIERS CORRIGÉ SUR MOBILE
+// src/pages/AdminPlanningView.js - VERSION AVEC UPLOAD FIABILISÉ
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GenericStatusBadge } from '../components/SharedUI';
 import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
+import { storageService } from '../lib/supabase'; // Assurez-vous que ce chemin est correct
 
-export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
+// La prop `onAddBriefingDocuments` est maintenant requise
+export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete, onAddBriefingDocuments }) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
 
     const [formValues, setFormValues] = useState({
-        client: '',
-        address: '',
-        service: '',
-        date: '',
-        time: '08:00'
+        client: '', address: '', service: '', date: '', time: '08:00'
     });
     const [assignedUsers, setAssignedUsers] = useState([]);
     const [briefingFiles, setBriefingFiles] = useState([]);
@@ -50,27 +48,23 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setFormError('');
     };
 
-    // ✅ CORRECTION : Logique de mise à jour de l'état des fichiers fiabilisée
     const handleFileChange = useCallback((e) => {
         setFormError('');
         const files = Array.from(e.target.files);
         if (!files.length) return;
 
-        // On utilise la forme fonctionnelle de setState pour éviter les problèmes de "stale state"
-        setBriefingFiles(prevBriefingFiles => {
-            if (prevBriefingFiles.length + files.length > 10) {
+        setBriefingFiles(prev => {
+            if (prev.length + files.length > 10) {
                 setFormError("Vous ne pouvez pas ajouter plus de 10 fichiers.");
-                return prevBriefingFiles; // On retourne l'état précédent sans modification
+                return prev;
             }
-
             const newFilesWithId = files.map(file => ({
                 id: `file-${Date.now()}-${Math.random()}`,
                 fileObject: file
             }));
-
-            return [...prevBriefingFiles, ...newFilesWithId];
+            return [...prev, ...newFilesWithId];
         });
-    }, []); // Le tableau de dépendances vide est correct ici
+    }, []);
 
     const handleRemoveFile = (fileId) => {
         setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
@@ -78,16 +72,51 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!onAddBriefingDocuments) {
+            setFormError("Erreur de configuration : la fonction onAddBriefingDocuments est manquante.");
+            return;
+        }
         setIsSubmitting(true);
         setFormError('');
+        let newIntervention = null;
 
         try {
+            // Étape 1: Créer l'intervention (sans fichiers) et récupérer son ID
+            newIntervention = await onAddIntervention(formValues, assignedUsers);
+            if (!newIntervention || !newIntervention.id) {
+                throw new Error("La création de l'intervention a échoué ou n'a pas retourné d'ID.");
+            }
+
+            // Étape 2: Envoyer les fichiers un par un en utilisant le nouvel ID
             const filesToUpload = briefingFiles.map(f => f.fileObject);
-            await onAddIntervention(formValues, assignedUsers, filesToUpload);
-            closeForm();
+            if (filesToUpload.length > 0) {
+                const successfulUploads = [];
+                for (const file of filesToUpload) {
+                    const result = await storageService.uploadInterventionFile(file, newIntervention.id, 'briefing');
+                    if (result.error) throw result.error;
+
+                    const urlSource = result.publicURL || result;
+                    const publicUrl = urlSource.publicUrl || urlSource;
+                    if (typeof publicUrl !== 'string') throw new Error("URL invalide reçue du stockage.");
+
+                    successfulUploads.push({ name: file.name, url: publicUrl, type: file.type });
+                }
+
+                // Étape 3: Lier les fichiers envoyés à l'intervention
+                if (successfulUploads.length > 0) {
+                    await onAddBriefingDocuments(newIntervention.id, successfulUploads);
+                }
+            }
+
+            closeForm(); // Succès, on ferme et réinitialise
+
         } catch (error) {
-            console.error("Erreur lors de la création de l'intervention:", error);
-            setFormError(`Erreur: ${error.message}`);
+            console.error("Erreur lors du processus de création :", error);
+            if (newIntervention && newIntervention.id) {
+                setFormError(`L'intervention a été créée, mais l'envoi des fichiers a échoué. Modifiez-la pour les ajouter. Erreur: ${error.message}`);
+            } else {
+                setFormError(`Erreur de création : ${error.message}`);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -116,11 +145,10 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
             <style>{`
                 .file-preview-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
                 .file-preview-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
-                .file-preview-icon { width: 24px; height: 24px; flex-shrink: 0; color: #495057; }
                 .file-info { flex-grow: 1; min-width: 0; }
                 .file-name { font-size: 0.9rem; font-weight: 500; word-break: break-all; }
                 .file-size { font-size: 0.75rem; color: #6c757d; }
-                .form-error-message { color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; }
+                .form-error-message { color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: .25rem; padding: .75rem 1.25rem; }
             `}</style>
 
             <div className="flex-between mb-6">
@@ -149,44 +177,19 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                     {/* Système d'upload */}
                     <div className="form-group">
                         <label>Documents de préparation (optionnel)</label>
-                        <input
-                            id="briefing-file-input"
-                            type="file"
-                            multiple
-                            onChange={handleFileChange}
-                            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                            style={{ display: 'none' }}
-                            disabled={isSubmitting}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => document.getElementById('briefing-file-input').click()}
-                            className="btn btn-secondary w-full"
-                            disabled={isSubmitting}
-                        >
-                            📎 Choisir des fichiers...
-                        </button>
-
-                        {formError && <p className="form-error-message">{formError}</p>}
+                        <input id="briefing-file-input" type="file" multiple onChange={handleFileChange} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }} disabled={isSubmitting} />
+                        <button type="button" onClick={() => document.getElementById('briefing-file-input').click()} className="btn btn-secondary w-full" disabled={isSubmitting}>📎 Choisir des fichiers...</button>
 
                         {briefingFiles.length > 0 && (
                             <ul className="file-preview-list">
                                 {briefingFiles.map(item => (
                                     <li key={item.id}>
-                                        <FileTextIcon className="file-preview-icon" />
+                                        <FileTextIcon />
                                         <div className="file-info">
                                             <span className="file-name">{item.fileObject.name}</span>
                                             <span className="file-size">{formatFileSize(item.fileObject.size)}</span>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveFile(item.id)}
-                                            className="btn-icon-danger"
-                                            disabled={isSubmitting}
-                                            title="Retirer"
-                                        >
-                                            <XIcon />
-                                        </button>
+                                        <button type="button" onClick={() => handleRemoveFile(item.id)} className="btn-icon-danger" disabled={isSubmitting} title="Retirer"><XIcon /></button>
                                     </li>
                                 ))}
                             </ul>
@@ -205,6 +208,8 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                             ))}
                         </div>
                     </div>
+
+                    {formError && <p className="form-error-message">{formError}</p>}
 
                     <button type="submit" className="btn btn-success w-full flex-center" disabled={isSubmitting}>
                         {isSubmitting ? <><LoaderIcon className="animate-spin" /> Création en cours...</> : <><PlusIcon /> Créer l'intervention</>}
