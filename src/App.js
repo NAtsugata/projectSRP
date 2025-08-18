@@ -178,18 +178,26 @@ function App() {
 
     // --- FONCTION CORRIGÉE ---
     const handleUpdateUser = async (updatedUserData) => {
-        const { error } = await profileService.updateProfile(updatedUserData.id, updatedUserData);
-        if (error) {
-            showToast("Erreur mise à jour profil.", "error");
-        } else {
-            showToast("Profil mis à jour.");
+        // On ne garde que les champs qu'on a le droit de modifier
+        const updates = {
+            full_name: updatedUserData.full_name,
+            is_admin: updatedUserData.is_admin,
+        };
 
-            // Si l'utilisateur modifié est l'utilisateur actuel, mettre à jour son profil dans l'état
+        // On envoie uniquement ces champs à la base de données
+        const { error } = await profileService.updateProfile(updatedUserData.id, updates);
+
+        if (error) {
+            showToast(`Erreur mise à jour: ${error.message}`, "error");
+        } else {
+            showToast("Profil mis à jour avec succès.");
+
+            // Si l'utilisateur modifié est l'utilisateur actuel, on met à jour son profil localement
             if (profile && profile.id === updatedUserData.id) {
-                setProfile(prevProfile => ({ ...prevProfile, ...updatedUserData }));
+                setProfile(prevProfile => ({ ...prevProfile, ...updates }));
             }
 
-            // Rafraîchir toute la liste des utilisateurs pour voir le changement
+            // On rafraîchit la liste des utilisateurs pour voir le changement
             await refreshData(profile);
         }
     };
