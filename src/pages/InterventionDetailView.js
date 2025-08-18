@@ -388,7 +388,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
         setReport(updatedReport);
         await onSaveSilent(intervention.id, updatedReport);
-        setShowUploader(false);
+        // ✅ CORRECTION : On restaure le rafraîchissement des données pour la mise à jour auto
+        refreshData();
+        // ✅ CORRECTION : On ne ferme plus le panneau pour permettre plusieurs ajouts
+        // setShowUploader(false);
     };
 
     const handleBriefingUploadComplete = async (files) => {
@@ -415,10 +418,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {intervention.intervention_briefing_documents.map(doc => {
+                                // ✅ CORRECTION : Logique d'affichage des images pour les admins
                                 const isImage = doc.file_name && /\.(jpe?g|png|gif|webp)$/i.test(doc.file_name);
                                 return (
                                     <li key={doc.id} className="document-item-optimized">
-                                        {isImage ? (
+                                        {isImage && doc.file_url ? (
                                             <OptimizedImage src={doc.file_url} alt={doc.file_name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '0.25rem' }} />
                                         ) : (
                                             <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9ecef', borderRadius: '0.25rem' }}>
@@ -430,9 +434,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                             href={doc.file_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="btn btn-sm btn-secondary"
+                                            className="btn btn-sm btn-primary"
                                         >
-                                            <DownloadIcon />
+                                            <DownloadIcon /> Voir
                                         </a>
                                     </li>
                                 );
