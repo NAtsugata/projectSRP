@@ -400,9 +400,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     };
 
     const handleBriefingUploadComplete = async (uploadedFiles) => {
-        // ✅ CORRECTION : Met à jour l'état local immédiatement pour un affichage correct
         const newDocsForDisplay = uploadedFiles.map(file => ({
-            id: `temp-${Date.now()}-${Math.random()}`, // Clé temporaire pour React
+            id: `temp-${Date.now()}-${Math.random()}`,
             file_name: file.name,
             file_url: file.url,
         }));
@@ -415,10 +414,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             ]
         }));
 
-        // Appelle la fonction de sauvegarde en arrière-plan
         await onAddBriefingDocuments(interventionId, uploadedFiles);
 
-        // Rafraîchit les données pour obtenir les vrais ID de la base de données
         refreshData();
         setShowBriefingUploader(false);
     };
@@ -458,6 +455,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="btn btn-sm btn-primary"
+                                            download={doc.file_name} // ✅ CORRECTION: Force le téléchargement
                                         >
                                             <DownloadIcon /> Voir
                                         </a>
@@ -534,7 +532,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                         </div>
                                     )}
                                     <span className="file-name">{file.name}</span>
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary"><DownloadIcon /></a>
+                                    {/* ✅ CORRECTION: Force le téléchargement */}
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
                                 </li>
                             ))}
                         </ul>
