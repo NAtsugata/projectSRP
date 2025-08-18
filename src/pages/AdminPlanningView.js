@@ -1,8 +1,8 @@
-// src/pages/AdminPlanningView.js - VERSION AMÉLIORÉE
+// src/pages/AdminPlanningView.js - VERSION AVEC UPLOAD STABILISÉ
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GenericStatusBadge } from '../components/SharedUI';
-import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
+import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
 
 export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
@@ -17,9 +17,10 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
     });
     const [assignedUsers, setAssignedUsers] = useState([]);
 
-    // ✅ NOUVEL ÉTAT pour gérer la file d'attente d'upload avec la progression
-    const [uploadQueue, setUploadQueue] = useState([]);
+    // ✅ ÉTAT STABILISÉ pour gérer la liste des fichiers à envoyer
+    const [briefingFiles, setBriefingFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [fileError, setFileError] = useState('');
 
     const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
 
@@ -35,26 +36,29 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
     };
 
-    // ✅ Gère la sélection des fichiers et les ajoute à la file d'attente
-    const handleFileSelect = (e) => {
+    // ✅ GESTION DES FICHIERS FIABILISÉE
+    const handleFileChange = useCallback((e) => {
+        setFileError('');
         const files = Array.from(e.target.files);
-        if (!files || files.length === 0) return;
+        if (!files.length) return;
 
-        const newQueueItems = files.map(file => ({
-            id: `${file.name}-${Date.now()}-${Math.random()}`,
-            file: file, // On garde l'objet File pour l'upload
-            name: file.name,
-            size: file.size,
-            status: 'pending', // 'pending', 'uploading', 'completed', 'error'
-            progress: 0,
-            error: null,
+        // Validation simple pour l'exemple
+        if (briefingFiles.length + files.length > 10) {
+            setFileError("Vous ne pouvez pas ajouter plus de 10 fichiers.");
+            return;
+        }
+
+        // On ajoute un ID unique à chaque fichier pour une gestion stable dans la liste
+        const newFilesWithId = files.map(file => ({
+            id: `file-${Date.now()}-${Math.random()}`,
+            fileObject: file
         }));
 
-        setUploadQueue(prev => [...prev, ...newQueueItems]);
-    };
+        setBriefingFiles(prev => [...prev, ...newFilesWithId]);
+    }, [briefingFiles]);
 
     const handleRemoveFile = (fileId) => {
-        setUploadQueue(prev => prev.filter(item => item.id !== fileId));
+        setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
     };
 
     const handleSubmit = async (e) => {
@@ -62,18 +66,19 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setIsSubmitting(true);
 
         try {
-            // On passe la file d'attente complète à la fonction de création
-            await onAddIntervention(formValues, assignedUsers, uploadQueue);
+            // On extrait uniquement les objets File pour la fonction parente
+            const filesToUpload = briefingFiles.map(f => f.fileObject);
+            await onAddIntervention(formValues, assignedUsers, filesToUpload);
 
             // Reset du formulaire après succès
             setShowForm(false);
             setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
             setAssignedUsers([]);
-            setUploadQueue([]);
+            setBriefingFiles([]);
+            setFileError('');
         } catch (error) {
             console.error("Erreur lors de la création de l'intervention:", error);
-            // L'erreur est maintenant gérée dans la fonction onAddIntervention
-            // pour mettre à jour le statut des fichiers dans la file d'attente.
+            setFileError(`Erreur: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -99,17 +104,14 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
     return (
         <div>
-            {/* Styles pour la nouvelle liste d'upload */}
             <style>{`
-                .upload-queue-container { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-                .upload-queue-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
-                .upload-queue-item.status-error { background-color: #fee2e2; border-color: #fecaca; }
+                .file-preview-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+                .file-preview-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
+                .file-preview-icon { width: 24px; height: 24px; flex-shrink: 0; color: #495057; }
                 .file-info { flex-grow: 1; min-width: 0; }
-                .file-name { font-size: 0.9rem; font-weight: 500; color: #212529; word-break: break-all; }
+                .file-name { font-size: 0.9rem; font-weight: 500; word-break: break-all; }
                 .file-size { font-size: 0.75rem; color: #6c757d; }
-                .upload-progress-bar { height: 4px; background-color: #e9ecef; border-radius: 2px; margin-top: 0.5rem; overflow: hidden; }
-                .upload-progress-fill { height: 100%; background-color: #0d6efd; transition: width 0.3s ease; }
-                .error-message { font-size: 0.8rem; color: #dc3545; margin-top: 0.25rem; }
+                .file-error-message { color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; }
             `}</style>
 
             <div className="flex-between mb-6">
@@ -121,7 +123,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
             {showForm && (
                 <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    {/* Champs du formulaire (Client, Adresse, etc.) - Inchangés */}
+                    {/* Champs du formulaire (Client, Adresse, etc.) */}
                     <div className="form-group"><label>Client *</label><input name="client" value={formValues.client} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Adresse *</label><input name="address" value={formValues.address} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Service *</label><input name="service" value={formValues.service} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
@@ -135,46 +137,37 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
                     </div>
 
-                    {/* ✅ NOUVELLE SECTION D'UPLOAD AMÉLIORÉE */}
+                    {/* ✅ SYSTÈME D'UPLOAD FIABILISÉ */}
                     <div className="form-group">
                         <label>Documents de préparation (optionnel)</label>
                         <input
-                            id="briefing-files-input"
+                            id="briefing-file-input"
                             type="file"
                             multiple
-                            onChange={handleFileSelect}
+                            onChange={handleFileChange}
                             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
                             style={{ display: 'none' }}
                             disabled={isSubmitting}
                         />
                         <button
                             type="button"
-                            onClick={() => document.getElementById('briefing-files-input').click()}
+                            onClick={() => document.getElementById('briefing-file-input').click()}
                             className="btn btn-secondary w-full"
                             disabled={isSubmitting}
                         >
                             📎 Choisir des fichiers...
                         </button>
 
-                        {uploadQueue.length > 0 && (
-                            <div className="upload-queue-container">
-                                {uploadQueue.map(item => (
-                                    <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                                        <div style={{width: '24px', flexShrink: 0}}>
-                                            {item.status === 'pending' && <FileTextIcon />}
-                                            {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
-                                            {item.status === 'completed' && <CheckCircleIcon style={{ color: '#198754' }} />}
-                                            {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc3545' }} />}
-                                        </div>
+                        {fileError && <p className="file-error-message">{fileError}</p>}
+
+                        {briefingFiles.length > 0 && (
+                            <ul className="file-preview-list">
+                                {briefingFiles.map(item => (
+                                    <li key={item.id}>
+                                        <FileTextIcon className="file-preview-icon" />
                                         <div className="file-info">
-                                            <div className="file-name">{item.name}</div>
-                                            <div className="file-size">{formatFileSize(item.size)}</div>
-                                            {item.status === 'uploading' && (
-                                                <div className="upload-progress-bar">
-                                                    <div className="upload-progress-fill" style={{width: `${item.progress}%`}} />
-                                                </div>
-                                            )}
-                                            {item.error && <div className="error-message">{item.error}</div>}
+                                            <span className="file-name">{item.fileObject.name}</span>
+                                            <span className="file-size">{formatFileSize(item.fileObject.size)}</span>
                                         </div>
                                         <button
                                             type="button"
@@ -185,13 +178,13 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                                         >
                                             <XIcon />
                                         </button>
-                                    </div>
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
                         )}
                     </div>
 
-                    {/* Section d'assignation des utilisateurs - Inchangée */}
+                    {/* Section d'assignation des utilisateurs */}
                     <div className="form-group">
                         <label>Assigner à :</label>
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
@@ -210,7 +203,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                 </form>
             )}
 
-            {/* Liste des interventions - Inchangée */}
+            {/* Liste des interventions */}
             <div className="card-white">
                 <h4 style={{marginBottom: '1rem'}}>Interventions planifiées</h4>
                 <ul className="document-list">
