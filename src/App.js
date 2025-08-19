@@ -203,10 +203,19 @@ function App() {
         }
     };
 
-    const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles) => {
-        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
-        if (error) showToast(`Erreur création intervention: ${error.message}`, "error");
-        else showToast("Intervention ajoutée.");
+    // --- FONCTION CORRIGÉE ---
+    // Elle ne prend plus les fichiers en argument et retourne la nouvelle intervention
+    const handleAddIntervention = async (interventionData, assignedUserIds) => {
+        const { data: newIntervention, error } = await interventionService.createIntervention(interventionData, assignedUserIds);
+
+        if (error) {
+            showToast(`Erreur création intervention: ${error.message}`, "error");
+            return null; // Important: retourner null en cas d'erreur
+        }
+
+        showToast("Intervention créée avec succès.");
+        await refreshData(profile); // On rafraîchit les données
+        return newIntervention; // Important: retourner la nouvelle intervention
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
@@ -462,7 +471,7 @@ function App() {
                                         onAddIntervention={handleAddIntervention}
                                         onArchive={handleArchiveIntervention}
                                         onDelete={handleDeleteIntervention}
-                                        onAddBriefingDocuments={handleAddBriefingDocuments} // <-- CORRECTION ICI
+                                        onAddBriefingDocuments={handleAddBriefingDocuments}
                                     />}
                                 />
                                 <Route
