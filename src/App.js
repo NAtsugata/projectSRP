@@ -205,8 +205,7 @@ function App() {
 
     // --- FONCTION CORRIGÉE ---
     const handleAddIntervention = async (interventionData, assignedUserIds) => {
-        // On passe un tableau vide [] pour les fichiers, ce qui corrige le bug 'length' of undefined
-        const { data: newIntervention, error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
+        const { data: newInterventionData, error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
 
         if (error) {
             showToast(`Erreur création intervention: ${error.message}`, "error");
@@ -215,7 +214,9 @@ function App() {
 
         showToast("Intervention créée avec succès.");
         await refreshData(profile);
-        return newIntervention;
+
+        // La base de données renvoie un tableau, on retourne le premier élément
+        return newInterventionData && newInterventionData.length > 0 ? newInterventionData[0] : null;
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
