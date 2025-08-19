@@ -176,15 +176,12 @@ function App() {
         navigate('/login');
     };
 
-    // --- FONCTION CORRIGÉE ---
     const handleUpdateUser = async (updatedUserData) => {
-        // On ne garde que les champs qu'on a le droit de modifier
         const updates = {
             full_name: updatedUserData.full_name,
             is_admin: updatedUserData.is_admin,
         };
 
-        // On envoie uniquement ces champs à la base de données
         const { error } = await profileService.updateProfile(updatedUserData.id, updates);
 
         if (error) {
@@ -192,19 +189,16 @@ function App() {
         } else {
             showToast("Profil mis à jour avec succès.");
 
-            // On met à jour la liste locale des utilisateurs pour un affichage instantané
             setUsers(currentUsers =>
                 currentUsers.map(user =>
                     user.id === updatedUserData.id ? { ...user, ...updates } : user
                 )
             );
 
-            // Si l'utilisateur modifié est l'utilisateur actuel, on met à jour son profil localement
             if (profile && profile.id === updatedUserData.id) {
                 setProfile(prevProfile => ({ ...prevProfile, ...updates }));
             }
 
-            // On peut garder refreshData pour resynchroniser avec la base de données par sécurité
             await refreshData(profile);
         }
     };
@@ -460,7 +454,17 @@ function App() {
                                 <Route index element={<Navigate to="/dashboard" replace />} />
                                 <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} />} />
+                                <Route
+                                    path="planning"
+                                    element={<AdminPlanningView
+                                        interventions={interventions}
+                                        users={users}
+                                        onAddIntervention={handleAddIntervention}
+                                        onArchive={handleArchiveIntervention}
+                                        onDelete={handleDeleteIntervention}
+                                        onAddBriefingDocuments={handleAddBriefingDocuments} // <-- CORRECTION ICI
+                                    />}
+                                />
                                 <Route
                                     path="planning/:interventionId"
                                     element={<InterventionDetailView {...interventionDetailProps} />}
