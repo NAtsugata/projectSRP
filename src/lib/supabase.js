@@ -347,14 +347,14 @@ export const storageService = {
   },
 }
 
-// ✅ SERVICE INTERVENTIONS OPTIMISÉ
+// ✅ SERVICE INTERVENTIONS OPTIMISÉ ET CORRIGÉ
 export const interventionService = {
   async getInterventions(userId = null, archived = false) {
     console.log('📋 Récupération interventions:', { userId, archived });
 
     let query = supabase
       .from('interventions')
-      .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)')
+      .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*), employee_photos(*)')
       .eq('is_archived', archived)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
