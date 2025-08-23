@@ -6,6 +6,7 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
     const [archived, setArchived] = useState([]);
     const [loading, setLoading] = useState(true);
     const [exportingId, setExportingId] = useState(null);
+
     const fetchArchived = useCallback(async () => {
         setLoading(true);
         const { data, error } = await interventionService.getInterventions(null, true);
@@ -16,9 +17,11 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
         }
         setLoading(false);
     }, [showToast]);
+
     useEffect(() => {
         fetchArchived();
     }, [fetchArchived]);
+
     const handleDeleteArchive = (id) => {
         showConfirmationModal({
             title: "Supprimer l'archive définitivement ?",
@@ -34,6 +37,7 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
             }
         });
     };
+
     const handleExport = async (intervention) => {
         setExportingId(intervention.id);
         if (typeof window.jspdf === 'undefined' || typeof window.JSZip === 'undefined') {
@@ -85,6 +89,22 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
                     if (blob) photosFolder.file(imageUrl.split('/').pop(), blob);
                 }
             }
+
+            // --- CODE CORRIGÉ ---
+            // Ajout des photos de l'employé dans un dossier dédié
+            const employeePhotosFolder = zip.folder("photos_employe");
+            // On suppose ici que les photos sont dans intervention.employee_photos
+            if (intervention.employee_photos && Array.isArray(intervention.employee_photos)) {
+                for (const imageUrl of intervention.employee_photos) {
+                    const fileName = imageUrl.split('/').pop();
+                    const blob = await fetchBlob(imageUrl, fileName);
+                    if (blob) {
+                        employeePhotosFolder.file(fileName, blob);
+                    }
+                }
+            }
+            // --- FIN DE LA CORRECTION ---
+
             const content = await zip.generateAsync({ type: "blob" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(content);
@@ -98,7 +118,9 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
             setExportingId(null);
         }
     };
+
     if (loading) return <div className="loading-spinner"></div>;
+
     return (
         <div>
             <h2 className="view-title">Archives</h2>
