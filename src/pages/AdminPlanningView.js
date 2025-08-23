@@ -4,14 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GenericStatusBadge } from '../components/SharedUI';
 import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
-import { storageService } from '../lib/supabase';
+import { storageService } from '../lib/supabase'; // Assurez-vous que ce chemin est correct
 
+// La prop `onAddBriefingDocuments` est maintenant requise
 export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete, onAddBriefingDocuments }) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
-    const [editingIntervention, setEditingIntervention] = useState(null);
-    const [showAddDocuments, setShowAddDocuments] = useState(false);
 
     const [formValues, setFormValues] = useState({
         client: '', address: '', service: '', date: '', time: '08:00'
@@ -71,17 +70,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
     };
 
-    const handleAddDocumentsToIntervention = async (interventionId, files) => {
-        try {
-            await onAddBriefingDocuments(interventionId, files);
-            setEditingIntervention(null);
-            setShowAddDocuments(false);
-            setBriefingFiles([]);
-        } catch (error) {
-            setFormError(`Erreur lors de l'ajout des documents: ${error.message}`);
-        }
-    };
-
+    // ✅ CORRECTION : Logique de soumission entièrement revue pour la stabilité
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!onAddBriefingDocuments) {
@@ -93,11 +82,13 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         let newIntervention = null;
 
         try {
+            // Étape 1: Créer l'intervention (sans fichiers) et récupérer son ID
             newIntervention = await onAddIntervention(formValues, assignedUsers);
             if (!newIntervention || !newIntervention.id) {
                 throw new Error("La création de l'intervention a échoué ou n'a pas retourné d'ID.");
             }
 
+            // Étape 2: Envoyer les fichiers un par un en utilisant le nouvel ID
             const filesToUpload = briefingFiles.map(f => f.fileObject);
             if (filesToUpload.length > 0) {
                 const successfulUploads = [];
@@ -112,12 +103,13 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                     successfulUploads.push({ name: file.name, url: publicUrl, type: file.type });
                 }
 
+                // Étape 3: Lier les fichiers envoyés à l'intervention
                 if (successfulUploads.length > 0) {
                     await onAddBriefingDocuments(newIntervention.id, successfulUploads);
                 }
             }
 
-            closeForm();
+            closeForm(); // Succès, on ferme et réinitialise
 
         } catch (error) {
             console.error("Erreur lors du processus de création :", error);
@@ -169,6 +161,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
             {showForm && (
                 <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                    {/* Champs du formulaire */}
                     <div className="form-group"><label>Client *</label><input name="client" value={formValues.client} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Adresse *</label><input name="address" value={formValues.address} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Service *</label><input name="service" value={formValues.service} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
@@ -182,6 +175,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
                     </div>
 
+                    {/* Système d'upload */}
                     <div className="form-group">
                         <label>Documents de préparation (optionnel)</label>
                         <input id="briefing-file-input" type="file" multiple onChange={handleFileChange} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }} disabled={isSubmitting} />
@@ -203,6 +197,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         )}
                     </div>
 
+                    {/* Section d'assignation des utilisateurs */}
                     <div className="form-group">
                         <label>Assigner à :</label>
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
@@ -223,80 +218,7 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                 </form>
             )}
 
-            {editingIntervention && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h3>Ajouter des documents à {editingIntervention.client}</h3>
-
-                        <div className="form-group">
-                            <label>Documents de préparation</label>
-                            <input
-                                id="additional-briefing-file-input"
-                                type="file"
-                                multiple
-                                onChange={handleFileChange}
-                                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                                style={{ display: 'none' }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => document.getElementById('additional-briefing-file-input').click()}
-                                className="btn btn-secondary w-full"
-                            >
-                                📎 Choisir des fichiers...
-                            </button>
-
-                            {briefingFiles.length > 0 && (
-                                <ul className="file-preview-list">
-                                    {briefingFiles.map(item => (
-                                        <li key={item.id}>
-                                            <FileTextIcon />
-                                            <div className="file-info">
-                                                <span className="file-name">{item.fileObject.name}</span>
-                                                <span className="file-size">{formatFileSize(item.fileObject.size)}</span>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveFile(item.id)}
-                                                className="btn-icon-danger"
-                                                title="Retirer"
-                                            >
-                                                <XIcon />
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-
-                        <div className="modal-footer">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditingIntervention(null);
-                                    setShowAddDocuments(false);
-                                    setBriefingFiles([]);
-                                }}
-                                className="btn btn-secondary"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const filesToUpload = briefingFiles.map(f => f.fileObject);
-                                    handleAddDocumentsToIntervention(editingIntervention.id, filesToUpload);
-                                }}
-                                className="btn btn-primary"
-                                disabled={briefingFiles.length === 0}
-                            >
-                                Ajouter les documents
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            {/* Liste des interventions */}
             <div className="card-white">
                 <h4 style={{marginBottom: '1rem'}}>Interventions planifiées</h4>
                 <ul className="document-list">
@@ -319,17 +241,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => navigate('/planning/' + int.id)} className="btn-icon" title="Voir les détails"><EditIcon/></button>
-                                    <button
-                                        onClick={() => {
-                                            setEditingIntervention(int);
-                                            setShowAddDocuments(true);
-                                            setBriefingFiles([]);
-                                        }}
-                                        className="btn-icon"
-                                        title="Ajouter des documents"
-                                    >
-                                        <FileTextIcon />
-                                    </button>
                                     <button onClick={() => onArchive(int.id)} className="btn-icon" title="Archiver"><ArchiveIcon/></button>
                                     <button onClick={() => onDelete(int.id)} className="btn-icon-danger" title="Supprimer"><TrashIcon/></button>
                                 </div>
