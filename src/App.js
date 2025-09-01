@@ -78,7 +78,7 @@ const AppLayout = ({ profile, handleLogout }) => {
 
 // --- Application principale ---
 function App() {
-    const [session, setSession] useState(null);
+    const [session, setSession] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState([]);
@@ -188,32 +188,18 @@ function App() {
             showToast(`Erreur mise à jour: ${error.message}`, "error");
         } else {
             showToast("Profil mis à jour avec succès.");
-
-            setUsers(currentUsers =>
-                currentUsers.map(user =>
-                    user.id === updatedUserData.id ? { ...user, ...updates } : user
-                )
-            );
-
-            if (profile && profile.id === updatedUserData.id) {
-                setProfile(prevProfile => ({ ...prevProfile, ...updates }));
-            }
-
             await refreshData(profile);
         }
     };
 
     const handleAddIntervention = async (interventionData, assignedUserIds) => {
         const { data: newInterventionData, error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
-
         if (error) {
             showToast(`Erreur création intervention: ${error.message}`, "error");
             return null;
         }
-
         showToast("Intervention créée avec succès.");
         await refreshData(profile);
-
         return newInterventionData && newInterventionData.length > 0 ? newInterventionData[0] : null;
     };
 
@@ -258,7 +244,6 @@ function App() {
             });
 
             if (error) throw error;
-
             showToast(newStatus === 'Terminée' ? "Rapport sauvegardé et intervention clôturée." : "Rapport sauvegardé.");
             navigate('/planning');
             await refreshData(profile);
@@ -299,7 +284,6 @@ function App() {
 
             const { error } = await leaveService.createLeaveRequest(newRequest);
             if (error) throw error;
-
             showToast("Votre demande de congé a été envoyée.", "success");
             await refreshData(profile);
 
@@ -309,7 +293,6 @@ function App() {
         }
     };
 
-    // --- AJOUT DES FONCTIONS MANQUANTES ---
     const handleUpdateLeaveStatus = async (requestId, status) => {
         const { error } = await leaveService.updateRequestStatus(requestId, status);
         if (error) {
@@ -357,6 +340,7 @@ function App() {
 
     return (
         <>
+            {/* --- LE BLOC DE STYLE EST RESTAURÉ ICI --- */}
             <style>{`
                 /* Styles par défaut (Mobile First) */
                 .desktop-nav {
@@ -432,71 +416,6 @@ function App() {
                         padding-bottom: 0;
                     }
                 }
-
-                /* Styles pour le processus de téléchargement */
-                .section > label[style*="cursor: pointer"] {
-                    background-color: #f7faff !important;
-                    border: 2px dashed #a0c4ff !important;
-                    color: #1c4ed8 !important;
-                    font-weight: 500 !important;
-                    padding: 1.25rem !important;
-                    border-radius: 0.75rem !important;
-                    transition: all 0.2s ease-in-out !important;
-                    text-align: center !important;
-                }
-
-                .section > label[style*="cursor: pointer"]:hover {
-                    background-color: #eef5ff !important;
-                    border-color: #3b82f6 !important;
-                    color: #1e40af !important;
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1) !important;
-                }
-
-                .upload-queue-container {
-                    margin-top: 1rem;
-                    padding: 0.5rem;
-                    background-color: #f8f9fa;
-                    border-radius: 0.75rem;
-                    border: 1px solid #e5e7eb;
-                }
-                .upload-queue-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 0.75rem;
-                    margin-bottom: 0.5rem;
-                    background-color: white;
-                    border-radius: 0.5rem;
-                    border: 1px solid #e5e7eb;
-                    transition: all 0.2s ease;
-                }
-                .upload-queue-item:last-child {
-                    margin-bottom: 0;
-                }
-                .upload-queue-item.status-error {
-                    background-color: #fee2e2;
-                    border-color: #fecaca;
-                    color: #991b1b;
-                }
-                .upload-queue-item.status-completed {
-                    background-color: #dcfce7;
-                    border-color: #bbf7d0;
-                    color: #166534;
-                }
-                .upload-progress-bar {
-                    width: 100%;
-                    height: 6px;
-                    background-color: #e5e7eb;
-                    border-radius: 3px;
-                    overflow: hidden;
-                    margin-top: 0.25rem;
-                }
-                .upload-progress-fill {
-                    height: 100%;
-                    background-color: #3b82f6;
-                    transition: width 0.3s ease;
-                    border-radius: 3px;
-                }
             `}</style>
 
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
@@ -527,7 +446,6 @@ function App() {
                                     element={<InterventionDetailView {...interventionDetailProps} />}
                                 />
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
-                                {/* --- CONNEXION DES FONCTIONS --- */}
                                 <Route
                                     path="leaves"
                                     element={<AdminLeaveView
