@@ -289,6 +289,30 @@ function App() {
         else showToast("Intervention archivée.");
     };
 
+    // ✅ NOUVELLE FONCTION: Gère la soumission d'une demande de congé
+    const handleSubmitLeaveRequest = async (requestData) => {
+        try {
+            const newRequest = {
+                user_id: profile.id,
+                full_name: profile.full_name,
+                start_date: requestData.startDate,
+                end_date: requestData.endDate,
+                reason: requestData.reason,
+                status: 'En attente'
+            };
+
+            const { error } = await leaveService.createLeaveRequest(newRequest);
+            if (error) throw error;
+
+            showToast("Votre demande de congé a été envoyée.", "success");
+            await refreshData(profile);
+
+        } catch (error) {
+            console.error('❌ Erreur lors de la soumission de la demande de congé:', error);
+            showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
+        }
+    };
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -494,7 +518,17 @@ function App() {
                                     element={<InterventionDetailView {...interventionDetailProps} />}
                                 />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="leaves" element={<EmployeeLeaveView leaveRequests={leaveRequests} />} />
+                                {/* ✅ CORRECTION: Passage des props nécessaires à EmployeeLeaveView */}
+                                <Route
+                                    path="leaves"
+                                    element={<EmployeeLeaveView
+                                        leaveRequests={leaveRequests}
+                                        onSubmitRequest={handleSubmitLeaveRequest}
+                                        userName={profile.full_name}
+                                        userId={profile.id}
+                                        showToast={showToast}
+                                    />}
+                                />
                                 <Route path="vault" element={<CoffreNumeriqueView vaultDocuments={vaultDocuments.filter(doc => doc.user_id === profile.id)} />} />
                                 <Route path="*" element={<Navigate to="/planning" replace />} />
                             </>
