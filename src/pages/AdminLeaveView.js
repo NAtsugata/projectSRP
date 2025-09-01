@@ -1,31 +1,69 @@
 import React from 'react';
-import { GenericStatusBadge } from '../components/SharedUI';
-import { CheckIcon, XIcon, TrashIcon } from '../components/SharedUI';
+import { GenericStatusBadge, CheckIcon, XIcon, TrashIcon } from '../components/SharedUI';
 
-export default function AdminLeaveView({ leaveRequests, onUpdateRequestStatus, onDeleteLeaveRequest }) {
-    const statusColorMap = { "Approuvé": "status-badge-green", "En attente": "status-badge-yellow", "Rejeté": "status-badge-red" };
+export default function AdminLeaveView({ leaveRequests, onUpdateStatus, onDelete }) {
+
+    const statusColorMap = {
+        "Approuvé": "status-badge-green",
+        "En attente": "status-badge-yellow",
+        "Rejeté": "status-badge-red"
+    };
+
     return (
         <div>
-            <h3>Gestion des Congés</h3>
+            <h2 className="view-title">Gestion des Demandes de Congés</h2>
+
             <div className="card-white">
-                <ul className="document-list">
-                    {leaveRequests.map(req => (
-                        <li key={req.id}>
-                            <div><p className="font-semibold">{req.user_name} - <span style={{fontWeight: 'normal'}}>{req.reason}</span></p><p className="text-muted">Du {req.start_date} au {req.end_date}</p></div>
-                            <div className="flex items-center gap-4 mt-2">
-                                <GenericStatusBadge status={req.status} colorMap={statusColorMap}/>
-                                {req.status === 'En attente' && (
-                                    <div className="flex gap-2">
-                                        <button onClick={() => onUpdateRequestStatus(req.id, 'Approuvé')} className="btn-icon-success"><CheckIcon/></button>
-                                        <button onClick={() => onUpdateRequestStatus(req.id, 'Rejeté')} className="btn-icon-danger"><XIcon/></button>
-                                    </div>
-                                )}
-                                <button onClick={() => onDeleteLeaveRequest(req.id)} className="btn-icon-danger"><TrashIcon/></button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                {leaveRequests.length > 0 ? (
+                    <ul className="divide-y divide-gray-200">
+                        {leaveRequests.map(req => (
+                            <li key={req.id} className="py-4 flex items-center justify-between space-x-4">
+                                <div className="flex-grow">
+                                    <p className="font-semibold text-gray-900">{req.user_name || 'Employé inconnu'}</p>
+                                    <p className="text-sm text-gray-600">{req.reason}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Du {new Date(req.start_date).toLocaleDateString()} au {new Date(req.end_date).toLocaleDateString()}
+                                    </p>
+                                </div>
+
+                                <div className="flex-shrink-0 flex items-center space-x-2">
+                                    <GenericStatusBadge status={req.status} colorMap={statusColorMap} />
+
+                                    {req.status === 'En attente' && (
+                                        <>
+                                            <button
+                                                onClick={() => onUpdateStatus(req.id, 'Approuvé')}
+                                                className="btn-icon btn-success"
+                                                title="Approuver"
+                                            >
+                                                <CheckIcon />
+                                            </button>
+                                            <button
+                                                onClick={() => onUpdateStatus(req.id, 'Rejeté')}
+                                                className="btn-icon btn-danger"
+                                                title="Rejeter"
+                                            >
+                                                <XIcon />
+                                            </button>
+                                        </>
+                                    )}
+
+                                    <button
+                                        onClick={() => onDelete(req.id)}
+                                        className="btn-icon btn-secondary"
+                                        title="Supprimer"
+                                    >
+                                        <TrashIcon />
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-center text-gray-500 py-4">Aucune demande de congé à afficher.</p>
+                )}
             </div>
         </div>
     );
 }
+
