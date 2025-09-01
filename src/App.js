@@ -289,16 +289,16 @@ function App() {
         else showToast("Intervention archivée.");
     };
 
-    // ✅ NOUVELLE FONCTION: Gère la soumission d'une demande de congé
+    // ✅ FONCTION CORRIGÉE: Gère la soumission d'une demande de congé
     const handleSubmitLeaveRequest = async (requestData) => {
         try {
+            // CORRECTION: Utilise les noms de champs attendus par la fonction dans supabase.js
             const newRequest = {
-                user_id: profile.id,
-                full_name: profile.full_name,
-                start_date: requestData.startDate,
-                end_date: requestData.endDate,
+                userId: profile.id, // Changé de 'user_id' en 'userId'
+                userName: profile.full_name, // Changé de 'full_name' en 'userName'
+                startDate: requestData.startDate,
+                endDate: requestData.endDate,
                 reason: requestData.reason,
-                status: 'En attente'
             };
 
             const { error } = await leaveService.createLeaveRequest(newRequest);
@@ -541,3 +541,4 @@ function App() {
 }
 
 export default App;
+
