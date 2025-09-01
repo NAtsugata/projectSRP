@@ -78,7 +78,7 @@ const AppLayout = ({ profile, handleLogout }) => {
 
 // --- Application principale ---
 function App() {
-    const [session, setSession] = useState(null);
+    const [session, setSession] useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState([]);
@@ -169,7 +169,7 @@ function App() {
                 supabase.removeChannel(sub);
             };
         }
-    }, [profile, refreshData]);
+    }, [profile, refreshData, supabase]);
 
     const handleLogout = async () => {
         await authService.signOut();
@@ -188,18 +188,33 @@ function App() {
             showToast(`Erreur mise à jour: ${error.message}`, "error");
         } else {
             showToast("Profil mis à jour avec succès.");
+
+            setUsers(currentUsers =>
+                currentUsers.map(user =>
+                    user.id === updatedUserData.id ? { ...user, ...updates } : user
+                )
+            );
+
+            if (profile && profile.id === updatedUserData.id) {
+                setProfile(prevProfile => ({ ...prevProfile, ...updates }));
+            }
+
             await refreshData(profile);
         }
     };
 
     const handleAddIntervention = async (interventionData, assignedUserIds) => {
-        const { error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
+        const { data: newInterventionData, error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
+
         if (error) {
             showToast(`Erreur création intervention: ${error.message}`, "error");
-        } else {
-            showToast("Intervention créée avec succès.");
-            await refreshData(profile);
+            return null;
         }
+
+        showToast("Intervention créée avec succès.");
+        await refreshData(profile);
+
+        return newInterventionData && newInterventionData.length > 0 ? newInterventionData[0] : null;
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
@@ -210,72 +225,91 @@ function App() {
             await refreshData(profile);
         } catch (error) {
             showToast(`Erreur lors de l'ajout des documents : ${error.message}`, "error");
+            throw error;
         }
     };
 
     const handleUpdateInterventionReportSilent = async (interventionId, report) => {
-        const { error } = await interventionService.updateIntervention(interventionId, { report });
+        const sanitizedReport = {
+            notes: report.notes || '',
+            files: Array.isArray(report.files) ? report.files : [],
+            arrivalTime: report.arrivalTime || null,
+            departureTime: report.departureTime || null,
+            signature: report.signature || null
+        };
+        const { error } = await interventionService.updateIntervention(interventionId, { report: sanitizedReport });
         return { success: !error, error };
     };
 
-    const handleUpdateInterventionReport = async (interventionId, reportData) => {
-        const { report, admin_notes } = reportData;
-        const newStatus = report.departureTime ? 'Terminée' : 'En cours';
-        const { error } = await interventionService.updateIntervention(interventionId, {
-            report: report,
-            admin_notes: admin_notes,
-            status: newStatus
-        });
-        if (error) {
-            showToast("Erreur lors de la sauvegarde: " + error.message, "error");
-        } else {
+    const handleUpdateInterventionReport = async (interventionId, report) => {
+        try {
+            const newStatus = report.departureTime ? 'Terminée' : 'En cours';
+            const sanitizedReport = {
+                notes: report.notes || '',
+                files: Array.isArray(report.files) ? report.files : [],
+                arrivalTime: report.arrivalTime || null,
+                departureTime: report.departureTime || null,
+                signature: report.signature || null
+            };
+
+            const { error } = await interventionService.updateIntervention(interventionId, {
+                report: sanitizedReport,
+                status: newStatus
+            });
+
+            if (error) throw error;
+
             showToast(newStatus === 'Terminée' ? "Rapport sauvegardé et intervention clôturée." : "Rapport sauvegardé.");
             navigate('/planning');
             await refreshData(profile);
+
+        } catch (error) {
+            showToast("Erreur lors de la sauvegarde: " + (error.message || 'Erreur inconnue'), "error");
+            throw error;
         }
     };
 
     const handleDeleteIntervention = (id) => {
         showConfirmationModal({
             title: "Supprimer l'intervention ?",
-            message: "Cette action est irréversible et supprimera tous les documents associés.",
+            message: "Cette action est irréversible.",
             onConfirm: async () => {
                 const { error } = await interventionService.deleteIntervention(id);
                 if (error) showToast("Erreur suppression.", "error");
                 else showToast("Intervention supprimée.");
-                await refreshData(profile);
             }
         });
     };
 
-    const handleArchiveIntervention = (id) => {
-        showConfirmationModal({
-            title: "Archiver l'intervention ?",
-            message: "L'intervention sera déplacée vers les archives.",
-            onConfirm: async () => {
-                const { error } = await interventionService.updateIntervention(id, { is_archived: true });
-                if (error) showToast("Erreur archivage.", "error");
-                else showToast("Intervention archivée.");
-                await refreshData(profile);
-            }
-        });
+    const handleArchiveIntervention = async (id) => {
+        const { error } = await interventionService.updateIntervention(id, { is_archived: true });
+        if (error) showToast("Erreur archivage.", "error");
+        else showToast("Intervention archivée.");
     };
 
     const handleSubmitLeaveRequest = async (requestData) => {
-        const newRequest = {
-            userId: profile.id,
-            userName: profile.full_name,
-            ...requestData
-        };
-        const { error } = await leaveService.createLeaveRequest(newRequest);
-        if (error) {
-            showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
-        } else {
+        try {
+            const newRequest = {
+                userId: profile.id,
+                userName: profile.full_name,
+                startDate: requestData.startDate,
+                endDate: requestData.endDate,
+                reason: requestData.reason,
+            };
+
+            const { error } = await leaveService.createLeaveRequest(newRequest);
+            if (error) throw error;
+
             showToast("Votre demande de congé a été envoyée.", "success");
             await refreshData(profile);
+
+        } catch (error) {
+            console.error('❌ Erreur lors de la soumission de la demande de congé:', error);
+            showToast(`Erreur lors de l'envoi: ${error.message}`, "error");
         }
     };
 
+    // --- AJOUT DES FONCTIONS MANQUANTES ---
     const handleUpdateLeaveStatus = async (requestId, status) => {
         const { error } = await leaveService.updateRequestStatus(requestId, status);
         if (error) {
@@ -303,7 +337,12 @@ function App() {
     };
 
     if (loading) {
-        return <div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>;
+        return (
+            <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Chargement de votre espace...</p>
+            </div>
+        );
     }
 
     const interventionDetailProps = {
@@ -318,8 +357,150 @@ function App() {
 
     return (
         <>
+            <style>{`
+                /* Styles par défaut (Mobile First) */
+                .desktop-nav {
+                    display: none;
+                }
+                .mobile-nav {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background-color: #ffffff;
+                    border-top: 1px solid #e5e7eb;
+                    z-index: 1000;
+                    padding-bottom: env(safe-area-inset-bottom, 0);
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                }
+                .mobile-nav-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 1rem;
+                    background-color: #f8f9fa;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                }
+                .btn-icon-logout {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #4b5563;
+                }
+                .mobile-nav-icons {
+                    display: flex;
+                    justify-content: space-around;
+                    align-items: center;
+                }
+                .mobile-nav-button {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    flex-grow: 1;
+                    padding: 0.5rem 0.25rem;
+                    color: #6b7280;
+                    text-decoration: none;
+                    transition: color 0.2s ease;
+                }
+                .mobile-nav-button.active {
+                    color: #3b82f6;
+                }
+                .mobile-nav-button svg {
+                    width: 24px;
+                    height: 24px;
+                }
+                .mobile-nav-label {
+                    font-size: 0.7rem;
+                    margin-top: 2px;
+                }
+                .main-content {
+                    padding-bottom: 100px;
+                }
+
+                /* Styles pour tablettes et desktop */
+                @media (min-width: 768px) {
+                    .desktop-nav {
+                        display: flex;
+                    }
+                    .mobile-nav {
+                        display: none;
+                    }
+                    .main-content {
+                        padding-bottom: 0;
+                    }
+                }
+
+                /* Styles pour le processus de téléchargement */
+                .section > label[style*="cursor: pointer"] {
+                    background-color: #f7faff !important;
+                    border: 2px dashed #a0c4ff !important;
+                    color: #1c4ed8 !important;
+                    font-weight: 500 !important;
+                    padding: 1.25rem !important;
+                    border-radius: 0.75rem !important;
+                    transition: all 0.2s ease-in-out !important;
+                    text-align: center !important;
+                }
+
+                .section > label[style*="cursor: pointer"]:hover {
+                    background-color: #eef5ff !important;
+                    border-color: #3b82f6 !important;
+                    color: #1e40af !important;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1) !important;
+                }
+
+                .upload-queue-container {
+                    margin-top: 1rem;
+                    padding: 0.5rem;
+                    background-color: #f8f9fa;
+                    border-radius: 0.75rem;
+                    border: 1px solid #e5e7eb;
+                }
+                .upload-queue-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem;
+                    margin-bottom: 0.5rem;
+                    background-color: white;
+                    border-radius: 0.5rem;
+                    border: 1px solid #e5e7eb;
+                    transition: all 0.2s ease;
+                }
+                .upload-queue-item:last-child {
+                    margin-bottom: 0;
+                }
+                .upload-queue-item.status-error {
+                    background-color: #fee2e2;
+                    border-color: #fecaca;
+                    color: #991b1b;
+                }
+                .upload-queue-item.status-completed {
+                    background-color: #dcfce7;
+                    border-color: #bbf7d0;
+                    color: #166534;
+                }
+                .upload-progress-bar {
+                    width: 100%;
+                    height: 6px;
+                    background-color: #e5e7eb;
+                    border-radius: 3px;
+                    overflow: hidden;
+                    margin-top: 0.25rem;
+                }
+                .upload-progress-fill {
+                    height: 100%;
+                    background-color: #3b82f6;
+                    transition: width 0.3s ease;
+                    border-radius: 3px;
+                }
+            `}</style>
+
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
-            {modal && <ConfirmationModal {...modal} onConfirm={(val) => { modal.onConfirm(val); setModal(null); }} onCancel={() => setModal(null)} />}
+            {modal && <ConfirmationModal {...modal} onConfirm={(inputValue) => { modal.onConfirm(inputValue); setModal(null); }} onCancel={() => setModal(null)} />}
             <Routes>
                 {!session || !profile ? (
                     <Route path="*" element={<LoginScreen />} />
@@ -330,10 +511,23 @@ function App() {
                                 <Route index element={<Navigate to="/dashboard" replace />} />
                                 <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
-                                <Route path="planning" element={<AdminPlanningView interventions={interventions} users={users} onAddIntervention={handleAddIntervention} onArchive={handleArchiveIntervention} onDelete={handleDeleteIntervention} onAddBriefingDocuments={handleAddBriefingDocuments} />} />
-                                <Route path="planning/:interventionId" element={<InterventionDetailView {...interventionDetailProps} />} />
+                                <Route
+                                    path="planning"
+                                    element={<AdminPlanningView
+                                        interventions={interventions}
+                                        users={users}
+                                        onAddIntervention={handleAddIntervention}
+                                        onArchive={handleArchiveIntervention}
+                                        onDelete={handleDeleteIntervention}
+                                        onAddBriefingDocuments={handleAddBriefingDocuments}
+                                    />}
+                                />
+                                <Route
+                                    path="planning/:interventionId"
+                                    element={<InterventionDetailView {...interventionDetailProps} />}
+                                />
                                 <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
-                                {/* --- LA CORRECTION EST ICI --- */}
+                                {/* --- CONNEXION DES FONCTIONS --- */}
                                 <Route
                                     path="leaves"
                                     element={<AdminLeaveView
@@ -350,7 +544,10 @@ function App() {
                             <>
                                 <Route index element={<Navigate to="/planning" replace />} />
                                 <Route path="planning" element={<EmployeePlanningView interventions={interventions} />} />
-                                <Route path="planning/:interventionId" element={<InterventionDetailView {...interventionDetailProps} />} />
+                                <Route
+                                    path="planning/:interventionId"
+                                    element={<InterventionDetailView {...interventionDetailProps} />}
+                                />
                                 <Route path="agenda" element={<AgendaView interventions={interventions} />} />
                                 <Route
                                     path="leaves"
