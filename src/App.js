@@ -169,7 +169,7 @@ function App() {
                 supabase.removeChannel(sub);
             };
         }
-    }, [profile, refreshData, supabase]);
+    }, [profile, refreshData]);
 
     const handleLogout = async () => {
         await authService.signOut();
@@ -319,6 +319,50 @@ function App() {
         });
     };
 
+    // ✅ NOUVELLE FONCTION - Logique d'envoi d'un document au coffre-fort
+    const handleSendVaultDocument = async ({ file, userId, name }) => {
+        try {
+            // 1. Envoyer le fichier vers Supabase Storage
+            const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
+            if (uploadError) throw uploadError;
+
+            // 2. Créer l'entrée correspondante en base de données
+            const { error: dbError } = await vaultService.createVaultDocument({
+                userId,
+                name,
+                url: publicURL,
+                path: filePath,
+            });
+            if (dbError) throw dbError;
+
+            showToast("Document envoyé avec succès !");
+            await refreshData(profile);
+
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'envoi du document:', error);
+            showToast(`Erreur d'envoi: ${error.message}`, "error");
+            throw error; // Permet au composant enfant de savoir que l'upload a échoué
+        }
+    };
+
+    // ✅ NOUVELLE FONCTION - Logique de suppression d'un document du coffre-fort
+    const handleDeleteVaultDocument = (document) => {
+        showConfirmationModal({
+            title: "Supprimer le document ?",
+            message: `Êtes-vous sûr de vouloir supprimer "${document.file_name}" ? Cette action est irréversible.`,
+            onConfirm: async () => {
+                const { error } = await vaultService.deleteVaultDocument(document.id);
+                if (error) {
+                    showToast(`Erreur: ${error.message}`, "error");
+                } else {
+                    showToast("Le document a été supprimé.", "success");
+                }
+                await refreshData(profile);
+            }
+        });
+    };
+
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -455,7 +499,16 @@ function App() {
                                     />}
                                 />
                                 <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
-                                <Route path="vault" element={<AdminVaultView users={users} vaultDocuments={vaultDocuments} />} />
+                                {/* ✅ On passe les fonctions au composant AdminVaultView */}
+                                <Route
+                                    path="vault"
+                                    element={<AdminVaultView
+                                        users={users}
+                                        vaultDocuments={vaultDocuments}
+                                        onSendDocument={handleSendVaultDocument}
+                                        onDeleteDocument={handleDeleteVaultDocument}
+                                    />}
+                                />
                                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
                             </>
                         ) : (
@@ -489,4 +542,3 @@ function App() {
 }
 
 export default App;
-

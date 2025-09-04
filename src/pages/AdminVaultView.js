@@ -1,7 +1,47 @@
-// src/pages/AdminVaultView.js - VERSION OPTIMISÉE POUR MOBILE
+// src/pages/AdminVaultView.js - VERSION AMÉLIORÉE AVEC TRI PAR EMPLOYÉ
 import React, { useState, useMemo, useCallback } from 'react';
 import MobileFileInput from '../components/MobileFileInput';
-import { DownloadIcon, TrashIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
+import { DownloadIcon, TrashIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, ChevronDownIcon, UserIcon } from '../components/SharedUI';
+
+// Composant Accordion pour chaque employé
+const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="user-accordion">
+      <button className="accordion-header" onClick={() => setIsOpen(!isOpen)}>
+        <div className="accordion-title">
+          <UserIcon />
+          <span>{userName}</span>
+          <span className="document-count">{documents.length} document{documents.length > 1 ? 's' : ''}</span>
+        </div>
+        <ChevronDownIcon className={`accordion-chevron ${isOpen ? 'open' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="accordion-content">
+          {documents.map(doc => (
+            <div key={doc.id} className="document-item-compact">
+              <FileTextIcon className="document-icon" />
+              <div className="document-info">
+                <span className="document-name">{doc.file_name}</span>
+                <span className="document-date">Envoyé le {formatDate(doc.created_at)}</span>
+              </div>
+              <div className="document-actions">
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Télécharger">
+                  <DownloadIcon />
+                </a>
+                <button onClick={() => onDeleteDocument(doc)} className="btn-icon-danger" title="Supprimer">
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 export default function AdminVaultView({ users = [], vaultDocuments = [], onSendDocument, onDeleteDocument }) {
   const [file, setFile] = useState(null);
@@ -12,10 +52,8 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // On ne garde que les employés qui ne sont pas administrateurs
   const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
 
-  // On regroupe les documents par employé pour l'affichage
   const documentsByUser = useMemo(() => {
     return vaultDocuments.reduce((acc, doc) => {
       const userId = doc.user_id;
@@ -31,12 +69,10 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     }, {});
   }, [vaultDocuments, users]);
 
-  // ✅ NOUVELLE FONCTION - Gestion optimisée de la sélection de fichier
   const handleFileSelect = useCallback((event) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      // Pré-remplir le nom du document avec le nom du fichier (sans extension)
       const nameWithoutExt = selectedFile.name.split('.').slice(0, -1).join('.');
       setDocumentName(nameWithoutExt);
       setError(null);
@@ -44,17 +80,14 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     }
   }, []);
 
-  // ✅ Gestion des erreurs d'upload
   const handleUploadError = useCallback((errors) => {
     setError(errors.join(' • '));
     console.error('Erreurs upload:', errors);
   }, []);
 
-  // ✅ Fonction de soumission optimisée
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Validation
+
     if (!file || !selectedUserId || !documentName.trim()) {
       setError('Veuillez remplir tous les champs obligatoires.');
       return;
@@ -66,27 +99,24 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     setUploadProgress(0);
 
     try {
-      // Simulation de progression pour l'UX
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      await onSendDocument({ 
-        file, 
-        userId: selectedUserId, 
-        name: documentName.trim() 
+      await onSendDocument({
+        file,
+        userId: selectedUserId,
+        name: documentName.trim()
       });
 
       clearInterval(progressInterval);
       setUploadProgress(100);
-      
-      // Reset du formulaire après succès
+
       setFile(null);
       setDocumentName('');
       setSelectedUserId('');
       setSuccess(true);
-      
-      // Masquer le message de succès après 3 secondes
+
       setTimeout(() => {
         setSuccess(false);
         setUploadProgress(0);
@@ -101,7 +131,6 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     }
   };
 
-  // ✅ Fonction pour formater la taille des fichiers
   const formatFileSize = (bytes) => {
     if (!bytes) return '';
     if (bytes < 1024) return bytes + ' B';
@@ -109,7 +138,6 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     return Math.round(bytes / (1024 * 1024) * 10) / 10 + ' MB';
   };
 
-  // ✅ Fonction pour obtenir la date de création formatée
   const formatDate = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -122,12 +150,14 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
   return (
     <div>
       <style>{`
+        /* --- Styles du Formulaire --- */
         .vault-form-section {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           padding: 1.5rem;
           border-radius: 0.75rem;
           color: white;
           margin-bottom: 2rem;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         .vault-form-section h3 {
           color: white;
@@ -142,131 +172,71 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         }
         .file-selected-info {
           background-color: #f0f9ff;
-          border: 1px solid #3b82f6;
-          padding: 0.75rem;
-          border-radius: 0.375rem;
-          margin-top: 0.5rem;
+          border-left: 4px solid #3b82f6;
+          padding: 0.75rem 1rem;
+          margin-top: 0.75rem;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.75rem;
+          font-size: 0.875rem;
         }
-        .upload-progress-container {
-          margin-top: 1rem;
+        .upload-progress-container { margin-top: 1rem; }
+        .upload-progress-bar { width: 100%; height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden; }
+        .upload-progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); transition: width 0.3s ease; border-radius: 4px; }
+        .success-message, .error-message { padding: 0.75rem; border-radius: 0.375rem; margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .success-message { background-color: #dcfce7; color: #166534; }
+        .error-message { background-color: #fee2e2; color: #b91c1c; }
+
+        /* --- Styles de la Liste des Documents (Nouveau) --- */
+        .documents-list-section {
+          background-color: #f8f9fa;
+          padding: 1rem;
+          border-radius: 0.5rem;
         }
-        .upload-progress-bar {
-          width: 100%;
-          height: 8px;
-          background-color: #e5e7eb;
-          border-radius: 4px;
+        .user-accordion {
+          background: white;
+          border-radius: 0.5rem;
+          margin-bottom: 1rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
           overflow: hidden;
         }
-        .upload-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-          transition: width 0.3s ease;
-          border-radius: 4px;
-        }
-        .success-message {
-          background-color: #dcfce7;
-          color: #166534;
-          padding: 0.75rem;
-          border-radius: 0.375rem;
-          margin-top: 1rem;
+        .accordion-header {
+          width: 100%;
+          padding: 1rem 1.25rem;
           display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          animation: slideIn 0.3s ease;
-        }
-        .error-message {
-          background-color: #fee2e2;
-          color: #b91c1c;
-          padding: 0.75rem;
-          border-radius: 0.375rem;
-          margin-top: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-        .document-user-section {
-          margin-bottom: 2rem;
-          background: white;
-          padding: 1.5rem;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .document-user-header {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-          padding-bottom: 0.5rem;
-          border-bottom: 2px solid #e5e7eb;
-        }
-        .document-item {
-          display: flex;
-          align-items: center;
           justify-content: space-between;
-          padding: 0.75rem;
-          background-color: #f8f9fa;
-          border-radius: 0.375rem;
-          margin-bottom: 0.5rem;
-          transition: all 0.2s ease;
+          align-items: center;
+          cursor: pointer;
+          background-color: white;
+          border: none;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
         }
-        .document-item:hover {
-          background-color: #e9ecef;
-          transform: translateX(2px);
-        }
-        .document-info {
-          flex-grow: 1;
-          min-width: 0;
-        }
-        .document-name {
-          font-weight: 500;
-          word-break: break-all;
-          display: block;
-        }
-        .document-date {
-          font-size: 0.75rem;
-          color: #6c757d;
-          margin-top: 0.25rem;
-        }
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @media (max-width: 768px) {
-          .vault-form-section {
-            padding: 1rem;
-          }
-          .document-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-          }
-        }
+        .accordion-header:hover { background-color: #f9fafb; }
+        .accordion-title { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; font-size: 1rem; color: #1f2937; }
+        .document-count { font-size: 0.875rem; color: #6c757d; font-weight: normal; background-color: #e9ecef; padding: 2px 8px; border-radius: 12px; }
+        .accordion-chevron { transition: transform 0.2s ease; color: #6c757d; }
+        .accordion-chevron.open { transform: rotate(180deg); }
+        .accordion-content { padding: 0.5rem; }
+        .document-item-compact { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.375rem; margin-bottom: 0.25rem; }
+        .document-item-compact:hover { background-color: #f0f3f5; }
+        .document-icon { color: #495057; margin-right: 0.75rem; flex-shrink: 0; }
+        .document-info { flex-grow: 1; min-width: 0; }
+        .document-name { font-weight: 500; color: #343a40; word-break: break-all; font-size: 0.9rem; }
+        .document-date { font-size: 0.75rem; color: #6c757d; }
+        .document-actions { display: flex; align-items: center; gap: 0.25rem; }
       `}</style>
 
       <h2 className="view-title">Coffre-fort numérique - Administration</h2>
 
+      {/* --- FORMULAIRE D'ENVOI --- */}
       <div className="vault-form-section">
-        <h3>📤 Envoyer un document à un employé</h3>
+        <h3>📤 Envoyer un document</h3>
         <div className="vault-form-card">
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="employee-select">Destinataire *</label>
-              <select
-                id="employee-select"
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="form-control"
-                required
-                disabled={isUploading}
-              >
+              <select id="employee-select" value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="form-control" required disabled={isUploading}>
                 <option value="">-- Sélectionnez un employé --</option>
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.full_name}</option>
@@ -276,28 +246,12 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
             <div className="form-group">
               <label htmlFor="document-name">Nom du document *</label>
-              <input
-                id="document-name"
-                type="text"
-                value={documentName}
-                onChange={(e) => setDocumentName(e.target.value)}
-                placeholder="Ex: Fiche de paie - Janvier 2025"
-                className="form-control"
-                required
-                disabled={isUploading}
-              />
+              <input id="document-name" type="text" value={documentName} onChange={(e) => setDocumentName(e.target.value)} placeholder="Ex: Fiche de paie - Janvier 2025" className="form-control" required disabled={isUploading} />
             </div>
 
             <div className="form-group">
               <label>Fichier à envoyer *</label>
-              <MobileFileInput
-                onChange={handleFileSelect}
-                accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
-                multiple={false}
-                disabled={isUploading}
-                maxSize={20 * 1024 * 1024} // 20MB max
-                onError={handleUploadError}
-              >
+              <MobileFileInput onChange={handleFileSelect} accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple={false} disabled={isUploading} maxSize={20 * 1024 * 1024} onError={handleUploadError}>
                 {file ? `📄 ${file.name}` : '📎 Sélectionner un document'}
               </MobileFileInput>
 
@@ -305,140 +259,51 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
                 <div className="file-selected-info">
                   <FileTextIcon />
                   <div style={{flexGrow: 1}}>
-                    <strong>{file.name}</strong>
-                    <div style={{fontSize: '0.875rem', color: '#6c757d'}}>
-                      {formatFileSize(file.size)}
-                    </div>
+                    <strong>{file.name}</strong> ({formatFileSize(file.size)})
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      setFile(null);
-                      setDocumentName('');
-                    }}
-                    className="btn btn-sm btn-secondary"
-                  >
-                    Changer
-                  </button>
+                  <button type="button" onClick={() => { setFile(null); setDocumentName(''); }} className="btn btn-sm btn-secondary">Changer</button>
                 </div>
               )}
             </div>
 
-            {/* Barre de progression */}
             {isUploading && (
               <div className="upload-progress-container">
-                <div style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>
-                  Envoi en cours... {uploadProgress}%
-                </div>
-                <div className="upload-progress-bar">
-                  <div 
-                    className="upload-progress-fill" 
-                    style={{width: `${uploadProgress}%`}}
-                  />
-                </div>
+                <div style={{fontSize: '0.875rem', marginBottom: '0.5rem'}}>Envoi en cours... {uploadProgress}%</div>
+                <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width: `${uploadProgress}%`}}/></div>
               </div>
             )}
+            {success && <div className="success-message"><CheckCircleIcon />Document envoyé avec succès !</div>}
+            {error && <div className="error-message"><AlertTriangleIcon />{error}</div>}
 
-            {/* Message de succès */}
-            {success && (
-              <div className="success-message">
-                <CheckCircleIcon />
-                Document envoyé avec succès !
-              </div>
-            )}
-
-            {/* Message d'erreur */}
-            {error && (
-              <div className="error-message">
-                <AlertTriangleIcon />
-                {error}
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              className="btn btn-primary w-full mt-4" 
-              disabled={isUploading || !file || !selectedUserId || !documentName.trim()}
-            >
-              {isUploading ? `Envoi en cours... ${uploadProgress}%` : '📤 Envoyer le document'}
+            <button type="submit" className="btn btn-primary w-full mt-4" disabled={isUploading || !file || !selectedUserId || !documentName.trim()}>
+              {isUploading ? `Envoi en cours...` : '📤 Envoyer le document'}
             </button>
           </form>
         </div>
       </div>
 
+      {/* --- LISTE DES DOCUMENTS ENVOYÉS --- */}
       <div className="card-white">
         <h3 style={{marginBottom: '1.5rem'}}>📁 Documents envoyés</h3>
-        
+
         {Object.keys(documentsByUser).length > 0 ? (
-          <div>
-            {Object.entries(documentsByUser).map(([userId, data]) => (
-              <div key={userId} className="document-user-section">
-                <div className="document-user-header">
-                  👤 {data.userName}
-                  <span style={{
-                    marginLeft: '0.5rem',
-                    fontSize: '0.875rem',
-                    color: '#6c757d',
-                    fontWeight: 'normal'
-                  }}>
-                    ({data.documents.length} document{data.documents.length > 1 ? 's' : ''})
-                  </span>
-                </div>
-                
-                {data.documents.map(doc => (
-                  <div key={doc.id} className="document-item">
-                    <div className="document-info">
-                      <span className="document-name">
-                        <FileTextIcon style={{display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle'}} />
-                        {doc.file_name}
-                      </span>
-                      {doc.created_at && (
-                        <span className="document-date">
-                          Envoyé le {formatDate(doc.created_at)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a 
-                        href={doc.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="btn-icon" 
-                        title="Télécharger"
-                      >
-                        <DownloadIcon />
-                      </a>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${doc.file_name}" ?`)) {
-                            onDeleteDocument(doc.id);
-                          }
-                        }} 
-                        className="btn-icon-danger" 
-                        title="Supprimer"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="documents-list-section">
+            {Object.entries(documentsByUser)
+              .sort(([_, a], [__, b]) => a.userName.localeCompare(b.userName)) // Trie les employés par ordre alphabétique
+              .map(([userId, data]) => (
+                <UserAccordion
+                  key={userId}
+                  userName={data.userName}
+                  documents={data.documents}
+                  onDeleteDocument={onDeleteDocument}
+                  formatDate={formatDate}
+                />
             ))}
           </div>
         ) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '3rem',
-            color: '#6c757d',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '0.5rem'
-          }}>
-            <p style={{fontSize: '1.125rem', marginBottom: '0.5rem'}}>
-              Aucun document envoyé
-            </p>
-            <p style={{fontSize: '0.875rem'}}>
-              Commencez par envoyer un document à un employé
-            </p>
+          <div className="empty-state">
+            <p className="empty-state-title">Aucun document envoyé</p>
+            <p className="empty-state-subtitle">Commencez par envoyer un document à un employé</p>
           </div>
         )}
       </div>
