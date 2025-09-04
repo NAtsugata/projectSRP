@@ -1,7 +1,15 @@
 // src/pages/AdminVaultView.js - VERSION AMÉLIORÉE AVEC TRI PAR EMPLOYÉ
 import React, { useState, useMemo, useCallback } from 'react';
-import MobileFileInput from '../components/MobileFileInput';
-import { DownloadIcon, TrashIcon, FileTextIcon, CheckCircleIcon, AlertTriangleIcon, ChevronDownIcon, UserIcon } from '../components/SharedUI';
+import {
+  DownloadIcon,
+  TrashIcon,
+  FileTextIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  ChevronDownIcon,
+  UserIcon,
+  CustomFileInput // On importe CustomFileInput
+} from '../components/SharedUI';
 
 // Composant Accordion pour chaque employé
 const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) => {
@@ -251,9 +259,16 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
             <div className="form-group">
               <label>Fichier à envoyer *</label>
-              <MobileFileInput onChange={handleFileSelect} accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple={false} disabled={isUploading} maxSize={20 * 1024 * 1024} onError={handleUploadError}>
-                {file ? `📄 ${file.name}` : '📎 Sélectionner un document'}
-              </MobileFileInput>
+              <CustomFileInput
+                onChange={handleFileSelect}
+                accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+                multiple={false}
+                disabled={isUploading}
+                maxSize={20 * 1024 * 1024}
+                onError={handleUploadError}
+              >
+                {file ? `📄 ${file.name}` : '📎 Sélectionner ou glisser un document'}
+              </CustomFileInput>
 
               {file && !isUploading && (
                 <div className="file-selected-info">
@@ -310,3 +325,4 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     </div>
   );
 }
+
