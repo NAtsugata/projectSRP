@@ -192,15 +192,15 @@ function App() {
         }
     };
 
-    const handleAddIntervention = async (interventionData, assignedUserIds) => {
-        const { data: newInterventionData, error } = await interventionService.createIntervention(interventionData, assignedUserIds, []);
+    const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles = []) => {
+        const { data: newIntervention, error } = await interventionService.createIntervention(interventionData, assignedUserIds, briefingFiles);
         if (error) {
             showToast(`Erreur création intervention: ${error.message}`, "error");
             return null;
         }
         showToast("Intervention créée avec succès.");
         await refreshData(profile);
-        return newInterventionData && newInterventionData.length > 0 ? newInterventionData[0] : null;
+        return newIntervention;
     };
 
     const handleAddBriefingDocuments = async (interventionId, files) => {
@@ -482,7 +482,6 @@ function App() {
                                         onAddIntervention={handleAddIntervention}
                                         onArchive={handleArchiveIntervention}
                                         onDelete={handleDeleteIntervention}
-                                        onAddBriefingDocuments={handleAddBriefingDocuments}
                                     />}
                                 />
                                 <Route
@@ -499,7 +498,6 @@ function App() {
                                     />}
                                 />
                                 <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
-                                {/* ✅ On passe les fonctions au composant AdminVaultView */}
                                 <Route
                                     path="vault"
                                     element={<AdminVaultView
@@ -542,3 +540,4 @@ function App() {
 }
 
 export default App;
+

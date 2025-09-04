@@ -1,13 +1,10 @@
-// src/pages/AdminPlanningView.js - VERSION AVEC UPLOAD FIABILISÉ
+// src/pages/AdminPlanningView.js - VERSION AVEC LOGIQUE DE CRÉATION CORRIGÉE
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GenericStatusBadge } from '../components/SharedUI';
-import { PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon } from '../components/SharedUI';
+import { GenericStatusBadge, PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon, CustomFileInput } from '../components/SharedUI';
 import { getAssignedUsersNames } from '../utils/helpers';
-import { storageService } from '../lib/supabase'; // Assurez-vous que ce chemin est correct
 
-// La prop `onAddBriefingDocuments` est maintenant requise
-export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete, onAddBriefingDocuments }) {
+export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
@@ -70,54 +67,23 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
         setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
     };
 
-    // ✅ CORRECTION : Logique de soumission entièrement revue pour la stabilité
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!onAddBriefingDocuments) {
-            setFormError("Erreur de configuration : la fonction onAddBriefingDocuments est manquante.");
-            return;
-        }
         setIsSubmitting(true);
         setFormError('');
-        let newIntervention = null;
 
         try {
-            // Étape 1: Créer l'intervention (sans fichiers) et récupérer son ID
-            newIntervention = await onAddIntervention(formValues, assignedUsers);
-            if (!newIntervention || !newIntervention.id) {
-                throw new Error("La création de l'intervention a échoué ou n'a pas retourné d'ID.");
-            }
-
-            // Étape 2: Envoyer les fichiers un par un en utilisant le nouvel ID
             const filesToUpload = briefingFiles.map(f => f.fileObject);
-            if (filesToUpload.length > 0) {
-                const successfulUploads = [];
-                for (const file of filesToUpload) {
-                    const result = await storageService.uploadInterventionFile(file, newIntervention.id, 'briefing');
-                    if (result.error) throw result.error;
+            const newIntervention = await onAddIntervention(formValues, assignedUsers, filesToUpload);
 
-                    const urlSource = result.publicURL || result;
-                    const publicUrl = urlSource.publicUrl || urlSource;
-                    if (typeof publicUrl !== 'string') throw new Error("URL invalide reçue du stockage.");
-
-                    successfulUploads.push({ name: file.name, url: publicUrl, type: file.type });
-                }
-
-                // Étape 3: Lier les fichiers envoyés à l'intervention
-                if (successfulUploads.length > 0) {
-                    await onAddBriefingDocuments(newIntervention.id, successfulUploads);
-                }
+            if (newIntervention) {
+                closeForm();
+            } else {
+                setFormError("La création de l'intervention a échoué. Veuillez réessayer.");
             }
-
-            closeForm(); // Succès, on ferme et réinitialise
-
         } catch (error) {
             console.error("Erreur lors du processus de création :", error);
-            if (newIntervention && newIntervention.id) {
-                setFormError(`L'intervention a été créée, mais l'envoi des fichiers a échoué. Modifiez-la pour les ajouter. Erreur: ${error.message}`);
-            } else {
-                setFormError(`Erreur de création : ${error.message}`);
-            }
+            setFormError(`Erreur de création : ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -161,7 +127,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
 
             {showForm && (
                 <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    {/* Champs du formulaire */}
                     <div className="form-group"><label>Client *</label><input name="client" value={formValues.client} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Adresse *</label><input name="address" value={formValues.address} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
                     <div className="form-group"><label>Service *</label><input name="service" value={formValues.service} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
@@ -175,11 +140,16 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
                     </div>
 
-                    {/* Système d'upload */}
                     <div className="form-group">
                         <label>Documents de préparation (optionnel)</label>
-                        <input id="briefing-file-input" type="file" multiple onChange={handleFileChange} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }} disabled={isSubmitting} />
-                        <button type="button" onClick={() => document.getElementById('briefing-file-input').click()} className="btn btn-secondary w-full" disabled={isSubmitting}>📎 Choisir des fichiers...</button>
+                        <CustomFileInput
+                            multiple
+                            onChange={handleFileChange}
+                            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                            disabled={isSubmitting}
+                        >
+                            📎 Choisir ou glisser des fichiers...
+                        </CustomFileInput>
 
                         {briefingFiles.length > 0 && (
                             <ul className="file-preview-list">
@@ -197,7 +167,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                         )}
                     </div>
 
-                    {/* Section d'assignation des utilisateurs */}
                     <div className="form-group">
                         <label>Assigner à :</label>
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
@@ -218,7 +187,6 @@ export default function AdminPlanningView({ interventions, users, onAddIntervent
                 </form>
             )}
 
-            {/* Liste des interventions */}
             <div className="card-white">
                 <h4 style={{marginBottom: '1rem'}}>Interventions planifiées</h4>
                 <ul className="document-list">

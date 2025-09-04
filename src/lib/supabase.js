@@ -374,16 +374,16 @@ export const interventionService = {
     return result;
   },
 
-  async createIntervention(intervention, assignedUserIds, briefingFiles) {
+  async createIntervention(intervention, assignedUserIds, briefingFiles = []) {
     try {
       console.log('➕ Création nouvelle intervention:', {
         client: intervention.client,
-        service: intervention.service,
         assignedUsers: assignedUserIds.length,
         briefingFiles: briefingFiles.length
       });
 
-      const { data: interventionData, error: interventionError } = await supabase
+      // 1. Insérer les données de base de l'intervention
+      const { data: insertedData, error: interventionError } = await supabase
         .from('interventions')
         .insert([{
           client: intervention.client,
@@ -392,50 +392,46 @@ export const interventionService = {
           date: intervention.date,
           time: intervention.time,
         }])
-        .select()
-        .single();
+        .select();
 
       if (interventionError) {
-        console.error('❌ Erreur création intervention:', interventionError);
-        return { error: interventionError };
+        console.error('❌ Erreur BDD création intervention:', interventionError);
+        throw interventionError;
+      }
+      if (!insertedData || insertedData.length === 0) {
+        throw new Error("La création a échoué ou n'a pas retourné de données. Vérifiez les permissions RLS.");
       }
 
-      const interventionId = interventionData.id;
+      const newIntervention = insertedData[0];
+      const interventionId = newIntervention.id;
       console.log('✅ Intervention créée avec ID:', interventionId);
 
-      if (assignedUserIds.length > 0) {
+      // 2. Assigner les utilisateurs
+      if (assignedUserIds && assignedUserIds.length > 0) {
         const assignments = assignedUserIds.map(userId => ({
           intervention_id: interventionId,
           user_id: userId
         }));
-
-        const { error: assignmentError } = await supabase
-          .from('intervention_assignments')
-          .insert(assignments);
-
+        const { error: assignmentError } = await supabase.from('intervention_assignments').insert(assignments);
         if (assignmentError) {
           console.error('❌ Erreur assignation utilisateurs:', assignmentError);
-          return { error: assignmentError };
+          // Ne pas bloquer, mais logger l'erreur
+        } else {
+          console.log('✅ Utilisateurs assignés:', assignedUserIds.length);
         }
-
-        console.log('✅ Utilisateurs assignés:', assignedUserIds.length);
       }
 
-      if (briefingFiles.length > 0) {
-        const { error: briefingError } = await this.addBriefingDocuments(interventionId, briefingFiles);
-        if (briefingError) {
-          console.error('❌ Erreur ajout documents préparation:', briefingError);
-          return { error: briefingError };
-        }
-        console.log('✅ Documents de préparation ajoutés:', briefingFiles.length);
+      // 3. Gérer les documents de préparation
+      if (briefingFiles && briefingFiles.length > 0) {
+        await this.addBriefingDocuments(interventionId, briefingFiles);
       }
 
       console.log('🎉 Intervention complètement créée avec succès');
-      return { error: null };
+      return { data: newIntervention, error: null };
 
     } catch (error) {
       console.error('❌ Erreur générale création intervention:', error);
-      return { error };
+      return { data: null, error };
     }
   },
 
@@ -507,42 +503,25 @@ export const interventionService = {
   async addBriefingDocuments(interventionId, briefingFiles) {
     try {
       console.log('📋 Ajout documents de préparation:', interventionId, briefingFiles.length, 'fichier(s)');
+      const uploadedDocuments = [];
 
       for (const file of briefingFiles) {
-        console.log('📤 Upload document:', file.name);
-
-        const { publicURL, error: uploadError } = await storageService.uploadInterventionFile(
-          file,
-          interventionId,
-          'briefing'
-        );
-
-        if (uploadError) {
-          console.error("❌ Erreur d'envoi pour le fichier", file.name, uploadError);
-          return { error: uploadError };
-        }
-
-        console.log('💾 Sauvegarde référence en base pour:', file.name);
-
-        const { error: dbError } = await supabase
-          .from('intervention_briefing_documents')
-          .insert({
-            intervention_id: interventionId,
-            file_name: file.name,
-            file_url: publicURL
-          });
-
-        if (dbError) {
-          console.error("❌ Erreur d'insertion en base de données pour", file.name, dbError);
-          return { error: dbError };
-        }
-
-        console.log('✅ Document de préparation ajouté:', file.name);
+        const { publicURL, error: uploadError } = await storageService.uploadInterventionFile(file, interventionId, 'briefing');
+        if (uploadError) throw uploadError;
+        uploadedDocuments.push({
+          intervention_id: interventionId,
+          file_name: file.name,
+          file_url: publicURL
+        });
       }
 
-      console.log('🎉 Tous les documents de préparation ont été ajoutés avec succès');
-      return { error: null };
+      if (uploadedDocuments.length > 0) {
+        const { error: dbError } = await supabase.from('intervention_briefing_documents').insert(uploadedDocuments);
+        if (dbError) throw dbError;
+      }
 
+      console.log('🎉 Documents de préparation ajoutés avec succès');
+      return { error: null };
     } catch (error) {
       console.error('❌ Erreur générale ajout documents préparation:', error);
       return { error };
@@ -837,3 +816,4 @@ export default {
   initializeSupabase,
   useSupabasePerformance
 }
+
