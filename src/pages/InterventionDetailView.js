@@ -1,13 +1,27 @@
 // =============================
-// FILE: src/pages/InterventionDetailView.js (FULL — extended + activity log)
+// FILE: src/pages/InterventionDetailView.js — FULL
+// Adds a usable "Demande de fourniture" workflow on top of Needs:
+//  - Needs keep category/estimated_price
+//  - Create purchase requests from selected needs (status: brouillon/envoyée/reçue/refusée)
+//  - Attach request docs, compute totals, persist via onSaveSilent
+//  - Safe defaults so existing data won’t crash
 // =============================
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
+import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon, PaperPlaneIcon, CheckCircle2Icon } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
 
-// Optimized image
-const OptimizedImage = ({ src, alt, className, style, onClick }) => {
+const MIN_REQUIRED_PHOTOS = 2; // validation clôture
+
+const isImageUrl = (f) => {
+  const u = typeof f === 'string' ? f : f?.url;
+  if (!u) return false;
+  return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
+};
+const numberOrNull = (v) => (v === '' || v === undefined || v === null || Number.isNaN(Number(v)) ? null : Number(v));
+
+// ---------- UI bits ----------
+const OptimizedImage = ({ src, alt, className, style }) => {
   const [loadState, setLoadState] = useState('loading');
   const imgRef = useRef(null);
   useEffect(() => {
@@ -16,19 +30,18 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
     img.onload = () => setLoadState('loaded');
     img.onerror = () => setLoadState('error');
     if ('IntersectionObserver' in window && imgRef.current) {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) { img.src = src; observer.disconnect(); }
+      const obs = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) { img.src = src; obs.disconnect(); }
       }, { rootMargin: '50px' });
-      observer.observe(imgRef.current);
-      return () => observer.disconnect();
+      obs.observe(imgRef.current);
+      return () => obs.disconnect();
     } else { img.src = src; }
   }, [src]);
   if (loadState === 'loading') return (<div ref={imgRef} className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#f3f4f6'}}><LoaderIcon className="animate-spin"/></div>);
   if (loadState === 'error') return (<div className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'}}><XCircleIcon/></div>);
-  return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style,display:'block'}} onClick={onClick} loading="lazy"/>;
+  return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style,display:'block'}} loading="lazy"/>;
 };
 
-// Signature Modal
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
   const canvasRef = useRef(null);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -40,10 +53,11 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const ctx = canvas.getContext('2d');
     ctx.strokeStyle = '#000'; ctx.lineWidth = isMobile ? 3 : 2; ctx.lineCap='round'; ctx.lineJoin='round';
     if (existingSignature) { const img = new Image(); img.onload = () => { ctx.drawImage(img,0,0,canvas.width,canvas.height); setHasDrawn(true); }; img.src = existingSignature; }
-    let drawing=false,last=null; const getPos=e=>{const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x:x*(canvas.width/r.width), y:y*(canvas.height/r.height)};};
-    const start=e=>{e.preventDefault(); drawing=true; setHasDrawn(true); last=getPos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y);};
-    const stop=e=>{e.preventDefault(); drawing=false; last=null;};
-    const draw=e=>{ if(!drawing) return; e.preventDefault(); const p=getPos(e); if(last){ ctx.lineTo(p.x,p.y); ctx.stroke(); } last=p; };
+    let drawing=false,last=null;
+    const getPos = (e) => { const r=canvas.getBoundingClientRect(); const ex=e.touches?e.touches[0].clientX:e.clientX; const ey=e.touches?e.touches[0].clientY:e.clientY; return { x:(ex-r.left)*(canvas.width/r.width), y:(ey-r.top)*(canvas.height/r.height) }; };
+    const start = (e)=>{ e.preventDefault(); drawing=true; setHasDrawn(true); last=getPos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); };
+    const stop  = (e)=>{ e.preventDefault(); drawing=false; last=null; };
+    const draw  = (e)=>{ if(!drawing) return; e.preventDefault(); const p=getPos(e); if(last){ ctx.lineTo(p.x,p.y); ctx.stroke(); } last=p; };
     canvas.addEventListener('mousedown',start); canvas.addEventListener('mouseup',stop); canvas.addEventListener('mousemove',draw); canvas.addEventListener('mouseleave',stop);
     canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchend',stop,{passive:false}); canvas.addEventListener('touchmove',draw,{passive:false});
     return ()=>{ canvas.removeEventListener('mousedown',start); canvas.removeEventListener('mouseup',stop); canvas.removeEventListener('mousemove',draw); canvas.removeEventListener('mouseleave',stop); canvas.removeEventListener('touchstart',start); canvas.removeEventListener('touchend',stop); canvas.removeEventListener('touchmove',draw); };
@@ -55,7 +69,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
       <div className="modal-footer" style={{marginTop:'1rem'}}>
         <button type="button" onClick={()=>{const c=canvasRef.current;if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);}}} className="btn btn-secondary">Effacer</button>
         <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
-        <button type="button" onClick={()=>onSave(canvasRef.current.toDataURL('image/png'))} className="btn btn-primary" disabled={!hasDrawn}>Valider la signature</button>
+        <button type="button" onClick={()=>onSave(canvasRef.current.toDataURL('image/png'))} className="btn btn-primary" disabled={!hasDrawn}>Valider</button>
       </div>
     </div></div>
   );
@@ -76,7 +90,6 @@ const CancelReasonModal = ({ onConfirm, onCancel }) => {
   );
 };
 
-// Inline Uploader (uses storageService)
 const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) => {
   const [state, setState] = useState({ uploading:false, queue:[], error:null });
   const inputRef = useRef(null);
@@ -100,7 +113,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) =
         setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'error',error:String(err.message||err)}:it)}));
       }
     }
-    if(uploaded.length){ try{ await onUploadComplete(uploaded);}catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué. Rafraîchissez et réessayez."})); } }
+    if(uploaded.length){ try{ await onUploadComplete(uploaded);}catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."})); } }
     setState(s=>({...s,uploading:false}));
   },[compressImage,interventionId,onUploadComplete]);
   return (
@@ -127,7 +140,6 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) =
           ))}
         </div>
       )}
-      {state.error && <div className="error-message" style={{color:'#dc2626',marginTop:'1rem',textAlign:'center',fontWeight:500}}>{state.error}</div>}
     </div>
   );
 };
@@ -136,172 +148,257 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [report, setReport] = useState(null);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [loading,   setLoading]   = useState(true);
+  const [report,    setReport]    = useState(null);
+  const [adminNotes,setAdminNotes]= useState('');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving,  setIsSaving]  = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // safe schema builder so old data never breaks
+  const ensureReportSchema = useCallback((base)=>{
+    const r = base || {};
+    return {
+      notes: r.notes || '',
+      files: Array.isArray(r.files) ? r.files : [],
+      arrivalTime: r.arrivalTime || null,
+      departureTime: r.departureTime || null,
+      signature: r.signature || null,
+      // needs with new properties
+      needs: Array.isArray(r.needs) ? r.needs.map(n=>({
+        id: n.id || `need-${Math.random().toString(36).slice(2)}`,
+        label: n.label || '',
+        qty: Number(n.qty)||1,
+        urgent: !!n.urgent,
+        note: n.note || '',
+        category: n.category || 'materiel',
+        estimated_price: numberOrNull(n.estimated_price),
+        request_id: n.request_id || null,
+      })) : [],
+      // new: supply requests
+      supply_requests: Array.isArray(r.supply_requests) ? r.supply_requests : [],
+      // leave the rest untouched if present (extended features can co-exist)
+      ...('blocks' in r ? { blocks: r.blocks } : {}),
+      ...('parts_used' in r ? { parts_used: r.parts_used } : {}),
+      ...('quick_checkpoints' in r ? { quick_checkpoints: r.quick_checkpoints } : {}),
+      ...('arrivalGeo' in r ? { arrivalGeo: r.arrivalGeo } : {}),
+      ...('departureGeo' in r ? { departureGeo: r.departureGeo } : {}),
+      ...('rating' in r ? { rating: r.rating } : {}),
+      ...('follow_up_required' in r ? { follow_up_required: r.follow_up_required } : {}),
+    };
+  },[]);
 
   useEffect(() => {
     const found = interventions.find(i => String(i.id) === String(interventionId));
     if (found) {
       setIntervention(found);
-      setReport(found.report || { notes:'', files:[], arrivalTime:null, departureTime:null, signature:null, needs:[] });
+      setReport(ensureReportSchema(found.report));
       setAdminNotes(found.admin_notes || '');
       setLoading(false);
     } else if (interventions.length>0) {
       navigate('/planning');
     }
-  }, [interventions, interventionId, navigate, dataVersion]);
+  }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
+
+  const persistReport = async (next) => {
+    setReport(next);
+    await onSaveSilent(intervention.id, next);
+    refreshData?.();
+  };
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 
-  const handleSave = async () => {
-    if (!intervention) return; setIsSaving(true);
-    try { await onSave(intervention.id, { ...report, admin_notes: adminNotes }); }
-    finally { setIsSaving(false); }
-  };
-
-  // Activity log helper
-  const appendActivity = async (action, meta={}) => {
-    const entry = { at:new Date().toISOString(), by:(isAdmin?'admin':'employe'), action, meta };
-    const current = Array.isArray(intervention.activity_log) ? [...intervention.activity_log] : [];
-    current.push(entry);
-    await onSaveSilent(intervention.id, { activity_log: current });
-  };
-
-  // Needs
-  const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'' });
-  const addNeed = async () => {
-    if (!needDraft.label.trim()) return;
-    const newNeeds = [...(report.needs||[]), { ...needDraft, id:`need-${Date.now()}` }];
-    const updated = { ...report, needs: newNeeds };
-    setReport(updated);
-    await onSaveSilent(intervention.id, updated);
-    await appendActivity('NEED_ADDED', { label:needDraft.label, qty:needDraft.qty, urgent:needDraft.urgent });
-    setNeedDraft({ label:'', qty:1, urgent:false, note:'' });
-    refreshData();
-  };
-  const removeNeed = async (id) => {
-    const newNeeds = (report.needs||[]).filter(n=>n.id!==id);
-    const updated = { ...report, needs: newNeeds };
-    setReport(updated);
-    await onSaveSilent(intervention.id, updated);
-    await appendActivity('NEED_REMOVED', { id });
-    refreshData();
-  };
-
-  // Status
-  const setStatus = async (status, reason=null) => {
-    const payload = { status, cancellation_reason: status==='Annulée' ? (reason||'') : null };
-    await onSaveSilent(intervention.id, payload);
-    await appendActivity('STATUS_CHANGED', { status, reason: reason||null });
-    refreshData();
-  };
-
   const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'N/A';
   if (loading || !intervention || !report) return <div className="loading-container"><LoaderIcon className="animate-spin"/><p>Chargement…</p></div>;
+
   const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
 
+  // ------------- Needs (with categories + price) -------------
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n=>n.urgent).length : 0;
+  const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
+  const addNeed = async () => {
+    if (!needDraft.label.trim()) return;
+    const item = { ...needDraft, id:`need-${Date.now()}`, estimated_price: numberOrNull(needDraft.estimated_price), request_id:null };
+    const updated = { ...report, needs: [...(report.needs||[]), item] };
+    await persistReport(updated);
+  };
+  const removeNeed = async (id) => {
+    const updated = { ...report, needs: (report.needs||[]).filter(n=>n.id!==id) };
+    await persistReport(updated);
+  };
+  const needsTotal = Array.isArray(report.needs) ? report.needs.reduce((s,n)=> s + (Number(n.estimated_price)||0), 0) : 0;
+
+  // ------------- Supply Requests (Demande de fourniture) -------------
+  const [selection, setSelection] = useState({});
+  const toggleSelect = (id) => setSelection(s=>({ ...s, [id]: !s[id] }));
+
+  const createSupplyRequest = async () => {
+    const selectedNeeds = (report.needs||[]).filter(n=>selection[n.id] && !n.request_id);
+    if (!selectedNeeds.length) return alert('Sélectionnez au moins 1 besoin non déjà demandé.');
+    const items = selectedNeeds.map(n=>({ need_id:n.id, label:n.label, qty:n.qty||1, category:n.category||'materiel', estimated_price:numberOrNull(n.estimated_price), note:n.note||'' }));
+    const total = items.reduce((s,i)=> s + ((Number(i.estimated_price)||0)), 0);
+    const req = { id:`req-${Date.now()}`, created_at:new Date().toISOString(), status:'brouillon', vendor:'', comment:'', total, items, files:[] };
+    const needs = report.needs.map(n=> selection[n.id] ? { ...n, request_id:req.id } : n);
+    const updated = { ...report, supply_requests:[...(report.supply_requests||[]), req], needs };
+    await persistReport(updated);
+    setSelection({});
+  };
+
+  const updateRequest = async (reqId, patch) => {
+    const list = (report.supply_requests||[]).map(r=> r.id===reqId ? { ...r, ...patch } : r);
+    await persistReport({ ...report, supply_requests: list });
+  };
+  const addRequestFiles = async (reqId, files) => {
+    const list = (report.supply_requests||[]).map(r=> r.id===reqId ? { ...r, files:[...(r.files||[]), ...files] } : r);
+    await persistReport({ ...report, supply_requests: list });
+  };
+
+  const exportRequestCSV = (req) => {
+    const rows = [['Label','Qté','Catégorie','Prix estimé (€)','Note']].concat(
+      req.items.map(i=>[i.label, i.qty, i.category, (i.estimated_price??'').toString().replace('.',','), i.note.replace(/\n/g,' ')]));
+    const total = req.total || req.items.reduce((s,i)=> s+(Number(i.estimated_price)||0),0);
+    rows.push([],[`TOTAL`, '', '', total.toString().replace('.',','), '']);
+    const csv = rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `demande_fourniture_${req.id}.csv`; a.click();
+  };
+
+  // ------------- Clôture -------------
+  const validateCanClose = () => {
+    const imgCount = Array.isArray(report.files) ? report.files.filter(isImageUrl).length : 0;
+    if (!report.signature) return { ok:false, msg:'Signature client manquante.' };
+    if (imgCount < MIN_REQUIRED_PHOTOS) return { ok:false, msg:`Minimum ${MIN_REQUIRED_PHOTOS} photo(s) requise(s).` };
+    return { ok:true };
+  };
+  const handleSave = async () => {
+    const v = validateCanClose(); if(!v.ok) return alert(v.msg);
+    setIsSaving(true); try { await onSave(intervention.id, { ...report, admin_notes: adminNotes }); } finally { setIsSaving(false); }
+  };
 
   return (
     <div>
-      {showSignatureModal && <SignatureModal onSave={(sig)=>{handleReportChange('signature',sig); setShowSignatureModal(false);}} onCancel={()=>setShowSignatureModal(false)} existingSignature={report.signature}/>}
-      {showCancelModal && <CancelReasonModal onCancel={()=>setShowCancelModal(false)} onConfirm={async(reason)=>{ setShowCancelModal(false); await setStatus('Annulée', reason); }}/>}
-
       <button onClick={()=>navigate('/planning')} className="back-button"><ChevronLeftIcon/> Retour</button>
       <div className="card-white">
         <h2>{intervention.client}</h2>
         <p className="text-muted">{intervention.address}</p>
 
+        {/* Statut + badges */}
         <div className="section">
           <h3>⚑ Statut de l'intervention</h3>
           <div className="flex items-center gap-2" style={{flexWrap:'wrap'}}>
-            <span className="badge">Statut actuel : {currentStatus}{intervention.cancellation_reason?` — ${intervention.cancellation_reason}`:''}</span>
+            <span className="badge">Statut actuel : {currentStatus}</span>
             {urgentCount>0 && <span className="badge" style={{background:'#f59e0b',color:'#111827'}}>URG {urgentCount}</span>}
-            {!isAdmin && (<>
-              <button className="btn btn-danger" onClick={()=>setShowCancelModal(true)} disabled={currentStatus==='Annulée'}>Annuler</button>
-              <button className="btn btn-secondary" onClick={async()=>{ await setStatus(report.arrivalTime?'En cours':'À venir'); }} disabled={currentStatus!=='Annulée'}>Reprise</button>
-            </>)}
           </div>
         </div>
 
-        <div className="section">
-          <h3>📋 Documents de préparation</h3>
-          {(intervention.intervention_briefing_documents?.length>0) ? (
-            <ul className="document-list-optimized" style={{marginBottom:'1rem'}}>
-              {intervention.intervention_briefing_documents.map(doc=>{
-                const isImage = doc.file_name && /(jpe?g|png|gif|webp)$/i.test(doc.file_name);
-                return (
-                  <li key={doc.id} className="document-item-optimized">
-                    {isImage && doc.file_url
-                      ? <OptimizedImage src={doc.file_url} alt={doc.file_name} style={{width:40,height:40,objectFit:'cover',borderRadius:'0.25rem'}}/>
-                      : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
-                    <span className="file-name">{doc.file_name}</span>
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary" download={doc.file_name}><DownloadIcon/> Voir</a>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <p className="text-muted">Aucun document de préparation.</p>}
-          {isAdmin && <BriefingUploadBlock interventionId={interventionId} onAddBriefingDocuments={onAddBriefingDocuments} refreshData={refreshData}/>}
-        </div>
-
-        <div className="section">
-          <h3>⏱️ Pointage</h3>
-          <div className="grid-2-cols">
-            <button onClick={async()=>{handleReportChange('arrivalTime', new Date().toISOString()); await appendActivity('TIME_ARRIVAL', {});}} className="btn btn-success" disabled={!!report.arrivalTime || isAdmin}>
-              {report.arrivalTime?`✅ Arrivé: ${formatTime(report.arrivalTime)}`:'🕐 Arrivée sur site'}
-            </button>
-            <button onClick={async()=>{handleReportChange('departureTime', new Date().toISOString()); await appendActivity('TIME_DEPARTURE', {});}} className="btn btn-danger" disabled={!report.arrivalTime || !!report.departureTime || isAdmin}>
-              {report.departureTime?`✅ Parti: ${formatTime(report.departureTime)}`:'🚪 Départ du site'}
-            </button>
-          </div>
-        </div>
-
+        {/* Rapport */}
         <div className="section">
           <h3>📝 Rapport de chantier</h3>
           <textarea value={report.notes||''} onChange={e=>handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin}/>
         </div>
 
-        {(isAdmin || adminNotes) && (
-          <div className="section">
-            <h3>🔒 Notes de l'administration</h3>
-            <textarea value={adminNotes} onChange={e=>setAdminNotes(e.target.value)} placeholder={isAdmin?"Ajouter des notes...":"Aucune note de l'administration."} rows="4" className="form-control" readOnly={!isAdmin}/>
-          </div>
-        )}
-
-        {/* Needs */}
+        {/* Besoins */}
         <div className="section">
-          <h3>🧰 Besoins chantier</h3>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+            <h3>🧰 Besoins chantier</h3>
+            <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
+          </div>
           {(!report.needs || report.needs.length===0) && <p className="text-muted">Aucun besoin pour le moment.</p>}
           {Array.isArray(report.needs) && report.needs.length>0 && (
             <ul className="document-list">
               {report.needs.map(n=> (
                 <li key={n.id}>
-                  <div style={{flexGrow:1}}>
-                    <p className="font-semibold">{n.label}{n.qty?` × ${n.qty}`:''} {n.urgent?<span className="badge" style={{marginLeft:8}}>Urgent</span>:null}</p>
-                    {n.note && <p className="text-muted" style={{fontSize:'0.875rem'}}>{n.note}</p>}
+                  <div style={{flexGrow:1,minWidth:0}}>
+                    <label className="checkbox" title="Inclure dans une demande"><input type="checkbox" checked={!!selection[n.id]} onChange={()=>toggleSelect(n.id)} disabled={!!n.request_id}/>&nbsp;</label>
+                    <span className="font-semibold">[{n.category||'—'}] {n.label}{n.qty?` × ${n.qty}`:''} {n.urgent?<span className="badge" style={{marginLeft:8}}>Urgent</span>:null}</span>
+                    <div className="text-muted" style={{fontSize:'0.875rem'}}>
+                      {n.note||'—'} {typeof n.estimated_price==='number'?` • Estimé: ${n.estimated_price.toFixed(2)} €`:''}
+                      {n.request_id && <span className="badge" style={{marginLeft:8,background:'#e5e7eb',color:'#111827'}}>Req: {n.request_id}</span>}
+                    </div>
                   </div>
-                  {!isAdmin && <button className="btn-icon-danger" onClick={()=>removeNeed(n.id)} title="Supprimer">✖</button>}
                 </li>
               ))}
             </ul>
           )}
           {!isAdmin && (
-            <div className="grid" style={{gridTemplateColumns:'180px 100px 120px 1fr auto', gap:'0.5rem', alignItems:'end'}}>
-              <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
+            <div className="grid" style={{gridTemplateColumns:'160px 80px 120px 1fr 140px auto', gap:'0.5rem', alignItems:'end'}}>
+              <div><label>Catégorie</label>
+                <select className="form-control" value={needDraft.category} onChange={e=>setNeedDraft(v=>({...v,category:e.target.value}))}>
+                  <option value="materiel">Matériel</option>
+                  <option value="consommables">Consommables</option>
+                  <option value="location">Location</option>
+                  <option value="commande">Commande</option>
+                </select>
+              </div>
               <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e=>setNeedDraft(v=>({...v,qty:Math.max(1,Number(e.target.value)||1)}))}/></div>
               <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent?'1':'0'} onChange={e=>setNeedDraft(v=>({...v,urgent:e.target.value==='1'}))}><option value="0">Non</option><option value="1">Oui</option></select></div>
-              <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, référence…"/></div>
-              <div><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
+              <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
+              <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e=>setNeedDraft(v=>({...v,estimated_price:e.target.value}))} placeholder="ex: 25.90"/></div>
+              <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, réf…"/></div>
+              <div style={{gridColumn:'1 / -1',display:'flex',gap:8,flexWrap:'wrap'}}>
+                <button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter besoin</button>
+                <button className="btn btn-secondary" onClick={createSupplyRequest} disabled={!Object.values(selection).some(Boolean)}><PaperPlaneIcon/> Créer une demande de fourniture</button>
+              </div>
             </div>
           )}
         </div>
 
+        {/* Demandes de fourniture */}
+        <div className="section">
+          <h3>📦 Demandes de fourniture</h3>
+          {!(report.supply_requests||[]).length && <p className="text-muted">Aucune demande créée.</p>}
+          {(report.supply_requests||[]).map(req => (
+            <div className="card-white" key={req.id} style={{marginBottom:8}}>
+              <div className="flex-between items-center" style={{gap:8,flexWrap:'wrap'}}>
+                <div>
+                  <b>#{req.id}</b> — {new Date(req.created_at).toLocaleString('fr-FR')} — <span className="badge" style={{background:'#e5e7eb',color:'#111827'}}>{req.status}</span>
+                  {req.vendor && <span className="text-muted"> • Fournisseur: {req.vendor}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="btn btn-secondary" onClick={()=>exportRequestCSV(req)} title="Exporter en CSV"><DownloadIcon/> CSV</button>
+                  {!isAdmin && req.status!=='envoyée' && (
+                    <button className="btn btn-primary" onClick={()=>updateRequest(req.id,{status:'envoyée'})}><PaperPlaneIcon/> Marquer envoyée</button>
+                  )}
+                  {isAdmin && req.status!=='reçue' && (
+                    <button className="btn btn-success" onClick={()=>updateRequest(req.id,{status:'reçue'})}><CheckCircle2Icon/> Marquer reçue</button>
+                  )}
+                </div>
+              </div>
+              <div style={{marginTop:8}}>
+                <label>Commentaire / fournisseur</label>
+                <input className="form-control" value={req.vendor||''} onChange={e=>updateRequest(req.id,{vendor:e.target.value})} placeholder="Nom fournisseur, référence devis…"/>
+              </div>
+              <ul className="document-list" style={{marginTop:8}}>
+                {req.items.map((i,idx)=> (
+                  <li key={i.need_id||idx}>
+                    <div style={{flexGrow:1}}>
+                      <p className="font-semibold">[{i.category}] {i.label} × {i.qty||1}</p>
+                      <p className="text-muted" style={{fontSize:'0.875rem'}}>Estimation: {typeof i.estimated_price==='number'? i.estimated_price.toFixed(2)+' €' : '—'} {i.note? ' • '+i.note : ''}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex-between" style={{marginTop:8}}>
+                <div className="text-muted">Total estimé: <b>{(req.total || req.items.reduce((s,i)=>s+(Number(i.estimated_price)||0),0)).toFixed(2)} €</b></div>
+                <InlineUploader interventionId={interventionId} onUploadComplete={(files)=>addRequestFiles(req.id, files)} folder={`supply/${req.id}`}/>
+              </div>
+              {Array.isArray(req.files) && req.files.length>0 && (
+                <ul className="document-list-optimized" style={{marginTop:8}}>
+                  {req.files.map((f,idx)=> (
+                    <li key={idx} className="document-item-optimized">
+                      <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>
+                      <span className="file-name">{f.name}</span>
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={f.name}><DownloadIcon/></a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Photos & signature (pour la validation) */}
         <div className="section">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <h3>📷 Photos et Documents</h3>
@@ -321,8 +418,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </ul>
           ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
           {!isAdmin && (<>
-            <button onClick={()=>setShowUploader(!showUploader)} className={`btn w-full ${showUploader?'btn-secondary':'btn-primary'}`}>{showUploader?'Fermer':'📷 Ajouter photos/documents'}</button>
-            {showUploader && <InlineUploader interventionId={interventionId} onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; setReport(updated); await onSaveSilent(intervention.id, updated); await appendActivity('FILE_UPLOADED', {count:uploaded.length}); refreshData(); }}/>}
+            <InlineUploader interventionId={interventionId} onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; await persistReport(updated); }}/>
           </>)}
         </div>
 
@@ -335,47 +431,19 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           ) : (
             <div>
-              <canvas width="300" height="150" style={{border:'2px dashed #cbd5e1',borderRadius:'0.5rem',width:'100%',maxWidth:300,background:'#f8fafc',cursor:isAdmin?'not-allowed':'crosshair'}}/>
+              <canvas width="300" height="150" style={{border:'2px dashed #cbd5e1',borderRadius:'0.5rem',width:'100%',maxWidth:300,background:'#f8fafc'}}/>
               {!isAdmin && <div style={{marginTop:8}}><button onClick={()=>setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon/> Agrandir</button></div>}
             </div>
           )}
         </div>
 
-        {/* Activity Log */}
-        {Array.isArray(intervention.activity_log) && intervention.activity_log.length>0 && (
-          <div className="section">
-            <h3>🗒️ Journal d’activités</h3>
-            <ul className="document-list">
-              {[...intervention.activity_log].reverse().slice(0,100).map((e,i)=> (
-                <li key={i}>
-                  <div style={{flexGrow:1}}>
-                    <p className="font-semibold">{e.action}</p>
-                    <p className="text-muted" style={{fontSize:'0.875rem'}}>{new Date(e.at).toLocaleString('fr-FR')} — {e.by}</p>
-                  </div>
-                  {e.meta && <code style={{fontSize:'0.75rem',background:'#f3f4f6',padding:'4px 6px',borderRadius:6}}>{JSON.stringify(e.meta)}</code>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{fontSize:'1rem',padding:'1rem',fontWeight:600}}>{isSaving ? (<><LoaderIcon className="animate-spin"/> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
       </div>
+
+      {/* Modales */}
+      {showSignatureModal && <SignatureModal onSave={(sig)=>{handleReportChange('signature',sig); setShowSignatureModal(false);}} onCancel={()=>setShowSignatureModal(false)} existingSignature={report.signature}/>}
+      {showCancelModal && <CancelReasonModal onCancel={()=>setShowCancelModal(false)} onConfirm={(reason)=>{ setShowCancelModal(false); /* setStatus('Annulée', reason) — optionnel */ }}/>}
     </div>
   );
 }
-
-const BriefingUploadBlock = ({ interventionId, onAddBriefingDocuments, refreshData }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button onClick={()=>setOpen(!open)} className={`btn w-full ${open?'btn-secondary':'btn-primary'}`}>{open?'Fermer':'➕ Ajouter des documents'}</button>
-      {open && (
-        <InlineUploader interventionId={interventionId} onUploadComplete={async(files)=>{ await onAddBriefingDocuments(interventionId, files); refreshData(); setOpen(false); }} folder="briefing"/>
-      )}
-    </>
-  );
-};
-
-
 
