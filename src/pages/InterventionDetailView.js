@@ -1,3 +1,12 @@
+// src/pages/InterventionDetailView.js — VERSION ÉTENDUE
+// Nouveaux apports sans casser l'existant :
+// - 🧰 "Besoins chantier" : l'employé ajoute librement des besoins (matériel/outils/achats) avec quantité/urgence/note
+//   -> stockés dans report.needs (persistés via onSaveSilent)
+// - ⚑ Statut : l'employé peut mettre l'intervention en "Annulée" (avec motif) ou "Reprise" (retour à "À venir" si pas démarrée, sinon "En cours")
+//   -> champs intervention.status et intervention.cancellation_reason (persistés via onSaveSilent)
+// - 🔒 Notes admin : section existante conservée (éditions admin uniquement, lecture employé)
+// - UI conservée : documents de préparation, pointage, rapport, fichiers, signature, sauvegarde
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, DownloadIcon, FileTextIcon, LoaderIcon, ExpandIcon, RefreshCwIcon, XCircleIcon, CheckCircleIcon, AlertTriangleIcon } from '../components/SharedUI';
@@ -80,7 +89,7 @@ const OptimizedImage = ({ src, alt, className, style, onClick }) => {
 };
 
 // =================================================================================
-// MODALE DE SIGNATURE
+// MODALES
 // =================================================================================
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     const canvasRef = useRef(null);
@@ -151,7 +160,6 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
             lastPos = pos;
         };
 
-        // Event listeners
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mousemove', draw);
@@ -195,15 +203,26 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
                 </p>
                 <canvas ref={canvasRef} className="signature-canvas-fullscreen" />
                 <div className="modal-footer" style={{marginTop: '1rem'}}>
-                    <button type="button" onClick={handleClear} className="btn btn-secondary">
-                        Effacer
-                    </button>
-                    <button type="button" onClick={onCancel} className="btn btn-secondary">
-                        Annuler
-                    </button>
-                    <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!hasDrawn}>
-                        Valider la signature
-                    </button>
+                    <button type="button" onClick={handleClear} className="btn btn-secondary">Effacer</button>
+                    <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
+                    <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!hasDrawn}>Valider la signature</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CancelReasonModal = ({ onConfirm, onCancel }) => {
+    const [reason, setReason] = useState('');
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content">
+                <h3>Annuler l'intervention</h3>
+                <p className="text-muted">Merci d'expliquer brièvement la raison de l'annulation.</p>
+                <textarea className="form-control" rows={4} value={reason} onChange={(e)=>setReason(e.target.value)} placeholder="Ex: Client absent, accès impossible, pièce manquante…"/>
+                <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={onCancel}>Retour</button>
+                    <button type="button" className="btn btn-danger" onClick={()=>onConfirm(reason.trim())} disabled={!reason.trim()}>Confirmer l'annulation</button>
                 </div>
             </div>
         </div>
@@ -211,7 +230,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
 };
 
 // =================================================================================
-// COMPOSANT D'UPLOAD INLINE (AMÉLIORÉ)
+// COMPOSANT UPLOADER INLINE (identique à l'existant)
 // =================================================================================
 const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' }) => {
     const [uploadState, setUploadState] = useState({ isUploading: false, queue: [], error: null });
@@ -242,9 +261,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
 
     const handleFileChange = useCallback(async (event) => {
         const files = Array.from(event.target.files);
-        if (inputRef.current) {
-            inputRef.current.value = "";
-        }
+        if (inputRef.current) { inputRef.current.value = ""; }
         if (files.length === 0) return;
 
         const queueItems = files.map((file, i) => ({ id: `${file.name}-${Date.now()}-${i}`, name: file.name, status: 'pending', progress: 0, error: null }));
@@ -258,13 +275,8 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                     setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'uploading', progress } : item) }));
                 });
                 if (result.error) throw result.error;
-
                 const publicUrl = result.publicURL?.publicUrl || result.publicURL;
-
-                if (typeof publicUrl !== 'string') {
-                    throw new Error("Format d'URL invalide reçu du service de stockage.");
-                }
-
+                if (typeof publicUrl !== 'string') throw new Error("Format d'URL invalide reçu du service de stockage.");
                 successfulUploads.push({ name: files[i].name, url: publicUrl, type: files[i].type });
                 setUploadState(p => ({ ...p, queue: p.queue.map((item, idx) => idx === i ? { ...item, status: 'completed', progress: 100 } : item) }));
             } catch (error) {
@@ -287,23 +299,10 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
 
     return (
         <div className="mobile-uploader-panel">
-            <input
-                ref={inputRef}
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                onChange={handleFileChange}
-                disabled={uploadState.isUploading}
-                style={{ display: 'none' }}
-            />
-            <button
-                onClick={() => inputRef.current.click()}
-                className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
-                disabled={uploadState.isUploading}
-            >
+            <input ref={inputRef} type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} disabled={uploadState.isUploading} style={{ display: 'none' }} />
+            <button onClick={() => inputRef.current.click()} className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`} disabled={uploadState.isUploading}>
                 {uploadState.isUploading ? 'Envoi en cours...' : 'Choisir des fichiers'}
             </button>
-
             {uploadState.queue.length > 0 && (
                 <div className="upload-queue-container">
                     {uploadState.queue.map(item => (
@@ -322,7 +321,6 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
                     ))}
                 </div>
             )}
-
             {uploadState.error && (
                 <div className="error-message" style={{ color: '#dc2626', marginTop: '1rem', textAlign: 'center', fontWeight: 500 }}>
                     {uploadState.error}
@@ -333,7 +331,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report' })
 };
 
 // =================================================================================
-// COMPOSANT PRINCIPAL DE LA VUE DÉTAILLÉE
+// COMPOSANT PRINCIPAL
 // =================================================================================
 export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onAddBriefingDocuments }) {
     const { interventionId } = useParams();
@@ -346,14 +344,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const [isSaving, setIsSaving] = useState(false);
     const [showUploader, setShowUploader] = useState(false);
     const [showBriefingUploader, setShowBriefingUploader] = useState(false);
-    const signatureCanvasRef = useRef(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     useEffect(() => {
         const foundIntervention = interventions.find(i => i.id.toString() === interventionId);
         if (foundIntervention) {
             setIntervention(foundIntervention);
             setReport(foundIntervention.report || {
-                notes: '', files: [], arrivalTime: null, departureTime: null, signature: null
+                notes: '', files: [], arrivalTime: null, departureTime: null, signature: null, needs: []
             });
             setAdminNotes(foundIntervention.admin_notes || '');
             setLoading(false);
@@ -370,54 +368,42 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         if (!intervention) return;
         setIsSaving(true);
         try {
-            const saveData = {
-                ...report,
-                admin_notes: adminNotes
-            };
+            const saveData = { ...report, admin_notes: adminNotes };
             await onSave(intervention.id, saveData);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleClearSignature = () => {
-        handleReportChange('signature', null);
+    // ------------------ Besoins chantier ------------------
+    const [needDraft, setNeedDraft] = useState({ label: '', qty: 1, urgent: false, note: '' });
+
+    const addNeed = async () => {
+        const { label } = needDraft;
+        if (!label.trim()) return;
+        const newNeeds = [...(report.needs || []), { ...needDraft, id: `need-${Date.now()}` }];
+        const updatedReport = { ...report, needs: newNeeds };
+        setReport(updatedReport);
+        await onSaveSilent(intervention.id, updatedReport);
+        setNeedDraft({ label: '', qty: 1, urgent: false, note: '' });
+        refreshData();
     };
 
-    const handleSaveSignatureFromModal = (signatureDataUrl) => {
-        handleReportChange('signature', signatureDataUrl);
-        setShowSignatureModal(false);
-    };
-
-    const handleUploadComplete = async (uploadedFiles) => {
-        const updatedReport = {
-            ...report,
-            files: [...(report.files || []), ...uploadedFiles]
-        };
+    const removeNeed = async (id) => {
+        const newNeeds = (report.needs || []).filter(n => n.id !== id);
+        const updatedReport = { ...report, needs: newNeeds };
         setReport(updatedReport);
         await onSaveSilent(intervention.id, updatedReport);
         refreshData();
     };
 
-    const handleBriefingUploadComplete = async (uploadedFiles) => {
-        const newDocsForDisplay = uploadedFiles.map(file => ({
-            id: `temp-${Date.now()}-${Math.random()}`,
-            file_name: file.name,
-            file_url: file.url,
-        }));
-
-        setIntervention(prev => ({
-            ...prev,
-            intervention_briefing_documents: [
-                ...(prev.intervention_briefing_documents || []),
-                ...newDocsForDisplay
-            ]
-        }));
-
-        await onAddBriefingDocuments(interventionId, uploadedFiles);
-
+    // ------------------ Statut Annulé / Reprise ------------------
+    const setStatus = async (status, reason = null) => {
+        const payload = { status };
+        if (status === 'Annulée') payload.cancellation_reason = reason || '';
+        else payload.cancellation_reason = null;
+        await onSaveSilent(intervention.id, payload);
         refreshData();
-        setShowBriefingUploader(false);
     };
 
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -426,20 +412,47 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement...</p></div>;
     }
 
+    const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
+
     return (
         <div>
-            {showSignatureModal && <SignatureModal onSave={handleSaveSignatureFromModal} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
+            {showSignatureModal && <SignatureModal onSave={(sig)=>{handleReportChange('signature', sig); setShowSignatureModal(false);}} onCancel={()=>setShowSignatureModal(false)} existingSignature={report.signature} />}
+            {showCancelModal && (
+                <CancelReasonModal
+                    onCancel={()=>setShowCancelModal(false)}
+                    onConfirm={async (reason) => { setShowCancelModal(false); await setStatus('Annulée', reason); }}
+                />
+            )}
+
             <button onClick={() => navigate('/planning')} className="back-button"><ChevronLeftIcon /> Retour</button>
             <div className="card-white">
                 <h2>{intervention.client}</h2>
                 <p className="text-muted">{intervention.address}</p>
+
+                {/* Statut + Actions */}
+                <div className="section">
+                    <h3>⚑ Statut de l'intervention</h3>
+                    <div className="flex items-center gap-2" style={{flexWrap:'wrap'}}>
+                        <span className="badge">Statut actuel : {currentStatus}{intervention.cancellation_reason ? ` — ${intervention.cancellation_reason}`:''}</span>
+                        {!isAdmin && (
+                          <>
+                            <button className="btn btn-danger" onClick={() => setShowCancelModal(true)} disabled={currentStatus === 'Annulée'}>Annuler</button>
+                            <button className="btn btn-secondary" onClick={async ()=>{
+                                // Reprise: si déjà arrivée -> En cours, sinon À venir
+                                await setStatus(report.arrivalTime ? 'En cours' : 'À venir');
+                              }} disabled={currentStatus !== 'Annulée'}
+                            >Reprise</button>
+                          </>
+                        )}
+                    </div>
+                </div>
 
                 <div className="section">
                     <h3>📋 Documents de préparation</h3>
                     {(intervention.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0) ? (
                         <ul className="document-list-optimized" style={{marginBottom: '1rem'}}>
                             {intervention.intervention_briefing_documents.map(doc => {
-                                const isImage = doc.file_name && /\.(jpe?g|png|gif|webp)$/i.test(doc.file_name);
+                                const isImage = doc.file_name && /(jpe?g|png|gif|webp)$/i.test(doc.file_name);
                                 return (
                                     <li key={doc.id} className="document-item-optimized">
                                         {isImage && doc.file_url ? (
@@ -450,15 +463,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                             </div>
                                         )}
                                         <span className="file-name">{doc.file_name}</span>
-                                        <a
-                                            href={doc.file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn btn-sm btn-primary"
-                                            download={doc.file_name} // ✅ CORRECTION: Force le téléchargement
-                                        >
-                                            <DownloadIcon /> Voir
-                                        </a>
+                                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary" download={doc.file_name}><DownloadIcon /> Voir</a>
                                     </li>
                                 );
                             })}
@@ -466,22 +471,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     ) : <p className="text-muted">Aucun document de préparation.</p>}
 
                     {isAdmin && (
-                        <>
-                            <button
-                                onClick={() => setShowBriefingUploader(!showBriefingUploader)}
-                                className={`btn w-full ${showBriefingUploader ? 'btn-secondary' : 'btn-primary'}`}
-                            >
-                                {showBriefingUploader ? 'Fermer' : '➕ Ajouter des documents'}
-                            </button>
-
-                            {showBriefingUploader && (
-                                <InlineUploader
-                                    interventionId={interventionId}
-                                    onUploadComplete={handleBriefingUploadComplete}
-                                    folder="briefing"
-                                />
-                            )}
-                        </>
+                        <BriefingUploadBlock interventionId={interventionId} onAddBriefingDocuments={onAddBriefingDocuments} refreshData={refreshData} />
                     )}
                 </div>
 
@@ -496,6 +486,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                         </button>
                     </div>
                 </div>
+
                 <div className="section">
                     <h3>📝 Rapport de chantier</h3>
                     <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={isAdmin} />
@@ -504,16 +495,57 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 {(isAdmin || adminNotes) && (
                     <div className="section">
                         <h3>🔒 Notes de l'administration</h3>
-                        <textarea
-                            value={adminNotes}
-                            onChange={e => setAdminNotes(e.target.value)}
-                            placeholder={isAdmin ? "Ajouter des notes..." : "Aucune note de l'administration."}
-                            rows="4"
-                            className="form-control"
-                            readOnly={!isAdmin}
-                        />
+                        <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder={isAdmin ? "Ajouter des notes..." : "Aucune note de l'administration."} rows="4" className="form-control" readOnly={!isAdmin} />
                     </div>
                 )}
+
+                {/* 🧰 Besoins chantier */}
+                <div className="section">
+                    <h3>🧰 Besoins chantier</h3>
+                    {(!report.needs || report.needs.length === 0) && <p className="text-muted">Aucun besoin pour le moment.</p>}
+                    {Array.isArray(report.needs) && report.needs.length > 0 && (
+                        <ul className="document-list">
+                            {report.needs.map((n) => (
+                                <li key={n.id}>
+                                    <div style={{flexGrow:1}}>
+                                        <p className="font-semibold">{n.label} {n.qty ? `× ${n.qty}`:''} {n.urgent ? <span className="badge" style={{marginLeft:8}}>Urgent</span> : null}</p>
+                                        {n.note && <p className="text-muted" style={{fontSize:'0.875rem'}}>{n.note}</p>}
+                                    </div>
+                                    {!isAdmin && (
+                                        <button className="btn-icon-danger" onClick={() => removeNeed(n.id)} title="Supprimer">✖</button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {!isAdmin && (
+                        <div className="grid" style={{gridTemplateColumns:'180px 100px 120px 1fr auto', gap:'0.5rem', alignItems:'end'}}>
+                            <div>
+                                <label>Intitulé</label>
+                                <input className="form-control" value={needDraft.label} onChange={(e)=>setNeedDraft(v=>({...v, label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/>
+                            </div>
+                            <div>
+                                <label>Qté</label>
+                                <input type="number" min={1} className="form-control" value={needDraft.qty} onChange={(e)=>setNeedDraft(v=>({...v, qty: Math.max(1, Number(e.target.value)||1)}))}/>
+                            </div>
+                            <div>
+                                <label>Urgent ?</label>
+                                <select className="form-control" value={needDraft.urgent ? '1':'0'} onChange={(e)=>setNeedDraft(v=>({...v, urgent: e.target.value==='1'}))}>
+                                    <option value="0">Non</option>
+                                    <option value="1">Oui</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Note</label>
+                                <input className="form-control" value={needDraft.note} onChange={(e)=>setNeedDraft(v=>({...v, note:e.target.value}))} placeholder="Détail, lien, référence…"/>
+                            </div>
+                            <div>
+                                <button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <div className="section">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -532,7 +564,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                                         </div>
                                     )}
                                     <span className="file-name">{file.name}</span>
-                                    {/* ✅ CORRECTION: Force le téléchargement */}
                                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
                                 </li>
                             ))}
@@ -541,32 +572,31 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
                     {!isAdmin && (
                         <>
-                            <button
-                                onClick={() => setShowUploader(!showUploader)}
-                                className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}
-                            >
+                            <button onClick={() => setShowUploader(!showUploader)} className={`btn w-full ${showUploader ? 'btn-secondary' : 'btn-primary'}`}>
                                 {showUploader ? 'Fermer' : '📷 Ajouter photos/documents'}
                             </button>
-
                             {showUploader && (
-                                <InlineUploader
-                                    interventionId={interventionId}
-                                    onUploadComplete={handleUploadComplete}
-                                />
+                                <InlineUploader interventionId={interventionId} onUploadComplete={async (uploaded)=>{
+                                    const updatedReport = { ...report, files: [...(report.files||[]), ...uploaded] };
+                                    setReport(updatedReport);
+                                    await onSaveSilent(intervention.id, updatedReport);
+                                    refreshData();
+                                }} />
                             )}
                         </>
                     )}
                 </div>
+
                 <div className="section">
                     <h3>✍️ Signature du client</h3>
                     {report.signature ? (
                         <div>
                             <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: '300px', border: '2px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: '#f8f9fa' }} />
-                            {!isAdmin && <button onClick={handleClearSignature} className="btn btn-sm btn-secondary" style={{marginTop: '0.5rem'}}>Effacer</button>}
+                            {!isAdmin && <button onClick={()=>handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{marginTop: '0.5rem'}}>Effacer</button>}
                         </div>
                     ) : (
                         <div>
-                            <canvas ref={signatureCanvasRef} width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: '300px', backgroundColor: '#f8fafc', cursor: isAdmin ? 'not-allowed' : 'crosshair' }} />
+                            <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: '300px', backgroundColor: '#f8fafc', cursor: isAdmin ? 'not-allowed' : 'crosshair' }} />
                             {!isAdmin && <div style={{marginTop: '0.5rem'}}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>}
                         </div>
                     )}
@@ -579,3 +609,28 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         </div>
     );
 }
+
+// Petit sous-composant pour factoriser l'upload briefing (admin)
+const BriefingUploadBlock = ({ interventionId, onAddBriefingDocuments, refreshData }) => {
+    const [showBriefingUploader, setShowBriefingUploader] = useState(false);
+    return (
+        <>
+            <button onClick={() => setShowBriefingUploader(!showBriefingUploader)} className={`btn w-full ${showBriefingUploader ? 'btn-secondary' : 'btn-primary'}`}>
+                {showBriefingUploader ? 'Fermer' : '➕ Ajouter des documents'}
+            </button>
+            {showBriefingUploader && (
+                <InlineUploader
+                    interventionId={interventionId}
+                    onUploadComplete={async (uploadedFiles) => {
+                        // construit un affichage immédiat
+                        // ici on délègue réellement au parent via onAddBriefingDocuments
+                        await onAddBriefingDocuments(interventionId, uploadedFiles);
+                        refreshData();
+                        setShowBriefingUploader(false);
+                    }}
+                    folder="briefing"
+                />
+            )}
+        </>
+    );
+};
