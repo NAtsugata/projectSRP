@@ -468,30 +468,3 @@ export default function AdminPlanningView({ interventions = [], users = [], show
   );
 }
 
-// =============================
-// FILE: src/pages/AgendaView.js (FULL — adds URG badge)
-// =============================
-import React, { useMemo } from 'react';
-
-export default function AgendaView({ interventions = [], date, onSelect }) {
-  const items = useMemo(() => (interventions||[]).filter(i=>i.date===date), [interventions, date]);
-  const urgentCount = (itv) => Array.isArray(itv?.report?.needs) ? itv.report.needs.filter(n => n.urgent).length : 0;
-  return (
-    <div>
-      <h2 className="view-title">Agenda — {new Date(date).toLocaleDateString('fr-FR')}</h2>
-      <div className="card-white">
-        <ul className="document-list">
-          {items.length? items.map(itv=> (
-            <li key={itv.id} onClick={()=>onSelect?.(itv)} style={{cursor:onSelect?'pointer':'default'}}>
-              <div>
-                <p className="font-semibold">{itv.client} — {itv.service} {urgentCount(itv)>0 && <span className="badge" style={{marginLeft:8}}>URG {urgentCount(itv)}</span>}</p>
-                <p className="text-muted">{itv.time_start?`${itv.time_start}–${itv.time_end||''}`:'—'} • {itv.address||''}</p>
-              </div>
-            </li>
-          )) : <p>Aucune intervention.</p>}
-        </ul>
-      </div>
-      <style>{`.badge{background:#f59e0b;color:#111827;border-radius:999px;padding:2px 6px;font-weight:700;font-size:11px}`}</style>
-    </div>
-  );
-}
