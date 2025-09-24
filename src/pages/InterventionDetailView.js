@@ -1,7 +1,9 @@
 // =============================
-// FILE: src/pages/InterventionDetailView.js — SCROLL 100% STABILISÉ (mobile + iOS)
+// FILE: src/pages/InterventionDetailView.js — SCROLL 100% STABILISÉ (mobile + iOS) + REFRESH & ANTI-CACHE
 // - Lock body scroll pendant le choix / upload (caméra, fichiers)
 // - Restaure exactement la position après persistance ET au retour de focus iOS
+// - Anti-cache sur les URLs uploadées (affichage immédiat)
+// - Refresh doux après persist (sans bouger le scroll)
 // - N'écrase plus le report après l’init
 // - 100% des fonctionnalités préservées
 // =============================
@@ -30,6 +32,13 @@ const isImageUrl = (f) => {
   return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
 };
 const numberOrNull = (v) => (v === '' || v === undefined || v === null || Number.isNaN(Number(v)) ? null : Number(v));
+
+// -------- Anti-cache pour forcer l'affichage immédiat --------
+const withCacheBust = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}v=${Date.now()}`;
+};
 
 // -------- Format util --------
 const fmtTime = (iso) => {
@@ -209,7 +218,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
           setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'uploading',progress:p}:it)}));
         });
         if(result.error) throw result.error;
-        const publicUrl = result.publicURL?.publicUrl || result.publicURL; if(typeof publicUrl !== 'string') throw new Error('URL de fichier invalide');
+        const publicUrlRaw = result.publicURL?.publicUrl || result.publicURL;
+        if(typeof publicUrlRaw !== 'string') throw new Error('URL de fichier invalide');
+        const publicUrl = withCacheBust(publicUrlRaw);
         uploaded.push({ name: files[i].name, url: publicUrl, type: files[i].type });
         setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'completed',progress:100}:it)}));
       }catch(err){
@@ -285,7 +296,8 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndC
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
           const file = new File([blob], `note-${Date.now()}.webm`, { type: 'audio/webm' });
           const res = await storageService.uploadInterventionFile(file, interventionId, 'voice', ()=>{});
-          const publicUrl = res.publicURL?.publicUrl || res.publicURL;
+          const publicUrlRaw = res.publicURL?.publicUrl || res.publicURL;
+          const publicUrl = withCacheBust(publicUrlRaw);
           await onUploaded([{ name: file.name, url: publicUrl, type: file.type }]);
         } finally {
           onEndCritical?.();
@@ -596,7 +608,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <textarea value={report.notes||''} onChange={e=>handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin}/>
           <VoiceNoteRecorder
             interventionId={interventionId}
-            onUploaded={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]), ...uploaded]}; await persistReport(updated); }}
+            onUploaded={async(uploaded)=>{
+              const updated={...report, files:[...(report.files||[]), ...uploaded]};
+              await persistReport(updated);
+              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
+              saveScroll();
+              pendingRestoreRef.current = true;
+              if (!document.body.dataset.__scrollLocked) lock();
+              try {
+                await refreshData?.();
+              } finally {
+                unlock();
+                restoreScroll();
+              }
+            }}
             onBeginCritical={lock}
             onEndCritical={unlock}
           />
@@ -673,8 +698,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
           <InlineUploader
             interventionId={interventionId}
-            onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; await persistReport(updated); }}
-            onBeginCritical={beginCriticalPicker}  // ⬅️ filet de sécurité focus + lock
+            onUploadComplete={async(uploaded)=>{
+              const updated={...report, files:[...(report.files||[]),...uploaded]};
+              await persistReport(updated);
+              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
+              saveScroll();
+              pendingRestoreRef.current = true;
+              if (!document.body.dataset.__scrollLocked) lock();
+              try {
+                await refreshData?.();
+              } finally {
+                unlock();
+                restoreScroll();
+              }
+            }}
+            onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
             onEndCritical={unlock}
           />
         </div>
