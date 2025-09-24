@@ -1,7 +1,7 @@
 // =============================
 // FILE: src/pages/InterventionDetailView.js — SCROLL 100% STABILISÉ (mobile + iOS)
 // - Lock body scroll pendant le choix / upload (caméra, fichiers)
-// - Restaure exactement la position après persistance
+// - Restaure exactement la position après persistance ET au retour de focus iOS
 // - N'écrase plus le report après l’init
 // - 100% des fonctionnalités préservées
 // =============================
@@ -103,10 +103,13 @@ const useBodyScrollLock = () => {
 
   const lock = useCallback(() => {
     if (lockedRef.current) return;
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    const y = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
     savedYRef.current = y;
     const body = document.body;
     body.dataset.__scrollLocked = '1';
+    // Empêche les rebonds Safari
+    body.style.overscrollBehavior = 'contain';
+    // Lock
     body.style.position = 'fixed';
     body.style.top = `-${y}px`;
     body.style.left = '0';
@@ -118,8 +121,10 @@ const useBodyScrollLock = () => {
 
   const unlock = useCallback(() => {
     if (!lockedRef.current) return;
-    const y = savedYRef.current || 0;
+    const targetY = savedYRef.current || 0;
     const body = document.body;
+
+    // Délock immédiat
     delete body.dataset.__scrollLocked;
     body.style.position = '';
     body.style.top = '';
@@ -127,8 +132,24 @@ const useBodyScrollLock = () => {
     body.style.right = '';
     body.style.width = '';
     body.style.overflow = '';
-    // Restaurer la position
-    window.scrollTo(0, y);
+    body.style.overscrollBehavior = '';
+
+    // Restauration robuste multi-frames (iOS)
+    const restore = () => {
+      const scroller = document.scrollingElement || document.documentElement || document.body;
+      scroller.scrollTop = targetY;
+      window.scrollTo(0, targetY);
+    };
+
+    restore(); // immédiat
+    requestAnimationFrame(() => {
+      restore(); // frame suivante
+      requestAnimationFrame(() => {
+        restore(); // encore une frame (focus/relayout tardifs)
+        setTimeout(restore, 60); // mini délai (toolbar/clavier)
+      });
+    });
+
     lockedRef.current = false;
   }, []);
 
@@ -144,7 +165,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
   const startCriticalWithFallback = useCallback(() => {
     onBeginCritical?.();
     // iOS : si l'utilisateur annule le picker, aucun "change" n'arrive.
-    // On met un fallback pour débloquer au bout de 12s.
+    // Fallback pour débloquer au bout de 12s.
     cancelUnlockTimerRef.current && clearTimeout(cancelUnlockTimerRef.current);
     cancelUnlockTimerRef.current = setTimeout(() => {
       onEndCritical?.();
@@ -296,8 +317,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const scrollerRef = useRef(null);
   const savedScrollRef = useRef(0);
   const pendingRestoreRef = useRef(false);
+  const focusRestoreCleanupRef = useRef(null);
 
-  const getScroller = () => document.scrollingElement || document.documentElement;
+  const getScroller = () => document.scrollingElement || document.documentElement || document.body;
 
   const saveScroll = useCallback(() => {
     scrollerRef.current = getScroller();
@@ -308,8 +330,36 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     if (!scrollerRef.current) scrollerRef.current = getScroller();
     const y = savedScrollRef.current || 0;
     scrollerRef.current.scrollTop = y;
-    // en plus, pour iOS Safari :
     window.scrollTo(0, y);
+  }, []);
+
+  // Au retour du focus (ex: caméra → app), relancer une restauration si on l'attend
+  const beginCriticalPicker = useCallback(() => {
+    // Mémorise la position et lock le body
+    saveScroll();
+    pendingRestoreRef.current = true;
+    lock();
+
+    // Handler focus une seule fois
+    const onFocus = () => {
+      if (pendingRestoreRef.current) {
+        setTimeout(() => {
+          restoreScroll();
+          pendingRestoreRef.current = false;
+        }, 50);
+      }
+      window.removeEventListener('focus', onFocus, true);
+      focusRestoreCleanupRef.current = null;
+    };
+    window.addEventListener('focus', onFocus, true);
+    focusRestoreCleanupRef.current = () => window.removeEventListener('focus', onFocus, true);
+  }, [lock, saveScroll, restoreScroll]);
+
+  // Nettoyage si démontage en plein milieu
+  useEffect(() => {
+    return () => {
+      focusRestoreCleanupRef.current?.();
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -395,7 +445,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     } finally {
       // Restaure le body + position
       unlock();
-      // (pendingRestoreRef fera le reste dans useLayoutEffect)
       // double sécurité immédiate :
       restoreScroll();
     }
@@ -622,7 +671,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               ))}
             </ul>
           ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
-          <InlineUploader interventionId={interventionId} onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; await persistReport(updated); }}/>
+          <InlineUploader
+            interventionId={interventionId}
+            onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; await persistReport(updated); }}
+            onBeginCritical={beginCriticalPicker}  // ⬅️ filet de sécurité focus + lock
+            onEndCritical={unlock}
+          />
         </div>
 
         {/* Signature */}
