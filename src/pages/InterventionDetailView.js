@@ -1,11 +1,10 @@
 // =============================
-// FILE: src/pages/InterventionDetailView.js — FULLY FIXED + ARRIVÉE/DÉPART
-// - Remet en place « Arrivé sur site » et « Départ du site »
-// - Enregistre l'heure ISO + géoloc (lat, lng, accuracy) dans report.arrivalTime/arrivalGeo & report.departureTime/departureGeo
-// - Boutons idempotents (désactivés après clic), possibilité d'écraser via menu contextuel si besoin plus tard
-// - Aucune modification du flux de sauvegarde/validation existant
+// FILE: src/pages/InterventionDetailView.js — SCROLL STABILISÉ
+// - Préserve le scroll lors des ajouts de fichiers / notes
+// - N'écrase plus le report après l'init
+// - Garde 100% des fonctionnalités existantes
 // =============================
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeftIcon,
@@ -190,6 +189,30 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // === Helpers de stabilisation de scroll ===
+  const scrollerRef = useRef(null);
+  const savedScrollRef = useRef(0);
+  const pendingRestoreRef = useRef(false);
+
+  const getScroller = () => document.scrollingElement || document.documentElement;
+
+  const saveScroll = useCallback(() => {
+    scrollerRef.current = getScroller();
+    savedScrollRef.current = scrollerRef.current.scrollTop;
+  }, []);
+
+  const restoreScroll = useCallback(() => {
+    if (!scrollerRef.current) scrollerRef.current = getScroller();
+    scrollerRef.current.scrollTop = savedScrollRef.current;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (pendingRestoreRef.current) {
+      restoreScroll();
+      pendingRestoreRef.current = false;
+    }
+  });
+
   // Harmonise le schéma du report
   const ensureReportSchema = useCallback((base)=>{
     const r = base || {};
@@ -233,15 +256,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const found = interventions.find(i => String(i.id) === String(interventionId));
     if (found) {
       setIntervention(found);
-      setReport(ensureReportSchema(found.report));
+      // ⬇️ Initialiser le report une seule fois pour éviter l'écrasement après upload
+      setReport(prev => prev ?? ensureReportSchema(found.report));
       setLoading(false);
     } else if (interventions.length>0) {
       navigate('/planning');
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
-  // Persistance *directement* du report
+  // Persistance *directement* du report avec stabilisation du scroll
   const persistReport = async (updated) => {
+    // Geler la position *avant* la mutation d'état
+    saveScroll();
+    pendingRestoreRef.current = true;
+
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -274,9 +302,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Arrivé / Départ (nouveau) --------
   const markWithGeo = useCallback(async (kind) => {
     const isArrival = kind === 'arrival';
+    const nowIso = new Date().toISOString();
+
+    // Early guard UI : départ ne peut pas précéder l'arrivée
+    if (!isArrival && report?.arrivalTime) {
+      try {
+        const arr = new Date(report.arrivalTime).getTime();
+        const dep = new Date(nowIso).getTime();
+        if (dep < arr) { alert("L'heure de départ ne peut pas précéder l'arrivée."); return; }
+      } catch {}
+    }
+
     if (!('geolocation' in navigator)) {
-      // On enregistre malgré tout l'heure sans geo
-      const nowIso = new Date().toISOString();
       const updated = {
         ...report,
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
@@ -286,26 +323,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       alert('Géolocalisation indisponible. Heure enregistrée.');
       return;
     }
-    const nowIso = new Date().toISOString();
+
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude, accuracy } = pos.coords || {};
       const geo = { lat: latitude, lng: longitude, acc: accuracy };
-      // Contrôle simple: départ après arrivée
-      if (!isArrival && report.arrivalTime) {
-        try {
-          if (new Date(nowIso).getTime() < new Date(report.arrivalTime).getTime()) {
-            alert('L\'heure de départ ne peut pas précéder l\'arrivée.');
-            return;
-          }
-        } catch {}
-      }
       const updated = {
         ...report,
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
         [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
       };
       await persistReport(updated);
-    }, async (err) => {
+    }, async () => {
       const updated = {
         ...report,
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
@@ -314,7 +342,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       await persistReport(updated);
       alert('Géolocalisation refusée. Heure enregistrée sans position.');
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report]);
+  }, [report]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
