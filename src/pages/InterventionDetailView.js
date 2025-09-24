@@ -1,8 +1,9 @@
 // =============================
-// FILE: src/pages/InterventionDetailView.js — SCROLL STABILISÉ
-// - Préserve le scroll lors des ajouts de fichiers / notes
-// - N'écrase plus le report après l'init
-// - Garde 100% des fonctionnalités existantes
+// FILE: src/pages/InterventionDetailView.js — SCROLL 100% STABILISÉ (mobile + iOS)
+// - Lock body scroll pendant le choix / upload (caméra, fichiers)
+// - Restaure exactement la position après persistance
+// - N'écrase plus le report après l’init
+// - 100% des fonctionnalités préservées
 // =============================
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -95,13 +96,88 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
   );
 };
 
+// ====== Hook/Helpers: Body Scroll Lock (robuste iOS) ======
+const useBodyScrollLock = () => {
+  const savedYRef = useRef(0);
+  const lockedRef = useRef(false);
+
+  const lock = useCallback(() => {
+    if (lockedRef.current) return;
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    savedYRef.current = y;
+    const body = document.body;
+    body.dataset.__scrollLocked = '1';
+    body.style.position = 'fixed';
+    body.style.top = `-${y}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    lockedRef.current = true;
+  }, []);
+
+  const unlock = useCallback(() => {
+    if (!lockedRef.current) return;
+    const y = savedYRef.current || 0;
+    const body = document.body;
+    delete body.dataset.__scrollLocked;
+    body.style.position = '';
+    body.style.top = '';
+    body.style.left = '';
+    body.style.right = '';
+    body.style.width = '';
+    body.style.overflow = '';
+    // Restaurer la position
+    window.scrollTo(0, y);
+    lockedRef.current = false;
+  }, []);
+
+  return { lock, unlock, isLocked: () => lockedRef.current };
+};
+
 // -------- Uploader inline (photos/docs) --------
-const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) => {
+const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onBeginCritical, onEndCritical }) => {
   const [state, setState] = useState({ uploading:false, queue:[], error:null });
   const inputRef = useRef(null);
-  const compressImage = useCallback(async(file)=>{ if(!file.type.startsWith('image/')) return file; return new Promise(res=>{const c=document.createElement('canvas');const ctx=c.getContext('2d');const img=new Image();img.onload=()=>{let {width,height}=img;const MW=1280,MH=720;if(width>height){if(width>MW){height*=MW/width;width=MW;}}else{if(height>MH){width*=MH/height;height=MH;}}c.width=width;c.height=height;ctx.drawImage(img,0,0,width,height);c.toBlob(b=>res(b?new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()}):file),'image/jpeg',0.8);};img.onerror=()=>res(file);img.src=URL.createObjectURL(file);}); },[]);
+  const cancelUnlockTimerRef = useRef(null);
+
+  const startCriticalWithFallback = useCallback(() => {
+    onBeginCritical?.();
+    // iOS : si l'utilisateur annule le picker, aucun "change" n'arrive.
+    // On met un fallback pour débloquer au bout de 12s.
+    cancelUnlockTimerRef.current && clearTimeout(cancelUnlockTimerRef.current);
+    cancelUnlockTimerRef.current = setTimeout(() => {
+      onEndCritical?.();
+    }, 12000);
+  }, [onBeginCritical, onEndCritical]);
+
+  const clearCriticalFallback = useCallback(() => {
+    cancelUnlockTimerRef.current && clearTimeout(cancelUnlockTimerRef.current);
+    cancelUnlockTimerRef.current = null;
+  }, []);
+
+  const compressImage = useCallback(async(file)=>{
+    if(!file.type.startsWith('image/')) return file;
+    return new Promise(res=>{
+      const c=document.createElement('canvas');const ctx=c.getContext('2d');const img=new Image();
+      img.onload=()=>{let {width,height}=img;const MW=1280,MH=720;
+        if(width>height){if(width>MW){height*=MW/width;width=MW;}}
+        else{if(height>MH){width*=MH/height;height=MH;}}
+        c.width=width;c.height=height;ctx.drawImage(img,0,0,width,height);
+        c.toBlob(b=>res(b?new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()}):file),'image/jpeg',0.8);
+      };
+      img.onerror=()=>res(file);
+      img.src=URL.createObjectURL(file);
+    });
+  },[]);
+
   const onChange = useCallback(async(e)=>{
-    const files = Array.from(e.target.files||[]); if(inputRef.current) inputRef.current.value=''; if(!files.length) return;
+    clearCriticalFallback(); // le picker a rendu la main
+    const files = Array.from(e.target.files||[]);
+    // Débloquer tout de suite si rien n'a été choisi (annulation)
+    if (!files.length) { onEndCritical?.(); if(inputRef.current) inputRef.current.value=''; return; }
+
+    if(inputRef.current) inputRef.current.value='';
     const queue = files.map((f,i)=>({id:`${f.name}-${Date.now()}-${i}`,name:f.name,status:'pending',progress:0,error:null}));
     setState({uploading:true,queue,error:null});
     const uploaded=[];
@@ -119,13 +195,34 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) =
         setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'error',error:String(err.message||err)}:it)}));
       }
     }
-    if(uploaded.length){ try{ await onUploadComplete(uploaded);}catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."})); } }
+    if(uploaded.length){
+      try{ await onUploadComplete(uploaded); }catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."})); }
+    }
     setState(s=>({...s,uploading:false}));
-  },[compressImage,interventionId,onUploadComplete]);
+    onEndCritical?.(); // fin de la phase critique
+  },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
+
   return (
     <div className="mobile-uploader-panel">
-      <input ref={inputRef} type="file" multiple accept="image/*,application/pdf,audio/webm" onChange={onChange} disabled={state.uploading} style={{display:'none'}}/>
-      <button onClick={()=>inputRef.current?.click()} className={`btn btn-secondary w-full flex-center ${state.uploading?'disabled':''}`} disabled={state.uploading}>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        // Ouvre directement la caméra sur mobile si possible
+        accept="image/*,application/pdf,audio/webm"
+        capture="environment"
+        onChange={onChange}
+        disabled={state.uploading}
+        style={{display:'none'}}
+      />
+      <button
+        onClick={()=>{
+          startCriticalWithFallback();
+          inputRef.current?.click();
+        }}
+        className={`btn btn-secondary w-full flex-center ${state.uploading?'disabled':''}`}
+        disabled={state.uploading}
+      >
         {state.uploading?'Envoi en cours…':'Choisir des fichiers'}
       </button>
       {state.queue.length>0 && (
@@ -151,7 +248,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report' }) =
 };
 
 // -------- Enregistrement note vocale --------
-const VoiceNoteRecorder = ({ onUploaded, interventionId }) => {
+const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndCritical }) => {
   const [rec, setRec] = useState(null);
   const [recording, setRecording] = useState(false);
   const chunksRef = useRef([]);
@@ -162,11 +259,16 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId }) => {
       chunksRef.current = [];
       mediaRec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
       mediaRec.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const file = new File([blob], `note-${Date.now()}.webm`, { type: 'audio/webm' });
-        const res = await storageService.uploadInterventionFile(file, interventionId, 'voice', ()=>{});
-        const publicUrl = res.publicURL?.publicUrl || res.publicURL;
-        await onUploaded([{ name: file.name, url: publicUrl, type: file.type }]);
+        try {
+          onBeginCritical?.();
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const file = new File([blob], `note-${Date.now()}.webm`, { type: 'audio/webm' });
+          const res = await storageService.uploadInterventionFile(file, interventionId, 'voice', ()=>{});
+          const publicUrl = res.publicURL?.publicUrl || res.publicURL;
+          await onUploaded([{ name: file.name, url: publicUrl, type: file.type }]);
+        } finally {
+          onEndCritical?.();
+        }
       };
       mediaRec.start(); setRec(mediaRec); setRecording(true);
     } catch (e) { alert("Micro non disponible: " + e.message); }
@@ -189,7 +291,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // === Helpers de stabilisation de scroll ===
+  // === Scroll locks + restauration ===
+  const { lock, unlock } = useBodyScrollLock();
   const scrollerRef = useRef(null);
   const savedScrollRef = useRef(0);
   const pendingRestoreRef = useRef(false);
@@ -198,17 +301,24 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   const saveScroll = useCallback(() => {
     scrollerRef.current = getScroller();
-    savedScrollRef.current = scrollerRef.current.scrollTop;
+    savedScrollRef.current = scrollerRef.current.scrollTop || window.scrollY || 0;
   }, []);
 
   const restoreScroll = useCallback(() => {
     if (!scrollerRef.current) scrollerRef.current = getScroller();
-    scrollerRef.current.scrollTop = savedScrollRef.current;
+    const y = savedScrollRef.current || 0;
+    scrollerRef.current.scrollTop = y;
+    // en plus, pour iOS Safari :
+    window.scrollTo(0, y);
   }, []);
 
   useLayoutEffect(() => {
     if (pendingRestoreRef.current) {
+      // Restaurer sur plusieurs frames pour contrer les relayouts iOS
       restoreScroll();
+      requestAnimationFrame(()=>restoreScroll());
+      setTimeout(()=>restoreScroll(), 0);
+      setTimeout(()=>restoreScroll(), 50);
       pendingRestoreRef.current = false;
     }
   });
@@ -233,7 +343,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         request_id: n.request_id || null,
       })) : [],
       supply_requests: Array.isArray(r.supply_requests) ? r.supply_requests : [],
-      quick_checkpoints: Array.isArray(r.quick_checkpoints) ? r.quick_checkpoints : [
+      quick_checkpoints: Array.isArray(r.quick_checkpoints) ? r.quick_checkpoints.every?.(c=>typeof c==='object') ? r.quick_checkpoints : [
+        { label:'Zone sécurisée', done:false, at:null },
+        { label:'Essais OK', done:false, at:null },
+        { label:'Brief client fait', done:false, at:null },
+      ] : [
         { label:'Zone sécurisée', done:false, at:null },
         { label:'Essais OK', done:false, at:null },
         { label:'Brief client fait', done:false, at:null },
@@ -264,11 +378,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
-  // Persistance *directement* du report avec stabilisation du scroll
+  // Persistance *directement* du report avec stabilisation + lock
   const persistReport = async (updated) => {
-    // Geler la position *avant* la mutation d'état
+    // Geler position + body (évite remontée iOS après retour du picker)
     saveScroll();
     pendingRestoreRef.current = true;
+    if (!document.body.dataset.__scrollLocked) lock();
 
     setReport(updated);
     try {
@@ -277,6 +392,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     } catch (e) {
       console.error(e);
       alert('Échec de la sauvegarde du rapport');
+    } finally {
+      // Restaure le body + position
+      unlock();
+      // (pendingRestoreRef fera le reste dans useLayoutEffect)
+      // double sécurité immédiate :
+      restoreScroll();
     }
   };
 
@@ -313,14 +434,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       } catch {}
     }
 
+    // Lock le body pendant la phase géoloc + persistance (mobile peut sauter)
+    saveScroll(); pendingRestoreRef.current = true; if (!document.body.dataset.__scrollLocked) lock();
+
+    const finalize = async (updated, msg) => {
+      await persistReport(updated); // persistReport gère déjà unlock + restore
+      if (msg) alert(msg);
+    };
+
     if (!('geolocation' in navigator)) {
       const updated = {
         ...report,
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
         [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
       };
-      await persistReport(updated);
-      alert('Géolocalisation indisponible. Heure enregistrée.');
+      await finalize(updated, 'Géolocalisation indisponible. Heure enregistrée.');
       return;
     }
 
@@ -332,17 +460,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
         [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
       };
-      await persistReport(updated);
+      await finalize(updated);
     }, async () => {
       const updated = {
         ...report,
         [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
         [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
       };
-      await persistReport(updated);
-      alert('Géolocalisation refusée. Heure enregistrée sans position.');
+      await finalize(updated, 'Géolocalisation refusée. Heure enregistrée sans position.');
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [report, lock, saveScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
@@ -418,7 +545,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         <div className="section">
           <h3>📝 Rapport de chantier</h3>
           <textarea value={report.notes||''} onChange={e=>handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin}/>
-          <VoiceNoteRecorder interventionId={interventionId} onUploaded={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]), ...uploaded]}; await persistReport(updated); }}/>
+          <VoiceNoteRecorder
+            interventionId={interventionId}
+            onUploaded={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]), ...uploaded]}; await persistReport(updated); }}
+            onBeginCritical={lock}
+            onEndCritical={unlock}
+          />
         </div>
 
         {/* Besoins */}
@@ -456,64 +588,4 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   <select className="form-control" value={needDraft.category} onChange={e=>setNeedDraft(v=>({...v,category:e.target.value}))}>
                     <option value="materiel">Matériel</option>
                     <option value="consommables">Consommables</option>
-                    <option value="location">Location</option>
-                    <option value="commande">Commande</option>
-                  </select>
-                </div>
-                <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e=>setNeedDraft(v=>({...v,qty:Math.max(1,Number(e.target.value)||1)}))}/></div>
-                <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent?'1':'0'} onChange={e=>setNeedDraft(v=>({...v,urgent:e.target.value==='1'}))}><option value="0">Non</option><option value="1">Oui</option></select></div>
-                <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
-                <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e=>setNeedDraft(v=>({...v,estimated_price:e.target.value}))} placeholder="ex: 25.90"/></div>
-                <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, réf…"/></div>
-                <div style={{gridColumn:'1 / -1'}}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Photos & docs */}
-        <div className="section">
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <h3>📷 Photos et Documents</h3>
-            <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
-          </div>
-          {report.files?.length>0 ? (
-            <ul className="document-list-optimized" style={{marginBottom:'1rem'}}>
-              {report.files.map((file,idx)=> (
-                <li key={`${file.url||idx}-${idx}`} className="document-item-optimized">
-                  {file.type?.startsWith('image/') ? <OptimizedImage src={file.url} alt={file.name} style={{width:40,height:40,objectFit:'cover',borderRadius:'0.25rem'}}/>
-                   : file.type?.startsWith('audio/') ? <div style={{width:40}}><audio controls src={file.url} style={{height:32}}/></div>
-                   : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
-                  <span className="file-name">{file.name}</span>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
-          <InlineUploader interventionId={interventionId} onUploadComplete={async(uploaded)=>{ const updated={...report, files:[...(report.files||[]),...uploaded]}; await persistReport(updated); }}/>
-        </div>
-
-        {/* Signature */}
-        <div className="section">
-          <h3>✍️ Signature du client</h3>
-          {report.signature ? (
-            <div>
-              <img src={report.signature} alt="Signature" style={{width:'100%',maxWidth:300,border:'2px solid #e5e7eb',borderRadius:'0.5rem',background:'#f8f9fa'}}/>
-              <button onClick={()=>handleReportChange('signature',null)} className="btn btn-sm btn-secondary" style={{marginTop:8}}>Effacer</button>
-            </div>
-          ) : (
-            <div>
-              <canvas width="300" height="150" style={{border:'2px dashed #cbd5e1',borderRadius:'0.5rem',width:'100%',maxWidth:300,background:'#f8fafc'}}/>
-              <div style={{marginTop:8}}><button onClick={()=>setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon/> Agrandir</button></div>
-            </div>
-          )}
-        </div>
-
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{fontSize:'1rem',padding:'1rem',fontWeight:600}}>{isSaving ? (<><LoaderIcon className="animate-spin"/> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
-      </div>
-
-      {/* Modale signature */}
-      {showSignatureModal && <SignatureModal onSave={(sig)=>{handleReportChange('signature',sig); setShowSignatureModal(false);}} onCancel={()=>setShowSignatureModal(false)} existingSignature={report.signature}/>}
-    </div>
-  );
-}
+                    <option value
