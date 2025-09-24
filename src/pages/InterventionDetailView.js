@@ -256,6 +256,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
+  const [needsOpen, setNeedsOpen] = useState(true);
   const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum,n)=> sum + (Number(n.estimated_price)||0), 0) : 0;
 
   const addNeed = async () => {
@@ -394,42 +395,52 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
         {/* Besoins */}
         <div className="section">
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:12}}>
-            <h3>🧰 Besoins chantier</h3>
+          <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o=>!o)} style={{cursor:'pointer', userSelect:'none'}}>
+            <h3 className="flex items-center gap-2" style={{margin:0}}>
+              <span style={{display:'inline-block', width:18, textAlign:'center'}}>{needsOpen ? '▼' : '▶'}</span>
+              🧰 Besoins chantier {Array.isArray(report.needs) ? `(${report.needs.length})` : ''}
+            </h3>
             <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
           </div>
-          {(!report.needs || report.needs.length===0) && <p className="text-muted">Aucun besoin pour le moment.</p>}
-          {Array.isArray(report.needs) && report.needs.length>0 && (
-            <ul className="document-list">
-              {report.needs.map(n=> (
-                <li key={n.id}>
-                  <div style={{flexGrow:1}}>
-                    <p className="font-semibold">[{n.category||'—'}] {n.label}{n.qty?` × ${n.qty}`:''} {n.urgent?<span className="badge" style={{marginLeft:8}}>Urgent</span>:null}</p>
-                    <p className="text-muted" style={{fontSize:'0.875rem'}}>
-                      {n.note || '—'} {typeof n.estimated_price==='number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
-                    </p>
-                  </div>
-                  <button className="btn-icon-danger" onClick={()=>removeNeed(n.id)} title="Supprimer">✖</button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="grid" style={{gridTemplateColumns:'160px 80px 120px 1fr 140px auto', gap:'0.5rem', alignItems:'end'}}>
-            <div><label>Catégorie</label>
-              <select className="form-control" value={needDraft.category} onChange={e=>setNeedDraft(v=>({...v,category:e.target.value}))}>
-                <option value="materiel">Matériel</option>
-                <option value="consommables">Consommables</option>
-                <option value="location">Location</option>
-                <option value="commande">Commande</option>
-              </select>
+
+          {needsOpen && (
+            <div>
+              {(!report.needs || report.needs.length===0) && <p className="text-muted" style={{marginTop:'0.5rem'}}>Aucun besoin pour le moment.</p>}
+
+              {Array.isArray(report.needs) && report.needs.length>0 && (
+                <ul className="document-list" style={{marginTop:'0.5rem'}}>
+                  {report.needs.map(n=> (
+                    <li key={n.id}>
+                      <div style={{flexGrow:1}}>
+                        <p className="font-semibold">[{n.category||'—'}] {n.label}{n.qty?` × ${n.qty}`:''} {n.urgent?<span className="badge" style={{marginLeft:8}}>Urgent</span>:null}</p>
+                        <p className="text-muted" style={{fontSize:'0.875rem'}}>
+                          {n.note || '—'} {typeof n.estimated_price==='number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
+                        </p>
+                      </div>
+                      <button className="btn-icon-danger" onClick={()=>removeNeed(n.id)} title="Supprimer">✖</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="grid" style={{gridTemplateColumns:'160px 80px 120px 1fr 140px auto', gap:'0.5rem', alignItems:'end', marginTop:'0.75rem'}}>
+                <div><label>Catégorie</label>
+                  <select className="form-control" value={needDraft.category} onChange={e=>setNeedDraft(v=>({...v,category:e.target.value}))}>
+                    <option value="materiel">Matériel</option>
+                    <option value="consommables">Consommables</option>
+                    <option value="location">Location</option>
+                    <option value="commande">Commande</option>
+                  </select>
+                </div>
+                <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e=>setNeedDraft(v=>({...v,qty:Math.max(1,Number(e.target.value)||1)}))}/></div>
+                <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent?'1':'0'} onChange={e=>setNeedDraft(v=>({...v,urgent:e.target.value==='1'}))}><option value="0">Non</option><option value="1">Oui</option></select></div>
+                <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
+                <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e=>setNeedDraft(v=>({...v,estimated_price:e.target.value}))} placeholder="ex: 25.90"/></div>
+                <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, réf…"/></div>
+                <div style={{gridColumn:'1 / -1'}}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
+              </div>
             </div>
-            <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e=>setNeedDraft(v=>({...v,qty:Math.max(1,Number(e.target.value)||1)}))}/></div>
-            <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent?'1':'0'} onChange={e=>setNeedDraft(v=>({...v,urgent:e.target.value==='1'}))}><option value="0">Non</option><option value="1">Oui</option></select></div>
-            <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
-            <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e=>setNeedDraft(v=>({...v,estimated_price:e.target.value}))} placeholder="ex: 25.90"/></div>
-            <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, réf…"/></div>
-            <div style={{gridColumn:'1 / -1'}}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
-          </div>
+          )}
         </div>
 
         {/* Photos & docs */}
