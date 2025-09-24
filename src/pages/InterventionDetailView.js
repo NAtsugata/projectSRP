@@ -1,9 +1,9 @@
 // =============================
-// FILE: src/pages/InterventionDetailView.js — FULLY FIXED
-// - Removes stray typo causing parse error
-// - No unused imports/vars (uses Mic/Stop icons)
-// - Persists `report` directly via onSaveSilent(updated)
-// - Uses `isAdmin` (notes en lecture seule côté admin)
+// FILE: src/pages/InterventionDetailView.js — FULLY FIXED + ARRIVÉE/DÉPART
+// - Remet en place « Arrivé sur site » et « Départ du site »
+// - Enregistre l'heure ISO + géoloc (lat, lng, accuracy) dans report.arrivalTime/arrivalGeo & report.departureTime/departureGeo
+// - Boutons idempotents (désactivés après clic), possibilité d'écraser via menu contextuel si besoin plus tard
+// - Aucune modification du flux de sauvegarde/validation existant
 // =============================
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -30,6 +30,15 @@ const isImageUrl = (f) => {
   return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
 };
 const numberOrNull = (v) => (v === '' || v === undefined || v === null || Number.isNaN(Number(v)) ? null : Number(v));
+
+// -------- Format util --------
+const fmtTime = (iso) => {
+  try {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
+  } catch { return '—'; }
+};
 
 // -------- Image lazy/optimisée --------
 const OptimizedImage = ({ src, alt, className, style }) => {
@@ -261,6 +270,51 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     await persistReport(updated);
   };
 
+  // -------- Arrivé / Départ (nouveau) --------
+  const markWithGeo = useCallback(async (kind) => {
+    const isArrival = kind === 'arrival';
+    if (!('geolocation' in navigator)) {
+      // On enregistre malgré tout l'heure sans geo
+      const nowIso = new Date().toISOString();
+      const updated = {
+        ...report,
+        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
+        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
+      };
+      await persistReport(updated);
+      alert('Géolocalisation indisponible. Heure enregistrée.');
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords || {};
+      const geo = { lat: latitude, lng: longitude, acc: accuracy };
+      // Contrôle simple: départ après arrivée
+      if (!isArrival && report.arrivalTime) {
+        try {
+          if (new Date(nowIso).getTime() < new Date(report.arrivalTime).getTime()) {
+            alert('L\'heure de départ ne peut pas précéder l\'arrivée.');
+            return;
+          }
+        } catch {}
+      }
+      const updated = {
+        ...report,
+        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
+        [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
+      };
+      await persistReport(updated);
+    }, async (err) => {
+      const updated = {
+        ...report,
+        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
+        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
+      };
+      await persistReport(updated);
+      alert('Géolocalisation refusée. Heure enregistrée sans position.');
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  }, [report]);
+
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
     const imgCount = Array.isArray(report.files) ? report.files.filter(isImageUrl).length : 0;
@@ -297,6 +351,37 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <div className="flex items-center gap-2" style={{flexWrap:'wrap'}}>
             <span className="badge">Statut actuel : {currentStatus}</span>
             {urgentCount>0 && <span className="badge" style={{background:'#f59e0b',color:'#111827'}}>URG {urgentCount}</span>}
+          </div>
+        </div>
+
+        {/* Arrivé / Départ */}
+        <div className="section">
+          <h3>⏱️ Temps sur site</h3>
+          <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:'0.75rem'}}>
+            <div className="card-slim">
+              <div className="text-muted" style={{marginBottom:4}}>Arrivé sur site</div>
+              <div className="flex items-center justify-between" style={{gap:8}}>
+                <div><b>{fmtTime(report.arrivalTime)}</b></div>
+                <button className="btn btn-secondary" disabled={!!report.arrivalTime} onClick={()=>markWithGeo('arrival')}>
+                  {report.arrivalTime? 'Déjà enregistré' : 'Marquer l\'arrivée'}
+                </button>
+              </div>
+              {report.arrivalGeo && (
+                <div className="text-muted" style={{fontSize:'0.85rem',marginTop:4}}>lat {report.arrivalGeo.lat?.toFixed?.(5)} · lng {report.arrivalGeo.lng?.toFixed?.(5)} (±{Math.round(report.arrivalGeo.acc||0)} m)</div>
+              )}
+            </div>
+            <div className="card-slim">
+              <div className="text-muted" style={{marginBottom:4}}>Départ du site</div>
+              <div className="flex items-center justify-between" style={{gap:8}}>
+                <div><b>{fmtTime(report.departureTime)}</b></div>
+                <button className="btn btn-secondary" disabled={!!report.departureTime || !report.arrivalTime} onClick={()=>markWithGeo('departure')}>
+                  {report.departureTime? 'Déjà enregistré' : (!report.arrivalTime? 'Attente arrivée' : 'Marquer le départ')}
+                </button>
+              </div>
+              {report.departureGeo && (
+                <div className="text-muted" style={{fontSize:'0.85rem',marginTop:4}}>lat {report.departureGeo.lat?.toFixed?.(5)} · lng {report.departureGeo.lng?.toFixed?.(5)} (±{Math.round(report.departureGeo.acc||0)} m)</div>
+              )}
+            </div>
           </div>
         </div>
 
