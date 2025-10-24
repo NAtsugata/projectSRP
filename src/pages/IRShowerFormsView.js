@@ -1,22 +1,19 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 /**
- * IRShowerFormsView — Étude + Plan technique (PDF 2 pages)
- * - Zones bleues (bandeaux 40px) = murs non dessinables
- * - Échelle 1:1 (1 px = 1 cm) — cotes en cm, centrées & décalées
- * - Plan: sélection/déplacement/suppression/undo, texte libre (drag + double-clic)
- * - Siège: demi-ovale plaqué au mur (haut/gauche/droite) + re-plaquage après déplacement
- * - Mitigeur: cercle + croix + bec
- * - Export PDF (A4 portrait): Page 1 = Étude, Page 2 = Plan (plan + légende + accessoires, sans outils)
- * - Barre d’actions sticky (Export visible sur tous les onglets)
+ * IRShowerFormsView — Étude + Plan technique
+ * - Mentions en-tête comme la maquette (titre, note, NOM/PRÉNOM, exemplaire…)
+ * - Accessoires au style du schéma (S, barre de maintien, robinetterie, ciel de pluie, échelle)
+ * - Détails textuels des symboles sous la légende
+ * - Zones bleues (bandeaux) = murs : création ET déplacement interdits
+ * - Échelle 1:1 (1 px = 1 cm), cotes en cm
+ * - Export PDF 2 pages (import dynamique -> build Vercel OK même sans deps)
  */
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
-const BANNER_H = 40; // bandeau bleu = mur (non dessinable)
+const BANNER_H = 40; // bandeaux bleus
 const LABEL_OFFSET = 8;
 
 /* ---------- UI helpers ---------- */
@@ -31,7 +28,7 @@ const Section = ({ title, children, style }) => (
       ...style,
     }}
   >
-    <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16, fontWeight: 700 }}>{title}</h3>
+    {title && <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16, fontWeight: 700 }}>{title}</h3>}
     {children}
   </div>
 );
@@ -83,8 +80,8 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
     ctx.fillStyle = "#0ea5a5";
     ctx.font = "600 16px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("AVANT — AVEC DIMENSIONS", w/2, BANNER_H/2);
-    ctx.fillText("APRÈS — AVEC DIMENSIONS", w/2, midY + BANNER_H/2);
+    ctx.fillText("SdB AVANT  —  AVEC DIMENSIONS", w/2, BANNER_H/2);
+    ctx.fillText("SdB APRÈS  —  AVEC DIMENSIONS", w/2, midY + BANNER_H/2);
     ctx.restore();
 
     // cadre + séparation
@@ -118,19 +115,16 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
 
-        // segment
         ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
 
-        // libellé centré & décalé (perpendiculaire)
         const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
         const dx = el.x2 - el.x1, dy = el.y2 - el.y1;
         const len = Math.hypot(dx, dy) || 1;
         const nx = -dy / len, ny = dx / len;
         const lx = mx + nx * labelOffsetPx, ly = my + ny * labelOffsetPx;
         const cm = toCm(len);
-        const text = el.label ?? `${cm.toFixed(1)} cm`;
         ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(text, lx, ly);
+        ctx.fillText(`${cm.toFixed(1)} cm`, lx, ly);
         ctx.restore();
       };
 
@@ -153,6 +147,7 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.translate(el.x, el.y);
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
+        // symbole simple "mitigeur" (rond + croix + petit bec)
         ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();
@@ -160,7 +155,7 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       };
 
       const drawSeat = (el) => {
-        // demi-ovale plaqué mur (haut/gauche/droite)
+        // demi-ovale plaqué mur
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
@@ -213,7 +208,7 @@ export default function IRShowerFormsView() {
   const toggleTravaux = (key) => setStudy((s) => ({ ...s, travaux: { ...s.travaux, [key]: !s.travaux[key] } }));
 
   /* PLAN */
-  const pxPerCm = 1; // Échelle 1:1 — 1 px = 1 cm
+  const pxPerCm = 1; // 1 px = 1 cm
   const toCm = (pxLen) => pxLen / Math.max(0.0001, pxPerCm);
 
   const canvasRef = useRef(null);
@@ -228,7 +223,7 @@ export default function IRShowerFormsView() {
   const [selectedId, setSelectedId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
 
-  // Refs pour export
+  // Refs PDF
   const etudeRef = useRef(null);
   const planExportRef = useRef(null);
 
@@ -253,7 +248,7 @@ export default function IRShowerFormsView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId]);
 
-  // utils coordonnées
+  // utilitaires
   const pointerPos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     let cx = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - rect.left;
@@ -261,25 +256,25 @@ export default function IRShowerFormsView() {
     if (snap) { cx = Math.round(cx / GRID_SIZE) * GRID_SIZE; cy = Math.round(cy / GRID_SIZE) * GRID_SIZE; }
     return { x: cx, y: cy };
   };
-
-  // zones pour murs / séparation
   const getZones = () => {
     const c = canvasRef.current; const h = c?.clientHeight || 0; const w = c?.clientWidth || 0; const mid = Math.floor(h / 2);
     return { w, h, midY: mid };
   };
-  // mur non dessinable (bandeaux bleus)
   const isInBanner = (y) => {
     const { midY } = getZones();
     return (y >= 0 && y <= BANNER_H) || (y >= midY && y <= midY + BANNER_H);
   };
-
+  const clampYOutOfBanner = (y) => {
+    const { midY } = getZones();
+    if (y < BANNER_H) return BANNER_H + 1;
+    if (y >= midY && y < midY + BANNER_H) return midY + BANNER_H + 1;
+    return y;
+  };
   const applyOrtho = (x1, y1, x2, y2) => {
     if (!ortho) return { x2, y2 };
     const dx = x2 - x1, dy = y2 - y1;
     return Math.abs(dx) > Math.abs(dy) ? { x2, y2: y1 } : { x2: x1, y2 };
   };
-
-  // siège -> plaquage au mur le plus proche
   const clampSeatToWall = (p) => {
     const { w, midY } = getZones();
     const topEdge = p.y < midY ? 0 : midY;
@@ -291,10 +286,10 @@ export default function IRShowerFormsView() {
     if (distTop <= distLeft && distTop <= distRight) { y = topEdge + pad; orient = "top"; }
     else if (distLeft <= distRight) { x = pad; orient = "left"; }
     else { x = w - pad; orient = "right"; }
+    y = clampYOutOfBanner(y);
     return { x, y, orient };
   };
 
-  // hit-test
   const hitTest = (x, y) => {
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
@@ -317,7 +312,7 @@ export default function IRShowerFormsView() {
     e.preventDefault(); if (tab !== "plan") return;
     const p = pointerPos(e);
 
-    // mur non dessinable (pas de création dans les bandeaux bleus)
+    // murs = interdit de créer dedans
     if (tool !== "select" && isInBanner(p.y)) return;
 
     if (tool === "select") {
@@ -334,7 +329,7 @@ export default function IRShowerFormsView() {
 
     if (tool === "mixer") {
       const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "mixer", x: p.x, y: p.y }]);
+      setElements((els) => [...els, { id, type: "symbol", kind: "mixer", x: p.x, y: clampYOutOfBanner(p.y) }]);
       setSelectedId(id);
       return;
     }
@@ -351,14 +346,13 @@ export default function IRShowerFormsView() {
       const t = window.prompt("Texte :");
       if (t && t.trim()) {
         const id = newId();
-        setElements((els) => [...els, { id, type: "text", x: p.x, y: p.y, text: t }]);
+        setElements((els) => [...els, { id, type: "text", x: p.x, y: clampYOutOfBanner(p.y), text: t }]);
         setSelectedId(id);
       }
       return;
     }
 
-    // dim/rect
-    setStartPt(p);
+    setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) }); // dim/rect: point de départ hors bandeau
   };
 
   const onPointerMove = (e) => {
@@ -368,13 +362,27 @@ export default function IRShowerFormsView() {
     if (tool === "select" && selectedId) {
       setElements((els) => els.map((el) => {
         if (el.id !== selectedId) return el;
-        if (el.type === "rect") return { ...el, x: p.x - dragOffset.dx, y: p.y - dragOffset.dy };
+        if (el.type === "rect") {
+          const nx = p.x - dragOffset.dx;
+          const ny = clampYOutOfBanner(p.y - dragOffset.dy);
+          return { ...el, x: nx, y: ny };
+        }
         if (el.type === "dim") {
           const dx = p.x - startPt.x, dy = p.y - startPt.y;
-          return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+          // refuse le déplacement si ça amène un point dans la bande
+          const ny1 = clampYOutOfBanner(el.y1 + dy);
+          const ny2 = clampYOutOfBanner(el.y2 + dy);
+          return { ...el, x1: el.x1 + dx, y1: ny1, x2: el.x2 + dx, y2: ny2 };
         }
         if (el.type === "text" || el.type === "symbol") {
-          return { ...el, x: p.x - dragOffset.dx, y: p.y - dragOffset.dy };
+          const nx = p.x - dragOffset.dx;
+          const ny = clampYOutOfBanner(p.y - dragOffset.dy);
+          // siège : re-plaquage dynamique
+          if (el.type === "symbol" && el.kind === "seat") {
+            const c = clampSeatToWall({ x: nx, y: ny });
+            return { ...el, ...c };
+          }
+          return { ...el, x: nx, y: ny };
         }
         return el;
       }));
@@ -383,6 +391,7 @@ export default function IRShowerFormsView() {
     }
 
     let { x: x2, y: y2 } = p;
+    y2 = clampYOutOfBanner(y2);
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
@@ -397,7 +406,7 @@ export default function IRShowerFormsView() {
     const p = pointerPos(e);
 
     if (tool === "select") {
-      // re-plaquer le siège au mur après déplacement
+      // si c'est un siège, re-plaquer au mur
       const el = elements.find((x) => x.id === selectedId);
       if (el && el.type === "symbol" && el.kind === "seat") {
         setElements((els) => els.map((x) => (x.id !== el.id ? x : { ...x, ...clampSeatToWall({ x: x.x, y: x.y }) })));
@@ -407,6 +416,7 @@ export default function IRShowerFormsView() {
     }
 
     let { x: x2, y: y2 } = p;
+    y2 = clampYOutOfBanner(y2);
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
@@ -438,53 +448,51 @@ export default function IRShowerFormsView() {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ---------- Export PDF 2 pages (Étude + Plan)
-     Pour fiabilité: on bascule l’onglet le temps de la capture pour garantir le rendu,
-     puis on restaure l’onglet initial. */
+  /* ---------- Export PDF (import dynamique pour éviter l'erreur de build sans deps) ---------- */
   const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
   const waitPaint = async (ms = 120) => { await raf(); await new Promise((r) => setTimeout(r, ms)); };
 
   const exportPDF = async () => {
-    const prevTab = tab;
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
 
-    // 1) Page Étude — basculer sur "etude" pour être sûr que tout est monté
-    setTab("etude"); await waitPaint();
-    const c1 = await html2canvas(etudeRef.current, { scale: 2, backgroundColor: "#ffffff" });
-    const img1 = c1.toDataURL("image/png");
+      const prevTab = tab;
 
-    // 2) Page Plan — basculer sur "plan"
-    setTab("plan"); await waitPaint();
-    const c2 = await html2canvas(planExportRef.current, { scale: 2, backgroundColor: "#ffffff" });
-    const img2 = c2.toDataURL("image/png");
+      // Page Étude
+      setTab("etude"); await waitPaint();
+      const c1 = await html2canvas(etudeRef.current, { scale: 2, backgroundColor: "#ffffff" });
+      const img1 = c1.toDataURL("image/png");
 
-    // 3) Construire le PDF A4 portrait
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
+      // Page Plan
+      setTab("plan"); await waitPaint();
+      const c2 = await html2canvas(planExportRef.current, { scale: 2, backgroundColor: "#ffffff" });
+      const img2 = c2.toDataURL("image/png");
 
-    // Page 1 (Étude)
-    {
-      const w = pageW;
-      const h = (c1.height / c1.width) * w;
-      pdf.addImage(img1, "PNG", 0, Math.max(0, (pageH - h) / 2), w, h, undefined, "FAST");
+      // PDF
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const w1 = pageW, h1 = (c1.height / c1.width) * w1;
+      pdf.addImage(img1, "PNG", 0, Math.max(0, (pageH - h1) / 2), w1, h1, undefined, "FAST");
+
+      pdf.addPage();
+      const w2 = pageW, h2 = (c2.height / c2.width) * w2;
+      pdf.addImage(img2, "PNG", 0, Math.max(0, (pageH - h2) / 2), w2, h2, undefined, "FAST");
+
+      pdf.save("Etude_et_Plan_IR.pdf");
+      setTab(prevTab);
+    } catch (err) {
+      alert("⚠️ L’export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
+      console.error(err);
     }
-    // Page 2 (Plan)
-    pdf.addPage();
-    {
-      const w = pageW;
-      const h = (c2.height / c2.width) * w;
-      pdf.addImage(img2, "PNG", 0, Math.max(0, (pageH - h) / 2), w, h, undefined, "FAST");
-    }
-    pdf.save("Etude_et_Plan_IR.pdf");
-
-    // 4) Restaurer l’onglet précédent
-    setTab(prevTab);
   };
 
-  /* ---------- Accessoires ---------- */
+  /* ---------- Accessoires (état) ---------- */
   const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
 
-  /* ---------- Styles globaux ---------- */
+  /* ---------- Styles ---------- */
   const styles = (
     <style>{`
       .ir-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-bottom: 10px; }
@@ -503,44 +511,45 @@ export default function IRShowerFormsView() {
         .ir-col.span-11 { grid-column: span 11 / span 11; }
         .ir-col.span-12 { grid-column: span 12 / span 12; }
       }
-      .ir-tabs { position: sticky; top: 64px; z-index: 9; background: #fff; padding-bottom: 8px; }
+      .actions-sticky { position: sticky; top: 0; z-index: 10; background: #ffffffcc; backdrop-filter: blur(4px); border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; }
       .ir-canvas-wrap { height: 560px; }
       @media (max-width: 767px) { .ir-canvas-wrap { height: 460px; } }
       canvas.ir-grid { touch-action: none; display: block; width: 100%; height: 100%; }
       button, input, select, textarea { min-height: 44px; }
       .legend svg { vertical-align: middle; }
-      .actions-sticky { position: sticky; top: 0; z-index: 10; background: #ffffffcc; backdrop-filter: blur(4px); border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; }
+      .header-card h2 { letter-spacing: .5px; }
     `}</style>
   );
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
       {styles}
-      <h1 style={{ fontSize: 22, marginBottom: 12 }}>Documents IR – Douche</h1>
 
-      {/* BARRE D’ACTIONS STICKY (Export tjs visible) */}
+      {/* BARRE D’ACTIONS (Export toujours visible) */}
       <div className="actions-sticky">
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            onClick={exportPDF}
-            style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600 }}
-            title="Génère un PDF avec l'Étude (page 1) et le Plan (page 2)"
-          >
+          <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600 }}>
             Exporter PDF (Étude + Plan)
           </button>
         </div>
       </div>
 
+      <h1 style={{ fontSize: 22, marginBottom: 12 }}>Documents IR – Douche</h1>
+
       {/* ONGLETS */}
-      <div className="ir-tabs" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button onClick={() => setTab("etude")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "etude" ? "#e2e8f0" : "#fff", flex: 1 }}>Étude technique</button>
         <button onClick={() => setTab("plan")}  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "plan"  ? "#e2e8f0" : "#fff", flex: 1 }}>Plan technique</button>
       </div>
 
-      {/* ======= SECTION ÉTUDE (capturée pour PDF) ======= */}
+      {/* ======= PAGE 1 — ÉTUDE ======= */}
       <div ref={etudeRef}>
         {tab === "etude" && (
-          <div>
+          <>
+            <Section style={{ paddingBottom: 8 }} >
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>ÉTUDE TECHNIQUE</h2>
+            </Section>
+
             <Section title="En-têtes">
               <Row>
                 <Col span={4}><Label>Date de la visite</Label><Input type="date" value={study.date_visite} onChange={(e)=>setStudy(s=>({...s, date_visite:e.target.value}))} /></Col>
@@ -554,6 +563,7 @@ export default function IRShowerFormsView() {
               </Row>
             </Section>
 
+            {/* … (tout le bloc Étude technique + Travaux comme avant) */}
             <Section title="Étude technique">
               <Row>
                 <Col span={6}><Label>Longueur receveur (mm)</Label><Input value={study.longueur_receveur} onChange={(e)=>setStudy(s=>({...s, longueur_receveur:e.target.value}))} /></Col>
@@ -616,14 +626,28 @@ export default function IRShowerFormsView() {
                 </Col>
               </Row>
             </Section>
-          </div>
+          </>
         )}
       </div>
 
-      {/* ======= SECTION PLAN (capturée pour PDF) ======= */}
+      {/* ======= PAGE 2 — PLAN ======= */}
       {tab === "plan" && (
         <div>
-          {/* OUTILS (non exportés) */}
+          {/* Entête comme la maquette */}
+          <Section style={{ paddingBottom: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
+            <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+              Plan non contractuel. Nécessite une validation technique au préalable. <br />
+              Dimensions sous réserve des éventuelles contraintes techniques rencontrées.
+            </div>
+            <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+              <div style={{ minWidth: 220 }}><Label>NOM :</Label><Input placeholder="........................................................" /></div>
+              <div style={{ minWidth: 220 }}><Label>PRÉNOM :</Label><Input placeholder="........................................................" /></div>
+            </div>
+            <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>Exemplaire à destination du client</div>
+          </Section>
+
+          {/* OUTILS (à l'écran seulement) */}
           <Section title="Outils">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <button onClick={()=>setTool("select")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="select"?"#e2e8f0":"#fff" }}>Sélection</button>
@@ -637,11 +661,12 @@ export default function IRShowerFormsView() {
               <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
             </div>
-            <Small>Zones bleues = murs (non dessinables). Double-clic pour éditer un texte. Suppr/Backspace pour effacer. Le siège se re-plaque au mur après déplacement.</Small>
+            <Small>Zones bleues = murs (création et déplacement interdits). Double-clic pour éditer un texte. Le siège se plaque automatiquement au mur.</Small>
           </Section>
 
-          {/* ZONE EXPORTABLE (plan + légende + accessoires — sans outils) */}
+          {/* ZONE EXPORTABLE (plan + accessoires + détails) */}
           <div ref={planExportRef}>
+            {/* Plan */}
             <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
               <div className="ir-canvas-wrap">
                 <canvas
@@ -659,52 +684,60 @@ export default function IRShowerFormsView() {
               </div>
             </div>
 
-            <Section title="Légende">
-              <div className="legend" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Mitigeur */}
-                  <svg width="36" height="24" viewBox="0 0 36 24">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="2" y1="12" x2="22" y2="12" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="12" y1="2" x2="12" y2="22" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="22" y1="12" x2="34" y2="9" stroke="#0f172a" strokeWidth="2" />
-                  </svg>
-                  <span>Mitigeur mural</span>
+            {/* Accessoires au style du schéma */}
+            <Section>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, alignItems: "center" }}>
+                {/* Siège (carré avec S) */}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ width:32, height:32, border:"2px solid #0f172a", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800 }}>S</div>
+                  <span>Siège</span>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Siège demi-ovale contre mur */}
-                  <svg width="48" height="28" viewBox="0 0 48 28">
-                    <line x1="2" y1="2" x2="2" y2="26" stroke="#0f172a" strokeWidth="2" /> {/* mur */}
-                    <path d="M2 14 A12 12 0 0 0 26 14" fill="none" stroke="#0f172a" strokeWidth="2" />
+                {/* Barre de maintien (ligne avec “curseur”) */}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <svg width="60" height="18" viewBox="0 0 60 18">
+                    <line x1="6" y1="9" x2="54" y2="9" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" />
+                    <circle cx="42" cy="9" r="3.5" fill="#0f172a" />
                   </svg>
-                  <span>Siège mural rabattable</span>
+                  <span>Barre de maintien</span>
+                </div>
+                {/* Robinetterie (sélecteur) */}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <svg width="48" height="20" viewBox="0 0 48 20">
+                    <circle cx="18" cy="10" r="3" fill="none" stroke="#0f172a" strokeWidth="2" />
+                    <circle cx="30" cy="10" r="3" fill="#fff" stroke="#0f172a" strokeWidth="2" />
+                  </svg>
+                  <span>Robinetterie</span>
+                </div>
+                {/* Ciel de pluie */}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <svg width="60" height="20" viewBox="0 0 60 20">
+                    <line x1="6" y1="6" x2="48" y2="6" stroke="#0f172a" strokeWidth="2" />
+                    <circle cx="48" cy="6" r="4" fill="none" stroke="#0f172a" strokeWidth="2" />
+                  </svg>
+                  <span>Ciel de pluie</span>
+                </div>
+                {/* Échelle */}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <svg width="36" height="20" viewBox="0 0 36 20">
+                    <line x1="8" y1="16" x2="28" y2="16" stroke="#0f172a" strokeWidth="2" />
+                    <line x1="8" y1="6" x2="8" y2="16" stroke="#0f172a" strokeWidth="2" />
+                  </svg>
+                  <span>Échelle 1:1</span>
                 </div>
               </div>
-            </Section>
 
-            <Section title="Accessoires & Commentaires">
-              <Row>
-                <Col span={3}><Check label="Siège" checked={accessoires.siege} onChange={()=>setAccessoires(a=>({...a, siege: !a.siege}))} /></Col>
-                <Col span={3}><Check label="Barre de maintien" checked={accessoires.barre} onChange={()=>setAccessoires(a=>({...a, barre: !a.barre}))} /></Col>
-                <Col span={3}>
-                  <Label>Robinetterie</Label>
-                  <select value={accessoires.robinetterie} onChange={(e)=>setAccessoires(a=>({...a, robinetterie:e.target.value}))} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }}>
-                    <option value="mitigeur">Mitigeur</option>
-                    <option value="thermostatique">Thermostatique</option>
-                  </select>
-                </Col>
-                <Col span={3}><Check label="Ciel de pluie" checked={accessoires.ciel} onChange={()=>setAccessoires(a=>({...a, ciel: !a.ciel}))} /></Col>
-              </Row>
-              <Row>
-                <Col span={12}><Label>Commentaires</Label>
-                  <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires…" style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
-                </Col>
-              </Row>
+              {/* Détails texte */}
+              <div style={{ marginTop: 10, fontSize: 12, color: "#334155" }}>
+                <div><strong>Mitigeur&nbsp;:</strong> symbole rond avec croix et bec orienté vers l’intérieur du plan.</div>
+                <div><strong>Siège mural&nbsp;:</strong> demi-ovale plaqué contre le mur le plus proche (haut/gauche/droite).</div>
+                <div><strong>Barre de maintien&nbsp;:</strong> segment avec curseur (position libre selon besoin).</div>
+                <div><strong>Ciel de pluie&nbsp;:</strong> ligne d’alimentation et pomme de douche en bout.</div>
+                <div><strong>Texte libre&nbsp;:</strong> posable et déplaçable précisément, double-clic pour éditer.</div>
+              </div>
             </Section>
           </div>
 
-          {/* Actions plan locales */}
+          {/* Actions locales */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
             <button onClick={resetPlan} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #cbd5e1", background:"#fff" }}>
               Réinitialiser
