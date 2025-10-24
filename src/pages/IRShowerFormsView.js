@@ -1,20 +1,20 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 /**
- * IRShowerFormsView — Étude (formulaire) + Plan technique export PDF (A4 paysage)
- * - Export PDF: capture Plan + Légende + Accessoires (pas les outils)
- * - Cotes en cm (arrondi 0.1), centrées & décalées (normale à la ligne)
- * - Texte libre: placement précis, draggable, double-clic pour éditer
- * - Siège: demi-ovale plaqué mur (haut/gauche/droite) orienté vers l’intérieur
- * - Mitigeur: cercle + croix + petit bec
- * - AVANT (haut) / APRÈS (bas)
+ * IRShowerFormsView — Étude (formulaire) + Plan technique (sans export)
+ * - Aucune dépendance externe (pas d'export PDF/PNG)
+ * - Plan interactif :
+ *   • Outils : Sélection / Cote / Rect / Mitigeur / Siège (plaqué mur) / Texte
+ *   • Déplacement au drag, suppression (bouton ou Backspace/Suppr), Undo, Reset
+ *   • Snap grille (20px), Ortho (h/v), cotes en cm (échelle réglable)
+ *   • Texte libre déplaçable, éditable (double-clic)
+ *   • AVANT (haut) / APRÈS (bas) — bandeaux bien visibles
+ * - Légende + Accessoires & Commentaires (hors outils)
  */
 
 const GRID_SIZE = 20;
-const HIT_PAD = 10; // tolérance hit-test px
+const HIT_PAD = 10; // tolérance de hit-test pour sélectionner facilement
 
 /* ---------- UI helpers ---------- */
 const Section = ({ title, children }) => (
@@ -39,26 +39,44 @@ const Radio = ({ label, name, ...props }) => (
 );
 const Small = ({ children }) => <div style={{ fontSize: 12, color: "#64748b" }}>{children}</div>;
 
-/* ---------- PLAN: Canvas engine ---------- */
+/* ---------- helpers ---------- */
+let _nextId = 1;
+const newId = () => _nextId++;
+
+/* distance point-segment */
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  let t = len_sq ? dot / len_sq : -1;
+  t = Math.max(0, Math.min(1, t));
+  const xx = x1 + C * t, yy = y1 + D * t;
+  const dx = px - xx, dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/* ---------- Canvas engine ---------- */
 const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
   const drawBase = (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
 
-    // zones AVANT/APRÈS
     const midY = Math.floor(h / 2);
+
+    // arrière-plan zones
     ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, midY);     // AVANT
     ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, midY, w, h-midY); // APRÈS
 
+    // cadre + séparation
     ctx.strokeStyle = "#0ea5a5"; ctx.lineWidth = 2;
     ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
     ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
 
-    // bandeaux + libellés
+    // bandeaux + titres
     ctx.save();
     ctx.fillStyle = "rgba(14,165,233,0.12)";
     ctx.fillRect(0, 0, w, 40);
     ctx.fillRect(0, midY, w, 40);
-    ctx.fillStyle = "#0ea5a5"; ctx.font = "600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.fillStyle = "#0ea5a5"; ctx.font = "600 16px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("AVANT — AVEC DIMENSIONS", w/2, 20);
     ctx.fillText("APRÈS — AVEC DIMENSIONS", w/2, midY+20);
@@ -83,22 +101,23 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       const sized = api.resizeCtx(); if (!sized) return;
       const { ctx, w, h } = sized;
       drawBase(ctx, w, h);
+
       const all = [...elements, ...(preview ? [preview] : [])];
 
-      // helpers
       const drawDim = (el) => {
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
-        // ligne
+
+        // segment
         ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
 
-        // libellé centré + décalé le long de la normale
+        // libellé centré et décalé sur la normale
         const mx = (el.x1 + el.x2) / 2;
         const my = (el.y1 + el.y2) / 2;
         const dx = el.x2 - el.x1, dy = el.y2 - el.y1;
         const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len, ny = dx / len;  // normale à la ligne
+        const nx = -dy / len, ny = dx / len; // normale (déplacement perpendiculaire)
         const lx = mx + nx * labelOffsetPx;
         const ly = my + ny * labelOffsetPx;
         const cm = toCm(len);
@@ -112,13 +131,15 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       const drawRect = (el) => {
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.restore();
+        ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, el.w, el.h);
+        ctx.restore();
       };
 
       const drawText = (el) => {
         ctx.save();
         ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.font = "bold 12px sans-serif"; ctx.fillText(el.text, el.x, el.y); ctx.restore();
+        ctx.font = "bold 12px sans-serif"; ctx.fillText(el.text, el.x, el.y);
+        ctx.restore();
       };
 
       const drawMixer = (el) => {
@@ -126,19 +147,20 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.translate(el.x, el.y);
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();         // rond
-        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke(); // croix
-        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();     // bec
+        // cercle + croix + petit bec
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();
         ctx.restore();
       };
 
       const drawSeat = (el) => {
+        // demi-ovale plaqué mur (haut/gauche/droite) et orienté vers l'intérieur
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
         const r = 18;
         if (el.orient === "top") {
-          // plat contre mur haut + demi-oval vers le bas
           ctx.beginPath(); ctx.moveTo(el.x - r, el.y); ctx.lineTo(el.x + r, el.y); ctx.stroke();
           ctx.beginPath(); ctx.arc(el.x, el.y, r, Math.PI, 0, false); ctx.stroke();
         } else if (el.orient === "left") {
@@ -159,37 +181,16 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         else if (el.type === "symbol" && el.kind === "seat") drawSeat(el);
       }
     },
-    downloadPNG(filename = "plan_douche.png") {
-      const c = canvasRef.current; if (!c) return;
-      const a = document.createElement("a");
-      a.href = c.toDataURL("image/png");
-      a.download = filename; a.click();
-    }
   }), [canvasRef, toCm, labelOffsetPx]);
 
   return api;
 };
 
-/* ---------- helpers ---------- */
-let _nextId = 1;
-const newId = () => _nextId++;
-
-/* distance point-segment */
-function distToSegment(px, py, x1, y1, x2, y2) {
-  const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
-  const dot = A * C + B * D;
-  const len_sq = C * C + D * D;
-  let t = len_sq ? dot / len_sq : -1;
-  t = Math.max(0, Math.min(1, t));
-  const xx = x1 + C * t, yy = y1 + D * t;
-  const dx = px - xx, dy = py - yy;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
+/* ---------- Composant principal ---------- */
 export default function IRShowerFormsView() {
-  const [tab, setTab] = useState("etude");
+  const [tab, setTab] = useState("plan"); // ouverture directe sur le plan
 
-  /* ====== Étude (formulaire) ====== */
+  /* ===== Étude (formulaire) — conservé si besoin ===== */
   const [study, setStudy] = useState({
     client_nom: "", client_prenom: "", client_adresse: "",
     inst_nom: "", inst_prenom: "", date_visite: "",
@@ -206,8 +207,8 @@ export default function IRShowerFormsView() {
   });
   const toggleTravaux = (key) => setStudy((s) => ({ ...s, travaux: { ...s.travaux, [key]: !s.travaux[key] } }));
 
-  /* ====== Plan (dessin) ====== */
-  const [pxPerCm, setPxPerCm] = useState(4); // échelle: combien de pixels = 1 cm (modifiable)
+  /* ===== Plan (dessin) ===== */
+  const [pxPerCm, setPxPerCm] = useState(4); // 4 px = 1 cm (modifiable)
   const toCm = (pxLen) => pxLen / Math.max(0.0001, pxPerCm);
 
   const canvasRef = useRef(null);
@@ -222,9 +223,6 @@ export default function IRShowerFormsView() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
-
-  // export wrapper (seulement plan + légende + accessoires)
-  const exportRef = useRef(null);
 
   useEffect(() => { if (tab === "plan") plan.draw(elements, preview, selectedId); }, [tab, elements, preview, selectedId, plan]);
   useEffect(() => {
@@ -242,7 +240,6 @@ export default function IRShowerFormsView() {
         setElements((els) => els.filter((x) => x.id !== selectedId));
         setSelectedId(null);
       }
-      // double-clic pour éditer texte: on gère au onDoubleClick
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -264,30 +261,9 @@ export default function IRShowerFormsView() {
     return applySnap(cx, cy);
   };
 
-  // Hit-test
-  const hitTest = (x, y) => {
-    for (let i = elements.length - 1; i >= 0; i--) {
-      const el = elements[i];
-      if (el.type === "rect") {
-        if (x >= el.x - HIT_PAD && x <= el.x + el.w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + el.h + HIT_PAD) return el;
-      } else if (el.type === "dim") {
-        if (distToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= HIT_PAD) return el;
-      } else if (el.type === "text") {
-        if (x >= el.x - 4 && x <= el.x + (el.w || 100) && y >= el.y - 16 && y <= el.y + 12) return el;
-      } else if (el.type === "symbol") {
-        const r = el.kind === "mixer" ? 14 : 22;
-        if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
-      }
-    }
-    return null;
-  };
-
-  // Zones AVANT/APRÈS pour placer siège contre mur
+  // zones AVANT/APRÈS et plaquage du siège au mur
   const getZones = () => {
-    const c = canvasRef.current;
-    const h = c?.clientHeight || 0;
-    const w = c?.clientWidth || 0;
-    const mid = Math.floor(h / 2);
+    const c = canvasRef.current; const h = c?.clientHeight || 0; const w = c?.clientWidth || 0; const mid = Math.floor(h / 2);
     return { w, h, midY: mid };
   };
   const clampSeatToWall = (p) => {
@@ -296,7 +272,7 @@ export default function IRShowerFormsView() {
     const distTop = Math.abs(p.y - topEdge);
     const distLeft = Math.abs(p.x - 0);
     const distRight = Math.abs(w - p.x);
-    const pad = 6;
+    const pad = 6; // petit retrait pour lisibilité
     let orient = "top", x = p.x, y = p.y;
     if (distTop <= distLeft && distTop <= distRight) { y = topEdge + pad; orient = "top"; }
     else if (distLeft <= distRight) { x = pad; orient = "left"; }
@@ -304,7 +280,25 @@ export default function IRShowerFormsView() {
     return { x, y, orient };
   };
 
-  // pointer handlers
+  // hit-test pour sélectionner
+  const hitTest = (x, y) => {
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type === "rect") {
+        if (x >= el.x - HIT_PAD && x <= el.x + el.w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + el.h + HIT_PAD) return el;
+      } else if (el.type === "dim") {
+        if (distToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= HIT_PAD) return el;
+      } else if (el.type === "text") {
+        if (x >= el.x - 4 && x <= el.x + 120 && y >= el.y - 16 && y <= el.y + 12) return el;
+      } else if (el.type === "symbol") {
+        const r = el.kind === "mixer" ? 14 : 22;
+        if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+      }
+    }
+    return null;
+  };
+
+  /* ----- Pointers ----- */
   const onPointerDown = (e) => {
     e.preventDefault(); if (tab !== "plan") return;
     const p = pointerPos(e);
@@ -313,10 +307,7 @@ export default function IRShowerFormsView() {
       const el = hitTest(p.x, p.y);
       if (el) {
         setSelectedId(el.id);
-        setDragOffset({
-          dx: p.x - (el.x ?? 0),
-          dy: p.y - (el.y ?? 0),
-        });
+        setDragOffset({ dx: p.x - (el.x ?? 0), dy: p.y - (el.y ?? 0) });
       } else {
         setSelectedId(null);
       }
@@ -349,7 +340,8 @@ export default function IRShowerFormsView() {
       return;
     }
 
-    setStartPt(p); // dim/rect
+    // dim/rect
+    setStartPt(p);
   };
 
   const onPointerMove = (e) => {
@@ -387,7 +379,19 @@ export default function IRShowerFormsView() {
     if (!startPt) return; e.preventDefault();
     const p = pointerPos(e);
 
-    if (tool === "select") { setStartPt(null); return; }
+    if (tool === "select") {
+      // si on relâche un siège déplacé, on le replaque au mur
+      const el = elements.find((x) => x.id === selectedId);
+      if (el && el.type === "symbol" && el.kind === "seat") {
+        setElements((els) => els.map((x) => {
+          if (x.id !== el.id) return x;
+          const clamped = clampSeatToWall({ x: x.x, y: x.y });
+          return { ...x, ...clamped };
+        }));
+      }
+      setStartPt(null);
+      return;
+    }
 
     let { x: x2, y: y2 } = p;
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
@@ -401,6 +405,7 @@ export default function IRShowerFormsView() {
       setElements((els) => [...els, { id, type: "rect", x: Math.min(startPt.x, x2), y: Math.min(startPt.y, y2), w: Math.abs(x2 - startPt.x), h: Math.abs(y2 - startPt.y) }]);
       setSelectedId(id);
     }
+
     setStartPt(null); setPreview(null);
   };
 
@@ -420,27 +425,7 @@ export default function IRShowerFormsView() {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ====== Export PDF (A4 paysage) : capture exportRef ====== */
-  const exportPDF = async () => {
-    const node = exportRef.current;
-    if (!node) return;
-    const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-
-    // fit to width
-    const imgW = pageW;
-    const imgH = (canvas.height / canvas.width) * imgW;
-    const marginTop = (pageH - imgH) / 2;
-    pdf.addImage(imgData, "PNG", 0, Math.max(0, marginTop), imgW, imgH, undefined, "FAST");
-
-    pdf.save("plan_douche_IR.pdf");
-  };
-
-  /* ====== Accessoires ====== */
+  /* ===== Accessoires ===== */
   const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
 
   return (
@@ -561,8 +546,8 @@ export default function IRShowerFormsView() {
       {/* ==== PLAN TECHNIQUE ==== */}
       {tab === "plan" && (
         <div>
-          {/* OUTILS (non exportés) */}
-          <Section title="Outils (non exportés)">
+          {/* OUTILS (non exportés, mais inclus dans la page) */}
+          <Section title="Outils">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <button onClick={()=>setTool("select")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="select"?"#e2e8f0":"#fff" }}>Sélection</button>
               <button onClick={()=>setTool("dim")}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="dim"?"#e2e8f0":"#fff" }}>Cote</button>
@@ -574,7 +559,6 @@ export default function IRShowerFormsView() {
               <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
               <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
-              <button onClick={()=>plan.downloadPNG()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Exporter PNG (plan seul)</button>
 
               <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
                 <Label>Échelle</Label>
@@ -582,84 +566,72 @@ export default function IRShowerFormsView() {
                 <Small>px par cm (affecte les cotes)</Small>
               </div>
             </div>
-            <Small>Astuce: outil “Sélection” → glisser pour déplacer, **double-clic** sur un texte pour l’éditer. **Suppr/Backspace** pour effacer.</Small>
+            <Small>Astuce: “Sélection” → glisser pour déplacer. **Double-clic** sur un texte pour l’éditer. **Suppr/Backspace** pour effacer. Le **siège** se plaque automatiquement au mur le plus proche (et se re-plaque après déplacement).</Small>
           </Section>
 
-          {/* ZONE EXPORTABLE */}
-          <div ref={exportRef}>
-            <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-              <div className="ir-canvas-wrap">
-                <canvas
-                  ref={canvasRef}
-                  className="ir-grid"
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onDoubleClick={onDoubleClick}
-                  onTouchStart={onPointerDown}
-                  onTouchMove={onPointerMove}
-                  onTouchEnd={onPointerUp}
-                  style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
-                />
+          {/* ZONE PLAN */}
+          <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+            <div className="ir-canvas-wrap">
+              <canvas
+                ref={canvasRef}
+                className="ir-grid"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onDoubleClick={onDoubleClick}
+                onTouchStart={onPointerDown}
+                onTouchMove={onPointerMove}
+                onTouchEnd={onPointerUp}
+                style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
+              />
+            </div>
+          </div>
+
+          {/* LÉGENDE */}
+          <Section title="Légende">
+            <div className="legend" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Mitigeur */}
+                <svg width="36" height="24" viewBox="0 0 36 24">
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="#0f172a" strokeWidth="2" />
+                  <line x1="2" y1="12" x2="22" y2="12" stroke="#0f172a" strokeWidth="2" />
+                  <line x1="12" y1="2" x2="12" y2="22" stroke="#0f172a" strokeWidth="2" />
+                  <line x1="22" y1="12" x2="34" y2="9" stroke="#0f172a" strokeWidth="2" />
+                </svg>
+                <span>Mitigeur mural</span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Siège demi-ovale contre mur */}
+                <svg width="48" height="28" viewBox="0 0 48 28">
+                  <line x1="2" y1="2" x2="2" y2="26" stroke="#0f172a" strokeWidth="2" /> {/* mur */}
+                  <path d="M2 14 A12 12 0 0 0 26 14" fill="none" stroke="#0f172a" strokeWidth="2" />
+                </svg>
+                <span>Siège mural rabattable</span>
               </div>
             </div>
+          </Section>
 
-            {/* LÉGENDE (dessins vectoriels) */}
-            <Section title="Légende">
-              <div className="legend" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Mitigeur */}
-                  <svg width="36" height="24" viewBox="0 0 36 24">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="2" y1="12" x2="22" y2="12" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="12" y1="2" x2="12" y2="22" stroke="#0f172a" strokeWidth="2" />
-                    <line x1="22" y1="12" x2="34" y2="9" stroke="#0f172a" strokeWidth="2" />
-                  </svg>
-                  <span>Mitigeur mural</span>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Siège demi-ovale contre mur */}
-                  <svg width="48" height="28" viewBox="0 0 48 28">
-                    <line x1="2" y1="2" x2="2" y2="26" stroke="#0f172a" strokeWidth="2" /> {/* mur */}
-                    <path d="M2 14 A12 12 0 0 0 26 14" fill="none" stroke="#0f172a" strokeWidth="2" />
-                  </svg>
-                  <span>Siège mural rabattable</span>
-                </div>
-              </div>
-            </Section>
-
-            {/* ACCESSOIRES / COMMENTAIRES */}
-            <Section title="Accessoires & Commentaires">
-              <Row>
-                <Col span={3}><Check label="Siège" checked={accessoires.siege} onChange={()=>setAccessoires(a=>({...a, siege: !a.siege}))} /></Col>
-                <Col span={3}><Check label="Barre de maintien" checked={accessoires.barre} onChange={()=>setAccessoires(a=>({...a, barre: !a.barre}))} /></Col>
-                <Col span={3}>
-                  <Label>Robinetterie</Label>
-                  <select value={accessoires.robinetterie} onChange={(e)=>setAccessoires(a=>({...a, robinetterie:e.target.value}))} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }}>
-                    <option value="mitigeur">Mitigeur</option>
-                    <option value="thermostatique">Thermostatique</option>
-                  </select>
-                </Col>
-                <Col span={3}><Check label="Ciel de pluie" checked={accessoires.ciel} onChange={()=>setAccessoires(a=>({...a, ciel: !a.ciel}))} /></Col>
-              </Row>
-              <Row>
-                <Col span={12}><Label>Commentaires</Label>
-                  <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires…" style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
-                </Col>
-              </Row>
-            </Section>
-          </div>
-
-          {/* BOUTON EXPORT (en dehors de exportRef) */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-            <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600 }}>
-              Exporter PDF (A4 paysage)
-            </button>
-            <button onClick={resetPlan} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #cbd5e1", background:"#fff" }}>
-              Réinitialiser
-            </button>
-          </div>
+          {/* ACCESSOIRES / COMMENTAIRES */}
+          <Section title="Accessoires & Commentaires">
+            <Row>
+              <Col span={3}><Check label="Siège" checked={accessoires.siege} onChange={()=>setAccessoires(a=>({...a, siege: !a.siege}))} /></Col>
+              <Col span={3}><Check label="Barre de maintien" checked={accessoires.barre} onChange={()=>setAccessoires(a=>({...a, barre: !a.barre}))} /></Col>
+              <Col span={3}>
+                <Label>Robinetterie</Label>
+                <select value={accessoires.robinetterie} onChange={(e)=>setAccessoires(a=>({...a, robinetterie:e.target.value}))} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }}>
+                  <option value="mitigeur">Mitigeur</option>
+                  <option value="thermostatique">Thermostatique</option>
+                </select>
+              </Col>
+              <Col span={3}><Check label="Ciel de pluie" checked={accessoires.ciel} onChange={()=>setAccessoires(a=>({...a, ciel: !a.ciel}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={12}><Label>Commentaires</Label>
+                <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires…" style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
+              </Col>
+            </Row>
+          </Section>
         </div>
       )}
     </div>
