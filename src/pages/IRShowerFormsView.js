@@ -1,17 +1,20 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 /**
- * IRShowerFormsView — Étude technique (Formulaire) + Plan technique
- * - Maquette PDF supprimée (comme demandé)
- * - Plan: sélection, déplacement (drag), suppression d’éléments
- * - Siège = demi-ovale, automatiquement plaqué au mur le plus proche (haut / gauche / droite pour chaque zone),
- *   orienté vers l’intérieur de la douche
- * - Marquage AVANT (haut) / APRÈS (bas) très visible
+ * IRShowerFormsView — Étude (formulaire) + Plan technique export PDF (A4 paysage)
+ * - Export PDF: capture Plan + Légende + Accessoires (pas les outils)
+ * - Cotes en cm (arrondi 0.1), centrées & décalées (normale à la ligne)
+ * - Texte libre: placement précis, draggable, double-clic pour éditer
+ * - Siège: demi-ovale plaqué mur (haut/gauche/droite) orienté vers l’intérieur
+ * - Mitigeur: cercle + croix + petit bec
+ * - AVANT (haut) / APRÈS (bas)
  */
 
 const GRID_SIZE = 20;
-const HIT_PAD = 10; // tolérance hit-test en px
+const HIT_PAD = 10; // tolérance hit-test px
 
 /* ---------- UI helpers ---------- */
 const Section = ({ title, children }) => (
@@ -36,45 +39,33 @@ const Radio = ({ label, name, ...props }) => (
 );
 const Small = ({ children }) => <div style={{ fontSize: 12, color: "#64748b" }}>{children}</div>;
 
-/* ---------- PLAN TECHNIQUE: Canvas engine ---------- */
-const usePlanCanvas = (canvasRef) => {
+/* ---------- PLAN: Canvas engine ---------- */
+const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
   const drawBase = (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
-    // fond
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, h);
 
-    // zones
+    // zones AVANT/APRÈS
     const midY = Math.floor(h / 2);
-    // teinte légère pour distinguer
-    ctx.fillStyle = "#f8fafc";
-    ctx.fillRect(0, 0, w, midY);         // AVANT (haut)
-    ctx.fillStyle = "#f1f5f9";
-    ctx.fillRect(0, midY, w, h - midY);  // APRÈS (bas)
+    ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, midY);     // AVANT
+    ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, midY, w, h-midY); // APRÈS
 
-    // cadres
-    ctx.strokeStyle = "#0ea5a5";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#0ea5a5"; ctx.lineWidth = 2;
     ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
     ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
 
-    // libellés grands et visibles
+    // bandeaux + libellés
     ctx.save();
-    ctx.fillStyle = "rgba(14,165,233,0.12)"; // bandeau discret
+    ctx.fillStyle = "rgba(14,165,233,0.12)";
     ctx.fillRect(0, 0, w, 40);
     ctx.fillRect(0, midY, w, 40);
-
-    ctx.fillStyle = "#0ea5a5";
-    ctx.font = "600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("AVANT — AVEC DIMENSIONS", w / 2, 20);
-    ctx.fillText("APRÈS — AVEC DIMENSIONS", w / 2, midY + 20);
+    ctx.fillStyle = "#0ea5a5"; ctx.font = "600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("AVANT — AVEC DIMENSIONS", w/2, 20);
+    ctx.fillText("APRÈS — AVEC DIMENSIONS", w/2, midY+20);
     ctx.restore();
 
     // grille
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
     for (let x = GRID_SIZE + 0.5; x < w; x += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     for (let y = GRID_SIZE + 0.5; y < h; y += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
   };
@@ -85,43 +76,49 @@ const usePlanCanvas = (canvasRef) => {
       const dpr = window.devicePixelRatio || 1;
       const cw = c.clientWidth, ch = c.clientHeight;
       c.width = Math.floor(cw * dpr); c.height = Math.floor(ch * dpr);
-      const ctx = c.getContext("2d");
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return { ctx, w: cw, h: ch };
     },
     draw(elements = [], preview = null, selectedId = null) {
       const sized = api.resizeCtx(); if (!sized) return;
       const { ctx, w, h } = sized;
       drawBase(ctx, w, h);
-
       const all = [...elements, ...(preview ? [preview] : [])];
 
+      // helpers
       const drawDim = (el) => {
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.lineWidth = 2;
+        ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
+        // ligne
         ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
-        const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
-        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-        ctx.fillText(el.label ?? `${Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1))}mm`, mx, my - 6);
+
+        // libellé centré + décalé le long de la normale
+        const mx = (el.x1 + el.x2) / 2;
+        const my = (el.y1 + el.y2) / 2;
+        const dx = el.x2 - el.x1, dy = el.y2 - el.y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;  // normale à la ligne
+        const lx = mx + nx * labelOffsetPx;
+        const ly = my + ny * labelOffsetPx;
+        const cm = toCm(len);
+        const text = el.label ?? `${cm.toFixed(1)} cm`;
+
+        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(text, lx, ly);
         ctx.restore();
       };
 
       const drawRect = (el) => {
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(el.x, el.y, el.w, el.h);
-        ctx.restore();
+        ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.restore();
       };
 
       const drawText = (el) => {
         ctx.save();
         ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.font = "bold 12px sans-serif";
-        ctx.fillText(el.text, el.x, el.y);
-        ctx.restore();
+        ctx.font = "bold 12px sans-serif"; ctx.fillText(el.text, el.x, el.y); ctx.restore();
       };
 
       const drawMixer = (el) => {
@@ -129,10 +126,9 @@ const usePlanCanvas = (canvasRef) => {
         ctx.translate(el.x, el.y);
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
-        // plaque murale + corps + bec discret
-        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(18, -2); ctx.stroke(); // petit bec
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();         // rond
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke(); // croix
+        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();     // bec
         ctx.restore();
       };
 
@@ -141,32 +137,16 @@ const usePlanCanvas = (canvasRef) => {
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
         const r = 18;
-        // demi-ovale orienté vers l'intérieur
         if (el.orient === "top") {
-          // collé en haut, demi-ovale vers le bas
-          ctx.beginPath();
-          ctx.moveTo(el.x - r, el.y);
-          ctx.arc(el.x, el.y, r, Math.PI, 0, false); // partie supérieure
-          ctx.lineTo(el.x - r, el.y); // fermer
-          ctx.stroke();
-          // plat côté mur (ligne horizontale fine)
+          // plat contre mur haut + demi-oval vers le bas
           ctx.beginPath(); ctx.moveTo(el.x - r, el.y); ctx.lineTo(el.x + r, el.y); ctx.stroke();
+          ctx.beginPath(); ctx.arc(el.x, el.y, r, Math.PI, 0, false); ctx.stroke();
         } else if (el.orient === "left") {
-          // collé à gauche, demi-ovale vers la droite
-          ctx.beginPath();
-          ctx.moveTo(el.x, el.y - r);
-          ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, false);
-          ctx.lineTo(el.x, el.y - r);
-          ctx.stroke();
           ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
+          ctx.beginPath(); ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, false); ctx.stroke();
         } else if (el.orient === "right") {
-          // collé à droite, demi-ovale vers la gauche
-          ctx.beginPath();
-          ctx.moveTo(el.x, el.y - r);
-          ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, true);
-          ctx.lineTo(el.x, el.y - r);
-          ctx.stroke();
           ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
+          ctx.beginPath(); ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, true); ctx.stroke();
         }
         ctx.restore();
       };
@@ -185,7 +165,7 @@ const usePlanCanvas = (canvasRef) => {
       a.href = c.toDataURL("image/png");
       a.download = filename; a.click();
     }
-  }), [canvasRef]);
+  }), [canvasRef, toCm, labelOffsetPx]);
 
   return api;
 };
@@ -209,7 +189,7 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 export default function IRShowerFormsView() {
   const [tab, setTab] = useState("etude");
 
-  /* ===== Étude (Formulaire simple) ===== */
+  /* ====== Étude (formulaire) ====== */
   const [study, setStudy] = useState({
     client_nom: "", client_prenom: "", client_adresse: "",
     inst_nom: "", inst_prenom: "", date_visite: "",
@@ -226,19 +206,25 @@ export default function IRShowerFormsView() {
   });
   const toggleTravaux = (key) => setStudy((s) => ({ ...s, travaux: { ...s.travaux, [key]: !s.travaux[key] } }));
 
-  /* ===== Plan (dessin) ===== */
+  /* ====== Plan (dessin) ====== */
+  const [pxPerCm, setPxPerCm] = useState(4); // échelle: combien de pixels = 1 cm (modifiable)
+  const toCm = (pxLen) => pxLen / Math.max(0.0001, pxPerCm);
+
   const canvasRef = useRef(null);
-  const plan = usePlanCanvas(canvasRef);
+  const plan = usePlanCanvas(canvasRef, toCm, 8);
 
   const [elements, setElements] = useState([]);
   const [preview, setPreview] = useState(null);
-  const [tool, setTool] = useState("dim"); // 'select' | 'dim' | 'rect' | 'mixer' | 'seat' | 'text'
+  const [tool, setTool] = useState("select"); // 'select' | 'dim' | 'rect' | 'mixer' | 'seat' | 'text'
   const [snap, setSnap] = useState(true);
   const [ortho, setOrtho] = useState(true);
   const [startPt, setStartPt] = useState(null);
 
   const [selectedId, setSelectedId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
+
+  // export wrapper (seulement plan + légende + accessoires)
+  const exportRef = useRef(null);
 
   useEffect(() => { if (tab === "plan") plan.draw(elements, preview, selectedId); }, [tab, elements, preview, selectedId, plan]);
   useEffect(() => {
@@ -256,6 +242,7 @@ export default function IRShowerFormsView() {
         setElements((els) => els.filter((x) => x.id !== selectedId));
         setSelectedId(null);
       }
+      // double-clic pour éditer texte: on gère au onDoubleClick
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -263,17 +250,13 @@ export default function IRShowerFormsView() {
 
   const applySnap = (x, y) => {
     if (!snap) return { x, y };
-    const sx = Math.round(x / GRID_SIZE) * GRID_SIZE;
-    const sy = Math.round(y / GRID_SIZE) * GRID_SIZE;
-    return { x: sx, y: sy };
+    return { x: Math.round(x / GRID_SIZE) * GRID_SIZE, y: Math.round(y / GRID_SIZE) * GRID_SIZE };
   };
-
   const applyOrtho = (x1, y1, x2, y2) => {
     if (!ortho) return { x2, y2 };
     const dx = x2 - x1, dy = y2 - y1;
     return Math.abs(dx) > Math.abs(dy) ? { x2, y2: y1 } : { x2: x1, y2 };
   };
-
   const pointerPos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     let cx = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - rect.left;
@@ -281,20 +264,16 @@ export default function IRShowerFormsView() {
     return applySnap(cx, cy);
   };
 
-  // Hit-test pour sélectionner
+  // Hit-test
   const hitTest = (x, y) => {
-    // chercher du haut vers le bas (dernier au-dessus)
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
       if (el.type === "rect") {
-        if (x >= el.x - HIT_PAD && x <= el.x + el.w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + el.h + HIT_PAD) {
-          return el;
-        }
+        if (x >= el.x - HIT_PAD && x <= el.x + el.w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + el.h + HIT_PAD) return el;
       } else if (el.type === "dim") {
         if (distToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= HIT_PAD) return el;
       } else if (el.type === "text") {
-        // boîte approximative (80x28)
-        if (x >= el.x - 4 && x <= el.x + 80 && y >= el.y - 16 && y <= el.y + 12) return el;
+        if (x >= el.x - 4 && x <= el.x + (el.w || 100) && y >= el.y - 16 && y <= el.y + 12) return el;
       } else if (el.type === "symbol") {
         const r = el.kind === "mixer" ? 14 : 22;
         if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
@@ -303,48 +282,29 @@ export default function IRShowerFormsView() {
     return null;
   };
 
-  // Zones AVANT (haut) / APRÈS (bas)
+  // Zones AVANT/APRÈS pour placer siège contre mur
   const getZones = () => {
     const c = canvasRef.current;
     const h = c?.clientHeight || 0;
     const w = c?.clientWidth || 0;
     const mid = Math.floor(h / 2);
-    return {
-      width: w,
-      height: h,
-      midY: mid,
-      topZone: { x: 0, y: 0, w, h: mid },
-      botZone: { x: 0, y: mid, w, h: h - mid },
-    };
+    return { w, h, midY: mid };
   };
-
   const clampSeatToWall = (p) => {
-    // Trouve la zone (haut = AVANT, bas = APRÈS) puis plaque au mur le plus proche (haut / gauche / droite de la zone).
-    const { width, midY } = getZones();
-    const zoneTop = p.y < midY ? { y0: 0, y1: midY } : { y0: midY, y1: null };
+    const { w, midY } = getZones();
     const topEdge = p.y < midY ? 0 : midY;
     const distTop = Math.abs(p.y - topEdge);
     const distLeft = Math.abs(p.x - 0);
-    const distRight = Math.abs(width - p.x);
-
-    let orient = "top";
-    let x = p.x, y = p.y;
-    const padding = 6; // léger retrait pour lisibilité
-
-    if (distTop <= distLeft && distTop <= distRight) {
-      // coller en haut de la zone
-      y = topEdge + padding;
-      orient = "top";
-    } else if (distLeft <= distRight) {
-      x = padding;
-      orient = "left";
-    } else {
-      x = width - padding;
-      orient = "right";
-    }
+    const distRight = Math.abs(w - p.x);
+    const pad = 6;
+    let orient = "top", x = p.x, y = p.y;
+    if (distTop <= distLeft && distTop <= distRight) { y = topEdge + pad; orient = "top"; }
+    else if (distLeft <= distRight) { x = pad; orient = "left"; }
+    else { x = w - pad; orient = "right"; }
     return { x, y, orient };
   };
 
+  // pointer handlers
   const onPointerDown = (e) => {
     e.preventDefault(); if (tab !== "plan") return;
     const p = pointerPos(e);
@@ -353,9 +313,10 @@ export default function IRShowerFormsView() {
       const el = hitTest(p.x, p.y);
       if (el) {
         setSelectedId(el.id);
-        // offset pour drag
-        if (el.type === "rect") setDragOffset({ dx: p.x - el.x, dy: p.y - el.y });
-        else setDragOffset({ dx: p.x - (el.x ?? 0), dy: p.y - (el.y ?? 0) });
+        setDragOffset({
+          dx: p.x - (el.x ?? 0),
+          dy: p.y - (el.y ?? 0),
+        });
       } else {
         setSelectedId(null);
       }
@@ -380,7 +341,7 @@ export default function IRShowerFormsView() {
 
     if (tool === "text") {
       const t = window.prompt("Texte :");
-      if (t?.trim()) {
+      if (t && t.trim()) {
         const id = newId();
         setElements((els) => [...els, { id, type: "text", x: p.x, y: p.y, text: t }]);
         setSelectedId(id);
@@ -388,8 +349,7 @@ export default function IRShowerFormsView() {
       return;
     }
 
-    // dim/rect
-    setStartPt(p);
+    setStartPt(p); // dim/rect
   };
 
   const onPointerMove = (e) => {
@@ -397,12 +357,10 @@ export default function IRShowerFormsView() {
     const p = pointerPos(e);
 
     if (tool === "select" && selectedId) {
-      // drag l’élément sélectionné
       setElements((els) => els.map((el) => {
         if (el.id !== selectedId) return el;
         if (el.type === "rect") return { ...el, x: p.x - dragOffset.dx, y: p.y - dragOffset.dy };
         if (el.type === "dim") {
-          // déplacer la cote : translation globale
           const dx = p.x - startPt.x, dy = p.y - startPt.y;
           return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
         }
@@ -411,7 +369,6 @@ export default function IRShowerFormsView() {
         }
         return el;
       }));
-      // update startPt pour delta continu
       setStartPt(p);
       return;
     }
@@ -427,45 +384,63 @@ export default function IRShowerFormsView() {
   };
 
   const onPointerUp = (e) => {
-    if (!startPt) return;
-    e.preventDefault();
+    if (!startPt) return; e.preventDefault();
     const p = pointerPos(e);
 
-    if (tool === "select") {
-      setStartPt(null);
-      return;
-    }
+    if (tool === "select") { setStartPt(null); return; }
 
     let { x: x2, y: y2 } = p;
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
-      const auto = `${Math.round(Math.hypot(x2 - startPt.x, y2 - startPt.y))}mm`;
-      const label = window.prompt("Libellé de la cote (laisser vide pour auto)", auto) || auto;
       const id = newId();
-      setElements((els) => [...els, { id, type: "dim", x1: startPt.x, y1: startPt.y, x2, y2, label }]);
+      setElements((els) => [...els, { id, type: "dim", x1: startPt.x, y1: startPt.y, x2, y2 }]);
       setSelectedId(id);
     } else if (tool === "rect") {
       const id = newId();
       setElements((els) => [...els, { id, type: "rect", x: Math.min(startPt.x, x2), y: Math.min(startPt.y, y2), w: Math.abs(x2 - startPt.x), h: Math.abs(y2 - startPt.y) }]);
       setSelectedId(id);
     }
-
     setStartPt(null); setPreview(null);
   };
 
-  const undo = () => {
-    setElements((els) => els.slice(0, -1));
-    setSelectedId(null);
+  const onDoubleClick = (e) => {
+    if (tool !== "select") return;
+    const p = pointerPos(e);
+    const el = hitTest(p.x, p.y);
+    if (el && el.type === "text") {
+      const newT = window.prompt("Modifier le texte :", el.text);
+      if (newT !== null) {
+        setElements((els) => els.map((x) => (x.id === el.id ? { ...x, text: newT } : x)));
+      }
+    }
   };
-  const delSelected = () => {
-    if (!selectedId) return;
-    setElements((els) => els.filter((x) => x.id !== selectedId));
-    setSelectedId(null);
-  };
+
+  const undo = () => { setElements((els) => els.slice(0, -1)); setSelectedId(null); };
+  const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ===== Accessoires (déclaratif) ===== */
+  /* ====== Export PDF (A4 paysage) : capture exportRef ====== */
+  const exportPDF = async () => {
+    const node = exportRef.current;
+    if (!node) return;
+    const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff" });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+
+    // fit to width
+    const imgW = pageW;
+    const imgH = (canvas.height / canvas.width) * imgW;
+    const marginTop = (pageH - imgH) / 2;
+    pdf.addImage(imgData, "PNG", 0, Math.max(0, marginTop), imgW, imgH, undefined, "FAST");
+
+    pdf.save("plan_douche_IR.pdf");
+  };
+
+  /* ====== Accessoires ====== */
   const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
 
   return (
@@ -492,6 +467,7 @@ export default function IRShowerFormsView() {
         @media (max-width: 767px) { .ir-canvas-wrap { height: 460px; } }
         canvas.ir-grid { touch-action: none; display: block; width: 100%; height: 100%; }
         button, input, select, textarea { min-height: 44px; }
+        .legend svg { vertical-align: middle; }
       `}</style>
 
       <h1 style={{ fontSize: 22, marginBottom: 12 }}>Documents IR – Douche</h1>
@@ -585,8 +561,9 @@ export default function IRShowerFormsView() {
       {/* ==== PLAN TECHNIQUE ==== */}
       {tab === "plan" && (
         <div>
-          <Section title="Outils">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {/* OUTILS (non exportés) */}
+          <Section title="Outils (non exportés)">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <button onClick={()=>setTool("select")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="select"?"#e2e8f0":"#fff" }}>Sélection</button>
               <button onClick={()=>setTool("dim")}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="dim"?"#e2e8f0":"#fff" }}>Cote</button>
               <button onClick={()=>setTool("rect")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="rect"?"#e2e8f0":"#fff" }}>Rect</button>
@@ -596,48 +573,93 @@ export default function IRShowerFormsView() {
               <button onClick={()=>setSnap(s=>!s)}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
               <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
               <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
-              <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", background:"#fff", color:"#ef4444" }} disabled={!selectedId}>Supprimer sélection</button>
-              <button onClick={()=>plan.downloadPNG()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Exporter PNG</button>
-              <button onClick={resetPlan}              style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Réinitialiser</button>
+              <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
+              <button onClick={()=>plan.downloadPNG()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Exporter PNG (plan seul)</button>
+
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <Label>Échelle</Label>
+                <input type="number" min={0.1} step={0.1} value={pxPerCm} onChange={(e)=>setPxPerCm(Math.max(0.1, Number(e.target.value)||4))} style={{ width: 90, border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 10px" }} />
+                <Small>px par cm (affecte les cotes)</Small>
+              </div>
             </div>
-            <Small>Astuce: “Sélection” → touche Suppr/Backspace pour effacer. Glisse pour déplacer. Le **siège** se plaque au mur le plus proche, demi-ovale orienté vers l’intérieur.</Small>
+            <Small>Astuce: outil “Sélection” → glisser pour déplacer, **double-clic** sur un texte pour l’éditer. **Suppr/Backspace** pour effacer.</Small>
           </Section>
 
-          <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-            <div className="ir-canvas-wrap">
-              <canvas
-                ref={canvasRef}
-                className="ir-grid"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onTouchStart={onPointerDown}
-                onTouchMove={onPointerMove}
-                onTouchEnd={onPointerUp}
-                style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
-              />
+          {/* ZONE EXPORTABLE */}
+          <div ref={exportRef}>
+            <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+              <div className="ir-canvas-wrap">
+                <canvas
+                  ref={canvasRef}
+                  className="ir-grid"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onDoubleClick={onDoubleClick}
+                  onTouchStart={onPointerDown}
+                  onTouchMove={onPointerMove}
+                  onTouchEnd={onPointerUp}
+                  style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
+                />
+              </div>
             </div>
+
+            {/* LÉGENDE (dessins vectoriels) */}
+            <Section title="Légende">
+              <div className="legend" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Mitigeur */}
+                  <svg width="36" height="24" viewBox="0 0 36 24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="#0f172a" strokeWidth="2" />
+                    <line x1="2" y1="12" x2="22" y2="12" stroke="#0f172a" strokeWidth="2" />
+                    <line x1="12" y1="2" x2="12" y2="22" stroke="#0f172a" strokeWidth="2" />
+                    <line x1="22" y1="12" x2="34" y2="9" stroke="#0f172a" strokeWidth="2" />
+                  </svg>
+                  <span>Mitigeur mural</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Siège demi-ovale contre mur */}
+                  <svg width="48" height="28" viewBox="0 0 48 28">
+                    <line x1="2" y1="2" x2="2" y2="26" stroke="#0f172a" strokeWidth="2" /> {/* mur */}
+                    <path d="M2 14 A12 12 0 0 0 26 14" fill="none" stroke="#0f172a" strokeWidth="2" />
+                  </svg>
+                  <span>Siège mural rabattable</span>
+                </div>
+              </div>
+            </Section>
+
+            {/* ACCESSOIRES / COMMENTAIRES */}
+            <Section title="Accessoires & Commentaires">
+              <Row>
+                <Col span={3}><Check label="Siège" checked={accessoires.siege} onChange={()=>setAccessoires(a=>({...a, siege: !a.siege}))} /></Col>
+                <Col span={3}><Check label="Barre de maintien" checked={accessoires.barre} onChange={()=>setAccessoires(a=>({...a, barre: !a.barre}))} /></Col>
+                <Col span={3}>
+                  <Label>Robinetterie</Label>
+                  <select value={accessoires.robinetterie} onChange={(e)=>setAccessoires(a=>({...a, robinetterie:e.target.value}))} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }}>
+                    <option value="mitigeur">Mitigeur</option>
+                    <option value="thermostatique">Thermostatique</option>
+                  </select>
+                </Col>
+                <Col span={3}><Check label="Ciel de pluie" checked={accessoires.ciel} onChange={()=>setAccessoires(a=>({...a, ciel: !a.ciel}))} /></Col>
+              </Row>
+              <Row>
+                <Col span={12}><Label>Commentaires</Label>
+                  <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires…" style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
+                </Col>
+              </Row>
+            </Section>
           </div>
 
-          <Section title="Accessoires (déclaratif)">
-            <Row>
-              <Col span={3}><Check label="Siège" checked={accessoires.siege} onChange={()=>setAccessoires(a=>({...a, siege: !a.siege}))} /></Col>
-              <Col span={3}><Check label="Barre de maintien" checked={accessoires.barre} onChange={()=>setAccessoires(a=>({...a, barre: !a.barre}))} /></Col>
-              <Col span={3}>
-                <Label>Robinetterie</Label>
-                <select value={accessoires.robinetterie} onChange={(e)=>setAccessoires(a=>({...a, robinetterie:e.target.value}))} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }}>
-                  <option value="mitigeur">Mitigeur</option>
-                  <option value="thermostatique">Thermostatique</option>
-                </select>
-              </Col>
-              <Col span={3}><Check label="Ciel de pluie" checked={accessoires.ciel} onChange={()=>setAccessoires(a=>({...a, ciel: !a.ciel}))} /></Col>
-            </Row>
-            <Row>
-              <Col span={12}><Label>Commentaires</Label>
-                <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires..." style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
-              </Col>
-            </Row>
-          </Section>
+          {/* BOUTON EXPORT (en dehors de exportRef) */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+            <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600 }}>
+              Exporter PDF (A4 paysage)
+            </button>
+            <button onClick={resetPlan} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #cbd5e1", background:"#fff" }}>
+              Réinitialiser
+            </button>
+          </div>
         </div>
       )}
     </div>
