@@ -2,15 +2,16 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 
 /**
- * IRShowerFormsView — Étude technique (Formulaire + Maquette PDF A4 300DPI) + Plan technique
- * - On conserve toutes les fonctionnalités précédentes (dessin, outils, undo, reset, export…)
- * - On ajoute un 2e mode d’affichage pour l’étude: "Maquette PDF" fidèle au visuel.
- * Mobile-first, sans dépendances externes.
+ * IRShowerFormsView — Étude technique (Formulaire) + Plan technique
+ * - Maquette PDF supprimée (comme demandé)
+ * - Plan: sélection, déplacement (drag), suppression d’éléments
+ * - Siège = demi-ovale, automatiquement plaqué au mur le plus proche (haut / gauche / droite pour chaque zone),
+ *   orienté vers l’intérieur de la douche
+ * - Marquage AVANT (haut) / APRÈS (bas) très visible
  */
 
-const ETUDE_BG_URL = "/ir/etude.png"; // place le visuel dans public/ir/etude.png
-const A4 = { wmm: 210, hmm: 297 };   // A4 portrait, en millimètres
 const GRID_SIZE = 20;
+const HIT_PAD = 10; // tolérance hit-test en px
 
 /* ---------- UI helpers ---------- */
 const Section = ({ title, children }) => (
@@ -35,69 +36,153 @@ const Radio = ({ label, name, ...props }) => (
 );
 const Small = ({ children }) => <div style={{ fontSize: 12, color: "#64748b" }}>{children}</div>;
 
-/* ---------- PLAN TECHNIQUE (canvas) ---------- */
-const useGridCanvas = (canvasRef) => {
+/* ---------- PLAN TECHNIQUE: Canvas engine ---------- */
+const usePlanCanvas = (canvasRef) => {
   const drawBase = (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
+    // fond
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    // zones
     const midY = Math.floor(h / 2);
-    ctx.strokeStyle = "#0ea5a5"; ctx.lineWidth = 2; ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    // teinte légère pour distinguer
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, w, midY);         // AVANT (haut)
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(0, midY, w, h - midY);  // APRÈS (bas)
+
+    // cadres
+    ctx.strokeStyle = "#0ea5a5";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
     ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
 
-    ctx.save(); ctx.translate(16, 16); ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = "#0ea5a5"; ctx.font = "bold 14px sans-serif";
-    ctx.fillText("SdB AVANT — AVEC DIMENSIONS", -h / 2 - 80, -4);
+    // libellés grands et visibles
+    ctx.save();
+    ctx.fillStyle = "rgba(14,165,233,0.12)"; // bandeau discret
+    ctx.fillRect(0, 0, w, 40);
+    ctx.fillRect(0, midY, w, 40);
+
+    ctx.fillStyle = "#0ea5a5";
+    ctx.font = "600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("AVANT — AVEC DIMENSIONS", w / 2, 20);
+    ctx.fillText("APRÈS — AVEC DIMENSIONS", w / 2, midY + 20);
     ctx.restore();
 
-    ctx.save(); ctx.translate(16, h - 16); ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = "#0ea5a5"; ctx.font = "bold 14px sans-serif";
-    ctx.fillText("SdB APRÈS — AVEC DIMENSIONS", -h / 2 - 80, -4);
-    ctx.restore();
-
-    ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+    // grille
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
     for (let x = GRID_SIZE + 0.5; x < w; x += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     for (let y = GRID_SIZE + 0.5; y < h; y += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
   };
 
   const api = useMemo(() => ({
-    resize() {
+    resizeCtx() {
       const c = canvasRef.current; if (!c) return null;
       const dpr = window.devicePixelRatio || 1;
       const cw = c.clientWidth, ch = c.clientHeight;
       c.width = Math.floor(cw * dpr); c.height = Math.floor(ch * dpr);
-      const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const ctx = c.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return { ctx, w: cw, h: ch };
     },
-    draw(elements = [], preview = null) {
-      const sized = api.resize(); if (!sized) return;
+    draw(elements = [], preview = null, selectedId = null) {
+      const sized = api.resizeCtx(); if (!sized) return;
       const { ctx, w, h } = sized;
       drawBase(ctx, w, h);
+
       const all = [...elements, ...(preview ? [preview] : [])];
 
-      for (const el of all) {
-        if (el.type === "dim") {
-          ctx.save(); ctx.strokeStyle = "#0f172a"; ctx.fillStyle = "#0f172a"; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
-          const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
-          ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-          ctx.fillText(el.label ?? `${Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1))}mm`, mx, my - 6);
-          ctx.restore();
-        } else if (el.type === "rect") {
-          ctx.save(); ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.restore();
-        } else if (el.type === "text") {
-          ctx.save(); ctx.fillStyle = "#0f172a"; ctx.font = "bold 12px sans-serif"; ctx.fillText(el.text, el.x, el.y); ctx.restore();
-        } else if (el.type === "symbol") {
-          ctx.save(); ctx.translate(el.x, el.y); ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2;
-          if (el.kind === "mixer") { ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(8,0); ctx.moveTo(0,-8); ctx.lineTo(0,8); ctx.stroke(); }
-          if (el.kind === "seat")  { ctx.strokeRect(-12,-8,24,16); ctx.beginPath(); ctx.moveTo(-12,2); ctx.lineTo(12,2); ctx.stroke(); }
-          ctx.restore();
+      const drawDim = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
+        const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
+        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+        ctx.fillText(el.label ?? `${Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1))}mm`, mx, my - 6);
+        ctx.restore();
+      };
+
+      const drawRect = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(el.x, el.y, el.w, el.h);
+        ctx.restore();
+      };
+
+      const drawText = (el) => {
+        ctx.save();
+        ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.font = "bold 12px sans-serif";
+        ctx.fillText(el.text, el.x, el.y);
+        ctx.restore();
+      };
+
+      const drawMixer = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // plaque murale + corps + bec discret
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(18, -2); ctx.stroke(); // petit bec
+        ctx.restore();
+      };
+
+      const drawSeat = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        const r = 18;
+        // demi-ovale orienté vers l'intérieur
+        if (el.orient === "top") {
+          // collé en haut, demi-ovale vers le bas
+          ctx.beginPath();
+          ctx.moveTo(el.x - r, el.y);
+          ctx.arc(el.x, el.y, r, Math.PI, 0, false); // partie supérieure
+          ctx.lineTo(el.x - r, el.y); // fermer
+          ctx.stroke();
+          // plat côté mur (ligne horizontale fine)
+          ctx.beginPath(); ctx.moveTo(el.x - r, el.y); ctx.lineTo(el.x + r, el.y); ctx.stroke();
+        } else if (el.orient === "left") {
+          // collé à gauche, demi-ovale vers la droite
+          ctx.beginPath();
+          ctx.moveTo(el.x, el.y - r);
+          ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, false);
+          ctx.lineTo(el.x, el.y - r);
+          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
+        } else if (el.orient === "right") {
+          // collé à droite, demi-ovale vers la gauche
+          ctx.beginPath();
+          ctx.moveTo(el.x, el.y - r);
+          ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, true);
+          ctx.lineTo(el.x, el.y - r);
+          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
         }
+        ctx.restore();
+      };
+
+      for (const el of all) {
+        if (el.type === "dim") drawDim(el);
+        else if (el.type === "rect") drawRect(el);
+        else if (el.type === "text") drawText(el);
+        else if (el.type === "symbol" && el.kind === "mixer") drawMixer(el);
+        else if (el.type === "symbol" && el.kind === "seat") drawSeat(el);
       }
     },
     downloadPNG(filename = "plan_douche.png") {
-      const canvas = canvasRef.current; if (!canvas) return;
+      const c = canvasRef.current; if (!c) return;
       const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
+      a.href = c.toDataURL("image/png");
       a.download = filename; a.click();
     }
   }), [canvasRef]);
@@ -105,11 +190,26 @@ const useGridCanvas = (canvasRef) => {
   return api;
 };
 
-/* ---------- PAGE ---------- */
+/* ---------- helpers ---------- */
+let _nextId = 1;
+const newId = () => _nextId++;
+
+/* distance point-segment */
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  let t = len_sq ? dot / len_sq : -1;
+  t = Math.max(0, Math.min(1, t));
+  const xx = x1 + C * t, yy = y1 + D * t;
+  const dx = px - xx, dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 export default function IRShowerFormsView() {
   const [tab, setTab] = useState("etude");
 
-  /* ===== Étude technique ===== */
+  /* ===== Étude (Formulaire simple) ===== */
   const [study, setStudy] = useState({
     client_nom: "", client_prenom: "", client_adresse: "",
     inst_nom: "", inst_prenom: "", date_visite: "",
@@ -126,154 +226,199 @@ export default function IRShowerFormsView() {
   });
   const toggleTravaux = (key) => setStudy((s) => ({ ...s, travaux: { ...s.travaux, [key]: !s.travaux[key] } }));
 
-  // Vue 1: formulaire
-  const printableRef = useRef(null);
-  const printEtude = () => {
-    const node = printableRef.current; if (!node) return;
-    const prev = document.body.innerHTML;
-    document.body.innerHTML = node.outerHTML;
-    window.print();
-    document.body.innerHTML = prev;
-  };
-
-  // Vue 2: maquette PDF (A4 mm)
-  const [etudeView, setEtudeView] = useState("form"); // "form" | "mockup"
-  const [bgImg, setBgImg] = useState(null);
-  useEffect(() => { const im = new Image(); im.src = ETUDE_BG_URL; im.onload = () => setBgImg(im); }, []);
-  const boxRef = useRef(null);
-
-  // Champs & cases positionnés en millimètres (A4). Ajuste si besoin.
-  const FIELDS_MM = [
-    { key: "date_visite", x: 150, y: 22,  w: 40 },
-    { key: "inst_nom",    x: 140, y: 53,  w: 55 },
-    { key: "inst_prenom", x: 140, y: 63,  w: 55 },
-    { key: "client_nom",  x: 18,  y: 53,  w: 60 },
-    { key: "client_prenom",x: 18, y: 63,  w: 60 },
-    { key: "client_adresse",x:18, y: 73,  w: 100 },
-
-    { key: "longueur_receveur", x:26, y:113, w:30 },
-    { key: "largeur_receveur",  x:26, y:120, w:30 },
-    { key: "largeur_acces",     x:80, y:120, w:30 },
-    { key: "hauteur_plafond",   x:26, y:127, w:30 },
-    { key: "hauteur_estimee_receveur", x:78, y:127, w:30 },
-    { key: "largeur_sdb",       x:42, y:134, w:30 },
-    { key: "longueur_sdb",      x:86, y:134, w:30 },
-
-    { key: "h_fenetre",   x:40, y:152, w:28 },
-    { key: "l_fenetre",   x:40, y:159, w:28 },
-    { key: "dist_gauche", x:86, y:159, w:28 },
-    { key: "dist_droit",  x:132,y:159, w:28 },
-    { key: "dist_plafond",x:86, y:166, w:28 },
-    { key: "dist_sol",    x:40, y:173, w:28 },
-  ];
-  const CHECKS_MM = [
-    { key: "robinetterie_type", value: "thermostatique", label: "Thermo",   x: 26,  y: 141 },
-    { key: "robinetterie_type", value: "mitigeur",       label: "Mitigeur", x: 108, y: 141 },
-    { key: "vanne_ok", value: "oui",  label: "Vanne OUI", x: 26, y: 145 },
-    { key: "vanne_ok", value: "non",  label: "NON",       x: 48, y: 145 },
-    { key: "fenetre",  value: "oui",  label: "Fenêtre OUI", x: 26, y: 149 },
-    { key: "fenetre",  value: "non",  label: "NON",         x: 48, y: 149 },
-  ];
-
-  const mmToPctStyle = (xmm, ymm, wmm = 30) => {
-    const left = `${(xmm / A4.wmm) * 100}%`;
-    const top  = `${(ymm / A4.hmm) * 100}%`;
-    const width = `${(wmm / A4.wmm) * 100}%`;
-    return { left, top, width };
-  };
-
-  const exportEtudeMockup = () => {
-    if (!bgImg) return;
-    const W = 2480, H = 3508; // 300 DPI A4
-    const c = document.createElement("canvas"); c.width = W; c.height = H;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,W,H);
-    ctx.drawImage(bgImg, 0, 0, W, H);
-
-    const drawText = (text, xmm, ymm, fontsize=22) => {
-      if (!text) return;
-      ctx.fillStyle = "#111827";
-      ctx.font = `bold ${fontsize}px Helvetica`;
-      ctx.textBaseline = "top"; ctx.textAlign = "left";
-      ctx.fillText(text, (xmm/A4.wmm)*W, (ymm/A4.hmm)*H);
-    };
-    const drawBox = (xmm, ymm, checked=false) => {
-      const x = (xmm/A4.wmm)*W, y=(ymm/A4.hmm)*H, s=30;
-      ctx.strokeStyle = "#111827"; ctx.lineWidth = 3;
-      ctx.strokeRect(x, y, s, s);
-      if (checked) { ctx.beginPath(); ctx.moveTo(x+6, y+16); ctx.lineTo(x+12, y+24); ctx.lineTo(x+24, y+8); ctx.stroke(); }
-    };
-
-    for (const f of FIELDS_MM) drawText(study[f.key], f.x, f.y, 22);
-    for (const ch of CHECKS_MM) {
-      const checked =
-        (ch.key === "robinetterie_type" && study.robinetterie_type === ch.value) ||
-        (ch.key === "vanne_ok" && study.vanne_ok === ch.value) ||
-        (ch.key === "fenetre" && study.fenetre === ch.value);
-      drawBox(ch.x, ch.y, checked);
-    }
-
-    const dataURL = c.toDataURL("image/png");
-    const w = window.open("");
-    if (w) {
-      w.document.write(`<html><head><title>Étude technique</title>
-        <style>@page{size:A4;margin:0}html,body{margin:0;padding:0}</style></head>
-        <body><img src="${dataURL}" style="width:210mm;height:297mm;display:block"/></body></html>`);
-      w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
-    }
-  };
-
-  /* ===== Plan technique (dessin) — on garde tout ===== */
+  /* ===== Plan (dessin) ===== */
   const canvasRef = useRef(null);
-  const canvas = useGridCanvas(canvasRef);
+  const plan = usePlanCanvas(canvasRef);
+
   const [elements, setElements] = useState([]);
   const [preview, setPreview] = useState(null);
-  const [tool, setTool] = useState("dim"); // 'dim' | 'rect' | 'mixer' | 'seat' | 'text'
+  const [tool, setTool] = useState("dim"); // 'select' | 'dim' | 'rect' | 'mixer' | 'seat' | 'text'
   const [snap, setSnap] = useState(true);
   const [ortho, setOrtho] = useState(true);
   const [startPt, setStartPt] = useState(null);
 
-  useEffect(() => { if (tab === "plan") canvas.draw(elements, preview); }, [tab, elements, preview, canvas]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
+
+  useEffect(() => { if (tab === "plan") plan.draw(elements, preview, selectedId); }, [tab, elements, preview, selectedId, plan]);
   useEffect(() => {
     if (tab !== "plan") return;
     const el = canvasRef.current; if (!el) return;
-    const ro = new ResizeObserver(() => canvas.draw(elements, preview));
+    const ro = new ResizeObserver(() => plan.draw(elements, preview, selectedId));
     ro.observe(el); return () => ro.disconnect();
-  }, [tab, elements, preview, canvas]);
+  }, [tab, elements, preview, selectedId, plan]);
 
-  const applySnap = (x,y) => snap ? ({ x: Math.round(x/GRID_SIZE)*GRID_SIZE, y: Math.round(y/GRID_SIZE)*GRID_SIZE }) : ({x,y});
-  const applyOrtho = (x1,y1,x2,y2) => {
+  // suppression via clavier
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!selectedId) return;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        setElements((els) => els.filter((x) => x.id !== selectedId));
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId]);
+
+  const applySnap = (x, y) => {
+    if (!snap) return { x, y };
+    const sx = Math.round(x / GRID_SIZE) * GRID_SIZE;
+    const sy = Math.round(y / GRID_SIZE) * GRID_SIZE;
+    return { x: sx, y: sy };
+  };
+
+  const applyOrtho = (x1, y1, x2, y2) => {
     if (!ortho) return { x2, y2 };
     const dx = x2 - x1, dy = y2 - y1;
     return Math.abs(dx) > Math.abs(dy) ? { x2, y2: y1 } : { x2: x1, y2 };
   };
+
   const pointerPos = (e) => {
-    const r = canvasRef.current.getBoundingClientRect();
-    const cx = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - r.left;
-    const cy = (e.clientY ?? (e.touches?.[0]?.clientY || 0)) - r.top;
+    const rect = canvasRef.current.getBoundingClientRect();
+    let cx = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - rect.left;
+    let cy = (e.clientY ?? (e.touches?.[0]?.clientY || 0)) - rect.top;
     return applySnap(cx, cy);
+  };
+
+  // Hit-test pour sélectionner
+  const hitTest = (x, y) => {
+    // chercher du haut vers le bas (dernier au-dessus)
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type === "rect") {
+        if (x >= el.x - HIT_PAD && x <= el.x + el.w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + el.h + HIT_PAD) {
+          return el;
+        }
+      } else if (el.type === "dim") {
+        if (distToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= HIT_PAD) return el;
+      } else if (el.type === "text") {
+        // boîte approximative (80x28)
+        if (x >= el.x - 4 && x <= el.x + 80 && y >= el.y - 16 && y <= el.y + 12) return el;
+      } else if (el.type === "symbol") {
+        const r = el.kind === "mixer" ? 14 : 22;
+        if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+      }
+    }
+    return null;
+  };
+
+  // Zones AVANT (haut) / APRÈS (bas)
+  const getZones = () => {
+    const c = canvasRef.current;
+    const h = c?.clientHeight || 0;
+    const w = c?.clientWidth || 0;
+    const mid = Math.floor(h / 2);
+    return {
+      width: w,
+      height: h,
+      midY: mid,
+      topZone: { x: 0, y: 0, w, h: mid },
+      botZone: { x: 0, y: mid, w, h: h - mid },
+    };
+  };
+
+  const clampSeatToWall = (p) => {
+    // Trouve la zone (haut = AVANT, bas = APRÈS) puis plaque au mur le plus proche (haut / gauche / droite de la zone).
+    const { width, midY } = getZones();
+    const zoneTop = p.y < midY ? { y0: 0, y1: midY } : { y0: midY, y1: null };
+    const topEdge = p.y < midY ? 0 : midY;
+    const distTop = Math.abs(p.y - topEdge);
+    const distLeft = Math.abs(p.x - 0);
+    const distRight = Math.abs(width - p.x);
+
+    let orient = "top";
+    let x = p.x, y = p.y;
+    const padding = 6; // léger retrait pour lisibilité
+
+    if (distTop <= distLeft && distTop <= distRight) {
+      // coller en haut de la zone
+      y = topEdge + padding;
+      orient = "top";
+    } else if (distLeft <= distRight) {
+      x = padding;
+      orient = "left";
+    } else {
+      x = width - padding;
+      orient = "right";
+    }
+    return { x, y, orient };
   };
 
   const onPointerDown = (e) => {
     e.preventDefault(); if (tab !== "plan") return;
     const p = pointerPos(e);
 
-    if (tool === "mixer" || tool === "seat") {
-      setElements((els) => [...els, { type: "symbol", kind: tool, x: p.x, y: p.y }]);
+    if (tool === "select") {
+      const el = hitTest(p.x, p.y);
+      if (el) {
+        setSelectedId(el.id);
+        // offset pour drag
+        if (el.type === "rect") setDragOffset({ dx: p.x - el.x, dy: p.y - el.y });
+        else setDragOffset({ dx: p.x - (el.x ?? 0), dy: p.y - (el.y ?? 0) });
+      } else {
+        setSelectedId(null);
+      }
+      setStartPt(p);
       return;
     }
+
+    if (tool === "mixer") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "mixer", x: p.x, y: p.y }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "seat") {
+      const seat = clampSeatToWall(p);
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "seat", x: seat.x, y: seat.y, orient: seat.orient }]);
+      setSelectedId(id);
+      return;
+    }
+
     if (tool === "text") {
-      const t = window.prompt("Texte à placer :");
-      if (t?.trim()) setElements((els) => [...els, { type: "text", x: p.x, y: p.y, text: t }]);
+      const t = window.prompt("Texte :");
+      if (t?.trim()) {
+        const id = newId();
+        setElements((els) => [...els, { id, type: "text", x: p.x, y: p.y, text: t }]);
+        setSelectedId(id);
+      }
       return;
     }
+
+    // dim/rect
     setStartPt(p);
   };
 
   const onPointerMove = (e) => {
     if (!startPt) return;
-    let { x: x2, y: y2 } = pointerPos(e);
+    const p = pointerPos(e);
+
+    if (tool === "select" && selectedId) {
+      // drag l’élément sélectionné
+      setElements((els) => els.map((el) => {
+        if (el.id !== selectedId) return el;
+        if (el.type === "rect") return { ...el, x: p.x - dragOffset.dx, y: p.y - dragOffset.dy };
+        if (el.type === "dim") {
+          // déplacer la cote : translation globale
+          const dx = p.x - startPt.x, dy = p.y - startPt.y;
+          return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+        }
+        if (el.type === "text" || el.type === "symbol") {
+          return { ...el, x: p.x - dragOffset.dx, y: p.y - dragOffset.dy };
+        }
+        return el;
+      }));
+      // update startPt pour delta continu
+      setStartPt(p);
+      return;
+    }
+
+    let { x: x2, y: y2 } = p;
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
+
     if (tool === "dim") {
       setPreview({ type: "dim", x1: startPt.x, y1: startPt.y, x2, y2 });
     } else if (tool === "rect") {
@@ -282,24 +427,45 @@ export default function IRShowerFormsView() {
   };
 
   const onPointerUp = (e) => {
-    if (!startPt) return; e.preventDefault();
-    let { x: x2, y: y2 } = pointerPos(e);
+    if (!startPt) return;
+    e.preventDefault();
+    const p = pointerPos(e);
+
+    if (tool === "select") {
+      setStartPt(null);
+      return;
+    }
+
+    let { x: x2, y: y2 } = p;
     if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
       const auto = `${Math.round(Math.hypot(x2 - startPt.x, y2 - startPt.y))}mm`;
       const label = window.prompt("Libellé de la cote (laisser vide pour auto)", auto) || auto;
-      setElements((els) => [...els, { type: "dim", x1: startPt.x, y1: startPt.y, x2, y2, label }]);
+      const id = newId();
+      setElements((els) => [...els, { id, type: "dim", x1: startPt.x, y1: startPt.y, x2, y2, label }]);
+      setSelectedId(id);
     } else if (tool === "rect") {
-      setElements((els) => [...els, { type: "rect", x: Math.min(startPt.x, x2), y: Math.min(startPt.y, y2), w: Math.abs(x2 - startPt.x), h: Math.abs(y2 - startPt.y) }]);
+      const id = newId();
+      setElements((els) => [...els, { id, type: "rect", x: Math.min(startPt.x, x2), y: Math.min(startPt.y, y2), w: Math.abs(x2 - startPt.x), h: Math.abs(y2 - startPt.y) }]);
+      setSelectedId(id);
     }
+
     setStartPt(null); setPreview(null);
   };
 
-  const undo = () => setElements((els) => els.slice(0, -1));
-  const resetPlan = () => { setElements([]); setPreview(null); canvas.draw([]); };
+  const undo = () => {
+    setElements((els) => els.slice(0, -1));
+    setSelectedId(null);
+  };
+  const delSelected = () => {
+    if (!selectedId) return;
+    setElements((els) => els.filter((x) => x.id !== selectedId));
+    setSelectedId(null);
+  };
+  const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ===== Accessoires ===== */
+  /* ===== Accessoires (déclaratif) ===== */
   const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
 
   return (
@@ -322,12 +488,9 @@ export default function IRShowerFormsView() {
           .ir-col.span-12 { grid-column: span 12 / span 12; }
         }
         .ir-tabs { position: sticky; top: 0; z-index: 10; background: #fff; padding-bottom: 8px; }
-        .ir-canvas-wrap { height: 520px; }
-        @media (max-width: 767px) { .ir-canvas-wrap { height: 420px; } }
+        .ir-canvas-wrap { height: 560px; }
+        @media (max-width: 767px) { .ir-canvas-wrap { height: 460px; } }
         canvas.ir-grid { touch-action: none; display: block; width: 100%; height: 100%; }
-        .a4-box { position: relative; width: 100%; aspect-ratio: 210 / 297; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff; }
-        .a4-bg  { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .a4-field { position: absolute; transform: translateY(-50%); border: 1px solid rgba(0,0,0,.2); background: rgba(255,255,255,.85); border-radius: 6px; padding: 6px 8px; font-size: 12px; min-height: 34px; }
         button, input, select, textarea { min-height: 44px; }
       `}</style>
 
@@ -338,154 +501,106 @@ export default function IRShowerFormsView() {
         <button onClick={() => setTab("plan")}  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "plan"  ? "#e2e8f0" : "#fff", flex: 1 }}>Plan technique</button>
       </div>
 
-      {/* ==== ETUDE ==== */}
+      {/* ==== ÉTUDE (formulaire classique) ==== */}
       {tab === "etude" && (
-        <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <button onClick={() => setEtudeView("form")}   style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: etudeView==="form" ? "#e2e8f0" : "#fff" }}>Vue Formulaire</button>
-            <button onClick={() => setEtudeView("mockup")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: etudeView==="mockup" ? "#e2e8f0" : "#fff" }}>Vue Maquette PDF</button>
-          </div>
+        <div>
+          <Section title="En-têtes">
+            <Row>
+              <Col span={4}><Label>Date de la visite</Label><Input type="date" value={study.date_visite} onChange={(e)=>setStudy(s=>({...s, date_visite:e.target.value}))} /></Col>
+              <Col span={4}><Label>Installateur — Nom</Label><Input value={study.inst_nom} onChange={(e)=>setStudy(s=>({...s, inst_nom:e.target.value}))} /></Col>
+              <Col span={4}><Label>Installateur — Prénom</Label><Input value={study.inst_prenom} onChange={(e)=>setStudy(s=>({...s, inst_prenom:e.target.value}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={4}><Label>Client — Nom</Label><Input value={study.client_nom} onChange={(e)=>setStudy(s=>({...s, client_nom:e.target.value}))} /></Col>
+              <Col span={4}><Label>Client — Prénom</Label><Input value={study.client_prenom} onChange={(e)=>setStudy(s=>({...s, client_prenom:e.target.value}))} /></Col>
+              <Col span={4}><Label>Client — Adresse</Label><Input value={study.client_adresse} onChange={(e)=>setStudy(s=>({...s, client_adresse:e.target.value}))} /></Col>
+            </Row>
+          </Section>
 
-          {etudeView === "form" ? (
-            <div ref={printableRef}>
-              <Section title="En-têtes">
-                <Row>
-                  <Col span={4}><Label>Date de la visite</Label><Input type="date" value={study.date_visite} onChange={(e)=>setStudy(s=>({...s, date_visite:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Installateur — Nom</Label><Input value={study.inst_nom} onChange={(e)=>setStudy(s=>({...s, inst_nom:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Installateur — Prénom</Label><Input value={study.inst_prenom} onChange={(e)=>setStudy(s=>({...s, inst_prenom:e.target.value}))} /></Col>
-                </Row>
-                <Row>
-                  <Col span={4}><Label>Client — Nom</Label><Input value={study.client_nom} onChange={(e)=>setStudy(s=>({...s, client_nom:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Client — Prénom</Label><Input value={study.client_prenom} onChange={(e)=>setStudy(s=>({...s, client_prenom:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Client — Adresse</Label><Input value={study.client_adresse} onChange={(e)=>setStudy(s=>({...s, client_adresse:e.target.value}))} /></Col>
-                </Row>
-              </Section>
-
-              <Section title="Étude technique">
-                <Row>
-                  <Col span={6}><Label>Longueur receveur (mm)</Label><Input value={study.longueur_receveur} onChange={(e)=>setStudy(s=>({...s, longueur_receveur:e.target.value}))} /></Col>
-                  <Col span={6}><Label>Largeur receveur (mm)</Label><Input value={study.largeur_receveur} onChange={(e)=>setStudy(s=>({...s, largeur_receveur:e.target.value}))} /></Col>
-                </Row>
-                <Row>
-                  <Col span={6}><Label>Largeur d'accès douche (min 65cm)</Label><Input value={study.largeur_acces} onChange={(e)=>setStudy(s=>({...s, largeur_acces:e.target.value}))} /></Col>
-                  <Col span={6}><Label>Hauteur plafond (mm)</Label><Input value={study.hauteur_plafond} onChange={(e)=>setStudy(s=>({...s, hauteur_plafond:e.target.value}))} /></Col>
-                </Row>
-                <Row>
-                  <Col span={6}><Label>Hauteur estimée du receveur (mm)</Label><Input value={study.hauteur_estimee_receveur} onChange={(e)=>setStudy(s=>({...s, hauteur_estimee_receveur:e.target.value}))} /></Col>
-                  <Col span={6}><Label>Largeur de la salle de bains (mm)</Label><Input value={study.largeur_sdb} onChange={(e)=>setStudy(s=>({...s, largeur_sdb:e.target.value}))} /></Col>
-                </Row>
-                <Row>
-                  <Col span={6}><Label>Longueur de la salle de bains (mm)</Label><Input value={study.longueur_sdb} onChange={(e)=>setStudy(s=>({...s, longueur_sdb:e.target.value}))} /></Col>
-                  <Col span={6}><Label>Type de robinetterie</Label>
-                    <div>
-                      <Radio name="robinetterie" label="Thermostatique" checked={study.robinetterie_type==="thermostatique"} onChange={()=>setStudy(s=>({...s, robinetterie_type:"thermostatique"}))} />
-                      <Radio name="robinetterie" label="Mitigeur classique" checked={study.robinetterie_type==="mitigeur"} onChange={()=>setStudy(s=>({...s, robinetterie_type:"mitigeur"}))} />
-                    </div>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col span={6}><Label>Vanne d'arrêt d'eau fonctionnelle</Label>
-                    <div>
-                      <Radio name="vanne" label="Oui" checked={study.vanne_ok==="oui"} onChange={()=>setStudy(s=>({...s, vanne_ok:"oui"}))} />
-                      <Radio name="vanne" label="Non" checked={study.vanne_ok==="non"} onChange={()=>setStudy(s=>({...s, vanne_ok:"non"}))} />
-                    </div>
-                  </Col>
-                  <Col span={6}><Label>Fenêtre</Label>
-                    <div>
-                      <Radio name="fenetre" label="Oui" checked={study.fenetre==="oui"} onChange={()=>setStudy(s=>({...s, fenetre:"oui"}))} />
-                      <Radio name="fenetre" label="Non" checked={study.fenetre==="non"} onChange={()=>setStudy(s=>({...s, fenetre:"non"}))} />
-                    </div>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col span={4}><Label>Hauteur de fenêtre (mm)</Label><Input value={study.h_fenetre} onChange={(e)=>setStudy(s=>({...s, h_fenetre:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Largeur de fenêtre (mm)</Label><Input value={study.l_fenetre} onChange={(e)=>setStudy(s=>({...s, l_fenetre:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Distance fenêtre / mur gauche (mm)</Label><Input value={study.dist_gauche} onChange={(e)=>setStudy(s=>({...s, dist_gauche:e.target.value}))} /></Col>
-                </Row>
-                <Row>
-                  <Col span={4}><Label>Distance fenêtre / mur droit (mm)</Label><Input value={study.dist_droit} onChange={(e)=>setStudy(s=>({...s, dist_droit:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Distance fenêtre / plafond (mm)</Label><Input value={study.dist_plafond} onChange={(e)=>setStudy(s=>({...s, dist_plafond:e.target.value}))} /></Col>
-                  <Col span={4}><Label>Distance fenêtre / sol (mm)</Label><Input value={study.dist_sol} onChange={(e)=>setStudy(s=>({...s, dist_sol:e.target.value}))} /></Col>
-                </Row>
-              </Section>
-
-              <Section title="Travaux complémentaires nécessaires">
-                <Row>
-                  <Col span={12}>
-                    {Object.entries(study.travaux).map(([k,v]) => (
-                      <Check key={k} label={k.replaceAll('_',' ')} checked={v} onChange={()=>toggleTravaux(k)} />
-                    ))}
-                  </Col>
-                </Row>
-                <Row>
-                  <Col span={12}><Label>Autres</Label>
-                    <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
-                  </Col>
-                </Row>
-                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                  <button onClick={printEtude} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>Imprimer / PDF</button>
+          <Section title="Étude technique">
+            <Row>
+              <Col span={6}><Label>Longueur receveur (mm)</Label><Input value={study.longueur_receveur} onChange={(e)=>setStudy(s=>({...s, longueur_receveur:e.target.value}))} /></Col>
+              <Col span={6}><Label>Largeur receveur (mm)</Label><Input value={study.largeur_receveur} onChange={(e)=>setStudy(s=>({...s, largeur_receveur:e.target.value}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={6}><Label>Largeur d'accès douche (min 65cm)</Label><Input value={study.largeur_acces} onChange={(e)=>setStudy(s=>({...s, largeur_acces:e.target.value}))} /></Col>
+              <Col span={6}><Label>Hauteur plafond (mm)</Label><Input value={study.hauteur_plafond} onChange={(e)=>setStudy(s=>({...s, hauteur_plafond:e.target.value}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={6}><Label>Hauteur estimée du receveur (mm)</Label><Input value={study.hauteur_estimee_receveur} onChange={(e)=>setStudy(s=>({...s, hauteur_estimee_receveur:e.target.value}))} /></Col>
+              <Col span={6}><Label>Largeur de la salle de bains (mm)</Label><Input value={study.largeur_sdb} onChange={(e)=>setStudy(s=>({...s, largeur_sdb:e.target.value}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={6}><Label>Longueur de la salle de bains (mm)</Label><Input value={study.longueur_sdb} onChange={(e)=>setStudy(s=>({...s, longueur_sdb:e.target.value}))} /></Col>
+              <Col span={6}><Label>Type de robinetterie</Label>
+                <div>
+                  <Radio name="robinetterie" label="Thermostatique" checked={study.robinetterie_type==="thermostatique"} onChange={()=>setStudy(s=>({...s, robinetterie_type:"thermostatique"}))} />
+                  <Radio name="robinetterie" label="Mitigeur classique" checked={study.robinetterie_type==="mitigeur"} onChange={()=>setStudy(s=>({...s, robinetterie_type:"mitigeur"}))} />
                 </div>
-              </Section>
-            </div>
-          ) : (
-            <Section title="Maquette PDF (A4)">
-              <Small>Champs positionnés en millimètres. Export net (300 DPI) via l’impression du navigateur.</Small>
-              <div ref={boxRef} className="a4-box">
-                <img className="a4-bg" src={ETUDE_BG_URL} alt="Étude technique" />
-                {FIELDS_MM.map((f) => (
-                  <input
-                    key={f.key}
-                    className="a4-field"
-                    value={study[f.key] ?? ""}
-                    onChange={(e)=>setStudy(s=>({ ...s, [f.key]: e.target.value }))}
-                    style={mmToPctStyle(f.x, f.y, f.w)}
-                  />
+              </Col>
+            </Row>
+            <Row>
+              <Col span={6}><Label>Vanne d'arrêt d'eau fonctionnelle</Label>
+                <div>
+                  <Radio name="vanne" label="Oui" checked={study.vanne_ok==="oui"} onChange={()=>setStudy(s=>({...s, vanne_ok:"oui"}))} />
+                  <Radio name="vanne" label="Non" checked={study.vanne_ok==="non"} onChange={()=>setStudy(s=>({...s, vanne_ok:"non"}))} />
+                </div>
+              </Col>
+              <Col span={6}><Label>Fenêtre</Label>
+                <div>
+                  <Radio name="fenetre" label="Oui" checked={study.fenetre==="oui"} onChange={()=>setStudy(s=>({...s, fenetre:"oui"}))} />
+                  <Radio name="fenetre" label="Non" checked={study.fenetre==="non"} onChange={()=>setStudy(s=>({...s, fenetre:"non"}))} />
+                </div>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={4}><Label>Hauteur de fenêtre (mm)</Label><Input value={study.h_fenetre} onChange={(e)=>setStudy(s=>({...s, h_fenetre:e.target.value}))} /></Col>
+              <Col span={4}><Label>Largeur de fenêtre (mm)</Label><Input value={study.l_fenetre} onChange={(e)=>setStudy(s=>({...s, l_fenetre:e.target.value}))} /></Col>
+              <Col span={4}><Label>Distance fenêtre / mur gauche (mm)</Label><Input value={study.dist_gauche} onChange={(e)=>setStudy(s=>({...s, dist_gauche:e.target.value}))} /></Col>
+            </Row>
+            <Row>
+              <Col span={4}><Label>Distance fenêtre / mur droit (mm)</Label><Input value={study.dist_droit} onChange={(e)=>setStudy(s=>({...s, dist_droit:e.target.value}))} /></Col>
+              <Col span={4}><Label>Distance fenêtre / plafond (mm)</Label><Input value={study.dist_plafond} onChange={(e)=>setStudy(s=>({...s, dist_plafond:e.target.value}))} /></Col>
+              <Col span={4}><Label>Distance fenêtre / sol (mm)</Label><Input value={study.dist_sol} onChange={(e)=>setStudy(s=>({...s, dist_sol:e.target.value}))} /></Col>
+            </Row>
+          </Section>
+
+          <Section title="Travaux complémentaires nécessaires">
+            <Row>
+              <Col span={12}>
+                {Object.entries(study.travaux).map(([k,v]) => (
+                  <Check key={k} label={k.replaceAll('_',' ')} checked={v} onChange={()=>toggleTravaux(k)} />
                 ))}
-                {CHECKS_MM.map((c) => {
-                  const style = mmToPctStyle(c.x, c.y, 0);
-                  const checked =
-                    (c.key === "robinetterie_type" && study.robinetterie_type === c.value) ||
-                    (c.key === "vanne_ok" && study.vanne_ok === c.value) ||
-                    (c.key === "fenetre" && study.fenetre === c.value);
-                  return (
-                    <label key={`${c.key}-${c.value}`} style={{ position:"absolute", left:style.left, top:style.top, transform:"translate(-6px,-12px)", background:"rgba(255,255,255,.7)", borderRadius:4, padding:"2px 4px", fontSize:12 }}>
-                      <input type="checkbox" checked={checked}
-                        onChange={()=>{
-                          if (c.key === "robinetterie_type") setStudy(s=>({ ...s, robinetterie_type: c.value }));
-                          if (c.key === "vanne_ok")        setStudy(s=>({ ...s, vanne_ok: c.value }));
-                          if (c.key === "fenetre")         setStudy(s=>({ ...s, fenetre: c.value }));
-                        }}
-                      /> {c.label}
-                    </label>
-                  );
-                })}
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button onClick={exportEtudeMockup} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>
-                  Exporter (PDF via impression)
-                </button>
-              </div>
-            </Section>
-          )}
-        </>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={12}><Label>Autres</Label>
+                <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
+              </Col>
+            </Row>
+          </Section>
+        </div>
       )}
 
-      {/* ==== PLAN ==== */}
+      {/* ==== PLAN TECHNIQUE ==== */}
       {tab === "plan" && (
         <div>
           <Section title="Outils">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button onClick={()=>setTool("dim")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="dim"?"#e2e8f0":"#fff" }}>Cote</button>
-              <button onClick={()=>setTool("rect")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="rect"?"#e2e8f0":"#fff" }}>Rect</button>
-              <button onClick={()=>setTool("mixer")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="mixer"?"#e2e8f0":"#fff" }}>Mitigeur</button>
-              <button onClick={()=>setTool("seat")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="seat"?"#e2e8f0":"#fff" }}>Siège</button>
-              <button onClick={()=>setTool("text")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="text"?"#e2e8f0":"#fff" }}>Texte</button>
-              <button onClick={()=>setSnap(s=>!s)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
-              <button onClick={()=>setOrtho(o=>!o)}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
-              <button onClick={undo}                  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
-              <button onClick={()=>canvas.downloadPNG()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Exporter PNG</button>
-              <button onClick={resetPlan}             style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Réinitialiser</button>
+              <button onClick={()=>setTool("select")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="select"?"#e2e8f0":"#fff" }}>Sélection</button>
+              <button onClick={()=>setTool("dim")}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="dim"?"#e2e8f0":"#fff" }}>Cote</button>
+              <button onClick={()=>setTool("rect")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="rect"?"#e2e8f0":"#fff" }}>Rect</button>
+              <button onClick={()=>setTool("mixer")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="mixer"?"#e2e8f0":"#fff" }}>Mitigeur</button>
+              <button onClick={()=>setTool("seat")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="seat"?"#e2e8f0":"#fff" }}>Siège (mur)</button>
+              <button onClick={()=>setTool("text")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="text"?"#e2e8f0":"#fff" }}>Texte</button>
+              <button onClick={()=>setSnap(s=>!s)}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
+              <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
+              <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
+              <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", background:"#fff", color:"#ef4444" }} disabled={!selectedId}>Supprimer sélection</button>
+              <button onClick={()=>plan.downloadPNG()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Exporter PNG</button>
+              <button onClick={resetPlan}              style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Réinitialiser</button>
             </div>
+            <Small>Astuce: “Sélection” → touche Suppr/Backspace pour effacer. Glisse pour déplacer. Le **siège** se plaque au mur le plus proche, demi-ovale orienté vers l’intérieur.</Small>
           </Section>
 
           <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
@@ -499,7 +614,7 @@ export default function IRShowerFormsView() {
                 onTouchStart={onPointerDown}
                 onTouchMove={onPointerMove}
                 onTouchEnd={onPointerUp}
-                style={{ cursor: (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
+                style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
               />
             </div>
           </div>
@@ -519,7 +634,7 @@ export default function IRShowerFormsView() {
             </Row>
             <Row>
               <Col span={12}><Label>Commentaires</Label>
-                <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires pour le plan…" style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
+                <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} placeholder="Notes complémentaires..." style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
               </Col>
             </Row>
           </Section>
