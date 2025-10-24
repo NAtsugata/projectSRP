@@ -1,8 +1,9 @@
 // =============================
-// FILE: src/App.js — FULL (sections pertinentes corrigées)
+// FILE: src/App.js — FULL (sections pertinentes corrigées + page IR Douche)
 // - Ajout buildSanitizedReport() qui conserve tous les champs du rapport
 // - handleUpdateInterventionReportSilent(report) attend *directement* le report
 // - handleUpdateInterventionReport(report) idem + statut
+// - INTÉGRATION de la page IRShowerFormsView (import + nav + routes admin & employé)
 // =============================
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
@@ -22,6 +23,7 @@ import EmployeeLeaveView from './pages/EmployeeLeaveView';
 import CoffreNumeriqueView from './pages/CoffreNumeriqueView';
 import AgendaView from './pages/AgendaView';
 import InterventionDetailView from './pages/InterventionDetailView';
+import IRShowerFormsView from './pages/IRShowerFormsView'; // ⬅️ NEW
 
 // Import des composants UI partagés
 import { Toast, ConfirmationModal } from './components/SharedUI';
@@ -38,13 +40,15 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> },
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'users', label: 'Employés', icon: <UsersIcon /> },
-        { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> }
+        { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
+        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> }, // ⬅️ NEW
       ]
     : [
         { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
         { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
-        { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> }
+        { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
+        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> }, // ⬅️ NEW
       ];
 
   return (
@@ -483,6 +487,7 @@ function App() {
                   path="vault"
                   element={<AdminVaultView users={users} vaultDocuments={vaultDocuments} onSendDocument={handleSendVaultDocument} onDeleteDocument={handleDeleteVaultDocument} />}
                 />
+                <Route path="ir-docs" element={<IRShowerFormsView />} /> {/* ⬅️ NEW */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </>
             ) : (
@@ -496,6 +501,7 @@ function App() {
                   element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile.full_name} userId={profile.id} showToast={showToast} />}
                 />
                 <Route path="vault" element={<CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />} />
+                <Route path="ir-docs" element={<IRShowerFormsView />} /> {/* ⬅️ NEW */}
                 <Route path="*" element={<Navigate to="/planning" replace />} />
               </>
             )}
