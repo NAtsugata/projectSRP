@@ -1,0 +1,133 @@
+/* src/components/intervention/FileUploader.css */
+
+.file-uploader {
+  width: 100%;
+}
+
+.file-uploader-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+  background-color: #fee2e2;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.file-uploader-error svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.upload-queue {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.upload-queue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.upload-status-uploading {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.upload-status-completed {
+  border-color: #16a34a;
+  background-color: #f0fdf4;
+}
+
+.upload-status-error {
+  border-color: #dc2626;
+  background-color: #fee2e2;
+}
+
+.upload-queue-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-queue-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.upload-queue-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.upload-queue-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.upload-queue-size {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.upload-progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background-color: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.upload-queue-error {
+  font-size: 0.75rem;
+  color: #991b1b;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+/* Animation spin */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .upload-queue-item {
+    padding: 0.625rem;
+  }
+
+  .upload-queue-name {
+    font-size: 0.8125rem;
+  }
+}

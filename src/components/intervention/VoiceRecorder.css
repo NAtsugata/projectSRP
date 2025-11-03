@@ -1,0 +1,76 @@
+/* src/components/intervention/VoiceRecorder.css */
+
+.voice-recorder {
+  margin-top: 0.5rem;
+}
+
+.voice-recorder-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: #fee2e2;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.voice-recorder-error svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.voice-recorder-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.voice-recorder-duration {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #dc2626;
+  padding: 0.5rem 0.75rem;
+  background-color: #fee2e2;
+  border-radius: 6px;
+}
+
+.recording-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #dc2626;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.voice-recorder-uploading {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .voice-recorder-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .voice-recorder-duration {
+    justify-content: center;
+  }
+}
