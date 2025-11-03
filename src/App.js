@@ -10,10 +10,10 @@ import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
-import './App.css';
-
-// Import immédiat pour les pages critiques
+import { Toast, ConfirmationModal } from './components/SharedUI';
+import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 import LoginScreen from './pages/LoginScreen';
+import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -28,10 +28,6 @@ const CoffreNumeriqueView = lazy(() => import('./pages/CoffreNumeriqueView'));
 const AgendaView = lazy(() => import('./pages/AgendaView'));
 const InterventionDetailView = lazy(() => import('./pages/InterventionDetailView'));
 const IRShowerFormsView = lazy(() => import('./pages/IRShowerFormsView'));
-
-// Import des composants UI partagés
-import { Toast, ConfirmationModal } from './components/SharedUI';
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
 
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
