@@ -5,25 +5,29 @@
 // - handleUpdateInterventionReport(report) idem + statut
 // - INTÉGRATION de la page IRShowerFormsView (import + nav + routes admin & employé)
 // =============================
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
+import { buildSanitizedReport } from './utils/reportHelpers';
+import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import './App.css';
 
-// Import des pages
+// Import immédiat pour les pages critiques
 import LoginScreen from './pages/LoginScreen';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminPlanningView from './pages/AdminPlanningView';
-import AdminLeaveView from './pages/AdminLeaveView';
-import AdminUserView from './pages/AdminUserView';
-import AdminVaultView from './pages/AdminVaultView';
-import AdminArchiveView from './pages/AdminArchiveView';
-import EmployeePlanningView from './pages/EmployeePlanningView';
-import EmployeeLeaveView from './pages/EmployeeLeaveView';
-import CoffreNumeriqueView from './pages/CoffreNumeriqueView';
-import AgendaView from './pages/AgendaView';
-import InterventionDetailView from './pages/InterventionDetailView';
-import IRShowerFormsView from './pages/IRShowerFormsView'; // ⬅️ NEW
+
+// Lazy loading pour les autres pages (améliore les performances)
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminPlanningView = lazy(() => import('./pages/AdminPlanningView'));
+const AdminLeaveView = lazy(() => import('./pages/AdminLeaveView'));
+const AdminUserView = lazy(() => import('./pages/AdminUserView'));
+const AdminVaultView = lazy(() => import('./pages/AdminVaultView'));
+const AdminArchiveView = lazy(() => import('./pages/AdminArchiveView'));
+const EmployeePlanningView = lazy(() => import('./pages/EmployeePlanningView'));
+const EmployeeLeaveView = lazy(() => import('./pages/EmployeeLeaveView'));
+const CoffreNumeriqueView = lazy(() => import('./pages/CoffreNumeriqueView'));
+const AgendaView = lazy(() => import('./pages/AgendaView'));
+const InterventionDetailView = lazy(() => import('./pages/InterventionDetailView'));
+const IRShowerFormsView = lazy(() => import('./pages/IRShowerFormsView'));
 
 // Import des composants UI partagés
 import { Toast, ConfirmationModal } from './components/SharedUI';
@@ -193,9 +197,22 @@ function App() {
       };
       initialLoad();
 
+      // Optimisation : écouter uniquement les tables pertinentes au lieu de toutes les tables
       const sub = supabase
-        .channel('public-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        .channel('app-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          refreshData(profile);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'interventions' }, () => {
+          refreshData(profile);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'intervention_assignments' }, () => {
+          refreshData(profile);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
+          refreshData(profile);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'vault_documents' }, () => {
           refreshData(profile);
         })
         .subscribe();
@@ -212,6 +229,13 @@ function App() {
   };
 
   const handleUpdateUser = async (updatedUserData) => {
+    // Validation des données utilisateur
+    const validation = validateUser(updatedUserData);
+    if (!validation.isValid) {
+      showToast(`Validation échouée: ${validation.errors.join(', ')}`, 'error');
+      return;
+    }
+
     const updates = {
       full_name: updatedUserData.full_name,
       is_admin: updatedUserData.is_admin
@@ -228,6 +252,24 @@ function App() {
   };
 
   const handleAddIntervention = async (interventionData, assignedUserIds, briefingFiles = []) => {
+    // Validation des données d'intervention
+    const validation = validateIntervention(interventionData);
+    if (!validation.isValid) {
+      showToast(`Validation échouée: ${validation.errors.join(', ')}`, 'error');
+      return null;
+    }
+
+    // Validation des fichiers
+    if (briefingFiles && briefingFiles.length > 0) {
+      for (const file of briefingFiles) {
+        const sizeValidation = validateFileSize(file.size);
+        if (!sizeValidation.isValid) {
+          showToast(`${file.name}: ${sizeValidation.message}`, 'error');
+          return null;
+        }
+      }
+    }
+
     const { data: newIntervention, error } = await interventionService.createIntervention(
       interventionData,
       assignedUserIds,
@@ -253,26 +295,6 @@ function App() {
       throw error;
     }
   };
-
-  // 🔧 Sanitizer complet pour *tous* les champs du rapport
-  const buildSanitizedReport = (report) => ({
-    notes: report?.notes || '',
-    files: Array.isArray(report?.files) ? report.files : [],
-    arrivalTime: report?.arrivalTime || null,
-    departureTime: report?.departureTime || null,
-    signature: report?.signature || null,
-
-    // ✅ nouveaux champs
-    needs: Array.isArray(report?.needs) ? report.needs : [],
-    supply_requests: Array.isArray(report?.supply_requests) ? report.supply_requests : [],
-    quick_checkpoints: Array.isArray(report?.quick_checkpoints) ? report.quick_checkpoints : [],
-    blocks: report?.blocks || null,
-    arrivalGeo: report?.arrivalGeo || null,
-    departureGeo: report?.departureGeo || null,
-    rating: report?.rating ?? null,
-    follow_up_required: !!report?.follow_up_required,
-    parts_used: Array.isArray(report?.parts_used) ? report.parts_used : []
-  });
 
   // ⚙️ Persistance silencieuse — attend le *report* directement
   const handleUpdateInterventionReportSilent = async (interventionId, report) => {
@@ -324,6 +346,13 @@ function App() {
 
   const handleSubmitLeaveRequest = async (requestData) => {
     try {
+      // Validation de la demande de congé
+      const validation = validateLeaveRequest(requestData);
+      if (!validation.isValid) {
+        showToast(`Validation échouée: ${validation.errors.join(', ')}`, 'error');
+        return;
+      }
+
       const newRequest = {
         userId: profile.id,
         userName: profile.full_name,
@@ -371,6 +400,13 @@ function App() {
   // ✅ Envoi coffre-fort
   const handleSendVaultDocument = async ({ file, userId, name }) => {
     try {
+      // Validation de la taille du fichier
+      const sizeValidation = validateFileSize(file.size, 20); // 20MB max pour coffre-fort
+      if (!sizeValidation.isValid) {
+        showToast(sizeValidation.message, 'error');
+        return;
+      }
+
       const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
       if (uploadError) throw uploadError;
 
@@ -462,46 +498,104 @@ function App() {
             {profile.is_admin ? (
               <>
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />} />
-                <Route path="agenda" element={<AgendaView interventions={interventions} />} />
+                <Route path="dashboard" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />
+                  </Suspense>
+                } />
+                <Route path="agenda" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AgendaView interventions={interventions} />
+                  </Suspense>
+                } />
                 <Route
                   path="planning"
                   element={
-                    <AdminPlanningView
-                      interventions={interventions}
-                      users={users}
-                      onAddIntervention={handleAddIntervention}
-                      onArchive={handleArchiveIntervention}
-                      onDelete={handleDeleteIntervention}
-                    />
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminPlanningView
+                        interventions={interventions}
+                        users={users}
+                        onAddIntervention={handleAddIntervention}
+                        onArchive={handleArchiveIntervention}
+                        onDelete={handleDeleteIntervention}
+                      />
+                    </Suspense>
                   }
                 />
-                <Route path="planning/:interventionId" element={<InterventionDetailView {...interventionDetailProps} />} />
-                <Route path="archives" element={<AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />} />
+                <Route path="planning/:interventionId" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <InterventionDetailView {...interventionDetailProps} />
+                  </Suspense>
+                } />
+                <Route path="archives" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />
+                  </Suspense>
+                } />
                 <Route
                   path="leaves"
-                  element={<AdminLeaveView leaveRequests={leaveRequests} onUpdateStatus={handleUpdateLeaveStatus} onDelete={handleDeleteLeaveRequest} />}
+                  element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminLeaveView leaveRequests={leaveRequests} onUpdateStatus={handleUpdateLeaveStatus} onDelete={handleDeleteLeaveRequest} />
+                    </Suspense>
+                  }
                 />
-                <Route path="users" element={<AdminUserView users={users} onUpdateUser={handleUpdateUser} />} />
+                <Route path="users" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AdminUserView users={users} onUpdateUser={handleUpdateUser} />
+                  </Suspense>
+                } />
                 <Route
                   path="vault"
-                  element={<AdminVaultView users={users} vaultDocuments={vaultDocuments} onSendDocument={handleSendVaultDocument} onDeleteDocument={handleDeleteVaultDocument} />}
+                  element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminVaultView users={users} vaultDocuments={vaultDocuments} onSendDocument={handleSendVaultDocument} onDeleteDocument={handleDeleteVaultDocument} />
+                    </Suspense>
+                  }
                 />
-                <Route path="ir-docs" element={<IRShowerFormsView />} /> {/* ⬅️ NEW */}
+                <Route path="ir-docs" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <IRShowerFormsView />
+                  </Suspense>
+                } />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </>
             ) : (
               <>
                 <Route index element={<Navigate to="/planning" replace />} />
-                <Route path="planning" element={<EmployeePlanningView interventions={interventions} />} />
-                <Route path="planning/:interventionId" element={<InterventionDetailView {...interventionDetailProps} />} />
-                <Route path="agenda" element={<AgendaView interventions={interventions} />} />
+                <Route path="planning" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <EmployeePlanningView interventions={interventions} />
+                  </Suspense>
+                } />
+                <Route path="planning/:interventionId" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <InterventionDetailView {...interventionDetailProps} />
+                  </Suspense>
+                } />
+                <Route path="agenda" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AgendaView interventions={interventions} />
+                  </Suspense>
+                } />
                 <Route
                   path="leaves"
-                  element={<EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile.full_name} userId={profile.id} showToast={showToast} />}
+                  element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile.full_name} userId={profile.id} showToast={showToast} />
+                    </Suspense>
+                  }
                 />
-                <Route path="vault" element={<CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />} />
-                <Route path="ir-docs" element={<IRShowerFormsView />} /> {/* ⬅️ NEW */}
+                <Route path="vault" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
+                  </Suspense>
+                } />
+                <Route path="ir-docs" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <IRShowerFormsView />
+                  </Suspense>
+                } />
                 <Route path="*" element={<Navigate to="/planning" replace />} />
               </>
             )}

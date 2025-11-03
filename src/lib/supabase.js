@@ -9,8 +9,9 @@
 // (ajout de l'entête ``apikey``), à améliorer la suppression récursive
 // de dossiers et à effectuer un ping plus fiable lors de l'initialisation.
 
-import React from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import logger from '../utils/logger'
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
@@ -36,40 +37,56 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // --- Service d'authentification ---
 export const authService = {
   async signIn(email, password) {
-    console.log('🔐 Tentative de connexion pour:', email);
+    logger.emoji('🔐', 'Tentative de connexion pour:', email);
     const result = await supabase.auth.signInWithPassword({ email, password });
     if (result.error) {
-      console.error('❌ Erreur de connexion:', result.error);
+      logger.error('❌ Erreur de connexion:', result.error);
     } else {
-      console.log('✅ Connexion réussie');
+      logger.emoji('✅', 'Connexion réussie');
     }
     return result;
   },
   async signOut() {
-    console.log('🚪 Déconnexion en cours...');
+    logger.emoji('🚪', 'Déconnexion en cours...');
     try {
       // Vérifie d'abord s'il existe une session active
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // Aucune session active : on nettoie localStorage et sessionStorage et on retourne sans erreur
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log('ℹ️ Aucune session active ; nettoyage local effectué');
+        // Aucune session active : on nettoie uniquement les clés Supabase et on retourne sans erreur
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('supabase')) {
+            localStorage.removeItem(key);
+          }
+        });
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('supabase')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+        logger.info('ℹ️ Aucune session active ; nettoyage Supabase effectué');
         return { error: null };
       }
 
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('❌ Erreur lors de la déconnexion:', error);
+        logger.error('❌ Erreur lors de la déconnexion:', error);
         return { error };
       }
-      // Nettoyage seulement si la déconnexion a réussi
-      localStorage.clear();
-      sessionStorage.clear();
-      console.log('✅ Déconnexion réussie - Storage nettoyé');
+      // Nettoyage sélectif des clés Supabase uniquement (pas de clear() global)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('supabase')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      logger.emoji('✅', 'Déconnexion réussie - Storage Supabase nettoyé');
       return { error: null };
     } catch (e) {
-      console.error('❌ Erreur inattendue lors de la déconnexion:', e);
+      logger.error('❌ Erreur inattendue lors de la déconnexion:', e);
       return { error: e };
     }
   },
@@ -81,34 +98,34 @@ export const authService = {
 // --- Services de données ---
 export const profileService = {
   async getProfile(userId) {
-    console.log('👤 Récupération profil pour:', userId);
+    logger.log('👤 Récupération profil pour:', userId);
     const result = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (result.error) {
-      console.error('❌ Erreur récupération profil:', result.error);
+      logger.error('❌ Erreur récupération profil:', result.error);
     } else {
-      console.log('✅ Profil récupéré:', result.data?.full_name);
+      logger.log('✅ Profil récupéré:', result.data?.full_name);
     }
     return result;
   },
   async getAllProfiles() {
-    console.log('👥 Récupération de tous les profils...');
+    logger.log('👥 Récupération de tous les profils...');
     const result = await supabase.from('profiles').select('*').order('full_name');
     if (result.error) {
-      console.error('❌ Erreur récupération profils:', result.error);
+      logger.error('❌ Erreur récupération profils:', result.error);
     } else {
-      console.log('✅ Profils récupérés:', result.data?.length || 0);
+      logger.log('✅ Profils récupérés:', result.data?.length || 0);
     }
     return result;
   },
   async updateProfile(userId, updates) {
-    console.log('✏️ Mise à jour profil:', userId, updates);
+    logger.log('✏️ Mise à jour profil:', userId, updates);
     const { full_name, is_admin } = updates;
     const updateData = { full_name, is_admin };
     const result = await supabase.from('profiles').update(updateData).eq('id', userId);
     if (result.error) {
-      console.error('❌ Erreur mise à jour profil:', result.error);
+      logger.error('❌ Erreur mise à jour profil:', result.error);
     } else {
-      console.log('✅ Profil mis à jour avec succès');
+      logger.log('✅ Profil mis à jour avec succès');
     }
     return result;
   }
@@ -123,7 +140,7 @@ const sanitizeFileName = (fileName) => {
     .substring(0, 100); // Limite la longueur
   // Si la chaîne est vide, on utilise un nom par défaut
   const safe = cleaned || 'fichier';
-  console.log('🧹 Nom de fichier nettoyé:', fileName, '->', safe);
+  logger.log('🧹 Nom de fichier nettoyé:', fileName, '->', safe);
   return safe;
 };
 
@@ -164,12 +181,12 @@ export const storageService = {
       const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `${interventionId}/${folder}/${fileName}`;
 
-      console.log('🗂️ Chemin de stockage:', filePath);
+      logger.log('🗂️ Chemin de stockage:', filePath);
 
       const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'intervention-files', onProgress);
 
       if (uploadResult.error) {
-        console.error('❌ Erreur upload:', uploadResult.error);
+        logger.error('❌ Erreur upload:', uploadResult.error);
         return { publicURL: null, error: uploadResult.error };
       }
 
@@ -178,11 +195,11 @@ export const storageService = {
         .getPublicUrl(filePath);
 
       const publicURL = data.publicUrl;
-      console.log('✅ Fichier uploadé avec succès:', publicURL);
+      logger.log('✅ Fichier uploadé avec succès:', publicURL);
       return { publicURL, error: null };
 
     } catch (error) {
-      console.error('❌ Erreur générale upload intervention:', error);
+      logger.error('❌ Erreur générale upload intervention:', error);
       return { publicURL: null, error };
     }
   },
@@ -212,7 +229,7 @@ export const storageService = {
         }
         // Fin de progression
         if (onProgress) onProgress(100);
-        console.log('✅ Upload réussi via supabase.storage.from().upload');
+        logger.log('✅ Upload réussi via supabase.storage.from().upload');
         return { data, error: null };
       } catch (error) {
         console.warn(`⚠️ Tentative ${attempt} échouée:`, error.message || error);
@@ -231,7 +248,7 @@ export const storageService = {
   // ✅ UPLOAD VAULT OPTIMISÉ
   async uploadVaultFile(file, userId, onProgress) {
     try {
-      console.log('📤 Upload fichier coffre-fort:', {
+      logger.log('📤 Upload fichier coffre-fort:', {
         fileName: file.name,
         size: Math.round(file.size / 1024) + 'KB',
         userId
@@ -241,12 +258,12 @@ export const storageService = {
       const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `${userId}/${fileName}`;
 
-      console.log('🗂️ Chemin de stockage vault:', filePath);
+      logger.log('🗂️ Chemin de stockage vault:', filePath);
 
       const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'vault-files', onProgress);
 
       if (uploadResult.error) {
-        console.error('❌ Erreur upload vault:', uploadResult.error);
+        logger.error('❌ Erreur upload vault:', uploadResult.error);
         return { publicURL: null, filePath: null, error: uploadResult.error };
       }
 
@@ -255,32 +272,32 @@ export const storageService = {
         .getPublicUrl(filePath);
 
       const publicURL = data.publicUrl;
-      console.log('✅ Fichier vault uploadé avec succès:', publicURL);
+      logger.log('✅ Fichier vault uploadé avec succès:', publicURL);
 
       return { publicURL, filePath: filePath, error: null };
 
     } catch (error) {
-      console.error('❌ Erreur générale upload vault:', error);
+      logger.error('❌ Erreur générale upload vault:', error);
       return { publicURL: null, filePath: null, error };
     }
   },
 
   // ✅ SUPPRESSION VAULT OPTIMISÉE
   async deleteVaultFile(filePath) {
-    console.log('🗑️ Suppression fichier vault:', filePath);
+    logger.log('🗑️ Suppression fichier vault:', filePath);
 
     try {
       const { error } = await supabase.storage.from('vault-files').remove([filePath]);
 
       if (error) {
-        console.error('❌ Erreur suppression fichier vault:', error);
+        logger.error('❌ Erreur suppression fichier vault:', error);
       } else {
-        console.log('✅ Fichier vault supprimé avec succès');
+        logger.log('✅ Fichier vault supprimé avec succès');
       }
 
       return { error };
     } catch (error) {
-      console.error('❌ Erreur générale suppression vault:', error);
+      logger.error('❌ Erreur générale suppression vault:', error);
       return { error };
     }
   },
@@ -288,7 +305,7 @@ export const storageService = {
   // ✅ SUPPRESSION DOSSIER INTERVENTION OPTIMISÉE
   async deleteInterventionFolder(interventionId) {
     try {
-      console.log('🗑️ Suppression dossier intervention:', interventionId);
+      logger.log('🗑️ Suppression dossier intervention:', interventionId);
       const folderPath = interventionId.toString();
 
       // Fonction récursive listant tous les fichiers d'un dossier (sous-dossiers inclus)
@@ -315,11 +332,11 @@ export const storageService = {
 
       const filePaths = await listAll(folderPath);
       if (!filePaths.length) {
-        console.log('ℹ️ Aucun fichier à supprimer pour:', folderPath);
+        logger.log('ℹ️ Aucun fichier à supprimer pour:', folderPath);
         return { error: null };
       }
 
-      console.log('🗑️ Suppression de', filePaths.length, 'fichier(s)');
+      logger.log('🗑️ Suppression de', filePaths.length, 'fichier(s)');
 
       const batchSize = 10;
       for (let i = 0; i < filePaths.length; i += batchSize) {
@@ -337,11 +354,11 @@ export const storageService = {
         console.log(`✅ Batch ${i / batchSize + 1} supprimé`);
       }
 
-      console.log('✅ Dossier intervention supprimé avec succès');
+      logger.log('✅ Dossier intervention supprimé avec succès');
       return { error: null };
 
     } catch (error) {
-      console.error('❌ Erreur générale suppression dossier:', error);
+      logger.error('❌ Erreur générale suppression dossier:', error);
       return { error };
     }
   },
@@ -350,7 +367,7 @@ export const storageService = {
 // ✅ SERVICE INTERVENTIONS OPTIMISÉ
 export const interventionService = {
   async getInterventions(userId = null, archived = false) {
-    console.log('📋 Récupération interventions:', { userId, archived });
+    logger.log('📋 Récupération interventions:', { userId, archived });
 
     let query = supabase
       .from('interventions')
@@ -366,9 +383,9 @@ export const interventionService = {
     const result = await query;
 
     if (result.error) {
-      console.error('❌ Erreur récupération interventions:', result.error);
+      logger.error('❌ Erreur récupération interventions:', result.error);
     } else {
-      console.log('✅ Interventions récupérées:', result.data?.length || 0);
+      logger.log('✅ Interventions récupérées:', result.data?.length || 0);
     }
 
     return result;
@@ -376,7 +393,7 @@ export const interventionService = {
 
   async createIntervention(intervention, assignedUserIds, briefingFiles = []) {
     try {
-      console.log('➕ Création nouvelle intervention:', {
+      logger.log('➕ Création nouvelle intervention:', {
         client: intervention.client,
         assignedUsers: assignedUserIds.length,
         briefingFiles: briefingFiles.length
@@ -395,7 +412,7 @@ export const interventionService = {
         .select();
 
       if (interventionError) {
-        console.error('❌ Erreur BDD création intervention:', interventionError);
+        logger.error('❌ Erreur BDD création intervention:', interventionError);
         throw interventionError;
       }
       if (!insertedData || insertedData.length === 0) {
@@ -404,7 +421,7 @@ export const interventionService = {
 
       const newIntervention = insertedData[0];
       const interventionId = newIntervention.id;
-      console.log('✅ Intervention créée avec ID:', interventionId);
+      logger.log('✅ Intervention créée avec ID:', interventionId);
 
       // 2. Assigner les utilisateurs
       if (assignedUserIds && assignedUserIds.length > 0) {
@@ -414,10 +431,10 @@ export const interventionService = {
         }));
         const { error: assignmentError } = await supabase.from('intervention_assignments').insert(assignments);
         if (assignmentError) {
-          console.error('❌ Erreur assignation utilisateurs:', assignmentError);
+          logger.error('❌ Erreur assignation utilisateurs:', assignmentError);
           // Ne pas bloquer, mais logger l'erreur
         } else {
-          console.log('✅ Utilisateurs assignés:', assignedUserIds.length);
+          logger.log('✅ Utilisateurs assignés:', assignedUserIds.length);
         }
       }
 
@@ -426,58 +443,49 @@ export const interventionService = {
         await this.addBriefingDocuments(interventionId, briefingFiles);
       }
 
-      console.log('🎉 Intervention complètement créée avec succès');
+      logger.log('🎉 Intervention complètement créée avec succès');
       return { data: newIntervention, error: null };
 
     } catch (error) {
-      console.error('❌ Erreur générale création intervention:', error);
+      logger.error('❌ Erreur générale création intervention:', error);
       return { data: null, error };
     }
   },
 
   // ✅ MISE À JOUR INTERVENTION OPTIMISÉE
+  // Note : La sanitisation du rapport est faite dans App.js via buildSanitizedReport
+  // avant d'appeler cette fonction
   async updateIntervention(id, updates) {
     try {
-      console.log('🔄 Mise à jour intervention', id, 'avec:', {
+      logger.log('🔄 Mise à jour intervention', id, 'avec:', {
         hasReport: !!updates.report,
         status: updates.status,
         isArchived: updates.is_archived
       });
 
-      const sanitizedUpdates = { ...updates };
-
-      if (updates.report) {
-        sanitizedUpdates.report = {
-          notes: updates.report.notes || '',
-          files: Array.isArray(updates.report.files) ? updates.report.files : [],
-          arrivalTime: updates.report.arrivalTime || null,
-          departureTime: updates.report.departureTime || null,
-          signature: updates.report.signature || null
-        };
-      }
-
+      // Le rapport est déjà sanitisé par App.js, on l'envoie directement
       const result = await supabase
         .from('interventions')
-        .update(sanitizedUpdates)
+        .update(updates)
         .eq('id', id);
 
       if (result.error) {
-        console.error('❌ Erreur Supabase lors de la mise à jour:', result.error);
+        logger.error('❌ Erreur Supabase lors de la mise à jour:', result.error);
         throw result.error;
       }
 
-      console.log('✅ Intervention mise à jour avec succès');
+      logger.log('✅ Intervention mise à jour avec succès');
       return result;
 
     } catch (error) {
-      console.error('❌ Erreur dans updateIntervention:', error);
+      logger.error('❌ Erreur dans updateIntervention:', error);
       return { error };
     }
   },
 
   async deleteIntervention(id) {
     try {
-      console.log('🗑️ Suppression intervention:', id);
+      logger.log('🗑️ Suppression intervention:', id);
 
       const { error: storageError } = await storageService.deleteInterventionFolder(id);
       if (storageError) {
@@ -487,22 +495,22 @@ export const interventionService = {
       const result = await supabase.from('interventions').delete().eq('id', id);
 
       if (result.error) {
-        console.error('❌ Erreur suppression intervention:', result.error);
+        logger.error('❌ Erreur suppression intervention:', result.error);
       } else {
-        console.log('✅ Intervention supprimée avec succès');
+        logger.log('✅ Intervention supprimée avec succès');
       }
 
       return result;
 
     } catch (error) {
-      console.error('❌ Erreur générale suppression intervention:', error);
+      logger.error('❌ Erreur générale suppression intervention:', error);
       return { error };
     }
   },
 
   async addBriefingDocuments(interventionId, briefingFiles) {
     try {
-      console.log('📋 Ajout documents de préparation:', interventionId, briefingFiles.length, 'fichier(s)');
+      logger.log('📋 Ajout documents de préparation:', interventionId, briefingFiles.length, 'fichier(s)');
       const uploadedDocuments = [];
 
       for (const file of briefingFiles) {
@@ -520,10 +528,10 @@ export const interventionService = {
         if (dbError) throw dbError;
       }
 
-      console.log('🎉 Documents de préparation ajoutés avec succès');
+      logger.log('🎉 Documents de préparation ajoutés avec succès');
       return { error: null };
     } catch (error) {
-      console.error('❌ Erreur générale ajout documents préparation:', error);
+      logger.error('❌ Erreur générale ajout documents préparation:', error);
       return { error };
     }
   }
@@ -532,7 +540,7 @@ export const interventionService = {
 // ✅ SERVICE CONGÉS
 export const leaveService = {
   async getLeaveRequests(userId = null) {
-    console.log('🏖️ Récupération demandes de congé:', { userId });
+    logger.log('🏖️ Récupération demandes de congé:', { userId });
 
     let query = supabase
       .from('leave_requests')
@@ -546,16 +554,16 @@ export const leaveService = {
     const result = await query;
 
     if (result.error) {
-      console.error('❌ Erreur récupération demandes congé:', result.error);
+      logger.error('❌ Erreur récupération demandes congé:', result.error);
     } else {
-      console.log('✅ Demandes de congé récupérées:', result.data?.length || 0);
+      logger.log('✅ Demandes de congé récupérées:', result.data?.length || 0);
     }
 
     return result;
   },
 
   async createLeaveRequest(request) {
-    console.log('📝 Création demande de congé:', {
+    logger.log('📝 Création demande de congé:', {
       userName: request.userName,
       startDate: request.startDate,
       endDate: request.endDate,
@@ -576,16 +584,16 @@ export const leaveService = {
       }]);
 
     if (result.error) {
-      console.error('❌ Erreur création demande congé:', result.error);
+      logger.error('❌ Erreur création demande congé:', result.error);
     } else {
-      console.log('✅ Demande de congé créée avec succès');
+      logger.log('✅ Demande de congé créée avec succès');
     }
 
     return result;
   },
 
   async updateRequestStatus(requestId, status, rejection_reason = null) {
-    console.log('🔄 Mise à jour statut demande congé:', {
+    logger.log('🔄 Mise à jour statut demande congé:', {
       requestId,
       status,
       rejection_reason
@@ -597,16 +605,16 @@ export const leaveService = {
       .eq('id', requestId);
 
     if (result.error) {
-      console.error('❌ Erreur mise à jour statut congé:', result.error);
+      logger.error('❌ Erreur mise à jour statut congé:', result.error);
     } else {
-      console.log('✅ Statut demande congé mis à jour');
+      logger.log('✅ Statut demande congé mis à jour');
     }
 
     return result;
   },
 
   async deleteLeaveRequest(requestId) {
-    console.log('🗑️ Suppression demande de congé:', requestId);
+    logger.log('🗑️ Suppression demande de congé:', requestId);
 
     const result = await supabase
       .from('leave_requests')
@@ -614,9 +622,9 @@ export const leaveService = {
       .eq('id', requestId);
 
     if (result.error) {
-      console.error('❌ Erreur suppression demande congé:', result.error);
+      logger.error('❌ Erreur suppression demande congé:', result.error);
     } else {
-      console.log('✅ Demande de congé supprimée');
+      logger.log('✅ Demande de congé supprimée');
     }
 
     return result;
@@ -626,7 +634,7 @@ export const leaveService = {
 // ✅ SERVICE COFFRE-FORT OPTIMISÉ
 export const vaultService = {
   async getVaultDocuments() {
-    console.log('🗄️ Récupération documents coffre-fort...');
+    logger.log('🗄️ Récupération documents coffre-fort...');
 
     const result = await supabase
       .from('vault_documents')
@@ -634,16 +642,16 @@ export const vaultService = {
       .order('created_at', { ascending: false });
 
     if (result.error) {
-      console.error('❌ Erreur récupération documents vault:', result.error);
+      logger.error('❌ Erreur récupération documents vault:', result.error);
     } else {
-      console.log('✅ Documents coffre-fort récupérés:', result.data?.length || 0);
+      logger.log('✅ Documents coffre-fort récupérés:', result.data?.length || 0);
     }
 
     return result;
   },
 
   async createVaultDocument({ userId, name, url, path }) {
-    console.log('📄 Création document coffre-fort:', {
+    logger.log('📄 Création document coffre-fort:', {
       userId,
       name,
       url: url?.substring(0, 50) + '...',
@@ -660,9 +668,9 @@ export const vaultService = {
       }]);
 
     if (result.error) {
-      console.error('❌ Erreur création document vault:', result.error);
+      logger.error('❌ Erreur création document vault:', result.error);
     } else {
-      console.log('✅ Document coffre-fort créé avec succès');
+      logger.log('✅ Document coffre-fort créé avec succès');
     }
 
     return result;
@@ -670,7 +678,7 @@ export const vaultService = {
 
   async deleteVaultDocument(documentId) {
     try {
-      console.log('🗑️ Suppression document coffre-fort:', documentId);
+      logger.log('🗑️ Suppression document coffre-fort:', documentId);
 
       const { data: doc, error: fetchError } = await supabase
         .from('vault_documents')
@@ -695,15 +703,15 @@ export const vaultService = {
         .eq('id', documentId);
 
       if (result.error) {
-        console.error('❌ Erreur suppression document vault:', result.error);
+        logger.error('❌ Erreur suppression document vault:', result.error);
       } else {
-        console.log('✅ Document coffre-fort supprimé avec succès');
+        logger.log('✅ Document coffre-fort supprimé avec succès');
       }
 
       return result;
 
     } catch (error) {
-      console.error('❌ Erreur générale suppression document vault:', error);
+      logger.error('❌ Erreur générale suppression document vault:', error);
       return { error };
     }
   }
@@ -728,14 +736,14 @@ export const monitoringService = {
       }
     };
 
-    console.log('📊 Upload Log:', logData);
+    logger.log('📊 Upload Log:', logData);
   }
 }
 
 // ✅ FONCTION D'INITIALISATION ET VÉRIFICATION
 export const initializeSupabase = async () => {
   try {
-    console.log('🚀 Initialisation Supabase optimisée...');
+    logger.log('🚀 Initialisation Supabase optimisée...');
 
     // On effectue un HEAD avec compte sur la table profiles pour vérifier la
     // connectivité, sans récupérer de données.
@@ -744,7 +752,7 @@ export const initializeSupabase = async () => {
       .select('id', { count: 'exact', head: true });
 
     if (error) {
-      console.error('❌ Erreur connexion Supabase:', error);
+      logger.error('❌ Erreur connexion Supabase:', error);
       return { success: false, error };
     }
 
@@ -773,9 +781,9 @@ export const initializeSupabase = async () => {
 
     const deviceInfo = getDeviceInfo();
 
-    console.log('✅ Supabase initialisé avec succès');
-    console.log('📊 Info device:', deviceInfo);
-    console.log('🪣 État buckets:', bucketChecks);
+    logger.log('✅ Supabase initialisé avec succès');
+    logger.log('📊 Info device:', deviceInfo);
+    logger.log('🪣 État buckets:', bucketChecks);
 
     return {
       success: true,
@@ -784,16 +792,16 @@ export const initializeSupabase = async () => {
     };
 
   } catch (error) {
-    console.error('❌ Erreur initialisation Supabase:', error);
+    logger.error('❌ Erreur initialisation Supabase:', error);
     return { success: false, error };
   }
 }
 
 // ✅ HOOK DE PERFORMANCE POUR COMPOSANTS
 export const useSupabasePerformance = () => {
-  const [performanceData, setPerformanceData] = React.useState(null);
+  const [performanceData, setPerformanceData] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const deviceInfo = getDeviceInfo();
     setPerformanceData({
       device: deviceInfo,
