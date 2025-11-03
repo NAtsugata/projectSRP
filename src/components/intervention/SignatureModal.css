@@ -1,0 +1,112 @@
+/* src/components/intervention/SignatureModal.css */
+
+.signature-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.signature-modal-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 90vw;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+.signature-modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.signature-modal-help {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.signature-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #6b7280;
+}
+
+.signature-canvas {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  cursor: crosshair;
+  touch-action: none;
+  margin: 0 auto;
+  transition: opacity 0.3s ease;
+}
+
+.signature-canvas:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.signature-modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .signature-modal-content {
+    padding: 1rem;
+    max-width: 95vw;
+  }
+
+  .signature-canvas {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .signature-modal-footer {
+    flex-direction: column;
+  }
+
+  .signature-modal-footer button {
+    width: 100%;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
