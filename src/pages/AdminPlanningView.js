@@ -1,224 +1,155 @@
-// src/pages/AdminPlanningView.js - VERSION AVEC LOGIQUE DE CRÉATION CORRIGÉE
+// src/pages/AdminPlanningView.js - Version refactorisée
+// Gestion du planning admin avec composants modulaires
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GenericStatusBadge, PlusIcon, EditIcon, ArchiveIcon, TrashIcon, FileTextIcon, LoaderIcon, XIcon, CustomFileInput } from '../components/SharedUI';
-import { getAssignedUsersNames } from '../utils/helpers';
+import { InterventionForm, InterventionList } from '../components/planning';
+import { Button, ConfirmDialog } from '../components/ui';
+import { PlusIcon } from '../components/SharedUI';
+import logger from '../utils/logger';
+import './AdminPlanningView.css';
 
-export default function AdminPlanningView({ interventions, users, onAddIntervention, onArchive, onDelete }) {
-    const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+export default function AdminPlanningView({
+  interventions,
+  users,
+  onAddIntervention,
+  onArchive,
+  onDelete
+}) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [archiveConfirm, setArchiveConfirm] = useState(null);
 
-    const [formValues, setFormValues] = useState({
-        client: '', address: '', service: '', date: '', time: '08:00'
-    });
-    const [assignedUsers, setAssignedUsers] = useState([]);
-    const [briefingFiles, setBriefingFiles] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formError, setFormError] = useState('');
+  // Sync form visibility with URL params
+  useEffect(() => {
+    setShowForm(searchParams.get('new') === 'true');
+  }, [searchParams]);
 
-    useEffect(() => {
-        setShowForm(searchParams.get('new') === 'true');
-    }, [searchParams]);
+  const openForm = useCallback(() => {
+    setSearchParams({ new: 'true' });
+    logger.log('AdminPlanningView: Ouverture formulaire');
+  }, [setSearchParams]);
 
-    const handleInputChange = (e) => setFormValues({...formValues, [e.target.name]: e.target.value});
+  const closeForm = useCallback(() => {
+    setSearchParams({});
+    logger.log('AdminPlanningView: Fermeture formulaire');
+  }, [setSearchParams]);
 
-    const handleUserAssignmentChange = (userId) => {
-        setAssignedUsers(prev =>
-            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-        );
-    };
+  const handleSubmit = useCallback(async ({ formData, assignedUsers, files }) => {
+    setIsSubmitting(true);
+    logger.log('AdminPlanningView: Soumission intervention', { formData, assignedUsers, filesCount: files.length });
 
-    const setDateShortcut = (daysToAdd) => {
-        const date = new Date();
-        date.setDate(date.getDate() + daysToAdd);
-        setFormValues(prev => ({...prev, date: date.toISOString().split('T')[0]}));
-    };
+    try {
+      const result = await onAddIntervention(formData, assignedUsers, files);
 
-    const openForm = () => setSearchParams({ new: 'true' });
+      if (result) {
+        logger.log('AdminPlanningView: Intervention créée avec succès');
+        closeForm();
+        return true;
+      } else {
+        logger.error('AdminPlanningView: Échec de création');
+        return false;
+      }
+    } catch (error) {
+      logger.error('AdminPlanningView: Erreur création', error);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [onAddIntervention, closeForm]);
 
-    const closeForm = () => {
-        setSearchParams({});
-        setFormValues({ client: '', address: '', service: '', date: '', time: '08:00' });
-        setAssignedUsers([]);
-        setBriefingFiles([]);
-        setFormError('');
-    };
+  const handleView = useCallback((intervention) => {
+    logger.log('AdminPlanningView: Navigation vers détails', intervention.id);
+    navigate(`/planning/${intervention.id}`);
+  }, [navigate]);
 
-    const handleFileChange = useCallback((e) => {
-        setFormError('');
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
+  const handleArchive = useCallback((interventionId) => {
+    logger.log('AdminPlanningView: Demande archivage', interventionId);
+    setArchiveConfirm(interventionId);
+  }, []);
 
-        setBriefingFiles(prev => {
-            if (prev.length + files.length > 10) {
-                setFormError("Vous ne pouvez pas ajouter plus de 10 fichiers.");
-                return prev;
-            }
-            const newFilesWithId = files.map(file => ({
-                id: `file-${Date.now()}-${Math.random()}`,
-                fileObject: file
-            }));
-            return [...prev, ...newFilesWithId];
-        });
-    }, []);
+  const confirmArchive = useCallback(() => {
+    if (archiveConfirm) {
+      logger.log('AdminPlanningView: Archivage confirmé', archiveConfirm);
+      onArchive(archiveConfirm);
+      setArchiveConfirm(null);
+    }
+  }, [archiveConfirm, onArchive]);
 
-    const handleRemoveFile = (fileId) => {
-        setBriefingFiles(prev => prev.filter(f => f.id !== fileId));
-    };
+  const handleDelete = useCallback((interventionId) => {
+    logger.log('AdminPlanningView: Demande suppression', interventionId);
+    setDeleteConfirm(interventionId);
+  }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        setFormError('');
+  const confirmDelete = useCallback(() => {
+    if (deleteConfirm) {
+      logger.log('AdminPlanningView: Suppression confirmée', deleteConfirm);
+      onDelete(deleteConfirm);
+      setDeleteConfirm(null);
+    }
+  }, [deleteConfirm, onDelete]);
 
-        try {
-            const filesToUpload = briefingFiles.map(f => f.fileObject);
-            const newIntervention = await onAddIntervention(formValues, assignedUsers, filesToUpload);
+  return (
+    <div className="admin-planning-view">
+      {/* Header */}
+      <div className="planning-header">
+        <h2 className="planning-title">Gestion du Planning</h2>
+        <Button
+          variant="primary"
+          icon={<PlusIcon />}
+          onClick={showForm ? closeForm : openForm}
+        >
+          {showForm ? 'Annuler' : 'Nouvelle Intervention'}
+        </Button>
+      </div>
 
-            if (newIntervention) {
-                closeForm();
-            } else {
-                setFormError("La création de l'intervention a échoué. Veuillez réessayer.");
-            }
-        } catch (error) {
-            console.error("Erreur lors du processus de création :", error);
-            setFormError(`Erreur de création : ${error.message}`);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const getStatus = (intervention) => {
-        if (intervention.status === 'Terminée') return 'Terminée';
-        if (intervention.report && intervention.report.arrivalTime) return 'En cours';
-        return intervention.status || 'À venir';
-    };
-
-    const statusColorMap = {
-        "À venir": "status-badge-blue",
-        "En cours": "status-badge-yellow",
-        "Terminée": "status-badge-green"
-    };
-
-    const formatFileSize = (bytes) => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
-        return Math.round(bytes / (1024 * 1024) * 10) / 10 + ' MB';
-    };
-
-    return (
-        <div>
-            <style>{`
-                .file-preview-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-                .file-preview-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f8f9fa; border-radius: 0.375rem; border: 1px solid #dee2e6; }
-                .file-info { flex-grow: 1; min-width: 0; }
-                .file-name { font-size: 0.9rem; font-weight: 500; word-break: break-all; }
-                .file-size { font-size: 0.75rem; color: #6c757d; }
-                .form-error-message { color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: .25rem; padding: .75rem 1.25rem; }
-            `}</style>
-
-            <div className="flex-between mb-6">
-                <h3>Gestion du Planning</h3>
-                <button onClick={showForm ? closeForm : openForm} className="btn btn-primary flex-center">
-                    <PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Intervention'}
-                </button>
-            </div>
-
-            {showForm && (
-                <form onSubmit={handleSubmit} className="card-white mb-6" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    <div className="form-group"><label>Client *</label><input name="client" value={formValues.client} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
-                    <div className="form-group"><label>Adresse *</label><input name="address" value={formValues.address} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
-                    <div className="form-group"><label>Service *</label><input name="service" value={formValues.service} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
-                    <div className="grid-2-cols">
-                        <div className="form-group"><label>Date *</label><input name="date" type="date" value={formValues.date} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
-                        <div className="form-group"><label>Heure *</label><input name="time" type="time" value={formValues.time} onChange={handleInputChange} required className="form-control" disabled={isSubmitting}/></div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={() => setDateShortcut(0)} className="btn btn-secondary" disabled={isSubmitting}>Aujourd'hui</button>
-                        <button type="button" onClick={() => setDateShortcut(1)} className="btn btn-secondary" disabled={isSubmitting}>Demain</button>
-                        <button type="button" onClick={() => setDateShortcut(7)} className="btn btn-secondary" disabled={isSubmitting}>Dans 1 semaine</button>
-                    </div>
-
-                    <div className="form-group">
-                        <label>Documents de préparation (optionnel)</label>
-                        <CustomFileInput
-                            multiple
-                            onChange={handleFileChange}
-                            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                            disabled={isSubmitting}
-                        >
-                            📎 Choisir ou glisser des fichiers...
-                        </CustomFileInput>
-
-                        {briefingFiles.length > 0 && (
-                            <ul className="file-preview-list">
-                                {briefingFiles.map(item => (
-                                    <li key={item.id}>
-                                        <FileTextIcon />
-                                        <div className="file-info">
-                                            <span className="file-name">{item.fileObject.name}</span>
-                                            <span className="file-size">{formatFileSize(item.fileObject.size)}</span>
-                                        </div>
-                                        <button type="button" onClick={() => handleRemoveFile(item.id)} className="btn-icon-danger" disabled={isSubmitting} title="Retirer"><XIcon /></button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-
-                    <div className="form-group">
-                        <label>Assigner à :</label>
-                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.5rem'}}>
-                            {users.filter(u => !u.is_admin).map(u => (
-                                <label key={u.id} className="flex items-center gap-2" style={{cursor: isSubmitting ? 'not-allowed' : 'pointer'}}>
-                                    <input type="checkbox" checked={assignedUsers.includes(u.id)} onChange={() => handleUserAssignmentChange(u.id)} disabled={isSubmitting} />
-                                    <span>{u.full_name}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    {formError && <p className="form-error-message">{formError}</p>}
-
-                    <button type="submit" className="btn btn-success w-full flex-center" disabled={isSubmitting}>
-                        {isSubmitting ? <><LoaderIcon className="animate-spin" /> Création en cours...</> : <><PlusIcon /> Créer l'intervention</>}
-                    </button>
-                </form>
-            )}
-
-            <div className="card-white">
-                <h4 style={{marginBottom: '1rem'}}>Interventions planifiées</h4>
-                <ul className="document-list">
-                    {interventions.length > 0 ? interventions.map(int => {
-                        const status = getStatus(int);
-                        return (
-                            <li key={int.id}>
-                                <div style={{flexGrow: 1}}>
-                                    <div className="flex-between items-start">
-                                        <p className="font-semibold">{int.client} - {int.service}</p>
-                                        <GenericStatusBadge status={status} colorMap={statusColorMap} />
-                                    </div>
-                                    <p className="text-muted">Assigné à: {getAssignedUsersNames(int.intervention_assignments)}</p>
-                                    <p className="text-muted">{int.date} à {int.time}</p>
-                                    {int.intervention_briefing_documents?.length > 0 && (
-                                        <p className="text-muted" style={{fontSize: '0.875rem', marginTop: '0.25rem'}}>
-                                            📎 {int.intervention_briefing_documents.length} document(s) joint(s)
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => navigate('/planning/' + int.id)} className="btn-icon" title="Voir les détails"><EditIcon/></button>
-                                    <button onClick={() => onArchive(int.id)} className="btn-icon" title="Archiver"><ArchiveIcon/></button>
-                                    <button onClick={() => onDelete(int.id)} className="btn-icon-danger" title="Supprimer"><TrashIcon/></button>
-                                </div>
-                            </li>
-                        );
-                    }) : (
-                        <li style={{textAlign: 'center', padding: '2rem', color: '#6c757d'}}>Aucune intervention planifiée</li>
-                    )}
-                </ul>
-            </div>
+      {/* Form */}
+      {showForm && (
+        <div className="planning-form-section">
+          <InterventionForm
+            users={users}
+            onSubmit={handleSubmit}
+            onCancel={closeForm}
+            isSubmitting={isSubmitting}
+          />
         </div>
-    );
+      )}
+
+      {/* List */}
+      <div className="planning-list-section">
+        <h3 className="section-title">Interventions planifiées</h3>
+        <InterventionList
+          interventions={interventions}
+          onView={handleView}
+          onArchive={handleArchive}
+          onDelete={handleDelete}
+          showFilters={true}
+          showSort={true}
+        />
+      </div>
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Supprimer l'intervention ?"
+          message="Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cette intervention ?"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      {/* Archive confirmation dialog */}
+      {archiveConfirm && (
+        <ConfirmDialog
+          title="Archiver l'intervention ?"
+          message="L'intervention sera déplacée dans les archives. Vous pourrez la restaurer plus tard."
+          onConfirm={confirmArchive}
+          onCancel={() => setArchiveConfirm(null)}
+        />
+      )}
+    </div>
+  );
 }
