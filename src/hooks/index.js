@@ -8,4 +8,11 @@ export { useDebounce } from './useDebounce';
 export { useGeolocation } from './useGeolocation';
 export { default as useMobileFileManager } from './useMobileFileManager';
 export { useChecklistPDFGenerator } from './useChecklistPDFGenerator';
-export { default as useMobileUpload } from './useMobileUpload';
+export {
+  useMobileUpload,
+  useDeviceCapabilities,
+  useFileValidation,
+  useImageCompression,
+  useOfflineUpload,
+  useResilientUpload
+} from './useMobileUpload';
