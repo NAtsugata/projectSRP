@@ -13,11 +13,17 @@
   font-family: inherit;
   position: relative;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .btn:focus {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn:disabled {
@@ -51,6 +57,10 @@
   background-color: #2563eb;
 }
 
+.btn-primary:active:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
 .btn-secondary {
   background-color: #6b7280;
   color: white;
@@ -58,6 +68,10 @@
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #4b5563;
+}
+
+.btn-secondary:active:not(:disabled) {
+  background-color: #374151;
 }
 
 .btn-danger {
@@ -69,6 +83,10 @@
   background-color: #dc2626;
 }
 
+.btn-danger:active:not(:disabled) {
+  background-color: #b91c1c;
+}
+
 .btn-ghost {
   background-color: transparent;
   color: #374151;
@@ -77,6 +95,10 @@
 
 .btn-ghost:hover:not(:disabled) {
   background-color: #f3f4f6;
+}
+
+.btn-ghost:active:not(:disabled) {
+  background-color: #e5e7eb;
 }
 
 /* Pleine largeur */
@@ -128,4 +150,24 @@
 .btn-icon svg {
   width: 1.25rem;
   height: 1.25rem;
+}
+
+/* Mobile responsive - zones tactiles minimales */
+@media (max-width: 640px) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 44px;
+    padding: 0.625rem 1rem;
+  }
+
+  .btn-md {
+    min-height: 48px;
+  }
+
+  .btn-lg {
+    min-height: 52px;
+  }
 }

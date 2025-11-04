@@ -369,6 +369,28 @@
         min-width: 44px;
     }
 
+    /* Feedback tactile pour tous les éléments interactifs */
+    button:active,
+    input[type="button"]:active,
+    input[type="submit"]:active,
+    input[type="checkbox"]:active,
+    input[type="radio"]:active,
+    a:active,
+    .clickable:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+
+    /* Highlight color pour le feedback natif */
+    button,
+    input,
+    textarea,
+    select,
+    a,
+    .clickable {
+        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.15);
+    }
+
     /* Optimise les Canvas pour le tactile */
     canvas {
         touch-action: none;
