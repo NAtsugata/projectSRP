@@ -23,7 +23,6 @@ import {
   StopCircleIcon,
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
-import ImageGallery from '../components/intervention/ImageGallery';
 
 const MIN_REQUIRED_PHOTOS = 2;
 
@@ -167,15 +166,10 @@ const useBodyScrollLock = () => {
 };
 
 // -------- Uploader inline (photos/docs) --------
-const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onBeginCritical, onEndCritical, onQueueChange }) => {
+const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onBeginCritical, onEndCritical }) => {
   const [state, setState] = useState({ uploading:false, queue:[], error:null });
   const inputRef = useRef(null);
   const cancelUnlockTimerRef = useRef(null);
-
-  // Notifier le parent quand la queue change
-  useEffect(() => {
-    onQueueChange?.(state.queue.filter(item => item.status === 'uploading' || item.status === 'pending'));
-  }, [state.queue, onQueueChange]);
 
   const startCriticalWithFallback = useCallback(() => {
     onBeginCritical?.();
@@ -214,15 +208,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     if (!files.length) { onEndCritical?.(); if(inputRef.current) inputRef.current.value=''; return; }
 
     if(inputRef.current) inputRef.current.value='';
-    // Créer des previews pour les images
-    const queue = files.map((f,i)=>{
-      const item = {id:`${f.name}-${Date.now()}-${i}`,name:f.name,status:'pending',progress:0,error:null,type:f.type};
-      // Ajouter preview pour les images
-      if (f.type.startsWith('image/')) {
-        item.preview = URL.createObjectURL(f);
-      }
-      return item;
-    });
+    const queue = files.map((f,i)=>({id:`${f.name}-${Date.now()}-${i}`,name:f.name,status:'pending',progress:0,error:null}));
     setState({uploading:true,queue,error:null});
     const uploaded=[];
     for (let i=0;i<files.length;i++) {
@@ -244,12 +230,6 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     if(uploaded.length){
       try{ await onUploadComplete(uploaded); }catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."})); }
     }
-    // Nettoyer les previews
-    queue.forEach(item => {
-      if (item.preview) {
-        URL.revokeObjectURL(item.preview);
-      }
-    });
     setState(s=>({...s,uploading:false}));
     onEndCritical?.(); // fin de la phase critique
   },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
@@ -343,7 +323,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [report, setReport] = useState(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadQueue, setUploadQueue] = useState([]);
 
   // === Scroll locks + restauration ===
   const { lock, unlock } = useBodyScrollLock();
@@ -700,38 +679,23 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
         {/* Photos & docs */}
         <div className="section">
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1rem'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <h3>📷 Photos et Documents</h3>
             <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
           </div>
-
-          {/* Galerie d'images avec upload progress */}
-          <ImageGallery
-            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-              url: f.url,
-              name: f.name,
-              type: f.type
-            }))}
-            uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
-            emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-          />
-
-          {/* Documents non-image (PDF, audio, etc.) */}
-          {report.files?.some(f => !f.type?.startsWith('image/')) && (
-            <div style={{marginTop:'1rem'}}>
-              <h4 style={{fontSize:'0.9375rem',fontWeight:600,marginBottom:'0.5rem'}}>📎 Autres fichiers</h4>
-              <ul className="document-list-optimized">
-                {report.files.filter(f => !f.type?.startsWith('image/')).map((file,idx)=> (
-                  <li key={`${file.url||idx}-${idx}`} className="document-item-optimized">
-                    {file.type?.startsWith('audio/') ? <div style={{width:40}}><audio controls src={file.url} style={{height:32}}/></div>
-                     : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
-                    <span className="file-name">{file.name}</span>
-                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {report.files?.length>0 ? (
+            <ul className="document-list-optimized" style={{marginBottom:'1rem'}}>
+              {report.files.map((file,idx)=> (
+                <li key={`${file.url||idx}-${idx}`} className="document-item-optimized">
+                  {file.type?.startsWith('image/') ? <OptimizedImage src={file.url} alt={file.name} style={{width:40,height:40,objectFit:'cover',borderRadius:'0.25rem'}}/>
+                   : file.type?.startsWith('audio/') ? <div style={{width:40}}><audio controls src={file.url} style={{height:32}}/></div>
+                   : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
+                  <span className="file-name">{file.name}</span>
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-muted">Aucun fichier pour le moment.</p>}
           <InlineUploader
             interventionId={interventionId}
             onUploadComplete={async(uploaded)=>{
@@ -750,7 +714,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             }}
             onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
             onEndCritical={unlock}
-            onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
           />
         </div>
 
