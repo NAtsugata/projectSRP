@@ -8,22 +8,31 @@ import './ImageGallery.css';
 /**
  * ImageThumbnail - Miniature avec loading state
  */
-const ImageThumbnail = ({ src, alt, onClick, isLoading }) => {
+const ImageThumbnail = ({ src, alt, onClick, isLoading, status }) => {
   const [loadState, setLoadState] = useState('loading');
   const imgRef = useRef(null);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src) {
+      setLoadState('error');
+      return;
+    }
+    // Reset state quand src change
+    setLoadState('loading');
     const img = new Image();
     img.onload = () => setLoadState('loaded');
     img.onerror = () => setLoadState('error');
     img.src = src;
   }, [src]);
 
-  if (isLoading || loadState === 'loading') {
+  // Afficher le loader pour les uploads en cours
+  if (isLoading || loadState === 'loading' || status === 'uploading' || status === 'pending') {
     return (
       <div className="image-thumbnail loading" onClick={onClick}>
         <LoaderIcon className="animate-spin" />
+        {status === 'uploading' && (
+          <div className="upload-badge">⬆️</div>
+        )}
       </div>
     );
   }
@@ -245,15 +254,21 @@ const ImageGallery = ({ images, uploadQueue = [], emptyMessage = 'Aucune image' 
   return (
     <>
       <div className="image-gallery">
-        {allItems.map((item, index) => (
-          <ImageThumbnail
-            key={item.id || item.url || index}
-            src={item.preview || item.url}
-            alt={item.name || `Image ${index + 1}`}
-            onClick={() => !item.isUploading && openLightbox(index - uploadQueue.length)}
-            isLoading={item.isUploading}
-          />
-        ))}
+        {allItems.map((item, index) => {
+          const isUploadItem = index < uploadQueue.length;
+          const imageIndex = index - uploadQueue.length;
+
+          return (
+            <ImageThumbnail
+              key={item.id || item.url || index}
+              src={item.preview || item.url}
+              alt={item.name || `Image ${index + 1}`}
+              onClick={() => !item.isUploading && !isUploadItem && imageIndex >= 0 && openLightbox(imageIndex)}
+              isLoading={item.isUploading}
+              status={item.status}
+            />
+          );
+        })}
       </div>
 
       {lightboxOpen && (

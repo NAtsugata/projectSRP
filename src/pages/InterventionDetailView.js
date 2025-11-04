@@ -38,7 +38,9 @@ const numberOrNull = (v) => (v === '' || v === undefined || v === null || Number
 const withCacheBust = (url) => {
   if (!url || typeof url !== 'string') return url;
   const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}v=${Date.now()}`;
+  const cacheBusted = `${url}${sep}v=${Date.now()}&r=${Math.random().toString(36).substring(7)}`;
+  console.log('🖼️ Cache-bust URL:', cacheBusted);
+  return cacheBusted;
 };
 
 // -------- Format util --------
@@ -174,7 +176,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
 
   // Notifier le parent quand la queue change
   useEffect(() => {
-    onQueueChange?.(state.queue.filter(item => item.status === 'uploading' || item.status === 'pending'));
+    const activeQueue = state.queue.filter(item => item.status === 'uploading' || item.status === 'pending');
+    console.log('🔔 Notification queue change:', activeQueue.length, 'items', activeQueue);
+    onQueueChange?.(activeQueue);
   }, [state.queue, onQueueChange]);
 
   const startCriticalWithFallback = useCallback(() => {
@@ -213,6 +217,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     // Débloquer tout de suite si rien n'a été choisi (annulation)
     if (!files.length) { onEndCritical?.(); if(inputRef.current) inputRef.current.value=''; return; }
 
+    console.log('📸 Fichiers sélectionnés:', files.length);
     if(inputRef.current) inputRef.current.value='';
     // Créer des previews pour les images
     const queue = files.map((f,i)=>{
@@ -220,9 +225,11 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
       // Ajouter preview pour les images
       if (f.type.startsWith('image/')) {
         item.preview = URL.createObjectURL(f);
+        console.log('🖼️ Preview créée pour:', f.name, '→', item.preview);
       }
       return item;
     });
+    console.log('📦 Queue initiale:', queue);
     setState({uploading:true,queue,error:null});
     const uploaded=[];
     for (let i=0;i<files.length;i++) {
@@ -242,15 +249,25 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
       }
     }
     if(uploaded.length){
-      try{ await onUploadComplete(uploaded); }catch(err){ setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."})); }
-    }
-    // Nettoyer les previews
-    queue.forEach(item => {
-      if (item.preview) {
-        URL.revokeObjectURL(item.preview);
+      try{
+        await onUploadComplete(uploaded);
+        // Attendre un peu pour que le refresh se fasse
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }catch(err){
+        setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."}));
       }
-    });
-    setState(s=>({...s,uploading:false}));
+    }
+    // Nettoyer les previews APRÈS que les vraies images soient chargées
+    setTimeout(() => {
+      queue.forEach(item => {
+        if (item.preview) {
+          URL.revokeObjectURL(item.preview);
+        }
+      });
+      // Vider la queue seulement après cleanup
+      setState(s=>({...s,uploading:false, queue:[]}));
+    }, 1000);
+
     onEndCritical?.(); // fin de la phase critique
   },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
 
@@ -344,6 +361,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
+
+  // Debug: logger les changements de uploadQueue
+  useEffect(() => {
+    console.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
+  }, [uploadQueue]);
 
   // === Scroll locks + restauration ===
   const { lock, unlock } = useBodyScrollLock();
@@ -736,6 +758,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             interventionId={interventionId}
             onUploadComplete={async(uploaded)=>{
               const updated={...report, files:[...(report.files||[]),...uploaded]};
+
+              // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
+              setReport(updated);
+
               await persistReport(updated);
               // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
               saveScroll();
