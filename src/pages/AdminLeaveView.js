@@ -1,69 +1,53 @@
-import React from 'react';
-import { GenericStatusBadge, CheckIcon, XIcon, TrashIcon } from '../components/SharedUI';
+// src/pages/AdminLeaveView.js - Version refactorisée
+// Gestion des demandes de congés avec composants modulaires
 
-export default function AdminLeaveView({ leaveRequests, onUpdateStatus, onDelete }) {
+import React, { useCallback } from 'react';
+import { LeaveRequestList } from '../components/leave';
+import logger from '../utils/logger';
+import './AdminLeaveView.css';
 
-    const statusColorMap = {
-        "Approuvé": "status-badge-green",
-        "En attente": "status-badge-yellow",
-        "Rejeté": "status-badge-red"
-    };
+export default function AdminLeaveView({
+  leaveRequests = [],
+  onUpdateStatus,
+  onDelete
+}) {
+  // Adapter callbacks for component API
+  const handleApprove = useCallback((requestId) => {
+    logger.log('AdminLeaveView: Approbation demande', requestId);
+    onUpdateStatus(requestId, 'Approuvée');
+  }, [onUpdateStatus]);
 
-    return (
-        <div>
-            <h2 className="view-title">Gestion des Demandes de Congés</h2>
+  const handleReject = useCallback((requestId) => {
+    logger.log('AdminLeaveView: Rejet demande', requestId);
+    onUpdateStatus(requestId, 'Rejetée');
+  }, [onUpdateStatus]);
 
-            <div className="card-white">
-                {leaveRequests.length > 0 ? (
-                    <ul className="divide-y divide-gray-200">
-                        {leaveRequests.map(req => (
-                            <li key={req.id} className="py-4 flex items-center justify-between space-x-4">
-                                <div className="flex-grow">
-                                    <p className="font-semibold text-gray-900">{req.user_name || 'Employé inconnu'}</p>
-                                    <p className="text-sm text-gray-600">{req.reason}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Du {new Date(req.start_date).toLocaleDateString()} au {new Date(req.end_date).toLocaleDateString()}
-                                    </p>
-                                </div>
+  const handleDelete = useCallback((requestId) => {
+    logger.log('AdminLeaveView: Suppression demande', requestId);
+    onDelete(requestId);
+  }, [onDelete]);
 
-                                <div className="flex-shrink-0 flex items-center space-x-2">
-                                    <GenericStatusBadge status={req.status} colorMap={statusColorMap} />
+  return (
+    <div className="admin-leave-view">
+      <div className="leave-header">
+        <h2 className="leave-title">Gestion des Demandes de Congés</h2>
+        <p className="leave-description">
+          Approuvez ou rejetez les demandes de congés de vos employés.
+        </p>
+      </div>
 
-                                    {req.status === 'En attente' && (
-                                        <>
-                                            <button
-                                                onClick={() => onUpdateStatus(req.id, 'Approuvé')}
-                                                className="btn-icon btn-success"
-                                                title="Approuver"
-                                            >
-                                                <CheckIcon />
-                                            </button>
-                                            <button
-                                                onClick={() => onUpdateStatus(req.id, 'Rejeté')}
-                                                className="btn-icon btn-danger"
-                                                title="Rejeter"
-                                            >
-                                                <XIcon />
-                                            </button>
-                                        </>
-                                    )}
-
-                                    <button
-                                        onClick={() => onDelete(req.id)}
-                                        className="btn-icon btn-secondary"
-                                        title="Supprimer"
-                                    >
-                                        <TrashIcon />
-                                    </button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-center text-gray-500 py-4">Aucune demande de congé à afficher.</p>
-                )}
-            </div>
-        </div>
-    );
+      <div className="leave-list-section">
+        <LeaveRequestList
+          requests={leaveRequests}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onDelete={handleDelete}
+          showFilters={true}
+          showSort={true}
+          showActions={true}
+          showUserName={true}
+        />
+      </div>
+    </div>
+  );
 }
-

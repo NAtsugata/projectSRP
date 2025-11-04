@@ -1,45 +1,113 @@
-import React, { useState } from 'react';
-import { GenericStatusBadge, PlusIcon } from '../components/SharedUI';
+// src/pages/EmployeeLeaveView.js - Version refactorisée
+// Vue employé pour soumettre et consulter ses demandes de congés
 
-export default function EmployeeLeaveView({ leaveRequests, onSubmitRequest, userName, userId, showToast }) {
-    const [showForm, setShowForm] = useState(false);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [reason, setReason] = useState('');
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if(!startDate || !endDate || !reason) {
-            showToast("Veuillez remplir tous les champs.", "error");
-            return;
-        }
-        onSubmitRequest({ userName, userId, startDate, endDate, reason });
-        setShowForm(false);
-        setStartDate(''); setEndDate(''); setReason('');
-    };
-    const statusColorMap = { "Approuvé": "status-badge-green", "En attente": "status-badge-yellow", "Rejeté": "status-badge-red" };
-    return (
-        <div>
-            <div className="flex-between mb-6">
-                <h2 className="view-title">Vos Demandes de Congés</h2>
-                <button onClick={() => setShowForm(!showForm)} className="btn btn-primary flex-center"><PlusIcon/>{showForm ? 'Annuler' : 'Nouvelle Demande'}</button>
-            </div>
-            {showForm && (
-                <form onSubmit={handleSubmit} className="card-white mb-6">
-                    <h3>Nouvelle demande</h3>
-                    <div className="grid-2-cols">
-                        <div className="form-group"><label>Date de début</label><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required className="form-control"/></div>
-                        <div className="form-group"><label>Date de fin</label><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required className="form-control"/></div>
-                    </div>
-                    <div className="form-group"><label>Motif</label><textarea value={reason} onChange={e => setReason(e.target.value)} required rows="3" className="form-control"></textarea></div>
-                    <button type="submit" className="btn btn-success w-full">Envoyer</button>
-                </form>
-            )}
-            <div className="card-white">
-                <h3>Historique</h3>
-                <ul className="document-list">
-                    {leaveRequests.map(req => (<li key={req.id}><div><p className="font-semibold">{req.reason}</p><p className="text-muted">Du {req.start_date} au {req.end_date}</p></div><GenericStatusBadge status={req.status} colorMap={statusColorMap} /></li>))}
-                </ul>
-            </div>
+import React, { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { LeaveRequestForm, LeaveRequestList } from '../components/leave';
+import { Button } from '../components/ui';
+import { PlusIcon } from '../components/SharedUI';
+import logger from '../utils/logger';
+import './EmployeeLeaveView.css';
+
+export default function EmployeeLeaveView({
+  leaveRequests = [],
+  onSubmitRequest,
+  userName,
+  userId,
+  showToast
+}) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const openForm = useCallback(() => {
+    setSearchParams({ new: 'true' });
+    logger.log('EmployeeLeaveView: Ouverture formulaire');
+  }, [setSearchParams]);
+
+  const closeForm = useCallback(() => {
+    setSearchParams({});
+    logger.log('EmployeeLeaveView: Fermeture formulaire');
+  }, [setSearchParams]);
+
+  const handleSubmit = useCallback(async (formData) => {
+    setIsSubmitting(true);
+    logger.log('EmployeeLeaveView: Soumission demande', formData);
+
+    try {
+      // Validate dates
+      if (!formData.startDate || !formData.endDate || !formData.reason) {
+        showToast?.('Veuillez remplir tous les champs.', 'error');
+        return false;
+      }
+
+      // Submit with user info
+      const result = await onSubmitRequest({
+        userName,
+        userId,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        reason: formData.reason
+      });
+
+      if (result !== false) {
+        logger.log('EmployeeLeaveView: Demande soumise avec succès');
+        closeForm();
+        return true;
+      } else {
+        logger.error('EmployeeLeaveView: Échec soumission');
+        return false;
+      }
+    } catch (error) {
+      logger.error('EmployeeLeaveView: Erreur soumission', error);
+      showToast?.('Erreur lors de la soumission', 'error');
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [userName, userId, onSubmitRequest, showToast, closeForm]);
+
+  return (
+    <div className="employee-leave-view">
+      {/* Header */}
+      <div className="leave-header">
+        <div className="header-content">
+          <h2 className="leave-title">Vos Demandes de Congés</h2>
+          <p className="leave-description">
+            Soumettez vos demandes de congés et consultez leur statut.
+          </p>
         </div>
-    );
+        <Button
+          variant="primary"
+          icon={<PlusIcon />}
+          onClick={showForm ? closeForm : openForm}
+        >
+          {showForm ? 'Annuler' : 'Nouvelle Demande'}
+        </Button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="leave-form-section">
+          <LeaveRequestForm
+            onSubmit={handleSubmit}
+            onCancel={closeForm}
+            isSubmitting={isSubmitting}
+          />
+        </div>
+      )}
+
+      {/* List */}
+      <div className="leave-list-section">
+        <h3 className="section-title">Historique de vos demandes</h3>
+        <LeaveRequestList
+          requests={leaveRequests}
+          showFilters={true}
+          showSort={true}
+          showActions={false}
+          showUserName={false}
+        />
+      </div>
+    </div>
+  );
 }
