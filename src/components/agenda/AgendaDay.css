@@ -1,0 +1,286 @@
+/* src/components/agenda/AgendaDay.css */
+
+.agenda-day {
+  margin-bottom: 2rem;
+}
+
+.agenda-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.agenda-day-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+/* Legend */
+.agenda-legend {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: #374151;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+/* All-day section */
+.agenda-allday-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.allday-wrap {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.allday-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  padding: 0.375rem 0.625rem;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 0.8125rem;
+}
+
+.allday-chip:hover {
+  background: #f3f4f6;
+}
+
+.allday-chip:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.chip-title {
+  font-weight: 600;
+}
+
+.chip-assignees {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.375rem;
+}
+
+.assignee-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+/* Badges */
+.badge {
+  font-weight: 700;
+  font-size: 0.625rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.badge-warn {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.badge-sav {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Timeline */
+.agenda-timeline {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 0;
+  position: relative;
+  min-height: 560px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.75rem;
+  overflow: hidden;
+}
+
+.hours-col {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 0.5rem;
+  position: relative;
+}
+
+.hour-mark {
+  height: calc(100% / 14); /* 14 hours from 6am to 8pm */
+  position: relative;
+}
+
+.hour-label {
+  position: absolute;
+  top: -7px;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.events-col {
+  position: relative;
+  background: linear-gradient(to bottom, transparent 50%, #f9fafb 50%);
+  background-size: 100% calc(100% / 14);
+}
+
+.hour-row {
+  height: calc(100% / 14);
+}
+
+/* Event cards */
+.event-card {
+  position: absolute;
+  box-sizing: border-box;
+  border: none;
+  border-left: 4px solid #4285F4;
+  background: #E8F0FE;
+  color: #1f2937;
+  border-radius: 8px;
+  padding: 0.375rem 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.event-card:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.event-card:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  z-index: 10;
+}
+
+.event-time {
+  font-size: 0.6875rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.event-title {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  margin-top: 0.125rem;
+  line-height: 1.3;
+}
+
+.event-sub {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-top: 0.125rem;
+  line-height: 1.3;
+}
+
+.event-meta {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.assignees {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+/* Empty state */
+.agenda-day-empty {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.text-muted {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .agenda-day-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .agenda-legend {
+    width: 100%;
+  }
+
+  .agenda-timeline {
+    grid-template-columns: 56px 1fr;
+    min-height: 480px;
+  }
+
+  .hours-col {
+    padding-right: 0.375rem;
+  }
+
+  .hour-label {
+    font-size: 0.6875rem;
+    right: 0.25rem;
+  }
+
+  .event-card {
+    padding: 0.25rem 0.375rem;
+  }
+
+  .event-time {
+    font-size: 0.625rem;
+  }
+
+  .event-title {
+    font-size: 0.75rem;
+  }
+
+  .event-sub {
+    font-size: 0.6875rem;
+  }
+
+  .badge {
+    font-size: 0.5625rem;
+    padding: 0.0625rem 0.25rem;
+  }
+}

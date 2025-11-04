@@ -501,7 +501,12 @@ function App() {
                 } />
                 <Route path="agenda" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AgendaView interventions={interventions} />
+                    <AgendaView
+                      interventions={interventions}
+                      employees={users}
+                      loading={loading}
+                      onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
+                    />
                   </Suspense>
                 } />
                 <Route
@@ -571,7 +576,12 @@ function App() {
                 } />
                 <Route path="agenda" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AgendaView interventions={interventions} />
+                    <AgendaView
+                      interventions={interventions}
+                      employees={users}
+                      loading={loading}
+                      onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
+                    />
                   </Suspense>
                 } />
                 <Route

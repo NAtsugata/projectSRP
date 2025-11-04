@@ -1,0 +1,36 @@
+/* src/pages/AgendaView.css */
+
+.agenda-view {
+  padding: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.view-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+}
+
+.agenda-days-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .agenda-view {
+    padding: 0.75rem;
+  }
+
+  .view-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .agenda-days-list {
+    gap: 1.5rem;
+  }
+}
