@@ -24,6 +24,7 @@ import {
 import { storageService } from '../lib/supabase';
 import {
   ImageGallery,
+  ImageGalleryOptimized,
   InterventionHeader,
   QuickActionsBar,
   SmartAlerts,
@@ -207,11 +208,27 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     if(!file.type.startsWith('image/')) return file;
     return new Promise(res=>{
       const c=document.createElement('canvas');const ctx=c.getContext('2d');const img=new Image();
-      img.onload=()=>{let {width,height}=img;const MW=1280,MH=720;
+      img.onload=()=>{
+        let {width,height}=img;
+        // 🚀 COMPRESSION AGGRESSIVE POUR MOBILE
+        const MW=800,MH=600; // Réduit de 1280x720 à 800x600
         if(width>height){if(width>MW){height*=MW/width;width=MW;}}
         else{if(height>MH){width*=MH/height;height=MH;}}
-        c.width=width;c.height=height;ctx.drawImage(img,0,0,width,height);
-        c.toBlob(b=>res(b?new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()}):file),'image/jpeg',0.8);
+        c.width=width;c.height=height;
+        // Fond blanc pour éviter transparence
+        ctx.fillStyle='#FFFFFF';
+        ctx.fillRect(0,0,width,height);
+        ctx.drawImage(img,0,0,width,height);
+        // Qualité 0.65 (au lieu de 0.8) = 40% plus léger !
+        c.toBlob(b=>{
+          if(b){
+            const compressed = new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()});
+            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+            res(compressed);
+          }else{
+            res(file);
+          }
+        },'image/jpeg',0.65);
       };
       img.onerror=()=>res(file);
       img.src=URL.createObjectURL(file);
@@ -777,8 +794,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
           </div>
 
-          {/* Galerie d'images avec upload progress */}
-          <ImageGallery
+          {/* Galerie d'images optimisée avec pagination et lazy loading */}
+          <ImageGalleryOptimized
             images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
               url: f.url,
               name: f.name,
