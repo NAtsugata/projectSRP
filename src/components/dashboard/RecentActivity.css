@@ -1,0 +1,157 @@
+/* src/components/dashboard/RecentActivity.css */
+
+.recent-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.recent-activity-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Activity List */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Activity Item */
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.activity-item:hover {
+  background: #f9fafb;
+}
+
+.activity-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 2.25rem;
+  width: 1px;
+  height: 0.5rem;
+  background: #e5e7eb;
+}
+
+/* Icon */
+.activity-icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.activity-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Content */
+.activity-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.activity-description {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+  margin-top: 0.125rem;
+}
+
+/* Variants */
+.activity-item-primary .activity-icon {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.activity-item-success .activity-icon {
+  background: #d1fae5;
+  color: #10b981;
+}
+
+.activity-item-warning .activity-icon {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.activity-item-danger .activity-icon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.activity-item-info .activity-icon {
+  background: #cffafe;
+  color: #06b6d4;
+}
+
+/* Empty State */
+.activity-empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+.activity-empty p {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .recent-activity {
+    padding: 1rem;
+  }
+
+  .activity-item {
+    padding: 0.5rem;
+  }
+
+  .activity-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .activity-icon svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
