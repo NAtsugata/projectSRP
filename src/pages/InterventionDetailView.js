@@ -23,7 +23,14 @@ import {
   StopCircleIcon,
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
-import ImageGallery from '../components/intervention/ImageGallery';
+import {
+  ImageGallery,
+  InterventionHeader,
+  TimeDisplay,
+  QuickActionsBar,
+  SmartAlerts
+} from '../components/intervention';
+import './InterventionDetailView_Modern.css';
 
 const MIN_REQUIRED_PHOTOS = 2;
 
@@ -599,8 +606,42 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n=>n.urgent).length : 0;
 
   return (
-    <div>
-      <button onClick={()=>navigate('/planning')} className="back-button"><ChevronLeftIcon/> Retour</button>
+    <div className="intervention-detail-modern">
+      {/* NOUVEAU HEADER MODERNE */}
+      <InterventionHeader
+        intervention={intervention}
+        onBack={() => navigate('/planning')}
+      />
+
+      <div className="intervention-content">
+        {/* ALERTES INTELLIGENTES */}
+        <SmartAlerts
+          report={report}
+          intervention={intervention}
+          MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
+        />
+
+        {/* ACTIONS RAPIDES */}
+        <QuickActionsBar
+          intervention={intervention}
+          onAction={(action) => console.log('Action:', action)}
+        />
+
+        {/* CHRONOMÈTRE TEMPS RÉEL */}
+        <div className="modern-section" id="time-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">⏱️</span>
+              Temps sur site
+            </h3>
+          </div>
+          <TimeDisplay
+            arrivalTime={report.arrivalTime}
+            departureTime={report.departureTime}
+          />
+        </div>
+
+      {/* ANCIEN CONTENU (conservé) */}
       <div className="card-white">
         <h2>{intervention.client}</h2>
         <p className="text-muted">{intervention.address}</p>
@@ -721,9 +762,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         </div>
 
         {/* Photos & docs */}
-        <div className="section">
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1rem'}}>
-            <h3>📷 Photos et Documents</h3>
+        <div className="modern-section" id="photos-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">📷</span>
+              Photos et Documents
+            </h3>
             <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
           </div>
 
@@ -781,8 +825,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         </div>
 
         {/* Signature */}
-        <div className="section">
-          <h3>✍️ Signature du client</h3>
+        <div className="modern-section" id="signature-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">✍️</span>
+              Signature du client
+            </h3>
+          </div>
           {report.signature ? (
             <div>
               <img src={report.signature} alt="Signature" style={{width:'100%',maxWidth:300,border:'2px solid #e5e7eb',borderRadius:'0.5rem',background:'#f8f9fa'}}/>
