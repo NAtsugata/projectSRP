@@ -1,7 +1,7 @@
 // src/hooks/useAsync.js
 // Hook pour gérer les opérations asynchrones avec loading, error et data states
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 /**
  * Hook pour gérer les opérations asynchrones
@@ -41,7 +41,7 @@ export const useAsync = (asyncFunction, immediate = false) => {
   }, []);
 
   // Exécution immédiate si demandé
-  React.useEffect(() => {
+  useEffect(() => {
     if (immediate) {
       execute();
     }
