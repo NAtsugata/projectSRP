@@ -666,9 +666,9 @@ export const vaultService = {
       tags
     });
 
-    const result = await supabase
-      .from('vault_documents')
-      .insert([{
+    try {
+      // Essayer d'abord avec toutes les colonnes
+      const documentData = {
         user_id: userId,
         file_name: name,
         file_url: url,
@@ -677,32 +677,71 @@ export const vaultService = {
         description: description || null,
         tags: tags && tags.length > 0 ? tags : null,
         is_favorite: false,
-      }]);
+      };
 
-    if (result.error) {
-      logger.error('❌ Erreur création document vault:', result.error);
-    } else {
+      const result = await supabase
+        .from('vault_documents')
+        .insert([documentData]);
+
+      if (result.error) {
+        // Si erreur de colonne, réessayer avec les colonnes de base uniquement
+        if (result.error.message && result.error.message.includes('column')) {
+          logger.warn('⚠️ Colonnes avancées non disponibles, insertion basique...');
+
+          const basicResult = await supabase
+            .from('vault_documents')
+            .insert([{
+              user_id: userId,
+              file_name: name,
+              file_url: url,
+              file_path: path,
+            }]);
+
+          if (basicResult.error) {
+            logger.error('❌ Erreur création document vault (basique):', basicResult.error);
+          } else {
+            logger.log('✅ Document coffre-fort créé (mode basique)');
+          }
+
+          return basicResult;
+        }
+
+        logger.error('❌ Erreur création document vault:', result.error);
+        return result;
+      }
+
       logger.log('✅ Document coffre-fort créé avec succès');
+      return result;
+    } catch (error) {
+      logger.error('❌ Erreur critique création document vault:', error);
+      return { error };
     }
-
-    return result;
   },
 
   async toggleFavorite(documentId, currentFavoriteStatus) {
-    logger.log('⭐ Basculement favori document:', documentId);
+    try {
+      logger.log('⭐ Basculement favori document:', documentId);
 
-    const result = await supabase
-      .from('vault_documents')
-      .update({ is_favorite: !currentFavoriteStatus })
-      .eq('id', documentId);
+      const result = await supabase
+        .from('vault_documents')
+        .update({ is_favorite: !currentFavoriteStatus })
+        .eq('id', documentId);
 
-    if (result.error) {
-      logger.error('❌ Erreur basculement favori:', result.error);
-    } else {
-      logger.log('✅ Favori mis à jour avec succès');
+      if (result.error) {
+        logger.error('❌ Erreur basculement favori:', result.error);
+        // Si la colonne n'existe pas, retourner un message clair
+        if (result.error.message && result.error.message.includes('column')) {
+          return { error: { message: 'La fonctionnalité favoris nécessite une mise à jour de la base de données.' } };
+        }
+      } else {
+        logger.log('✅ Favori mis à jour avec succès');
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Erreur critique basculement favori:', error);
+      return { error };
     }
-
-    return result;
   },
 
   async deleteVaultDocument(documentId) {

@@ -111,6 +111,11 @@ export default function CoffreNumeriqueView({ vaultDocuments = [], onRefresh }) 
   const enrichedDocuments = useMemo(() => {
     return localDocuments.map(doc => ({
       ...doc,
+      // Garantir que toutes les propriétés existent avec des valeurs par défaut
+      file_size: doc.file_size || null,
+      description: doc.description || '',
+      tags: Array.isArray(doc.tags) ? doc.tags : [],
+      is_favorite: doc.is_favorite || false,
       category: getCategoryFromName(doc.file_name),
       icon: getFileIcon(doc.file_name),
       fileExt: doc.file_name.split('.').pop()?.toUpperCase() || 'FILE',
@@ -157,19 +162,27 @@ export default function CoffreNumeriqueView({ vaultDocuments = [], onRefresh }) 
   // Toggle favori
   const handleToggleFavorite = async (doc) => {
     try {
-      const result = await vaultService.toggleFavorite(doc.id, doc.is_favorite);
+      const result = await vaultService.toggleFavorite(doc.id, doc.is_favorite || false);
       if (!result.error) {
-        // Mettre à jour localement
+        // Mettre à jour localement immédiatement
         setLocalDocuments(prev => prev.map(d =>
-          d.id === doc.id ? { ...d, is_favorite: !d.is_favorite } : d
+          d.id === doc.id ? { ...d, is_favorite: !(d.is_favorite || false) } : d
         ));
-        // Rafraîchir les données
-        if (onRefresh) {
-          onRefresh();
+        // Rafraîchir les données si la fonction existe
+        if (onRefresh && typeof onRefresh === 'function') {
+          try {
+            await onRefresh();
+          } catch (refreshError) {
+            console.warn('Erreur lors du refresh:', refreshError);
+          }
         }
+      } else {
+        console.error('Erreur toggle favori:', result.error);
+        alert('Impossible de mettre à jour le favori. Veuillez réessayer.');
       }
     } catch (error) {
       console.error('Erreur toggle favori:', error);
+      alert('Une erreur est survenue. Veuillez réessayer.');
     }
   };
 
