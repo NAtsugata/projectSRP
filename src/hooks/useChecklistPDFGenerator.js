@@ -1,6 +1,6 @@
 // src/hooks/useChecklistPDFGenerator.js
 import { jsPDF } from "jspdf";
-import 'jspdf-autotable'; // Pour des tableaux plus complexes si besoin un jour
+// import 'jspdf-autotable'; // Pour des tableaux plus complexes si besoin un jour (package non installé)
 
 /**
  * Hook personnalisé pour générer des PDF à partir des données de checklist.
