@@ -232,7 +232,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     }
     setState(s=>({...s,uploading:false}));
     onEndCritical?.(); // fin de la phase critique
-  },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
+  },[compressImage,interventionId,folder,onUploadComplete,onEndCritical,clearCriticalFallback]);
 
   return (
     <div className="mobile-uploader-panel">
@@ -441,7 +441,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
   // Persistance *directement* du report avec stabilisation + lock
-  const persistReport = async (updated) => {
+  const persistReport = useCallback(async (updated) => {
     // Geler position + body (évite remontée iOS après retour du picker)
     saveScroll();
     pendingRestoreRef.current = true;
@@ -460,7 +460,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       // double sécurité immédiate :
       restoreScroll();
     }
-  };
+  }, [saveScroll, lock, onSaveSilent, intervention, unlock, restoreScroll]);
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 

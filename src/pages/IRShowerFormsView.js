@@ -489,9 +489,6 @@ export default function IRShowerFormsView() {
     }
   };
 
-  /* ---------- Accessoires (état) ---------- */
-  const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
-
   /* ---------- Styles ---------- */
   const styles = (
     <style>{`
