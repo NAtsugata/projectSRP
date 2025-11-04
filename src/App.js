@@ -394,7 +394,7 @@ function App() {
   };
 
   // ✅ Envoi coffre-fort
-  const handleSendVaultDocument = async ({ file, userId, name }) => {
+  const handleSendVaultDocument = async ({ file, userId, name, fileSize = null, description = '', tags = [] }) => {
     try {
       // Validation de la taille du fichier
       const sizeValidation = validateFileSize(file.size, 20); // 20MB max pour coffre-fort
@@ -410,7 +410,10 @@ function App() {
         userId,
         name,
         url: publicURL,
-        path: filePath
+        path: filePath,
+        fileSize: fileSize || file.size,
+        description,
+        tags
       });
       if (dbError) throw dbError;
 

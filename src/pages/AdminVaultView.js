@@ -55,6 +55,8 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
   const [file, setFile] = useState(null);
   const [documentName, setDocumentName] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [description, setDescription] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
@@ -111,10 +113,15 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
+      const tags = tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
+
       await onSendDocument({
         file,
         userId: selectedUserId,
-        name: documentName.trim()
+        name: documentName.trim(),
+        fileSize: file.size,
+        description: description.trim(),
+        tags
       });
 
       clearInterval(progressInterval);
@@ -123,6 +130,8 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
       setFile(null);
       setDocumentName('');
       setSelectedUserId('');
+      setDescription('');
+      setTagsInput('');
       setSuccess(true);
 
       setTimeout(() => {
@@ -255,6 +264,35 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
             <div className="form-group">
               <label htmlFor="document-name">Nom du document *</label>
               <input id="document-name" type="text" value={documentName} onChange={(e) => setDocumentName(e.target.value)} placeholder="Ex: Fiche de paie - Janvier 2025" className="form-control" required disabled={isUploading} />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="document-description">Description (optionnel)</label>
+              <textarea
+                id="document-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex: Fiche de paie du mois de janvier 2025 incluant les heures supplémentaires"
+                className="form-control"
+                rows="3"
+                disabled={isUploading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="document-tags">Tags (optionnel)</label>
+              <input
+                id="document-tags"
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="Ex: paie, janvier, 2025 (séparez par des virgules)"
+                className="form-control"
+                disabled={isUploading}
+              />
+              <small style={{fontSize: '0.75rem', color: '#6c757d', marginTop: '0.25rem', display: 'block'}}>
+                Séparez les tags par des virgules pour faciliter la recherche
+              </small>
             </div>
 
             <div className="form-group">

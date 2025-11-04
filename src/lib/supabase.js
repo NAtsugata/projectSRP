@@ -655,12 +655,15 @@ export const vaultService = {
     return result;
   },
 
-  async createVaultDocument({ userId, name, url, path }) {
+  async createVaultDocument({ userId, name, url, path, fileSize = null, description = '', tags = [] }) {
     logger.log('📄 Création document coffre-fort:', {
       userId,
       name,
       url: url?.substring(0, 50) + '...',
-      path
+      path,
+      fileSize,
+      description,
+      tags
     });
 
     const result = await supabase
@@ -670,12 +673,33 @@ export const vaultService = {
         file_name: name,
         file_url: url,
         file_path: path,
+        file_size: fileSize,
+        description: description || null,
+        tags: tags && tags.length > 0 ? tags : null,
+        is_favorite: false,
       }]);
 
     if (result.error) {
       logger.error('❌ Erreur création document vault:', result.error);
     } else {
       logger.log('✅ Document coffre-fort créé avec succès');
+    }
+
+    return result;
+  },
+
+  async toggleFavorite(documentId, currentFavoriteStatus) {
+    logger.log('⭐ Basculement favori document:', documentId);
+
+    const result = await supabase
+      .from('vault_documents')
+      .update({ is_favorite: !currentFavoriteStatus })
+      .eq('id', documentId);
+
+    if (result.error) {
+      logger.error('❌ Erreur basculement favori:', result.error);
+    } else {
+      logger.log('✅ Favori mis à jour avec succès');
     }
 
     return result;
