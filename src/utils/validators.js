@@ -13,6 +13,18 @@ export const isValidEmail = (email) => {
 };
 
 /**
+ * Valide un numéro de téléphone français
+ * @param {string} phone - Numéro à valider
+ * @returns {boolean}
+ */
+export const isValidPhone = (phone) => {
+  if (!phone || typeof phone !== 'string') return false;
+  // Accepte: 0612345678, 06 12 34 56 78, 06.12.34.56.78, +33612345678
+  const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
+  return phoneRegex.test(phone.trim());
+};
+
+/**
  * Valide un mot de passe
  * @param {string} password - Mot de passe à valider
  * @returns {{ isValid: boolean, message: string }}
@@ -75,6 +87,26 @@ export const validateIntervention = (intervention) => {
 
   if (!intervention.client || intervention.client.trim().length === 0) {
     errors.push('Le nom du client est requis');
+  }
+
+  if (!intervention.client_phone || intervention.client_phone.trim().length === 0) {
+    errors.push('Le téléphone du client est requis');
+  } else if (!isValidPhone(intervention.client_phone)) {
+    errors.push('Le numéro de téléphone est invalide (format: 06 12 34 56 78)');
+  }
+
+  // Validation optionnelle du téléphone secondaire
+  if (intervention.secondary_phone && intervention.secondary_phone.trim().length > 0) {
+    if (!isValidPhone(intervention.secondary_phone)) {
+      errors.push('Le numéro secondaire est invalide');
+    }
+  }
+
+  // Validation optionnelle de l'email
+  if (intervention.client_email && intervention.client_email.trim().length > 0) {
+    if (!isValidEmail(intervention.client_email)) {
+      errors.push('L\'email est invalide');
+    }
   }
 
   if (!intervention.address || intervention.address.trim().length === 0) {

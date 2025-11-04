@@ -400,7 +400,7 @@ export const interventionService = {
       });
 
       // 1. Insérer les données de base de l'intervention
-      const { data: insertedData, error: interventionError } = await supabase
+      const { data: insertedData, error: interventionError} = await supabase
         .from('interventions')
         .insert([{
           client: intervention.client,
@@ -408,6 +408,11 @@ export const interventionService = {
           service: intervention.service,
           date: intervention.date,
           time: intervention.time,
+          client_phone: intervention.client_phone || null,
+          secondary_phone: intervention.secondary_phone || null,
+          client_email: intervention.client_email || null,
+          ticket_number: intervention.ticket_number || null,
+          km_start: intervention.km_start ? parseInt(intervention.km_start) : null,
         }])
         .select();
 

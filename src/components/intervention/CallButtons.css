@@ -1,0 +1,231 @@
+/* src/components/intervention/CallButtons.css */
+/* Boutons d'appel ultra-visibles */
+
+.call-buttons-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  color: #fff;
+}
+
+.call-buttons-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1.25rem 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid des cartes d'appel */
+.call-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Carte d'appel */
+.call-button-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.call-button-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.call-button-primary {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Header de la carte */
+.call-button-header {
+  margin-bottom: 1rem;
+}
+
+.call-button-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+}
+
+.call-button-number {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Actions */
+.call-button-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-call {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-call:active {
+  transform: scale(0.97);
+}
+
+.btn-call-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.btn-call-text {
+  font-size: 0.9375rem;
+}
+
+/* Bouton d'appel principal */
+.btn-call-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+}
+
+.btn-call-primary:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);
+}
+
+/* Bouton SMS */
+.btn-call-secondary {
+  background: #fff;
+  color: #667eea;
+}
+
+.btn-call-secondary:hover {
+  background: #f9fafb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Infos supplémentaires */
+.call-info-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  margin-top: 0.75rem;
+}
+
+.info-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.info-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.info-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.info-text {
+  color: #fff;
+  font-size: 0.9375rem;
+}
+
+.info-text strong {
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+/* État vide */
+.call-buttons-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.call-buttons-empty p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .call-buttons-container {
+    padding: 1.25rem;
+  }
+
+  .call-buttons-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .call-button-number {
+    font-size: 1.25rem;
+  }
+
+  .btn-call {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .call-button-actions {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-call-text {
+    font-size: 0.875rem;
+  }
+
+  .call-button-actions {
+    flex-direction: column;
+  }
+
+  .btn-call {
+    width: 100%;
+  }
+}

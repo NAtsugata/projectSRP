@@ -32,7 +32,12 @@ const InterventionForm = ({
     address: '',
     service: '',
     date: '',
-    time: '08:00'
+    time: '08:00',
+    client_phone: '',
+    secondary_phone: '',
+    client_email: '',
+    ticket_number: '',
+    km_start: ''
   },
   users = [],
   onSubmit,
@@ -131,6 +136,78 @@ const InterventionForm = ({
           required
         />
         {errors.client && <span className="error-message">{errors.client}</span>}
+      </div>
+
+      {/* Contact Info - 2 columns */}
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="client_phone" className="form-label">
+            ☎️ Téléphone client <span className="required">*</span>
+          </label>
+          <input
+            id="client_phone"
+            name="client_phone"
+            type="tel"
+            value={values.client_phone}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            className={`form-control ${errors.client_phone ? 'error' : ''}`}
+            placeholder="06 12 34 56 78"
+            required
+          />
+          {errors.client_phone && <span className="error-message">{errors.client_phone}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="secondary_phone" className="form-label">
+            📞 N° secondaire <span className="optional">(optionnel)</span>
+          </label>
+          <input
+            id="secondary_phone"
+            name="secondary_phone"
+            type="tel"
+            value={values.secondary_phone}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            className="form-control"
+            placeholder="Fournisseur, autre contact..."
+          />
+        </div>
+      </div>
+
+      {/* Email & Ticket */}
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="client_email" className="form-label">
+            📧 Email client <span className="optional">(optionnel)</span>
+          </label>
+          <input
+            id="client_email"
+            name="client_email"
+            type="email"
+            value={values.client_email}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            className="form-control"
+            placeholder="client@example.com"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="ticket_number" className="form-label">
+            🎫 N° ticket/référence <span className="optional">(optionnel)</span>
+          </label>
+          <input
+            id="ticket_number"
+            name="ticket_number"
+            type="text"
+            value={values.ticket_number}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            className="form-control"
+            placeholder="TICKET-2024-001"
+          />
+        </div>
       </div>
 
       {/* Address */}
@@ -237,6 +314,27 @@ const InterventionForm = ({
         >
           Dans 1 semaine
         </Button>
+      </div>
+
+      {/* Kilométrage départ */}
+      <div className="form-group">
+        <label htmlFor="km_start" className="form-label">
+          🚗 Kilométrage départ <span className="optional">(pour remboursement)</span>
+        </label>
+        <input
+          id="km_start"
+          name="km_start"
+          type="number"
+          min="0"
+          step="1"
+          value={values.km_start}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="form-control"
+          placeholder="Ex: 45230"
+          style={{ maxWidth: '200px' }}
+        />
+        <small className="form-hint">Le kilométrage de fin sera enregistré à la clôture</small>
       </div>
 
       {/* File upload */}

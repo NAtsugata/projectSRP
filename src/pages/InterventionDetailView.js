@@ -10,7 +10,6 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChevronLeftIcon,
   DownloadIcon,
   FileTextIcon,
   LoaderIcon,
@@ -26,9 +25,10 @@ import { storageService } from '../lib/supabase';
 import {
   ImageGallery,
   InterventionHeader,
-  TimeDisplay,
   QuickActionsBar,
-  SmartAlerts
+  SmartAlerts,
+  TimeTrackerEnhanced,
+  CallButtons
 } from '../components/intervention';
 import './InterventionDetailView_Modern.css';
 
@@ -475,6 +475,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       rating: r.rating || null,
       follow_up_required: !!r.follow_up_required,
       parts_used: Array.isArray(r.parts_used) ? r.parts_used : [],
+      // Nouveaux champs pour timer avec pause/reprise
+      isPaused: !!r.isPaused,
+      pauseStartedAt: r.pauseStartedAt || null,
+      pauseHistory: Array.isArray(r.pauseHistory) ? r.pauseHistory : [],
+      km_end: r.km_end ? Number(r.km_end) : null,
     };
   },[]);
 
@@ -627,17 +632,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           onAction={(action) => console.log('Action:', action)}
         />
 
-        {/* CHRONOMÈTRE TEMPS RÉEL */}
-        <div className="modern-section" id="time-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">⏱️</span>
-              Temps sur site
-            </h3>
-          </div>
-          <TimeDisplay
-            arrivalTime={report.arrivalTime}
-            departureTime={report.departureTime}
+        {/* BOUTONS D'APPEL ULTRA-VISIBLES */}
+        <CallButtons
+          intervention={intervention}
+          onCall={(label) => console.log('Appel vers:', label)}
+        />
+
+        {/* CHRONOMÈTRE AVANCÉ AVEC PAUSE/REPRISE */}
+        <div id="time-section">
+          <TimeTrackerEnhanced
+            report={report}
+            onUpdateReport={persistReport}
+            disabled={!!isAdmin}
           />
         </div>
 
@@ -843,6 +849,32 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <div style={{marginTop:8}}><button onClick={()=>setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon/> Agrandir</button></div>
             </div>
           )}
+        </div>
+
+        {/* Kilométrage de fin */}
+        <div className="modern-section">
+          <h3 className="section-title">
+            <span className="section-title-icon">🚗</span>
+            Kilométrage de fin
+          </h3>
+          <div className="form-group">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={report.km_end || ''}
+              onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
+              placeholder="Ex: 45430"
+              className="form-control"
+              style={{maxWidth: '200px'}}
+              readOnly={!!isAdmin}
+            />
+            {intervention.km_start && report.km_end && (
+              <small className="form-hint" style={{display:'block', marginTop:'0.5rem'}}>
+                Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
+              </small>
+            )}
+          </div>
         </div>
 
         <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{fontSize:'1rem',padding:'1rem',fontWeight:600}}>{isSaving ? (<><LoaderIcon className="animate-spin"/> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
