@@ -7,5 +7,5 @@ export { useLocalStorage } from './useLocalStorage';
 export { useDebounce } from './useDebounce';
 export { useGeolocation } from './useGeolocation';
 export { default as useMobileFileManager } from './useMobileFileManager';
-export { default as useChecklistPDFGenerator } from './useChecklistPDFGenerator';
+export { useChecklistPDFGenerator } from './useChecklistPDFGenerator';
 export { default as useMobileUpload } from './useMobileUpload';
