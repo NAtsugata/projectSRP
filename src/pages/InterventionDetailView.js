@@ -281,16 +281,42 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."}));
       }
     }
-    // Nettoyer les previews APRÈS que les vraies images soient chargées
-    setTimeout(() => {
-      queue.forEach(item => {
-        if (item.preview) {
-          URL.revokeObjectURL(item.preview);
-        }
-      });
-      // Vider la queue seulement après cleanup
-      setState(s=>({...s,uploading:false, queue:[]}));
-    }, 1000);
+
+    // ✅ Attendre que TOUS les uploads soient terminés avant de nettoyer
+    // Utiliser le state actuel au lieu de la variable queue initiale
+    await new Promise((resolve) => {
+      const checkCompleted = () => {
+        setState(currentState => {
+          const allDone = currentState.queue.length > 0 &&
+            currentState.queue.every(item =>
+              item.status === 'completed' || item.status === 'error'
+            );
+
+          if (allDone) {
+            // ✅ Tous terminés, nettoyer maintenant
+            setTimeout(() => {
+              currentState.queue.forEach(item => {
+                if (item.preview) {
+                  URL.revokeObjectURL(item.preview);
+                }
+              });
+              setState(s => ({...s, uploading: false, queue: []}));
+              resolve();
+            }, 200);
+            return currentState;
+          } else if (currentState.queue.length > 0) {
+            // Pas encore tous terminés, vérifier à nouveau dans 100ms
+            setTimeout(checkCompleted, 100);
+            return currentState;
+          } else {
+            // Queue vide, on peut résoudre
+            resolve();
+            return currentState;
+          }
+        });
+      };
+      checkCompleted();
+    });
 
     onEndCritical?.(); // fin de la phase critique
   },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
@@ -504,21 +530,23 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const found = interventions.find(i => String(i.id) === String(interventionId));
     if (found) {
       setIntervention(found);
-      // ⬇️ Initialiser le report une seule fois pour éviter l'écrasement après upload
-      setReport(prev => prev ?? ensureReportSchema(found.report));
+      // ✅ Fusionner le report pour obtenir les nouveaux fichiers uploadés
+      setReport(prev => {
+        const currentReport = prev || ensureReportSchema(found.report);
+        return {
+          ...currentReport,  // Garde les changements locaux
+          files: found.report?.files || currentReport.files,  // ✅ UPDATE files depuis la BDD
+          updated_at: found.updated_at
+        };
+      });
       setLoading(false);
     } else if (interventions.length>0) {
       navigate('/planning');
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
-  // Persistance *directement* du report avec stabilisation + lock
+  // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
   const persistReport = async (updated) => {
-    // Geler position + body (évite remontée iOS après retour du picker)
-    saveScroll();
-    pendingRestoreRef.current = true;
-    if (!document.body.dataset.__scrollLocked) lock();
-
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -526,12 +554,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     } catch (e) {
       console.error(e);
       alert('Échec de la sauvegarde du rapport');
-    } finally {
-      // Restaure le body + position
-      unlock();
-      // double sécurité immédiate :
-      restoreScroll();
     }
+    // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
   };
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
