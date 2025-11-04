@@ -2,23 +2,27 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 
 /**
- * IRShowerFormsView — Étude + Plan technique
- * - Mentions en-tête comme la maquette (titre, note, NOM/PRÉNOM, exemplaire…)
- * - Accessoires au style du schéma (S, barre de maintien, robinetterie, ciel de pluie, échelle)
- * - Détails textuels des symboles sous la légende
- * - Zones bleues (bandeaux) = murs : création ET déplacement interdits
- * - Échelle 1:1 (1 px = 1 cm), cotes en cm
- * - Export PDF 2 pages (import dynamique -> build Vercel OK même sans deps)
+ * IRShowerFormsView — Version améliorée
+ * NOUVELLES FONCTIONNALITÉS :
+ * - Capture de photos AVANT/APRÈS avec caméra mobile
+ * - Sauvegarde automatique dans localStorage (toutes les 5 sec)
+ * - Restauration automatique au chargement
+ * - Validation des champs obligatoires avant export PDF
+ * - Design moderne avec gradients et ombres
+ * - Bouton "Nouvelle étude" pour réinitialiser
+ * - Export PDF incluant les photos
+ * - UX mobile optimisée (tactile feedback)
  */
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
-const BANNER_H = 40; // bandeaux bleus
+const BANNER_H = 40;
 const LABEL_OFFSET = 8;
 
 /* ---------- UI helpers ---------- */
-const Section = ({ title, children, style }) => (
+const Section = ({ title, children, style, className = "" }) => (
   <div
+    className={className}
     style={{
       border: "1px solid #e5e7eb",
       borderRadius: 12,
@@ -34,7 +38,11 @@ const Section = ({ title, children, style }) => (
 );
 const Row = ({ children }) => <div className="ir-row">{children}</div>;
 const Col = ({ span = 6, children }) => <div className={`ir-col span-${Math.min(12, Math.max(1, span))}`}>{children}</div>;
-const Label = ({ children }) => <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 4 }}>{children}</label>;
+const Label = ({ children, required }) => (
+  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 4 }}>
+    {children} {required && <span style={{ color: "#ef4444" }}>*</span>}
+  </label>
+);
 const Input = (props) => <input {...props} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 10px", fontSize: 14, minHeight: 44 }} />;
 const Check = ({ label, ...props }) => (
   <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, marginRight: 12 }}>
@@ -69,8 +77,8 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
     const midY = Math.floor(h / 2);
 
     // zones
-    ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, midY);     // AVANT
-    ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, midY, w, h-midY); // APRÈS
+    ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, midY);
+    ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, midY, w, h-midY);
 
     // bandeaux (murs)
     ctx.save();
@@ -147,7 +155,6 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.translate(el.x, el.y);
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
-        // symbole simple "mitigeur" (rond + croix + petit bec)
         ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();
@@ -155,7 +162,6 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       };
 
       const drawSeat = (el) => {
-        // demi-ovale plaqué mur
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
@@ -188,7 +194,7 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
 
 /* ---------- Main ---------- */
 export default function IRShowerFormsView() {
-  const [tab, setTab] = useState("plan");
+  const [tab, setTab] = useState("etude");
 
   /* ÉTUDE */
   const [study, setStudy] = useState({
@@ -208,7 +214,7 @@ export default function IRShowerFormsView() {
   const toggleTravaux = (key) => setStudy((s) => ({ ...s, travaux: { ...s.travaux, [key]: !s.travaux[key] } }));
 
   /* PLAN */
-  const pxPerCm = 1; // 1 px = 1 cm
+  const pxPerCm = 1;
   const toCm = (pxLen) => pxLen / Math.max(0.0001, pxPerCm);
 
   const canvasRef = useRef(null);
@@ -216,12 +222,108 @@ export default function IRShowerFormsView() {
 
   const [elements, setElements] = useState([]);
   const [preview, setPreview] = useState(null);
-  const [tool, setTool] = useState("select"); // 'select' | 'dim' | 'rect' | 'mixer' | 'seat' | 'text'
+  const [tool, setTool] = useState("select");
   const [snap, setSnap] = useState(true);
   const [ortho, setOrtho] = useState(true);
   const [startPt, setStartPt] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
+
+  /* PHOTOS AVANT/APRÈS */
+  const [photosAvant, setPhotosAvant] = useState([]);
+  const [photosApres, setPhotosApres] = useState([]);
+  const photoAvantInputRef = useRef(null);
+  const photoApresInputRef = useRef(null);
+
+  const handlePhotoCapture = (e, type) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const photoData = { id: newId(), url: ev.target.result, name: file.name };
+        if (type === 'avant') setPhotosAvant(prev => [...prev, photoData]);
+        else setPhotosApres(prev => [...prev, photoData]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const removePhoto = (id, type) => {
+    if (type === 'avant') setPhotosAvant(prev => prev.filter(p => p.id !== id));
+    else setPhotosApres(prev => prev.filter(p => p.id !== id));
+  };
+
+  /* SAUVEGARDE AUTOMATIQUE */
+  useEffect(() => {
+    const saveTimer = setInterval(() => {
+      const data = { study, elements, photosAvant, photosApres, timestamp: Date.now() };
+      try {
+        localStorage.setItem('ir-shower-draft', JSON.stringify(data));
+      } catch (e) {
+        console.error('Sauvegarde auto échouée:', e);
+      }
+    }, 5000);
+    return () => clearInterval(saveTimer);
+  }, [study, elements, photosAvant, photosApres]);
+
+  // Restauration au chargement
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ir-shower-draft');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.study) setStudy(data.study);
+        if (data.elements) setElements(data.elements);
+        if (data.photosAvant) setPhotosAvant(data.photosAvant);
+        if (data.photosApres) setPhotosApres(data.photosApres);
+      }
+    } catch (e) {
+      console.error('Restauration échouée:', e);
+    }
+  }, []);
+
+  const resetAll = () => {
+    if (window.confirm('⚠️ Réinitialiser toute l\'étude ? Cette action est irréversible.')) {
+      setStudy({
+        client_nom: "", client_prenom: "", client_adresse: "",
+        inst_nom: "", inst_prenom: "", date_visite: "",
+        longueur_receveur: "", largeur_receveur: "", largeur_acces: "",
+        hauteur_plafond: "", hauteur_estimee_receveur: "", largeur_sdb: "", longueur_sdb: "",
+        robinetterie_type: "thermostatique", vanne_ok: "oui", fenetre: "oui",
+        h_fenetre: "", l_fenetre: "", dist_gauche: "", dist_droit: "", dist_plafond: "", dist_sol: "",
+        travaux: {
+          coffrage: false, creation_entretoise: false, reprise_sol: false, saignee_sol: false, modif_plomberie: false,
+          depose_wc_ou_meuble: false, depose_bidet: false, depose_douche_suppl: false, depose_sanitaire: false,
+          depl_machine: false, depl_prise: false, pompe_relevage: false, finition_haute: false
+        },
+        travaux_autres: ""
+      });
+      setElements([]);
+      setPhotosAvant([]);
+      setPhotosApres([]);
+      localStorage.removeItem('ir-shower-draft');
+      setTab("etude");
+    }
+  };
+
+  /* VALIDATION */
+  const validateStudy = () => {
+    const errors = [];
+    if (!study.client_nom || !study.client_prenom) errors.push('Nom et prénom du client');
+    if (!study.inst_nom || !study.inst_prenom) errors.push('Nom et prénom de l\'installateur');
+    if (!study.date_visite) errors.push('Date de visite');
+    if (!study.longueur_receveur || !study.largeur_receveur) errors.push('Dimensions du receveur');
+    if (!study.largeur_acces) errors.push('Largeur d\'accès');
+
+    if (errors.length > 0) {
+      alert('⚠️ Champs obligatoires manquants :\n\n' + errors.map(e => `• ${e}`).join('\n'));
+      return false;
+    }
+    return true;
+  };
 
   // Refs PDF
   const etudeRef = useRef(null);
@@ -312,7 +414,6 @@ export default function IRShowerFormsView() {
     e.preventDefault(); if (tab !== "plan") return;
     const p = pointerPos(e);
 
-    // murs = interdit de créer dedans
     if (tool !== "select" && isInBanner(p.y)) return;
 
     if (tool === "select") {
@@ -352,7 +453,7 @@ export default function IRShowerFormsView() {
       return;
     }
 
-    setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) }); // dim/rect: point de départ hors bandeau
+    setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) });
   };
 
   const onPointerMove = (e) => {
@@ -369,7 +470,6 @@ export default function IRShowerFormsView() {
         }
         if (el.type === "dim") {
           const dx = p.x - startPt.x, dy = p.y - startPt.y;
-          // refuse le déplacement si ça amène un point dans la bande
           const ny1 = clampYOutOfBanner(el.y1 + dy);
           const ny2 = clampYOutOfBanner(el.y2 + dy);
           return { ...el, x1: el.x1 + dx, y1: ny1, x2: el.x2 + dx, y2: ny2 };
@@ -377,7 +477,6 @@ export default function IRShowerFormsView() {
         if (el.type === "text" || el.type === "symbol") {
           const nx = p.x - dragOffset.dx;
           const ny = clampYOutOfBanner(p.y - dragOffset.dy);
-          // siège : re-plaquage dynamique
           if (el.type === "symbol" && el.kind === "seat") {
             const c = clampSeatToWall({ x: nx, y: ny });
             return { ...el, ...c };
@@ -406,7 +505,6 @@ export default function IRShowerFormsView() {
     const p = pointerPos(e);
 
     if (tool === "select") {
-      // si c'est un siège, re-plaquer au mur
       const el = elements.find((x) => x.id === selectedId);
       if (el && el.type === "symbol" && el.kind === "seat") {
         setElements((els) => els.map((x) => (x.id !== el.id ? x : { ...x, ...clampSeatToWall({ x: x.x, y: x.y }) })));
@@ -448,11 +546,13 @@ export default function IRShowerFormsView() {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ---------- Export PDF (import dynamique pour éviter l'erreur de build sans deps) ---------- */
+  /* ---------- Export PDF ---------- */
   const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
   const waitPaint = async (ms = 120) => { await raf(); await new Promise((r) => setTimeout(r, ms)); };
 
   const exportPDF = async () => {
+    if (!validateStudy()) return;
+
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
@@ -481,16 +581,42 @@ export default function IRShowerFormsView() {
       const w2 = pageW, h2 = (c2.height / c2.width) * w2;
       pdf.addImage(img2, "PNG", 0, Math.max(0, (pageH - h2) / 2), w2, h2, undefined, "FAST");
 
-      pdf.save("Etude_et_Plan_IR.pdf");
+      // Pages photos si présentes
+      if (photosAvant.length > 0) {
+        pdf.addPage();
+        pdf.setFontSize(18);
+        pdf.text("Photos AVANT travaux", pageW / 2, 20, { align: "center" });
+        let y = 30;
+        for (const photo of photosAvant) {
+          if (y > pageH - 60) { pdf.addPage(); y = 20; }
+          const imgW = pageW - 40;
+          const imgH = imgW * 0.75;
+          pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
+          y += imgH + 10;
+        }
+      }
+
+      if (photosApres.length > 0) {
+        pdf.addPage();
+        pdf.setFontSize(18);
+        pdf.text("Photos APRÈS travaux", pageW / 2, 20, { align: "center" });
+        let y = 30;
+        for (const photo of photosApres) {
+          if (y > pageH - 60) { pdf.addPage(); y = 20; }
+          const imgW = pageW - 40;
+          const imgH = imgW * 0.75;
+          pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
+          y += imgH + 10;
+        }
+      }
+
+      pdf.save(`Etude_IR_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
       setTab(prevTab);
     } catch (err) {
-      alert("⚠️ L’export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
+      alert("⚠️ L'export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
       console.error(err);
     }
   };
-
-  /* ---------- Accessoires (état) ---------- */
-  const [accessoires, setAccessoires] = useState({ siege: false, barre: false, robinetterie: "mitigeur", ciel: false });
 
   /* ---------- Styles ---------- */
   const styles = (
@@ -511,13 +637,96 @@ export default function IRShowerFormsView() {
         .ir-col.span-11 { grid-column: span 11 / span 11; }
         .ir-col.span-12 { grid-column: span 12 / span 12; }
       }
-      .actions-sticky { position: sticky; top: 0; z-index: 10; background: #ffffffcc; backdrop-filter: blur(4px); border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; }
+      .actions-sticky {
+        position: sticky; top: 0; z-index: 10;
+        background: linear-gradient(135deg, #0ea5e9 0%, #0ea5a5 100%);
+        box-shadow: 0 4px 12px rgba(14,165,233,0.3);
+        padding: 12px 16px; margin: -16px -16px 16px -16px;
+        border-radius: 0;
+      }
       .ir-canvas-wrap { height: 560px; }
       @media (max-width: 767px) { .ir-canvas-wrap { height: 460px; } }
       canvas.ir-grid { touch-action: none; display: block; width: 100%; height: 100%; }
       button, input, select, textarea { min-height: 44px; }
+      button:active:not(:disabled) { transform: scale(0.97); opacity: 0.8; }
       .legend svg { vertical-align: middle; }
-      .header-card h2 { letter-spacing: .5px; }
+      .header-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border: 2px solid #0ea5a5;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+      .header-card h2 {
+        letter-spacing: .5px;
+        background: linear-gradient(135deg, #0ea5e9, #0ea5a5);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .photo-item {
+        position: relative;
+        aspect-ratio: 4/3;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #e5e7eb;
+        background: #f8fafc;
+      }
+      .photo-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .photo-remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        min-height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+      }
+      .photo-add-btn {
+        aspect-ratio: 4/3;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        gap: 8px;
+        transition: all 0.2s;
+      }
+      .photo-add-btn:hover {
+        border-color: #0ea5a5;
+        background: #e0f2fe;
+      }
+      .photo-add-btn svg {
+        width: 32px;
+        height: 32px;
+        stroke: #64748b;
+      }
+      @media (max-width: 640px) {
+        .photo-grid {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+      }
     `}</style>
   );
 
@@ -525,60 +734,63 @@ export default function IRShowerFormsView() {
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
       {styles}
 
-      {/* BARRE D’ACTIONS (Export toujours visible) */}
+      {/* BARRE D'ACTIONS */}
       <div className="actions-sticky">
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600 }}>
-            Exporter PDF (Étude + Plan)
-          </button>
+        <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: 20, margin: 0, color: "#fff", fontWeight: 700 }}>Documents IR — Douche</h1>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={resetAll} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:600 }}>
+              Nouvelle étude
+            </button>
+            <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #fff", background:"#fff", color:"#0ea5a5", fontWeight:600 }}>
+              Exporter PDF
+            </button>
+          </div>
         </div>
       </div>
 
-      <h1 style={{ fontSize: 22, marginBottom: 12 }}>Documents IR – Douche</h1>
-
       {/* ONGLETS */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={() => setTab("etude")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "etude" ? "#e2e8f0" : "#fff", flex: 1 }}>Étude technique</button>
-        <button onClick={() => setTab("plan")}  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "plan"  ? "#e2e8f0" : "#fff", flex: 1 }}>Plan technique</button>
+        <button onClick={() => setTab("etude")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "etude" ? "#e2e8f0" : "#fff", flex: 1, fontWeight: 600 }}>Étude technique</button>
+        <button onClick={() => setTab("plan")}  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: tab === "plan"  ? "#e2e8f0" : "#fff", flex: 1, fontWeight: 600 }}>Plan technique</button>
       </div>
 
       {/* ======= PAGE 1 — ÉTUDE ======= */}
       <div ref={etudeRef}>
         {tab === "etude" && (
           <>
-            <Section style={{ paddingBottom: 8 }} >
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>ÉTUDE TECHNIQUE</h2>
+            <Section className="header-card" style={{ paddingBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>ÉTUDE TECHNIQUE</h2>
             </Section>
 
             <Section title="En-têtes">
               <Row>
-                <Col span={4}><Label>Date de la visite</Label><Input type="date" value={study.date_visite} onChange={(e)=>setStudy(s=>({...s, date_visite:e.target.value}))} /></Col>
-                <Col span={4}><Label>Installateur — Nom</Label><Input value={study.inst_nom} onChange={(e)=>setStudy(s=>({...s, inst_nom:e.target.value}))} /></Col>
-                <Col span={4}><Label>Installateur — Prénom</Label><Input value={study.inst_prenom} onChange={(e)=>setStudy(s=>({...s, inst_prenom:e.target.value}))} /></Col>
+                <Col span={4}><Label required>Date de la visite</Label><Input type="date" value={study.date_visite} onChange={(e)=>setStudy(s=>({...s, date_visite:e.target.value}))} /></Col>
+                <Col span={4}><Label required>Installateur — Nom</Label><Input value={study.inst_nom} onChange={(e)=>setStudy(s=>({...s, inst_nom:e.target.value}))} /></Col>
+                <Col span={4}><Label required>Installateur — Prénom</Label><Input value={study.inst_prenom} onChange={(e)=>setStudy(s=>({...s, inst_prenom:e.target.value}))} /></Col>
               </Row>
               <Row>
-                <Col span={4}><Label>Client — Nom</Label><Input value={study.client_nom} onChange={(e)=>setStudy(s=>({...s, client_nom:e.target.value}))} /></Col>
-                <Col span={4}><Label>Client — Prénom</Label><Input value={study.client_prenom} onChange={(e)=>setStudy(s=>({...s, client_prenom:e.target.value}))} /></Col>
+                <Col span={4}><Label required>Client — Nom</Label><Input value={study.client_nom} onChange={(e)=>setStudy(s=>({...s, client_nom:e.target.value}))} /></Col>
+                <Col span={4}><Label required>Client — Prénom</Label><Input value={study.client_prenom} onChange={(e)=>setStudy(s=>({...s, client_prenom:e.target.value}))} /></Col>
                 <Col span={4}><Label>Client — Adresse</Label><Input value={study.client_adresse} onChange={(e)=>setStudy(s=>({...s, client_adresse:e.target.value}))} /></Col>
               </Row>
             </Section>
 
-            {/* … (tout le bloc Étude technique + Travaux comme avant) */}
             <Section title="Étude technique">
               <Row>
-                <Col span={6}><Label>Longueur receveur (mm)</Label><Input value={study.longueur_receveur} onChange={(e)=>setStudy(s=>({...s, longueur_receveur:e.target.value}))} /></Col>
-                <Col span={6}><Label>Largeur receveur (mm)</Label><Input value={study.largeur_receveur} onChange={(e)=>setStudy(s=>({...s, largeur_receveur:e.target.value}))} /></Col>
+                <Col span={6}><Label required>Longueur receveur (mm)</Label><Input type="number" value={study.longueur_receveur} onChange={(e)=>setStudy(s=>({...s, longueur_receveur:e.target.value}))} /></Col>
+                <Col span={6}><Label required>Largeur receveur (mm)</Label><Input type="number" value={study.largeur_receveur} onChange={(e)=>setStudy(s=>({...s, largeur_receveur:e.target.value}))} /></Col>
               </Row>
               <Row>
-                <Col span={6}><Label>Largeur d'accès douche (min 65cm)</Label><Input value={study.largeur_acces} onChange={(e)=>setStudy(s=>({...s, largeur_acces:e.target.value}))} /></Col>
-                <Col span={6}><Label>Hauteur plafond (mm)</Label><Input value={study.hauteur_plafond} onChange={(e)=>setStudy(s=>({...s, hauteur_plafond:e.target.value}))} /></Col>
+                <Col span={6}><Label required>Largeur d'accès douche (min 65cm)</Label><Input type="number" value={study.largeur_acces} onChange={(e)=>setStudy(s=>({...s, largeur_acces:e.target.value}))} /></Col>
+                <Col span={6}><Label>Hauteur plafond (mm)</Label><Input type="number" value={study.hauteur_plafond} onChange={(e)=>setStudy(s=>({...s, hauteur_plafond:e.target.value}))} /></Col>
               </Row>
               <Row>
-                <Col span={6}><Label>Hauteur estimée du receveur (mm)</Label><Input value={study.hauteur_estimee_receveur} onChange={(e)=>setStudy(s=>({...s, hauteur_estimee_receveur:e.target.value}))} /></Col>
-                <Col span={6}><Label>Largeur de la salle de bains (mm)</Label><Input value={study.largeur_sdb} onChange={(e)=>setStudy(s=>({...s, largeur_sdb:e.target.value}))} /></Col>
+                <Col span={6}><Label>Hauteur estimée du receveur (mm)</Label><Input type="number" value={study.hauteur_estimee_receveur} onChange={(e)=>setStudy(s=>({...s, hauteur_estimee_receveur:e.target.value}))} /></Col>
+                <Col span={6}><Label>Largeur de la salle de bains (mm)</Label><Input type="number" value={study.largeur_sdb} onChange={(e)=>setStudy(s=>({...s, largeur_sdb:e.target.value}))} /></Col>
               </Row>
               <Row>
-                <Col span={6}><Label>Longueur de la salle de bains (mm)</Label><Input value={study.longueur_sdb} onChange={(e)=>setStudy(s=>({...s, longueur_sdb:e.target.value}))} /></Col>
+                <Col span={6}><Label>Longueur de la salle de bains (mm)</Label><Input type="number" value={study.longueur_sdb} onChange={(e)=>setStudy(s=>({...s, longueur_sdb:e.target.value}))} /></Col>
                 <Col span={6}><Label>Type de robinetterie</Label>
                   <div>
                     <Radio name="robinetterie" label="Thermostatique" checked={study.robinetterie_type==="thermostatique"} onChange={()=>setStudy(s=>({...s, robinetterie_type:"thermostatique"}))} />
@@ -601,30 +813,98 @@ export default function IRShowerFormsView() {
                 </Col>
               </Row>
               <Row>
-                <Col span={4}><Label>Hauteur de fenêtre (mm)</Label><Input value={study.h_fenetre} onChange={(e)=>setStudy(s=>({...s, h_fenetre:e.target.value}))} /></Col>
-                <Col span={4}><Label>Largeur de fenêtre (mm)</Label><Input value={study.l_fenetre} onChange={(e)=>setStudy(s=>({...s, l_fenetre:e.target.value}))} /></Col>
-                <Col span={4}><Label>Distance fenêtre / mur gauche (mm)</Label><Input value={study.dist_gauche} onChange={(e)=>setStudy(s=>({...s, dist_gauche:e.target.value}))} /></Col>
+                <Col span={4}><Label>Hauteur de fenêtre (mm)</Label><Input type="number" value={study.h_fenetre} onChange={(e)=>setStudy(s=>({...s, h_fenetre:e.target.value}))} /></Col>
+                <Col span={4}><Label>Largeur de fenêtre (mm)</Label><Input type="number" value={study.l_fenetre} onChange={(e)=>setStudy(s=>({...s, l_fenetre:e.target.value}))} /></Col>
+                <Col span={4}><Label>Distance fenêtre / mur gauche (mm)</Label><Input type="number" value={study.dist_gauche} onChange={(e)=>setStudy(s=>({...s, dist_gauche:e.target.value}))} /></Col>
               </Row>
               <Row>
-                <Col span={4}><Label>Distance fenêtre / mur droit (mm)</Label><Input value={study.dist_droit} onChange={(e)=>setStudy(s=>({...s, dist_droit:e.target.value}))} /></Col>
-                <Col span={4}><Label>Distance fenêtre / plafond (mm)</Label><Input value={study.dist_plafond} onChange={(e)=>setStudy(s=>({...s, dist_plafond:e.target.value}))} /></Col>
-                <Col span={4}><Label>Distance fenêtre / sol (mm)</Label><Input value={study.dist_sol} onChange={(e)=>setStudy(s=>({...s, dist_sol:e.target.value}))} /></Col>
+                <Col span={4}><Label>Distance fenêtre / mur droit (mm)</Label><Input type="number" value={study.dist_droit} onChange={(e)=>setStudy(s=>({...s, dist_droit:e.target.value}))} /></Col>
+                <Col span={4}><Label>Distance fenêtre / plafond (mm)</Label><Input type="number" value={study.dist_plafond} onChange={(e)=>setStudy(s=>({...s, dist_plafond:e.target.value}))} /></Col>
+                <Col span={4}><Label>Distance fenêtre / sol (mm)</Label><Input type="number" value={study.dist_sol} onChange={(e)=>setStudy(s=>({...s, dist_sol:e.target.value}))} /></Col>
               </Row>
             </Section>
 
             <Section title="Travaux complémentaires nécessaires">
               <Row>
                 <Col span={12}>
-                  {Object.entries(study.travaux).map(([k,v]) => (
-                    <Check key={k} label={k.replaceAll('_',' ')} checked={v} onChange={()=>toggleTravaux(k)} />
-                  ))}
+                  <Check label="Coffrage" checked={study.travaux.coffrage} onChange={()=>toggleTravaux('coffrage')} />
+                  <Check label="Création entretoise" checked={study.travaux.creation_entretoise} onChange={()=>toggleTravaux('creation_entretoise')} />
+                  <Check label="Reprise sol" checked={study.travaux.reprise_sol} onChange={()=>toggleTravaux('reprise_sol')} />
+                  <Check label="Saignée sol" checked={study.travaux.saignee_sol} onChange={()=>toggleTravaux('saignee_sol')} />
+                  <Check label="Modif plomberie" checked={study.travaux.modif_plomberie} onChange={()=>toggleTravaux('modif_plomberie')} />
+                  <Check label="Dépose WC ou meuble" checked={study.travaux.depose_wc_ou_meuble} onChange={()=>toggleTravaux('depose_wc_ou_meuble')} />
+                  <Check label="Dépose bidet" checked={study.travaux.depose_bidet} onChange={()=>toggleTravaux('depose_bidet')} />
+                  <Check label="Dépose douche suppl" checked={study.travaux.depose_douche_suppl} onChange={()=>toggleTravaux('depose_douche_suppl')} />
+                  <Check label="Dépose sanitaire" checked={study.travaux.depose_sanitaire} onChange={()=>toggleTravaux('depose_sanitaire')} />
+                  <Check label="Dépl machine" checked={study.travaux.depl_machine} onChange={()=>toggleTravaux('depl_machine')} />
+                  <Check label="Dépl prise" checked={study.travaux.depl_prise} onChange={()=>toggleTravaux('depl_prise')} />
+                  <Check label="Pompe relevage" checked={study.travaux.pompe_relevage} onChange={()=>toggleTravaux('pompe_relevage')} />
+                  <Check label="Finition haute" checked={study.travaux.finition_haute} onChange={()=>toggleTravaux('finition_haute')} />
                 </Col>
               </Row>
               <Row>
                 <Col span={12}><Label>Autres</Label>
-                  <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8 }} />
+                  <textarea value={study.travaux_autres} onChange={(e)=>setStudy(s=>({...s, travaux_autres:e.target.value}))} style={{ width: "100%", minHeight: 100, border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, fontSize: 14 }} />
                 </Col>
               </Row>
+            </Section>
+
+            {/* PHOTOS AVANT */}
+            <Section title="Photos AVANT travaux">
+              <div className="photo-grid">
+                {photosAvant.map(photo => (
+                  <div key={photo.id} className="photo-item">
+                    <img src={photo.url} alt={photo.name} />
+                    <button className="photo-remove" onClick={() => removePhoto(photo.id, 'avant')}>×</button>
+                  </div>
+                ))}
+                <label className="photo-add-btn">
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                  </svg>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>Ajouter</span>
+                  <input
+                    ref={photoAvantInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => handlePhotoCapture(e, 'avant')}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            </Section>
+
+            {/* PHOTOS APRÈS */}
+            <Section title="Photos APRÈS travaux">
+              <div className="photo-grid">
+                {photosApres.map(photo => (
+                  <div key={photo.id} className="photo-item">
+                    <img src={photo.url} alt={photo.name} />
+                    <button className="photo-remove" onClick={() => removePhoto(photo.id, 'apres')}>×</button>
+                  </div>
+                ))}
+                <label className="photo-add-btn">
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                  </svg>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>Ajouter</span>
+                  <input
+                    ref={photoApresInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => handlePhotoCapture(e, 'apres')}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
             </Section>
           </>
         )}
@@ -633,9 +913,8 @@ export default function IRShowerFormsView() {
       {/* ======= PAGE 2 — PLAN ======= */}
       {tab === "plan" && (
         <div>
-          {/* Entête comme la maquette */}
-          <Section style={{ paddingBottom: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
+          <Section className="header-card" style={{ paddingBottom: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
             <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
               Plan non contractuel. Nécessite une validation technique au préalable. <br />
               Dimensions sous réserve des éventuelles contraintes techniques rencontrées.
@@ -647,7 +926,7 @@ export default function IRShowerFormsView() {
             <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>Exemplaire à destination du client</div>
           </Section>
 
-          {/* OUTILS (à l'écran seulement) */}
+          {/* OUTILS */}
           <Section title="Outils">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <button onClick={()=>setTool("select")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="select"?"#e2e8f0":"#fff" }}>Sélection</button>
@@ -664,9 +943,8 @@ export default function IRShowerFormsView() {
             <Small>Zones bleues = murs (création et déplacement interdits). Double-clic pour éditer un texte. Le siège se plaque automatiquement au mur.</Small>
           </Section>
 
-          {/* ZONE EXPORTABLE (plan + accessoires + détails) */}
+          {/* ZONE EXPORTABLE */}
           <div ref={planExportRef}>
-            {/* Plan */}
             <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
               <div className="ir-canvas-wrap">
                 <canvas
@@ -687,12 +965,10 @@ export default function IRShowerFormsView() {
             {/* Accessoires au style du schéma */}
             <Section>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, alignItems: "center" }}>
-                {/* Siège (carré avec S) */}
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <div style={{ width:32, height:32, border:"2px solid #0f172a", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800 }}>S</div>
                   <span>Siège</span>
                 </div>
-                {/* Barre de maintien (ligne avec “curseur”) */}
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <svg width="60" height="18" viewBox="0 0 60 18">
                     <line x1="6" y1="9" x2="54" y2="9" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" />
@@ -700,7 +976,6 @@ export default function IRShowerFormsView() {
                   </svg>
                   <span>Barre de maintien</span>
                 </div>
-                {/* Robinetterie (sélecteur) */}
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <svg width="48" height="20" viewBox="0 0 48 20">
                     <circle cx="18" cy="10" r="3" fill="none" stroke="#0f172a" strokeWidth="2" />
@@ -708,7 +983,6 @@ export default function IRShowerFormsView() {
                   </svg>
                   <span>Robinetterie</span>
                 </div>
-                {/* Ciel de pluie */}
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <svg width="60" height="20" viewBox="0 0 60 20">
                     <line x1="6" y1="6" x2="48" y2="6" stroke="#0f172a" strokeWidth="2" />
@@ -716,7 +990,6 @@ export default function IRShowerFormsView() {
                   </svg>
                   <span>Ciel de pluie</span>
                 </div>
-                {/* Échelle */}
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <svg width="36" height="20" viewBox="0 0 36 20">
                     <line x1="8" y1="16" x2="28" y2="16" stroke="#0f172a" strokeWidth="2" />
@@ -726,12 +999,11 @@ export default function IRShowerFormsView() {
                 </div>
               </div>
 
-              {/* Détails texte */}
               <div style={{ marginTop: 10, fontSize: 12, color: "#334155" }}>
-                <div><strong>Mitigeur&nbsp;:</strong> symbole rond avec croix et bec orienté vers l’intérieur du plan.</div>
+                <div><strong>Mitigeur&nbsp;:</strong> symbole rond avec croix et bec orienté vers l'intérieur du plan.</div>
                 <div><strong>Siège mural&nbsp;:</strong> demi-ovale plaqué contre le mur le plus proche (haut/gauche/droite).</div>
                 <div><strong>Barre de maintien&nbsp;:</strong> segment avec curseur (position libre selon besoin).</div>
-                <div><strong>Ciel de pluie&nbsp;:</strong> ligne d’alimentation et pomme de douche en bout.</div>
+                <div><strong>Ciel de pluie&nbsp;:</strong> ligne d'alimentation et pomme de douche en bout.</div>
                 <div><strong>Texte libre&nbsp;:</strong> posable et déplaçable précisément, double-clic pour éditer.</div>
               </div>
             </Section>
@@ -740,7 +1012,7 @@ export default function IRShowerFormsView() {
           {/* Actions locales */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
             <button onClick={resetPlan} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #cbd5e1", background:"#fff" }}>
-              Réinitialiser
+              Réinitialiser le plan
             </button>
           </div>
         </div>
