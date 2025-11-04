@@ -1,0 +1,51 @@
+/* src/pages/EmployeePlanningView.css */
+
+.employee-planning-view {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.planning-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.planning-description {
+  padding: 1rem;
+  background-color: #f0f9ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 6px;
+}
+
+.planning-description p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .employee-planning-view {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .planning-title {
+    font-size: 1.25rem;
+  }
+
+  .planning-description {
+    padding: 0.75rem;
+  }
+
+  .planning-description p {
+    font-size: 0.875rem;
+  }
+}

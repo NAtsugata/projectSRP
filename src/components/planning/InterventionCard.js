@@ -46,7 +46,13 @@ const InterventionCard = ({
   const documentsCount = intervention.intervention_briefing_documents?.length || 0;
 
   return (
-    <div className="intervention-card">
+    <div
+      className={`intervention-card ${!showActions ? 'clickable' : ''}`}
+      onClick={!showActions ? () => onView?.(intervention) : undefined}
+      role={!showActions ? 'button' : undefined}
+      tabIndex={!showActions ? 0 : undefined}
+      onKeyPress={!showActions ? (e) => e.key === 'Enter' && onView?.(intervention) : undefined}
+    >
       <div className="intervention-card-content">
         {/* Header */}
         <div className="intervention-card-header">

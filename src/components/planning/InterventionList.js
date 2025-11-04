@@ -80,6 +80,7 @@ const filterInterventions = (interventions, filters) => {
  * @param {Function} onDelete - Handler to delete
  * @param {boolean} showFilters - Show filter controls
  * @param {boolean} showSort - Show sort controls
+ * @param {boolean} showActions - Show actions on cards (default true)
  */
 const InterventionList = ({
   interventions = [],
@@ -87,7 +88,8 @@ const InterventionList = ({
   onArchive,
   onDelete,
   showFilters = true,
-  showSort = true
+  showSort = true,
+  showActions = true
 }) => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -164,6 +166,7 @@ const InterventionList = ({
                 onView={onView}
                 onArchive={onArchive}
                 onDelete={onDelete}
+                showActions={showActions}
               />
             </div>
           ))}

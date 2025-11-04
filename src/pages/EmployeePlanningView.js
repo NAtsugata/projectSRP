@@ -1,23 +1,44 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { GenericStatusBadge } from '../components/SharedUI';
+// src/pages/EmployeePlanningView.js - Version refactorisée
+// Planning employé avec réutilisation des composants
 
-export default function EmployeePlanningView({ interventions }) {
-    const navigate = useNavigate();
+import React, { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { InterventionList } from '../components/planning';
+import { LoadingSpinner } from '../components/ui';
+import './EmployeePlanningView.css';
+
+export default function EmployeePlanningView({ interventions, loading = false }) {
+  const navigate = useNavigate();
+
+  const handleView = useCallback((intervention) => {
+    navigate(`/planning/${intervention.id}`);
+  }, [navigate]);
+
+  // Loading state
+  if (loading) {
     return (
-        <div>
-            <h2 className="view-title">Votre Planning</h2>
-            {interventions.length > 0 ? interventions.map(int => (
-                <div key={int.id} onClick={() => navigate('/planning/' + int.id)} className="intervention-list-item-clickable">
-                    <div style={{padding: '1rem'}}>
-                        <div className="flex-between">
-                            <div><p className="font-semibold">{int.client}</p><p className="text-muted">{int.service}</p></div>
-                            <GenericStatusBadge status={int.status} colorMap={{ "À venir": "status-badge-blue", "Terminée": "status-badge-green" }}/>
-                        </div>
-                        <p className="text-muted mt-2">{int.date} à {int.time}</p>
-                    </div>
-                </div>
-            )) : <div className="card-white" style={{textAlign: 'center'}}><p>Aucune intervention planifiée.</p></div>}
-        </div>
+      <div className="employee-planning-view">
+        <h2 className="planning-title">Votre Planning</h2>
+        <LoadingSpinner text="Chargement de vos interventions..." />
+      </div>
     );
+  }
+
+  return (
+    <div className="employee-planning-view">
+      <h2 className="planning-title">Votre Planning</h2>
+
+      <div className="planning-description">
+        <p>Retrouvez ici toutes les interventions qui vous sont assignées.</p>
+      </div>
+
+      <InterventionList
+        interventions={interventions}
+        onView={handleView}
+        showFilters={true}
+        showSort={true}
+        showActions={false}
+      />
+    </div>
+  );
 }
