@@ -1,0 +1,128 @@
+/* src/components/intervention/SmartAlerts.css */
+
+.smart-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.smart-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: alertSlide 0.3s ease-out;
+  border: 1px solid;
+}
+
+@keyframes alertSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.smart-alert:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.smart-alert:active {
+  transform: scale(0.99);
+}
+
+/* Alert Types */
+.alert-error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.alert-info {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+/* Icon */
+.alert-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Content */
+.alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin-bottom: 0.125rem;
+  line-height: 1.3;
+}
+
+.alert-message {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* Arrow */
+.alert-arrow {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.smart-alert:hover .alert-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .smart-alert {
+    padding: 0.875rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .alert-icon {
+    font-size: 1.25rem;
+  }
+
+  .alert-title {
+    font-size: 0.875rem;
+  }
+
+  .alert-message {
+    font-size: 0.75rem;
+  }
+
+  .alert-arrow {
+    width: 16px;
+    height: 16px;
+  }
+}
