@@ -13,12 +13,19 @@ import { jsPDF } from "jspdf";
  * - Export PDF 3 pages OPTIMISÉ
  * - Interface RESPONSIVE mobile
  * - Légende complète avec explications
+ * - 💾 SAUVEGARDE AUTOMATIQUE (localStorage)
+ * - ✅ VALIDATION champs obligatoires
+ * - 📊 BARRE DE PROGRESSION export
+ * - 🔔 NOTIFICATIONS toast
+ * - 📥 EXPORT/IMPORT JSON
  */
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
 const BANNER_H = 40;
 const LABEL_OFFSET = 8;
+const AUTOSAVE_KEY = "ir_douche_autosave";
+const AUTOSAVE_INTERVAL = 30000; // 30 secondes
 
 /* ---------- UI helpers ---------- */
 const Section = ({ title, children, style }) => (
@@ -51,6 +58,55 @@ const Radio = ({ label, name, ...props }) => (
   </label>
 );
 const Small = ({ children, style }) => <div style={{ fontSize: 12, color: "#64748b", ...style }}>{children}</div>;
+
+/* ---------- Toast Notification Component ---------- */
+const Toast = ({ message, type = "success", onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === "success" ? "#10b981" : type === "error" ? "#ef4444" : "#3b82f6";
+  const icon = type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️";
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 80,
+      right: 20,
+      zIndex: 9999,
+      background: bgColor,
+      color: "#fff",
+      padding: "12px 20px",
+      borderRadius: 8,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      minWidth: 300,
+      maxWidth: 500,
+      animation: "slideIn 0.3s ease"
+    }}>
+      <span style={{ fontSize: 18 }}>{icon}</span>
+      <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{message}</span>
+      <button
+        onClick={onClose}
+        style={{
+          background: "transparent",
+          border: "none",
+          color: "#fff",
+          cursor: "pointer",
+          fontSize: 18,
+          padding: 0,
+          width: 24,
+          height: 24
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+};
 
 /* ---------- helpers ---------- */
 let _nextId = 1;
@@ -463,6 +519,12 @@ export default function IRShowerFormsView() {
 
   /* EXPORT PDF */
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  /* NOTIFICATIONS & SAUVEGARDE */
+  const [toast, setToast] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Refs PDF
   const etudeRef = useRef(null);
@@ -689,14 +751,147 @@ export default function IRShowerFormsView() {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
+  /* ---------- SAUVEGARDE & RESTAURATION ---------- */
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
+  const saveToLocalStorage = React.useCallback(() => {
+    try {
+      const data = {
+        version: "1.0",
+        timestamp: Date.now(),
+        study,
+        elements,
+        signatureClient,
+        signatureInstaller,
+        photosAvant,
+        photosApres,
+        tool,
+        currentColor
+      };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      console.log("💾 Sauvegarde automatique effectuée");
+      return true;
+    } catch (error) {
+      console.error("❌ Erreur sauvegarde:", error);
+      return false;
+    }
+  }, [study, elements, signatureClient, signatureInstaller, photosAvant, photosApres, tool, currentColor]);
+
+  const restoreFromLocalStorage = () => {
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (!saved) return false;
+
+      const data = JSON.parse(saved);
+      setStudy(data.study || {});
+      setElements(data.elements || []);
+      setSignatureClient(data.signatureClient || null);
+      setSignatureInstaller(data.signatureInstaller || null);
+      setPhotosAvant(data.photosAvant || []);
+      setPhotosApres(data.photosApres || []);
+      setTool(data.tool || "select");
+      setCurrentColor(data.currentColor || "#0f172a");
+      setLastSaved(new Date(data.timestamp));
+
+      showToast("Travail restauré avec succès", "success");
+      console.log("✅ Données restaurées depuis localStorage");
+      return true;
+    } catch (error) {
+      console.error("❌ Erreur restauration:", error);
+      return false;
+    }
+  };
+
+  const exportToJSON = () => {
+    const data = {
+      version: "1.0",
+      timestamp: Date.now(),
+      study,
+      elements,
+      signatureClient,
+      signatureInstaller,
+      photosAvant,
+      photosApres
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `IR_Douche_${study.client_nom || 'Backup'}_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Fichier JSON exporté avec succès", "success");
+  };
+
+  const importFromJSON = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = JSON.parse(evt.target.result);
+          setStudy(data.study || {});
+          setElements(data.elements || []);
+          setSignatureClient(data.signatureClient || null);
+          setSignatureInstaller(data.signatureInstaller || null);
+          setPhotosAvant(data.photosAvant || []);
+          setPhotosApres(data.photosApres || []);
+          showToast("Fichier JSON importé avec succès", "success");
+        } catch (error) {
+          showToast("Erreur lors de l'import JSON", "error");
+          console.error(error);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  /* ---------- VALIDATION CHAMPS ---------- */
+  const validateFields = () => {
+    const missing = [];
+
+    if (!study.client_nom) missing.push("Nom client");
+    if (!study.client_prenom) missing.push("Prénom client");
+    if (!study.date_visite) missing.push("Date de visite");
+    if (!study.inst_nom) missing.push("Nom installateur");
+    if (!study.longueur_receveur) missing.push("Longueur receveur");
+    if (!study.largeur_receveur) missing.push("Largeur receveur");
+
+    if (missing.length > 0) {
+      const message = `Champs obligatoires manquants:\n${missing.join(", ")}`;
+      showToast(message, "error");
+      return false;
+    }
+
+    return true;
+  };
+
   /* ---------- Export PDF ROBUSTE ---------- */
   const exportPDF = async () => {
+    // Validation des champs obligatoires
+    if (!validateFields()) {
+      setTab("etude"); // Aller à l'onglet étude pour voir les champs
+      return;
+    }
+
     setIsExporting(true);
+    setExportProgress(0);
 
     // Sauvegarder l'onglet actuel
     const currentTab = tab;
 
     try {
+      setExportProgress(5);
       // Vérification des bibliothèques
       if (!html2canvas || !jsPDF) {
         throw new Error("Les bibliothèques html2canvas ou jsPDF ne sont pas chargées");
@@ -708,10 +903,10 @@ export default function IRShowerFormsView() {
       }
 
       console.log("🚀 Démarrage de l'export PDF...");
+      setExportProgress(10);
 
       // Sauvegarder l'état d'affichage du parent du plan
       const planParentDiv = planExportRef.current?.parentElement;
-      const originalPlanDisplay = planParentDiv?.style.display;
 
       // Rendre tous les éléments visibles temporairement pour la capture
       etudeRef.current.style.display = "block";
@@ -726,6 +921,7 @@ export default function IRShowerFormsView() {
 
       // Attendre que le navigateur applique les changements et calcule les dimensions
       await new Promise(resolve => setTimeout(resolve, 300));
+      setExportProgress(15);
 
       // Vérifier que les éléments ont des dimensions
       const checkDimensions = (ref, name) => {
@@ -794,9 +990,11 @@ export default function IRShowerFormsView() {
 
       // ===== PAGE 1: ÉTUDE =====
       console.log("📄 Capture page 1 (Étude)...");
+      setExportProgress(25);
       const canvas1 = await html2canvas(etudeRef.current, canvasOptions);
       addPageToPDF(canvas1, 1);
       console.log("✅ Page 1 ajoutée");
+      setExportProgress(35);
 
       // ===== PAGE 2: PLAN =====
       console.log("📄 Capture page 2 (Plan)...");
@@ -805,9 +1003,13 @@ export default function IRShowerFormsView() {
       const canvas2 = await html2canvas(planExportRef.current, canvasOptions);
       addPageToPDF(canvas2, 2);
       console.log("✅ Page 2 ajoutée");
+      setExportProgress(50);
 
       // ===== PAGES PHOTOS: UNE PAGE PAR PHOTO =====
       let pageNumber = 3;
+      const totalPhotos = photosAvant.length + photosApres.length;
+      const photoProgressRange = 40; // 50% à 90%
+      let currentPhotoIndex = 0;
 
       // Fonction pour créer une page pour une photo
       const addPhotoPage = async (photo, title) => {
@@ -837,6 +1039,11 @@ export default function IRShowerFormsView() {
 
         document.body.removeChild(tempDiv);
         console.log(`   ✅ Photo ajoutée`);
+
+        // Mettre à jour la progression
+        currentPhotoIndex++;
+        const photoProgress = 50 + (currentPhotoIndex / totalPhotos) * photoProgressRange;
+        setExportProgress(Math.round(photoProgress));
       };
 
       // Photos AVANT
@@ -855,6 +1062,8 @@ export default function IRShowerFormsView() {
         }
       }
 
+      setExportProgress(90);
+
       // ===== PAGE SIGNATURES =====
       if (signatureClient || signatureInstaller) {
         console.log("✍️ Ajout page signatures...");
@@ -866,16 +1075,19 @@ export default function IRShowerFormsView() {
         console.log("⏭️ Pas de signatures");
       }
 
+      setExportProgress(95);
+
       // Sauvegarder
       const fileName = `IR_Douche_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
 
       console.log("✅ PDF généré avec succès:", fileName);
-      alert("✅ PDF exporté avec succès !");
+      setExportProgress(100);
+      showToast("PDF exporté avec succès!", "success");
 
     } catch (error) {
       console.error("❌ Erreur lors de l'export PDF:", error);
-      alert(`❌ Erreur lors de l'export PDF:\n\n${error.message}\n\nConsultez la console (F12) pour plus de détails.`);
+      showToast(`Erreur lors de l'export PDF: ${error.message}`, "error");
     } finally {
       // Restaurer l'affichage initial
       if (etudeRef.current) etudeRef.current.style.display = currentTab === "etude" ? "block" : "none";
@@ -888,12 +1100,67 @@ export default function IRShowerFormsView() {
       if (signaturesRef.current) signaturesRef.current.style.display = "none";
 
       setIsExporting(false);
+      setExportProgress(0);
     }
   };
+
+  /* ---------- USEEFFECTS: Sauvegarde & Restauration ---------- */
+  // Restauration au chargement
+  useEffect(() => {
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (saved) {
+      const shouldRestore = window.confirm(
+        "Une sauvegarde automatique a été trouvée. Voulez-vous restaurer votre travail ?"
+      );
+      if (shouldRestore) {
+        restoreFromLocalStorage();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sauvegarde automatique toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (hasUnsavedChanges) {
+        saveToLocalStorage();
+      }
+    }, AUTOSAVE_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [hasUnsavedChanges, saveToLocalStorage]);
+
+  // Marquer comme "modifications non sauvegardées" à chaque changement
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [study, elements, signatureClient, signatureInstaller, photosAvant, photosApres]);
+
+  // Sauvegarder avant de quitter la page
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        saveToLocalStorage();
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges, saveToLocalStorage]);
 
   /* ---------- Styles OPTIMISÉS MOBILE ---------- */
   const styles = (
     <style>{`
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
       .ir-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-bottom: 10px; }
       .ir-col { grid-column: span 12 / span 12; }
       @media (min-width: 768px) {
@@ -930,28 +1197,106 @@ export default function IRShowerFormsView() {
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
       {styles}
 
+      {/* TOAST NOTIFICATION */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       {/* BARRE D'ACTIONS */}
       <div className="actions-sticky">
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: 22, margin: 0 }}>Documents IR – Douche</h1>
-          <button
-            onClick={exportPDF}
-            disabled={isExporting}
-            style={{
-              padding:"10px 14px",
-              borderRadius: 10,
-              border:"1px solid #0ea5a5",
-              background: isExporting ? "#94a3b8" : "#0ea5a5",
-              color:"#fff",
-              fontWeight:600,
-              fontSize: 14,
-              cursor: isExporting ? "wait" : "pointer",
-              opacity: isExporting ? 0.7 : 1
-            }}
-          >
-            {isExporting ? "⏳ Export en cours..." : "📄 Export PDF"}
-          </button>
+          <div>
+            <h1 style={{ fontSize: 22, margin: 0 }}>Documents IR – Douche</h1>
+            {lastSaved && (
+              <small style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 4 }}>
+                💾 Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR')}
+              </small>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={saveToLocalStorage}
+              style={{
+                padding:"8px 12px",
+                borderRadius: 8,
+                border:"1px solid #cbd5e1",
+                background: "#fff",
+                fontWeight:500,
+                fontSize: 13,
+                cursor: "pointer"
+              }}
+              title="Sauvegarder maintenant"
+            >
+              💾 Sauvegarder
+            </button>
+            <button
+              onClick={exportToJSON}
+              style={{
+                padding:"8px 12px",
+                borderRadius: 8,
+                border:"1px solid #cbd5e1",
+                background: "#fff",
+                fontWeight:500,
+                fontSize: 13,
+                cursor: "pointer"
+              }}
+              title="Exporter en JSON"
+            >
+              📥 Export JSON
+            </button>
+            <button
+              onClick={importFromJSON}
+              style={{
+                padding:"8px 12px",
+                borderRadius: 8,
+                border:"1px solid #cbd5e1",
+                background: "#fff",
+                fontWeight:500,
+                fontSize: 13,
+                cursor: "pointer"
+              }}
+              title="Importer depuis JSON"
+            >
+              📤 Import JSON
+            </button>
+            <button
+              onClick={exportPDF}
+              disabled={isExporting}
+              style={{
+                padding:"10px 14px",
+                borderRadius: 10,
+                border:"1px solid #0ea5a5",
+                background: isExporting ? "#94a3b8" : "#0ea5a5",
+                color:"#fff",
+                fontWeight:600,
+                fontSize: 14,
+                cursor: isExporting ? "wait" : "pointer",
+                opacity: isExporting ? 0.7 : 1
+              }}
+            >
+              {isExporting ? "⏳ Export en cours..." : "📄 Export PDF"}
+            </button>
+          </div>
         </div>
+
+        {/* BARRE DE PROGRESSION */}
+        {isExporting && exportProgress > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <small style={{ fontSize: 12, color: "#64748b" }}>Export PDF en cours...</small>
+              <small style={{ fontSize: 12, fontWeight: 600, color: "#0ea5a5" }}>{exportProgress}%</small>
+            </div>
+            <div style={{ width: "100%", height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+              <div
+                style={{
+                  width: `${exportProgress}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #0ea5a5, #10b981)",
+                  transition: "width 0.3s ease",
+                  borderRadius: 3
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ONGLETS */}
