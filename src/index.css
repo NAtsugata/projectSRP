@@ -12,6 +12,9 @@
 /* 3. Components - Composants UI réutilisables */
 @import './styles/components.css';
 
+/* 4. Mobile Optimizations - Touch-friendly & Performance */
+@import './styles/mobile-optimizations.css';
+
 /* ==================== RESET & BASE ==================== */
 *,
 *::before,
