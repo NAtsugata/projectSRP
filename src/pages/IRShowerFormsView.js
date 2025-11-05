@@ -326,7 +326,7 @@ const SignatureCanvas = ({ onSave, label }) => {
 };
 
 /* ---------- Photo Manager Component ---------- */
-const PhotoManager = ({ photos, setPhotos, title }) => {
+const PhotoManager = ({ photos, setPhotos, title, forPDF = false }) => {
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -348,52 +348,64 @@ const PhotoManager = ({ photos, setPhotos, title }) => {
     setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p)));
   };
 
+  // Taille différente selon l'utilisation
+  const gridColumns = forPDF ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(120px, 1fr))";
+  const imageHeight = forPDF ? 300 : 120;
+  const showControls = !forPDF;
+
   return (
     <div>
-      <Label>{title}</Label>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileChange}
-        style={{ display: "none" }}
-      />
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", marginBottom: 12, fontSize: 14, minHeight: 44 }}
-      >
-        📷 Ajouter des photos
-      </button>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 12 }}>
+      {!forPDF && <Label>{title}</Label>}
+      {!forPDF && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", marginBottom: 12, fontSize: 14, minHeight: 44 }}
+          >
+            📷 Ajouter des photos
+          </button>
+        </>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: gridColumns, gap: forPDF ? 16 : 12 }}>
         {photos.map((photo) => (
-          <div key={photo.id} style={{ border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden", position: "relative" }}>
+          <div key={photo.id} style={{ border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden", position: "relative", background: "#fff" }}>
             <img
               src={photo.src}
               alt={photo.name}
               style={{
                 width: "100%",
-                height: 120,
-                objectFit: "cover",
+                height: imageHeight,
+                objectFit: "contain",
                 transform: `rotate(${photo.rotation}deg)`,
                 transition: "transform 0.2s",
+                background: "#f8fafc",
               }}
             />
-            <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 4 }}>
-              <button
-                onClick={() => rotatePhoto(photo.id)}
-                style={{ padding: 4, borderRadius: 4, border: "1px solid #fff", background: "rgba(255,255,255,0.9)", cursor: "pointer", fontSize: 14, minHeight: 32 }}
-              >
-                🔄
-              </button>
-              <button
-                onClick={() => removePhoto(photo.id)}
-                style={{ padding: 4, borderRadius: 4, border: "1px solid #fff", background: "rgba(255,255,255,0.9)", cursor: "pointer", fontSize: 14, minHeight: 32 }}
-              >
-                🗑️
-              </button>
-            </div>
-            <div style={{ padding: 4, fontSize: 10, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {showControls && (
+              <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 4 }}>
+                <button
+                  onClick={() => rotatePhoto(photo.id)}
+                  style={{ padding: 4, borderRadius: 4, border: "1px solid #fff", background: "rgba(255,255,255,0.9)", cursor: "pointer", fontSize: 14, minHeight: 32 }}
+                >
+                  🔄
+                </button>
+                <button
+                  onClick={() => removePhoto(photo.id)}
+                  style={{ padding: 4, borderRadius: 4, border: "1px solid #fff", background: "rgba(255,255,255,0.9)", cursor: "pointer", fontSize: 14, minHeight: 32 }}
+                >
+                  🗑️
+                </button>
+              </div>
+            )}
+            <div style={{ padding: forPDF ? 8 : 4, fontSize: forPDF ? 11 : 10, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
               {photo.name}
             </div>
           </div>
@@ -697,9 +709,17 @@ export default function IRShowerFormsView() {
 
       console.log("🚀 Démarrage de l'export PDF...");
 
-      // Rendre tous les éléments visibles temporairement
+      // Sauvegarder l'état d'affichage du parent du plan
+      const planParentDiv = planExportRef.current?.parentElement;
+      const originalPlanDisplay = planParentDiv?.style.display;
+
+      // Rendre tous les éléments visibles temporairement pour la capture
       etudeRef.current.style.display = "block";
-      planExportRef.current.style.display = "block";
+
+      // planExportRef est à l'intérieur d'une div avec display conditionnel
+      if (planParentDiv) planParentDiv.style.display = "block";
+
+      // signaturesRef est toujours caché normalement, on le rend visible
       signaturesRef.current.style.display = "block";
 
       // Attendre que le navigateur applique les changements et calcule les dimensions
@@ -807,8 +827,13 @@ export default function IRShowerFormsView() {
     } finally {
       // Restaurer l'affichage initial
       if (etudeRef.current) etudeRef.current.style.display = currentTab === "etude" ? "block" : "none";
-      if (planExportRef.current) planExportRef.current.style.display = currentTab === "plan" ? "block" : "none";
-      if (signaturesRef.current) signaturesRef.current.style.display = currentTab === "signatures" ? "block" : "none";
+
+      // Restaurer le parent du plan
+      const planParentDiv = planExportRef.current?.parentElement;
+      if (planParentDiv) planParentDiv.style.display = currentTab === "plan" ? "block" : "none";
+
+      // signaturesRef version PDF toujours cachée
+      if (signaturesRef.current) signaturesRef.current.style.display = "none";
 
       setIsExporting(false);
     }
@@ -1103,8 +1128,8 @@ export default function IRShowerFormsView() {
           </div>
       </div>
 
-      {/* ======= PAGE 3 — PHOTOS & SIGNATURES ======= */}
-      <div ref={signaturesRef} style={{ display: tab === "signatures" ? "block" : "none" }}>
+      {/* ======= PAGE 3 — PHOTOS & SIGNATURES (Interface) ======= */}
+      <div style={{ display: tab === "signatures" ? "block" : "none" }}>
           <Section style={{ paddingBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PHOTOS & SIGNATURES</h2>
           </Section>
@@ -1126,6 +1151,51 @@ export default function IRShowerFormsView() {
               <Col span={6}>
                 <SignatureCanvas onSave={setSignatureInstaller} label="Signature Installateur" />
                 {signatureInstaller && <Small style={{ marginTop: 8 }}>✅ Signature installateur enregistrée</Small>}
+              </Col>
+            </Row>
+            <Small style={{ marginTop: 12 }}>Date de signature : {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}</Small>
+          </Section>
+      </div>
+
+      {/* ======= PAGE 3 — VERSION PDF (grandes photos) ======= */}
+      <div ref={signaturesRef} style={{ display: "none" }}>
+          <Section style={{ paddingBottom: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PHOTOS & SIGNATURES</h2>
+          </Section>
+
+          {photosAvant.length > 0 && (
+            <Section title="Photos AVANT travaux">
+              <PhotoManager photos={photosAvant} setPhotos={setPhotosAvant} title="Photos AVANT" forPDF={true} />
+            </Section>
+          )}
+
+          {photosApres.length > 0 && (
+            <Section title="Photos APRÈS travaux">
+              <PhotoManager photos={photosApres} setPhotos={setPhotosApres} title="Photos APRÈS" forPDF={true} />
+            </Section>
+          )}
+
+          <Section title="Signatures">
+            <Row>
+              <Col span={6}>
+                {signatureClient && (
+                  <div>
+                    <Label>Signature Client</Label>
+                    <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, background: "#fff" }}>
+                      <img src={signatureClient} alt="Signature Client" style={{ width: "100%", height: 150, objectFit: "contain" }} />
+                    </div>
+                  </div>
+                )}
+              </Col>
+              <Col span={6}>
+                {signatureInstaller && (
+                  <div>
+                    <Label>Signature Installateur</Label>
+                    <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, background: "#fff" }}>
+                      <img src={signatureInstaller} alt="Signature Installateur" style={{ width: "100%", height: 150, objectFit: "contain" }} />
+                    </div>
+                  </div>
+                )}
               </Col>
             </Row>
             <Small style={{ marginTop: 12 }}>Date de signature : {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}</Small>
