@@ -179,12 +179,86 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.restore();
       };
 
+      const drawBar = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(el.x1, el.y1);
+        ctx.lineTo(el.x2, el.y2);
+        ctx.stroke();
+        // Poignée centrale
+        const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.arc(mx, my, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      const drawShower = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // Ligne d'alimentation
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y);
+        ctx.lineTo(el.x + 40, el.y);
+        ctx.stroke();
+        // Pomme de douche
+        ctx.beginPath();
+        ctx.arc(el.x + 40, el.y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const drawDoor = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        const w = 60; // largeur porte
+        // Arc d'ouverture
+        ctx.beginPath();
+        ctx.arc(el.x, el.y, w, 0, Math.PI / 2);
+        ctx.stroke();
+        // Ligne de la porte
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y);
+        ctx.lineTo(el.x + w, el.y);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const drawWindow = (el) => {
+        ctx.save();
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        const w = el.w || 60, h = el.h || 40;
+        // Rectangle fenêtre
+        ctx.strokeRect(el.x, el.y, w, h);
+        // Croix centrale
+        ctx.beginPath();
+        ctx.moveTo(el.x + w/2, el.y);
+        ctx.lineTo(el.x + w/2, el.y + h);
+        ctx.moveTo(el.x, el.y + h/2);
+        ctx.lineTo(el.x + w, el.y + h/2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
       for (const el of all) {
         if (el.type === "dim") drawDim(el);
         else if (el.type === "rect") drawRect(el);
         else if (el.type === "text") drawText(el);
-        else if (el.type === "symbol" && el.kind === "mixer") drawMixer(el);
-        else if (el.type === "symbol" && el.kind === "seat") drawSeat(el);
+        else if (el.type === "symbol") {
+          if (el.kind === "mixer") drawMixer(el);
+          else if (el.kind === "seat") drawSeat(el);
+          else if (el.kind === "bar") drawBar(el);
+          else if (el.kind === "shower") drawShower(el);
+          else if (el.kind === "door") drawDoor(el);
+          else if (el.kind === "window") drawWindow(el);
+        }
       }
     },
   }), [canvasRef, toCm, labelOffsetPx]);
@@ -235,6 +309,14 @@ export default function IRShowerFormsView() {
   const photoAvantInputRef = useRef(null);
   const photoApresInputRef = useRef(null);
 
+  /* SIGNATURES */
+  const signatureClientRef = useRef(null);
+  const signatureInstallerRef = useRef(null);
+  const [signatureClient, setSignatureClient] = useState(null);
+  const [signatureInstaller, setSignatureInstaller] = useState(null);
+  const [isDrawingSignature, setIsDrawingSignature] = useState({ client: false, installer: false });
+  const [signaturePos, setSignaturePos] = useState({ client: null, installer: null });
+
   const handlePhotoCapture = (e, type) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -256,10 +338,61 @@ export default function IRShowerFormsView() {
     else setPhotosApres(prev => prev.filter(p => p.id !== id));
   };
 
+  /* GESTION SIGNATURES */
+  const startSignature = (e, type) => {
+    const canvas = type === 'client' ? signatureClientRef.current : signatureInstallerRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX ?? e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY ?? e.touches?.[0]?.clientY) - rect.top;
+    setIsDrawingSignature(prev => ({ ...prev, [type]: true }));
+    setSignaturePos(prev => ({ ...prev, [type]: { x, y } }));
+  };
+
+  const drawSignature = (e, type) => {
+    if (!isDrawingSignature[type]) return;
+    const canvas = type === 'client' ? signatureClientRef.current : signatureInstallerRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX ?? e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY ?? e.touches?.[0]?.clientY) - rect.top;
+
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(signaturePos[type].x, signaturePos[type].y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setSignaturePos(prev => ({ ...prev, [type]: { x, y } }));
+  };
+
+  const endSignature = (type) => {
+    setIsDrawingSignature(prev => ({ ...prev, [type]: false }));
+    const canvas = type === 'client' ? signatureClientRef.current : signatureInstallerRef.current;
+    if (canvas) {
+      const dataUrl = canvas.toDataURL();
+      if (type === 'client') setSignatureClient(dataUrl);
+      else setSignatureInstaller(dataUrl);
+    }
+  };
+
+  const clearSignature = (type) => {
+    const canvas = type === 'client' ? signatureClientRef.current : signatureInstallerRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (type === 'client') setSignatureClient(null);
+      else setSignatureInstaller(null);
+    }
+  };
+
   /* SAUVEGARDE AUTOMATIQUE */
   useEffect(() => {
     const saveTimer = setInterval(() => {
-      const data = { study, elements, photosAvant, photosApres, timestamp: Date.now() };
+      const data = { study, elements, photosAvant, photosApres, signatureClient, signatureInstaller, timestamp: Date.now() };
       try {
         localStorage.setItem('ir-shower-draft', JSON.stringify(data));
       } catch (e) {
@@ -267,7 +400,7 @@ export default function IRShowerFormsView() {
       }
     }, 5000);
     return () => clearInterval(saveTimer);
-  }, [study, elements, photosAvant, photosApres]);
+  }, [study, elements, photosAvant, photosApres, signatureClient, signatureInstaller]);
 
   // Restauration au chargement
   useEffect(() => {
@@ -279,6 +412,8 @@ export default function IRShowerFormsView() {
         if (data.elements) setElements(data.elements);
         if (data.photosAvant) setPhotosAvant(data.photosAvant);
         if (data.photosApres) setPhotosApres(data.photosApres);
+        if (data.signatureClient) setSignatureClient(data.signatureClient);
+        if (data.signatureInstaller) setSignatureInstaller(data.signatureInstaller);
       }
     } catch (e) {
       console.error('Restauration échouée:', e);
@@ -304,6 +439,10 @@ export default function IRShowerFormsView() {
       setElements([]);
       setPhotosAvant([]);
       setPhotosApres([]);
+      setSignatureClient(null);
+      setSignatureInstaller(null);
+      clearSignature('client');
+      clearSignature('installer');
       localStorage.removeItem('ir-shower-draft');
       setTab("etude");
     }
@@ -402,8 +541,18 @@ export default function IRShowerFormsView() {
       } else if (el.type === "text") {
         if (x >= el.x - 4 && x <= el.x + 120 && y >= el.y - 16 && y <= el.y + 12) return el;
       } else if (el.type === "symbol") {
-        const r = el.kind === "mixer" ? 14 : 22;
-        if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+        if (el.kind === "bar") {
+          if (distToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= HIT_PAD) return el;
+        } else if (el.kind === "window") {
+          const w = el.w || 60, h = el.h || 40;
+          if (x >= el.x - HIT_PAD && x <= el.x + w + HIT_PAD && y >= el.y - HIT_PAD && y <= el.y + h + HIT_PAD) return el;
+        } else if (el.kind === "door") {
+          const r = 60;
+          if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+        } else {
+          const r = el.kind === "mixer" ? 14 : (el.kind === "shower" ? 48 : 22);
+          if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+        }
       }
     }
     return null;
@@ -453,7 +602,28 @@ export default function IRShowerFormsView() {
       return;
     }
 
-    setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) });
+    if (tool === "shower") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "shower", x: p.x, y: clampYOutOfBanner(p.y) }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "door") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "door", x: p.x, y: clampYOutOfBanner(p.y) }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "window") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "window", x: p.x, y: clampYOutOfBanner(p.y), w: 60, h: 40 }]);
+      setSelectedId(id);
+      return;
+    }
+
+    setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) }); // bar / dim / rect
   };
 
   const onPointerMove = (e) => {
@@ -491,10 +661,12 @@ export default function IRShowerFormsView() {
 
     let { x: x2, y: y2 } = p;
     y2 = clampYOutOfBanner(y2);
-    if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
+    if (tool === "dim" || tool === "rect" || tool === "bar") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
       setPreview({ type: "dim", x1: startPt.x, y1: startPt.y, x2, y2 });
+    } else if (tool === "bar") {
+      setPreview({ type: "symbol", kind: "bar", x1: startPt.x, y1: startPt.y, x2, y2 });
     } else if (tool === "rect") {
       setPreview({ type: "rect", x: Math.min(startPt.x, x2), y: Math.min(startPt.y, y2), w: Math.abs(x2 - startPt.x), h: Math.abs(y2 - startPt.y) });
     }
@@ -515,11 +687,15 @@ export default function IRShowerFormsView() {
 
     let { x: x2, y: y2 } = p;
     y2 = clampYOutOfBanner(y2);
-    if (tool === "dim" || tool === "rect") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
+    if (tool === "dim" || tool === "rect" || tool === "bar") ({ x2, y2 } = applyOrtho(startPt.x, startPt.y, x2, y2));
 
     if (tool === "dim") {
       const id = newId();
       setElements((els) => [...els, { id, type: "dim", x1: startPt.x, y1: startPt.y, x2, y2 }]);
+      setSelectedId(id);
+    } else if (tool === "bar") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "bar", x1: startPt.x, y1: startPt.y, x2, y2 }]);
       setSelectedId(id);
     } else if (tool === "rect") {
       const id = newId();
@@ -574,40 +750,129 @@ export default function IRShowerFormsView() {
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
+      // En-tête professionnel
+      pdf.setFillColor(14, 165, 165);
+      pdf.rect(0, 0, pageW, 15, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.setFont(undefined, "bold");
+      pdf.text("ÉTUDE TECHNIQUE - INSTALLATION DOUCHE", pageW / 2, 10, { align: "center" });
+
+      // Info document
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFontSize(8);
+      pdf.text(`Client: ${study.client_nom} ${study.client_prenom} | Date: ${study.date_visite || new Date().toLocaleDateString('fr-FR')}`, 10, 20);
+      pdf.text(`Installateur: ${study.inst_nom} ${study.inst_prenom}`, 10, 24);
+
       const w1 = pageW, h1 = (c1.height / c1.width) * w1;
-      pdf.addImage(img1, "PNG", 0, Math.max(0, (pageH - h1) / 2), w1, h1, undefined, "FAST");
+      pdf.addImage(img1, "PNG", 0, 28, w1, Math.min(h1, pageH - 80), undefined, "FAST");
+
+      // Ajout signatures sur la première page si disponibles
+      if (signatureClient || signatureInstaller) {
+        const sigY = pageH - 50;
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(10, sigY - 5, pageW - 10, sigY - 5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(10);
+        pdf.text("SIGNATURES", pageW / 2, sigY, { align: "center" });
+
+        if (signatureClient) {
+          pdf.setFontSize(8);
+          pdf.text("Client:", 20, sigY + 8);
+          pdf.addImage(signatureClient, "PNG", 15, sigY + 10, 80, 30);
+          pdf.text(`${study.client_nom} ${study.client_prenom}`, 20, sigY + 42);
+          pdf.text(new Date().toLocaleDateString('fr-FR'), 20, sigY + 46);
+        }
+
+        if (signatureInstaller) {
+          pdf.setFontSize(8);
+          pdf.text("Installateur:", pageW - 95, sigY + 8);
+          pdf.addImage(signatureInstaller, "PNG", pageW - 95, sigY + 10, 80, 30);
+          pdf.text(`${study.inst_nom} ${study.inst_prenom}`, pageW - 95, sigY + 42);
+          pdf.text(new Date().toLocaleDateString('fr-FR'), pageW - 95, sigY + 46);
+        }
+      }
+
+      // Footer
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFontSize(7);
+      pdf.text("Document généré automatiquement - Page 1", pageW / 2, pageH - 5, { align: "center" });
 
       pdf.addPage();
+      // En-tête page 2
+      pdf.setFillColor(14, 165, 165);
+      pdf.rect(0, 0, pageW, 15, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.setFont(undefined, "bold");
+      pdf.text("PLAN TECHNIQUE INDICATIF", pageW / 2, 10, { align: "center" });
       const w2 = pageW, h2 = (c2.height / c2.width) * w2;
-      pdf.addImage(img2, "PNG", 0, Math.max(0, (pageH - h2) / 2), w2, h2, undefined, "FAST");
+      pdf.addImage(img2, "PNG", 0, 18, w2, Math.min(h2, pageH - 25), undefined, "FAST");
+
+      // Footer page 2
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFontSize(7);
+      pdf.text("Document généré automatiquement - Page 2", pageW / 2, pageH - 5, { align: "center" });
 
       // Pages photos si présentes
+      let pageNum = 3;
       if (photosAvant.length > 0) {
         pdf.addPage();
-        pdf.setFontSize(18);
-        pdf.text("Photos AVANT travaux", pageW / 2, 20, { align: "center" });
-        let y = 30;
+        pdf.setFillColor(14, 165, 233);
+        pdf.rect(0, 0, pageW, 15, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(16);
+        pdf.setFont(undefined, "bold");
+        pdf.text("PHOTOS AVANT TRAVAUX", pageW / 2, 10, { align: "center" });
+        pdf.setTextColor(0, 0, 0);
+        let y = 25;
         for (const photo of photosAvant) {
-          if (y > pageH - 60) { pdf.addPage(); y = 20; }
+          if (y > pageH - 85) {
+            pdf.setTextColor(150, 150, 150);
+            pdf.setFontSize(7);
+            pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
+            pdf.addPage();
+            pageNum++;
+            y = 20;
+          }
           const imgW = pageW - 40;
           const imgH = imgW * 0.75;
           pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
           y += imgH + 10;
         }
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFontSize(7);
+        pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
+        pageNum++;
       }
 
       if (photosApres.length > 0) {
         pdf.addPage();
-        pdf.setFontSize(18);
-        pdf.text("Photos APRÈS travaux", pageW / 2, 20, { align: "center" });
-        let y = 30;
+        pdf.setFillColor(34, 197, 94);
+        pdf.rect(0, 0, pageW, 15, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(16);
+        pdf.setFont(undefined, "bold");
+        pdf.text("PHOTOS APRÈS TRAVAUX", pageW / 2, 10, { align: "center" });
+        pdf.setTextColor(0, 0, 0);
+        let y = 25;
         for (const photo of photosApres) {
-          if (y > pageH - 60) { pdf.addPage(); y = 20; }
+          if (y > pageH - 85) {
+            pdf.setTextColor(150, 150, 150);
+            pdf.setFontSize(7);
+            pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
+            pdf.addPage();
+            pageNum++;
+            y = 20;
+          }
           const imgW = pageW - 40;
           const imgH = imgW * 0.75;
           pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
           y += imgH + 10;
         }
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFontSize(7);
+        pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
       }
 
       pdf.save(`Etude_IR_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -906,6 +1171,62 @@ export default function IRShowerFormsView() {
                 </label>
               </div>
             </Section>
+
+            {/* SIGNATURES */}
+            <Section title="Signatures">
+              <Row>
+                <Col span={6}>
+                  <Label>Signature du client</Label>
+                  <div style={{ border: "2px solid #cbd5e1", borderRadius: 8, background: "#fff", position: "relative" }}>
+                    <canvas
+                      ref={signatureClientRef}
+                      width={400}
+                      height={150}
+                      onPointerDown={(e) => startSignature(e, 'client')}
+                      onPointerMove={(e) => drawSignature(e, 'client')}
+                      onPointerUp={() => endSignature('client')}
+                      onTouchStart={(e) => startSignature(e, 'client')}
+                      onTouchMove={(e) => drawSignature(e, 'client')}
+                      onTouchEnd={() => endSignature('client')}
+                      style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none' }}
+                    />
+                    <button
+                      onClick={() => clearSignature('client')}
+                      style={{ position: 'absolute', top: 4, right: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #ef4444', background: '#fff', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}
+                    >
+                      Effacer
+                    </button>
+                  </div>
+                  <Small>Nom : {study.client_nom} {study.client_prenom}</Small>
+                  <Small>Date : {new Date().toLocaleDateString('fr-FR')}</Small>
+                </Col>
+                <Col span={6}>
+                  <Label>Signature de l'installateur</Label>
+                  <div style={{ border: "2px solid #cbd5e1", borderRadius: 8, background: "#fff", position: "relative" }}>
+                    <canvas
+                      ref={signatureInstallerRef}
+                      width={400}
+                      height={150}
+                      onPointerDown={(e) => startSignature(e, 'installer')}
+                      onPointerMove={(e) => drawSignature(e, 'installer')}
+                      onPointerUp={() => endSignature('installer')}
+                      onTouchStart={(e) => startSignature(e, 'installer')}
+                      onTouchMove={(e) => drawSignature(e, 'installer')}
+                      onTouchEnd={() => endSignature('installer')}
+                      style={{ display: 'block', width: '100%', height: 'auto', touchAction: 'none' }}
+                    />
+                    <button
+                      onClick={() => clearSignature('installer')}
+                      style={{ position: 'absolute', top: 4, right: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #ef4444', background: '#fff', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}
+                    >
+                      Effacer
+                    </button>
+                  </div>
+                  <Small>Nom : {study.inst_nom} {study.inst_prenom}</Small>
+                  <Small>Date : {new Date().toLocaleDateString('fr-FR')}</Small>
+                </Col>
+              </Row>
+            </Section>
           </>
         )}
       </div>
@@ -933,14 +1254,18 @@ export default function IRShowerFormsView() {
               <button onClick={()=>setTool("dim")}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="dim"?"#e2e8f0":"#fff" }}>Cote</button>
               <button onClick={()=>setTool("rect")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="rect"?"#e2e8f0":"#fff" }}>Rect</button>
               <button onClick={()=>setTool("mixer")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="mixer"?"#e2e8f0":"#fff" }}>Mitigeur</button>
-              <button onClick={()=>setTool("seat")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="seat"?"#e2e8f0":"#fff" }}>Siège (mur)</button>
+              <button onClick={()=>setTool("seat")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="seat"?"#e2e8f0":"#fff" }}>Siège</button>
+              <button onClick={()=>setTool("bar")}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="bar"?"#e2e8f0":"#fff" }}>Barre maintien</button>
+              <button onClick={()=>setTool("shower")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="shower"?"#e2e8f0":"#fff" }}>Ciel pluie</button>
+              <button onClick={()=>setTool("door")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="door"?"#e2e8f0":"#fff" }}>Porte</button>
+              <button onClick={()=>setTool("window")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="window"?"#e2e8f0":"#fff" }}>Fenêtre</button>
               <button onClick={()=>setTool("text")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="text"?"#e2e8f0":"#fff" }}>Texte</button>
               <button onClick={()=>setSnap(s=>!s)}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
               <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
               <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
             </div>
-            <Small>Zones bleues = murs (création et déplacement interdits). Double-clic pour éditer un texte. Le siège se plaque automatiquement au mur.</Small>
+            <Small>Zones bleues = murs. Double-clic pour éditer un texte. Le siège se plaque au mur. Barre de maintien = trait entre 2 points.</Small>
           </Section>
 
           {/* ZONE EXPORTABLE */}
