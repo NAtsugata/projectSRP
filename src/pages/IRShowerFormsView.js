@@ -1,5 +1,7 @@
 // FILE: src/pages/IRShowerFormsView.jsx — VERSION OPTIMISÉE MOBILE
 import React, { useMemo, useRef, useState, useEffect } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 /**
  * IRShowerFormsView — Étude + Plan technique + Signatures + Photos
@@ -675,8 +677,9 @@ export default function IRShowerFormsView() {
   /* ---------- Export PDF AMÉLIORÉ ---------- */
   const exportPDF = async () => {
     try {
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
+      if (!html2canvas || !jsPDF) {
+        throw new Error("html2canvas ou jsPDF n'est pas chargé correctement");
+      }
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
@@ -684,6 +687,9 @@ export default function IRShowerFormsView() {
 
       // Fonction helper pour capturer proprement
       const capturePage = async (element) => {
+        if (!element) {
+          throw new Error("Élément de référence manquant");
+        }
         return await html2canvas(element, {
           scale: 2,
           backgroundColor: "#ffffff",
@@ -721,8 +727,8 @@ export default function IRShowerFormsView() {
 
       pdf.save(`IR_Douche_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (err) {
-      alert("⚠️ Erreur lors de l'export PDF. Vérifiez que html2canvas et jspdf sont installés.");
-      console.error(err);
+      alert(`⚠️ Erreur lors de l'export PDF: ${err.message}\n\nVérifiez que html2canvas et jspdf sont installés et que l'application a été redémarrée.`);
+      console.error("Erreur détaillée:", err);
     }
   };
 
