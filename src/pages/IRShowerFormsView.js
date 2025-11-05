@@ -1066,7 +1066,6 @@ export default function IRShowerFormsView() {
               </div>
             </Section>
           </div>
-        </div>
       </div>
 
       {/* ======= PAGE 3 — PHOTOS & SIGNATURES ======= */}
