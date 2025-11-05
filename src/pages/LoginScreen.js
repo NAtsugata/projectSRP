@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { authService } from '../lib/supabase';
+import { BriefcaseIcon, MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
+import './LoginScreen.css';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -11,31 +13,19 @@ export default function LoginScreen() {
         e.preventDefault();
         setLoading(true);
         setError('');
-        
+
         try {
-            console.log('Tentative de connexion...');
-            
-            // ✅ CORRIGÉ: Suppression du nettoyage manuel du localStorage.
-            // La librairie Supabase gère cela automatiquement.
             const { error: signInError } = await authService.signIn(email, password);
-            
+
             if (signInError) {
-                console.error('Erreur de connexion:', signInError);
-                // L'erreur "Failed to fetch" est souvent liée à un problème réseau ou de CORS.
-                // 1. Vérifiez que l'URL et la clé de votre projet Supabase sont correctes dans le fichier .env
-                // 2. Assurez-vous que http://localhost:3000 est autorisé dans les réglages d'authentification de Supabase.
-                // 3. Désactivez les bloqueurs de pub ou VPN qui pourraient interférer.
-                setError('Email ou mot de passe incorrect, ou problème de connexion.');
-            } else {
-                console.log('Connexion réussie, attente de la redirection...');
-                // La redirection est maintenant gérée par le listener onAuthStateChange dans App.js
+                setError('Email ou mot de passe incorrect. Veuillez réessayer.');
             }
+            // La redirection est gérée par App.js via onAuthStateChange
         } catch (error) {
-            console.error('Erreur lors de la connexion:', error);
             setError('Erreur de connexion. Veuillez réessayer.');
+        } finally {
+            setLoading(false);
         }
-        
-        setLoading(false);
     };
 
     const handleEmailChange = (e) => {
@@ -50,45 +40,92 @@ export default function LoginScreen() {
 
     return (
         <div className="login-screen-container">
+            {/* Animated background */}
+            <div className="login-background">
+                <div className="gradient-orb gradient-orb-1"></div>
+                <div className="gradient-orb gradient-orb-2"></div>
+                <div className="gradient-orb gradient-orb-3"></div>
+            </div>
+
+            {/* Login card */}
             <div className="login-card">
+                {/* Logo & branding */}
                 <div className="login-header">
-                    <h1>Entreprise SRP</h1>
-                    <p>Connectez-vous à votre espace employé</p>
+                    <div className="logo-container">
+                        <div className="logo-icon">
+                            <BriefcaseIcon size={40} />
+                        </div>
+                        <h1 className="logo-text">Portail SRP</h1>
+                    </div>
+                    <p className="tagline">Gestion des interventions terrain</p>
                 </div>
+
+                {/* Login form */}
                 <form onSubmit={handleSubmit} className="login-form">
-                    <div className="form-group">
-                        <label>Email</label>
-                        <input 
-                            type="email" 
-                            value={email} 
+                    {/* Email input */}
+                    <div className="login-input-group">
+                        <label>
+                            <span className="label-icon">
+                                <MailIcon size={16} />
+                            </span>
+                            Adresse email
+                        </label>
+                        <input
+                            type="email"
+                            value={email}
                             onChange={handleEmailChange}
-                            className="form-control" 
-                            required 
+                            className={`login-input ${error ? 'input-error' : ''}`}
+                            placeholder="votre@email.com"
+                            required
                             autoComplete="email"
                             disabled={loading}
                         />
                     </div>
-                    <div className="form-group">
-                        <label>Mot de passe</label>
-                        <input 
-                            type="password" 
-                            value={password} 
+
+                    {/* Password input */}
+                    <div className="login-input-group">
+                        <label>
+                            <span className="label-icon">
+                                <LockIcon size={16} />
+                            </span>
+                            Mot de passe
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
                             onChange={handlePasswordChange}
-                            className="form-control" 
-                            required 
+                            className={`login-input ${error ? 'input-error' : ''}`}
+                            placeholder="••••••••"
+                            required
                             autoComplete="current-password"
                             disabled={loading}
                         />
                     </div>
-                    {error && <p className="error-message">{error}</p>}
-                    <button 
-                        type="submit" 
-                        disabled={loading || !email || !password} 
-                        className="btn btn-primary w-full"
+
+                    {/* Error message */}
+                    {error && (
+                        <div className="login-error">
+                            <AlertTriangleIcon size={20} />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {/* Submit button */}
+                    <button
+                        type="submit"
+                        disabled={loading || !email || !password}
+                        className={`login-submit-btn ${loading ? 'btn-loading' : ''}`}
                     >
-                        {loading ? 'Connexion...' : 'Connexion'}
+                        {!loading && 'Se connecter'}
                     </button>
                 </form>
+
+                {/* Footer */}
+                <div className="login-footer">
+                    <p>
+                        Besoin d'aide ? Contactez votre administrateur
+                    </p>
+                </div>
             </div>
         </div>
     );
