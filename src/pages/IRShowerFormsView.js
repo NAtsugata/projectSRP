@@ -449,6 +449,9 @@ export default function IRShowerFormsView() {
   const [photosAvant, setPhotosAvant] = useState([]);
   const [photosApres, setPhotosApres] = useState([]);
 
+  /* EXPORT PDF */
+  const [isExporting, setIsExporting] = useState(false);
+
   // Refs PDF
   const etudeRef = useRef(null);
   const planExportRef = useRef(null);
@@ -674,64 +677,105 @@ export default function IRShowerFormsView() {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
 
-  /* ---------- Export PDF AMÉLIORÉ ---------- */
+  /* ---------- Export PDF ROBUSTE ---------- */
   const exportPDF = async () => {
+    setIsExporting(true);
+
+    // Sauvegarder l'onglet actuel
+    const currentTab = tab;
+
     try {
+      // Vérification des bibliothèques
       if (!html2canvas || !jsPDF) {
-        throw new Error("html2canvas ou jsPDF n'est pas chargé correctement");
+        throw new Error("Les bibliothèques html2canvas ou jsPDF ne sont pas chargées");
       }
 
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
+      // Vérification des refs
+      if (!etudeRef.current || !planExportRef.current || !signaturesRef.current) {
+        throw new Error("Les éléments de la page ne sont pas prêts");
+      }
 
-      // Fonction helper pour capturer proprement
-      const capturePage = async (element) => {
-        if (!element) {
-          throw new Error("Élément de référence manquant");
-        }
-        return await html2canvas(element, {
-          scale: 2,
-          backgroundColor: "#ffffff",
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          scrollY: -window.scrollY,
-          scrollX: -window.scrollX,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight
-        });
+      console.log("🚀 Démarrage de l'export PDF...");
+
+      // Rendre tous les éléments visibles temporairement
+      etudeRef.current.style.display = "block";
+      planExportRef.current.style.display = "block";
+      signaturesRef.current.style.display = "block";
+
+      // Attendre que le navigateur applique les changements
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Créer le PDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      // Options communes pour html2canvas
+      const canvasOptions = {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true,
+        allowTaint: true
       };
 
-      // Page 1: Étude
-      const c1 = await capturePage(etudeRef.current);
-      const img1 = c1.toDataURL("image/jpeg", 0.95);
-      const ratio1 = c1.height / c1.width;
-      const imgH1 = pageW * ratio1;
-      pdf.addImage(img1, "JPEG", 0, 0, pageW, imgH1);
+      // ===== PAGE 1: ÉTUDE =====
+      console.log("📄 Capture page 1 (Étude)...");
+      const canvas1 = await html2canvas(etudeRef.current, canvasOptions);
+      const imgData1 = canvas1.toDataURL("image/jpeg", 0.92);
+      const imgHeight1 = (canvas1.height / canvas1.width) * pageWidth;
+      pdf.addImage(imgData1, "JPEG", 0, 0, pageWidth, imgHeight1);
+      console.log("✅ Page 1 ajoutée");
 
-      // Page 2: Plan
+      // ===== PAGE 2: PLAN =====
+      console.log("📄 Capture page 2 (Plan)...");
       pdf.addPage();
-      const c2 = await capturePage(planExportRef.current);
-      const img2 = c2.toDataURL("image/jpeg", 0.95);
-      const ratio2 = c2.height / c2.width;
-      const imgH2 = pageW * ratio2;
-      pdf.addImage(img2, "JPEG", 0, 0, pageW, imgH2);
 
-      // Page 3: Photos & Signatures
-      if (photosAvant.length > 0 || photosApres.length > 0 || signatureClient || signatureInstaller) {
+      // Forcer le redessinage du canvas
+      plan.draw(elements, null, null);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const canvas2 = await html2canvas(planExportRef.current, canvasOptions);
+      const imgData2 = canvas2.toDataURL("image/jpeg", 0.92);
+      const imgHeight2 = (canvas2.height / canvas2.width) * pageWidth;
+      pdf.addImage(imgData2, "JPEG", 0, 0, pageWidth, imgHeight2);
+      console.log("✅ Page 2 ajoutée");
+
+      // ===== PAGE 3: PHOTOS & SIGNATURES =====
+      const hasContent = photosAvant.length > 0 || photosApres.length > 0 || signatureClient || signatureInstaller;
+      if (hasContent) {
+        console.log("📄 Capture page 3 (Photos & Signatures)...");
         pdf.addPage();
-        const c3 = await capturePage(signaturesRef.current);
-        const img3 = c3.toDataURL("image/jpeg", 0.95);
-        const ratio3 = c3.height / c3.width;
-        const imgH3 = pageW * ratio3;
-        pdf.addImage(img3, "JPEG", 0, 0, pageW, imgH3);
+        const canvas3 = await html2canvas(signaturesRef.current, canvasOptions);
+        const imgData3 = canvas3.toDataURL("image/jpeg", 0.92);
+        const imgHeight3 = (canvas3.height / canvas3.width) * pageWidth;
+        pdf.addImage(imgData3, "JPEG", 0, 0, pageWidth, imgHeight3);
+        console.log("✅ Page 3 ajoutée");
+      } else {
+        console.log("⏭️ Page 3 ignorée (pas de contenu)");
       }
 
-      pdf.save(`IR_Douche_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (err) {
-      alert(`⚠️ Erreur lors de l'exportation du PDF\n${err.message}\n\nVeuillez vérifier que html2canvas et jsPDF sont correctement installés, puis redémarrez l'application.`);
-      console.error("Erreur détaillée:", err);
+      // Sauvegarder
+      const fileName = `IR_Douche_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      console.log("✅ PDF généré avec succès:", fileName);
+      alert("✅ PDF exporté avec succès !");
+
+    } catch (error) {
+      console.error("❌ Erreur lors de l'export PDF:", error);
+      alert(`❌ Erreur lors de l'export PDF:\n\n${error.message}\n\nConsultez la console (F12) pour plus de détails.`);
+    } finally {
+      // Restaurer l'affichage initial
+      if (etudeRef.current) etudeRef.current.style.display = currentTab === "etude" ? "block" : "none";
+      if (planExportRef.current) planExportRef.current.style.display = currentTab === "plan" ? "block" : "none";
+      if (signaturesRef.current) signaturesRef.current.style.display = currentTab === "signatures" ? "block" : "none";
+
+      setIsExporting(false);
     }
   };
 
@@ -778,8 +822,22 @@ export default function IRShowerFormsView() {
       <div className="actions-sticky">
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 22, margin: 0 }}>Documents IR – Douche</h1>
-          <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #0ea5a5", background:"#0ea5a5", color:"#fff", fontWeight:600, fontSize: 14 }}>
-            📄 Export PDF
+          <button
+            onClick={exportPDF}
+            disabled={isExporting}
+            style={{
+              padding:"10px 14px",
+              borderRadius: 10,
+              border:"1px solid #0ea5a5",
+              background: isExporting ? "#94a3b8" : "#0ea5a5",
+              color:"#fff",
+              fontWeight:600,
+              fontSize: 14,
+              cursor: isExporting ? "wait" : "pointer",
+              opacity: isExporting ? 0.7 : 1
+            }}
+          >
+            {isExporting ? "⏳ Export en cours..." : "📄 Export PDF"}
           </button>
         </div>
       </div>
@@ -875,8 +933,7 @@ export default function IRShowerFormsView() {
       </div>
 
       {/* ======= PAGE 2 — PLAN ======= */}
-      {tab === "plan" && (
-        <div>
+      <div style={{ display: tab === "plan" ? "block" : "none" }}>
           <Section style={{ paddingBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
             <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
@@ -1010,11 +1067,10 @@ export default function IRShowerFormsView() {
             </Section>
           </div>
         </div>
-      )}
+      </div>
 
       {/* ======= PAGE 3 — PHOTOS & SIGNATURES ======= */}
-      {tab === "signatures" && (
-        <div ref={signaturesRef}>
+      <div ref={signaturesRef} style={{ display: tab === "signatures" ? "block" : "none" }}>
           <Section style={{ paddingBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>PHOTOS & SIGNATURES</h2>
           </Section>
@@ -1040,8 +1096,7 @@ export default function IRShowerFormsView() {
             </Row>
             <Small style={{ marginTop: 12 }}>Date de signature : {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}</Small>
           </Section>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
