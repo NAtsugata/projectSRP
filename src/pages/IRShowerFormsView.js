@@ -702,7 +702,26 @@ export default function IRShowerFormsView() {
       planExportRef.current.style.display = "block";
       signaturesRef.current.style.display = "block";
 
-      // Attendre que le navigateur applique les changements
+      // Attendre que le navigateur applique les changements et calcule les dimensions
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Vérifier que les éléments ont des dimensions
+      const checkDimensions = (ref, name) => {
+        const rect = ref.getBoundingClientRect();
+        console.log(`   ${name}: ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}px`);
+        if (rect.width === 0 || rect.height === 0) {
+          throw new Error(`${name} n'a pas de dimensions (${rect.width}x${rect.height})`);
+        }
+      };
+
+      console.log("📐 Vérification des dimensions des éléments:");
+      checkDimensions(etudeRef.current, "Étude");
+      checkDimensions(planExportRef.current, "Plan");
+      checkDimensions(signaturesRef.current, "Signatures");
+
+      // Forcer le redessinage du canvas du plan maintenant qu'il est visible
+      console.log("🎨 Redessinage du canvas...");
+      plan.draw(elements, null, null);
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Créer le PDF
@@ -723,26 +742,44 @@ export default function IRShowerFormsView() {
         allowTaint: true
       };
 
+      // Fonction helper pour ajouter une image au PDF avec validation
+      const addPageToPDF = (canvas, pageNumber) => {
+        if (!canvas || canvas.width === 0 || canvas.height === 0) {
+          throw new Error(`Canvas ${pageNumber} invalide: dimensions ${canvas?.width}x${canvas?.height}`);
+        }
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const ratio = canvas.height / canvas.width;
+
+        // Valider le ratio
+        if (!isFinite(ratio) || ratio <= 0) {
+          throw new Error(`Ratio invalide pour page ${pageNumber}: ${ratio}`);
+        }
+
+        const imgHeight = pageWidth * ratio;
+
+        // Valider les dimensions finales
+        if (!isFinite(imgHeight) || imgHeight <= 0) {
+          throw new Error(`Hauteur d'image invalide pour page ${pageNumber}: ${imgHeight}`);
+        }
+
+        console.log(`   Dimensions canvas: ${canvas.width}x${canvas.height}, Ratio: ${ratio.toFixed(2)}, Hauteur PDF: ${imgHeight.toFixed(2)}mm`);
+
+        pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, imgHeight);
+      };
+
       // ===== PAGE 1: ÉTUDE =====
       console.log("📄 Capture page 1 (Étude)...");
       const canvas1 = await html2canvas(etudeRef.current, canvasOptions);
-      const imgData1 = canvas1.toDataURL("image/jpeg", 0.92);
-      const imgHeight1 = (canvas1.height / canvas1.width) * pageWidth;
-      pdf.addImage(imgData1, "JPEG", 0, 0, pageWidth, imgHeight1);
+      addPageToPDF(canvas1, 1);
       console.log("✅ Page 1 ajoutée");
 
       // ===== PAGE 2: PLAN =====
       console.log("📄 Capture page 2 (Plan)...");
       pdf.addPage();
 
-      // Forcer le redessinage du canvas
-      plan.draw(elements, null, null);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       const canvas2 = await html2canvas(planExportRef.current, canvasOptions);
-      const imgData2 = canvas2.toDataURL("image/jpeg", 0.92);
-      const imgHeight2 = (canvas2.height / canvas2.width) * pageWidth;
-      pdf.addImage(imgData2, "JPEG", 0, 0, pageWidth, imgHeight2);
+      addPageToPDF(canvas2, 2);
       console.log("✅ Page 2 ajoutée");
 
       // ===== PAGE 3: PHOTOS & SIGNATURES =====
@@ -751,9 +788,7 @@ export default function IRShowerFormsView() {
         console.log("📄 Capture page 3 (Photos & Signatures)...");
         pdf.addPage();
         const canvas3 = await html2canvas(signaturesRef.current, canvasOptions);
-        const imgData3 = canvas3.toDataURL("image/jpeg", 0.92);
-        const imgHeight3 = (canvas3.height / canvas3.width) * pageWidth;
-        pdf.addImage(imgData3, "JPEG", 0, 0, pageWidth, imgHeight3);
+        addPageToPDF(canvas3, 3);
         console.log("✅ Page 3 ajoutée");
       } else {
         console.log("⏭️ Page 3 ignorée (pas de contenu)");
