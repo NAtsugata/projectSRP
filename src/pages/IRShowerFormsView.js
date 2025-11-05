@@ -500,6 +500,8 @@ export default function IRShowerFormsView() {
   const plan = usePlanCanvas(canvasRef, toCm, LABEL_OFFSET);
 
   const [elements, setElements] = useState([]);
+  const [history, setHistory] = useState([[]]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [preview, setPreview] = useState(null);
   const [tool, setTool] = useState("select");
   const [snap, setSnap] = useState(true);
@@ -508,6 +510,8 @@ export default function IRShowerFormsView() {
   const [selectedId, setSelectedId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
   const [currentColor, setCurrentColor] = useState("#0f172a");
+  const [copiedElement, setCopiedElement] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   /* SIGNATURES */
   const [signatureClient, setSignatureClient] = useState(null);
