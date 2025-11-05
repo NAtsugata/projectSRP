@@ -719,8 +719,10 @@ export default function IRShowerFormsView() {
       // planExportRef est à l'intérieur d'une div avec display conditionnel
       if (planParentDiv) planParentDiv.style.display = "block";
 
-      // signaturesRef est toujours caché normalement, on le rend visible
-      signaturesRef.current.style.display = "block";
+      // signaturesRef uniquement si on a des signatures
+      if (signatureClient || signatureInstaller) {
+        signaturesRef.current.style.display = "block";
+      }
 
       // Attendre que le navigateur applique les changements et calcule les dimensions
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -737,7 +739,9 @@ export default function IRShowerFormsView() {
       console.log("📐 Vérification des dimensions des éléments:");
       checkDimensions(etudeRef.current, "Étude");
       checkDimensions(planExportRef.current, "Plan");
-      checkDimensions(signaturesRef.current, "Signatures");
+      if (signatureClient || signatureInstaller) {
+        checkDimensions(signaturesRef.current, "Signatures");
+      }
 
       // Forcer le redessinage du canvas du plan maintenant qu'il est visible
       console.log("🎨 Redessinage du canvas...");
@@ -802,16 +806,64 @@ export default function IRShowerFormsView() {
       addPageToPDF(canvas2, 2);
       console.log("✅ Page 2 ajoutée");
 
-      // ===== PAGE 3: PHOTOS & SIGNATURES =====
-      const hasContent = photosAvant.length > 0 || photosApres.length > 0 || signatureClient || signatureInstaller;
-      if (hasContent) {
-        console.log("📄 Capture page 3 (Photos & Signatures)...");
+      // ===== PAGES PHOTOS: UNE PAGE PAR PHOTO =====
+      let pageNumber = 3;
+
+      // Fonction pour créer une page pour une photo
+      const addPhotoPage = async (photo, title) => {
+        console.log(`📸 Ajout photo: ${title} - ${photo.name}`);
+        pdf.addPage();
+
+        // Créer un élément temporaire pour la photo
+        const tempDiv = document.createElement('div');
+        tempDiv.style.width = '1000px';
+        tempDiv.style.padding = '40px';
+        tempDiv.style.background = '#ffffff';
+        tempDiv.innerHTML = `
+          <div style="margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a;">${title}</h2>
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #64748b;">${photo.name}</p>
+          </div>
+          <div style="border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 600px;">
+            <img src="${photo.src}" style="max-width: 100%; max-height: 600px; object-fit: contain; transform: rotate(${photo.rotation}deg);" />
+          </div>
+        `;
+
+        document.body.appendChild(tempDiv);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const photoCanvas = await html2canvas(tempDiv, canvasOptions);
+        addPageToPDF(photoCanvas, pageNumber++);
+
+        document.body.removeChild(tempDiv);
+        console.log(`   ✅ Photo ajoutée`);
+      };
+
+      // Photos AVANT
+      if (photosAvant.length > 0) {
+        console.log(`📷 Traitement ${photosAvant.length} photo(s) AVANT...`);
+        for (const photo of photosAvant) {
+          await addPhotoPage(photo, "Photo AVANT travaux");
+        }
+      }
+
+      // Photos APRÈS
+      if (photosApres.length > 0) {
+        console.log(`📷 Traitement ${photosApres.length} photo(s) APRÈS...`);
+        for (const photo of photosApres) {
+          await addPhotoPage(photo, "Photo APRÈS travaux");
+        }
+      }
+
+      // ===== PAGE SIGNATURES =====
+      if (signatureClient || signatureInstaller) {
+        console.log("✍️ Ajout page signatures...");
         pdf.addPage();
         const canvas3 = await html2canvas(signaturesRef.current, canvasOptions);
-        addPageToPDF(canvas3, 3);
-        console.log("✅ Page 3 ajoutée");
+        addPageToPDF(canvas3, pageNumber);
+        console.log("✅ Page signatures ajoutée");
       } else {
-        console.log("⏭️ Page 3 ignorée (pas de contenu)");
+        console.log("⏭️ Pas de signatures");
       }
 
       // Sauvegarder
