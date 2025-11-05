@@ -706,28 +706,31 @@ export default function IRShowerFormsView() {
       // Page 1: Étude
       const c1 = await capturePage(etudeRef.current);
       const img1 = c1.toDataURL("image/jpeg", 0.95);
-      const h1 = (c1.height / c1.width) * pageW;
-      pdf.addImage(img1, "JPEG", 0, 0, pageW, Math.min(h1, pageH), undefined, "FAST");
+      const ratio1 = c1.height / c1.width;
+      const imgH1 = pageW * ratio1;
+      pdf.addImage(img1, "JPEG", 0, 0, pageW, imgH1);
 
       // Page 2: Plan
       pdf.addPage();
       const c2 = await capturePage(planExportRef.current);
       const img2 = c2.toDataURL("image/jpeg", 0.95);
-      const h2 = (c2.height / c2.width) * pageW;
-      pdf.addImage(img2, "JPEG", 0, 0, pageW, Math.min(h2, pageH), undefined, "FAST");
+      const ratio2 = c2.height / c2.width;
+      const imgH2 = pageW * ratio2;
+      pdf.addImage(img2, "JPEG", 0, 0, pageW, imgH2);
 
       // Page 3: Photos & Signatures
       if (photosAvant.length > 0 || photosApres.length > 0 || signatureClient || signatureInstaller) {
         pdf.addPage();
         const c3 = await capturePage(signaturesRef.current);
         const img3 = c3.toDataURL("image/jpeg", 0.95);
-        const h3 = (c3.height / c3.width) * pageW;
-        pdf.addImage(img3, "JPEG", 0, 0, pageW, Math.min(h3, pageH), undefined, "FAST");
+        const ratio3 = c3.height / c3.width;
+        const imgH3 = pageW * ratio3;
+        pdf.addImage(img3, "JPEG", 0, 0, pageW, imgH3);
       }
 
       pdf.save(`IR_Douche_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (err) {
-      alert(`⚠️ Erreur lors de l'export PDF: ${err.message}\n\nVérifiez que html2canvas et jspdf sont installés et que l'application a été redémarrée.`);
+      alert(`⚠️ Erreur lors de l'exportation du PDF\n${err.message}\n\nVeuillez vérifier que html2canvas et jsPDF sont correctement installés, puis redémarrez l'application.`);
       console.error("Erreur détaillée:", err);
     }
   };
