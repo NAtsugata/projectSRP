@@ -119,21 +119,47 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
   const handleFileChange = (event) => {
     // Empêcher la propagation de l'événement pour éviter de fermer le formulaire
     event.stopPropagation();
+    event.preventDefault();
 
     console.log('📁 CustomFileInput handleFileChange appelé', event);
+    console.log('📁 isMobile:', isMobile, 'isIOS:', isIOS, 'isAndroid:', isAndroid);
+
     const files = event.target.files;
     console.log('📁 files:', files);
     console.log('📁 files.length:', files?.length);
     console.log('📁 onChange callback:', typeof onChange);
 
-    if (files && files.length > 0 && onChange) {
-      console.log('✅ Fichiers détectés, appel onChange');
-      const newEvent = { target: { files, value: event.target.value } };
-      onChange(newEvent);
+    if (files && files.length > 0) {
+      console.log('✅ Fichiers détectés:', Array.from(files).map(f => ({ name: f.name, size: f.size, type: f.type })));
+
+      if (onChange) {
+        // Créer un clone des fichiers avant de reset l'input
+        const fileArray = Array.from(files);
+        const newEvent = {
+          target: {
+            files: files,
+            value: event.target.value
+          },
+          preventDefault: () => {},
+          stopPropagation: () => {}
+        };
+
+        console.log('📤 Appel onChange avec', fileArray.length, 'fichier(s)');
+        onChange(newEvent);
+
+        // Reset APRÈS un court délai pour laisser le temps au traitement
+        setTimeout(() => {
+          event.target.value = '';
+          console.log('🔄 Input reset');
+        }, 100);
+      } else {
+        console.error('❌ onChange callback manquant');
+      }
     } else {
-      console.warn('⚠️ Pas de fichiers ou pas de onChange callback');
+      console.warn('⚠️ Aucun fichier sélectionné (possiblement annulé par l\'utilisateur)');
+      // Toujours reset même si annulé
+      event.target.value = '';
     }
-    event.target.value = '';
   };
 
   const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); if (!isMobile && !disabled) setIsDragOver(true); };

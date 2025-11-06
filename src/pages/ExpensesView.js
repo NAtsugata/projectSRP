@@ -64,14 +64,29 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   // Gestion des photos
   const handleReceiptCapture = useCallback((event) => {
+    console.log('💰 handleReceiptCapture appelé', event);
+    console.log('💰 event.target:', event.target);
+    console.log('💰 event.target.files:', event.target.files);
+
     const files = Array.from(event.target.files);
-    if (files.length === 0) return;
+    console.log('💰 Nombre de fichiers:', files.length);
+    console.log('💰 Fichiers:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+
+    if (files.length === 0) {
+      console.warn('💰 Aucun fichier à traiter');
+      return;
+    }
+
+    console.log('💰 Début lecture des fichiers...');
 
     // Lire tous les fichiers en parallèle et mettre à jour le state une seule fois
-    const readPromises = files.map(file => {
+    const readPromises = files.map((file, index) => {
       return new Promise((resolve, reject) => {
+        console.log(`💰 Lecture fichier ${index + 1}/${files.length}:`, file.name);
         const reader = new FileReader();
+
         reader.onload = (ev) => {
+          console.log(`✅ Fichier ${index + 1} lu avec succès:`, file.name, 'Taille données:', ev.target.result?.length);
           resolve({
             id: Date.now() + Math.random(),
             url: ev.target.result,
@@ -79,20 +94,31 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
             size: file.size
           });
         };
-        reader.onerror = reject;
+
+        reader.onerror = (err) => {
+          console.error(`❌ Erreur lecture fichier ${index + 1}:`, file.name, err);
+          reject(err);
+        };
+
         reader.readAsDataURL(file);
       });
     });
 
     Promise.all(readPromises)
       .then(newReceipts => {
-        setNewExpense(prev => ({
-          ...prev,
-          receipts: [...prev.receipts, ...newReceipts]
-        }));
+        console.log('✅ Tous les fichiers lus:', newReceipts.length);
+        console.log('💰 Ajout des receipts au state...');
+        setNewExpense(prev => {
+          const updated = {
+            ...prev,
+            receipts: [...prev.receipts, ...newReceipts]
+          };
+          console.log('💰 State mis à jour, total receipts:', updated.receipts.length);
+          return updated;
+        });
       })
       .catch(error => {
-        console.error('Erreur lecture fichiers:', error);
+        console.error('❌ Erreur lecture fichiers:', error);
         setError('Erreur lors de la lecture des fichiers');
       });
   }, []);
