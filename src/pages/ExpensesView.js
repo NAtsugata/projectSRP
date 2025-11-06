@@ -67,22 +67,34 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const receiptData = {
-          id: Date.now() + Math.random(),
-          url: ev.target.result,
-          name: file.name,
-          size: file.size
+    // Lire tous les fichiers en parallèle et mettre à jour le state une seule fois
+    const readPromises = files.map(file => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          resolve({
+            id: Date.now() + Math.random(),
+            url: ev.target.result,
+            name: file.name,
+            size: file.size
+          });
         };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(readPromises)
+      .then(newReceipts => {
         setNewExpense(prev => ({
           ...prev,
-          receipts: [...prev.receipts, receiptData]
+          receipts: [...prev.receipts, ...newReceipts]
         }));
-      };
-      reader.readAsDataURL(file);
-    });
+      })
+      .catch(error => {
+        console.error('Erreur lecture fichiers:', error);
+        setError('Erreur lors de la lecture des fichiers');
+      });
   }, []);
 
   const removeReceipt = (id) => {
