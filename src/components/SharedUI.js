@@ -106,9 +106,25 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
   const [isDragOver, setIsDragOver] = useState(false);
 
   const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-  const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+  // Détection mobile améliorée : UserAgent + capacités tactiles + taille écran
+  const hasTouch = typeof navigator !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const isSmallScreen = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const isMobileUA = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isMobile = isMobileUA || (hasTouch && isSmallScreen);
+
   const isIOS = /iPad|iPhone|iPod/.test(ua);
   const isAndroid = /Android/.test(ua);
+
+  console.log('📱 Détection mobile:', {
+    userAgent: ua,
+    isMobileUA,
+    hasTouch,
+    isSmallScreen,
+    isMobile: isMobile ? '✅' : '❌',
+    isIOS: isIOS ? '✅' : '❌',
+    isAndroid: isAndroid ? '✅' : '❌'
+  });
 
   const getOptimizedAccept = () => {
     if (!accept) return undefined;
