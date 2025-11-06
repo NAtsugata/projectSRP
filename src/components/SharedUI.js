@@ -117,6 +117,9 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
   };
 
   const handleFileChange = (event) => {
+    // Empêcher la propagation de l'événement pour éviter de fermer le formulaire
+    event.stopPropagation();
+
     console.log('📁 CustomFileInput handleFileChange appelé', event);
     const files = event.target.files;
     console.log('📁 files:', files);
@@ -162,13 +165,19 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     console.log('📁 Mode sélection fichier normal (pas seulement images)');
   }
 
+  const handleLabelClick = (e) => {
+    // Empêcher la propagation du clic sur le label
+    e.stopPropagation();
+  };
+
   const labelClasses = ['mobile-file-input-label', disabled ? 'disabled' : '', isDragOver ? 'drag-over' : '', className].filter(Boolean).join(' ');
 
   return (
-    <div className={className}>
+    <div className={className} onClick={(e) => e.stopPropagation()}>
       <label
         htmlFor={inputId.current}
         className={labelClasses}
+        onClick={handleLabelClick}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}

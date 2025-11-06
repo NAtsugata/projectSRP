@@ -353,6 +353,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       {/* Bouton Nouvelle Note */}
       {!isCreating && (
         <button
+          type="button"
           className="btn btn-primary w-full"
           onClick={() => setIsCreating(true)}
           style={{ marginBottom: '1.5rem' }}
@@ -444,6 +445,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                   <div key={receipt.id} className="receipt-item">
                     <img src={receipt.url} alt={receipt.name} />
                     <button
+                      type="button"
                       className="receipt-remove"
                       onClick={() => removeReceipt(receipt.id)}
                       disabled={isSubmitting}
@@ -464,6 +466,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={handleSubmit}
               disabled={isSubmitting}
@@ -472,6 +475,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
               {isSubmitting ? '📤 Envoi...' : '✅ Soumettre'}
             </button>
             <button
+              type="button"
               className="btn btn-secondary"
               onClick={() => {
                 setIsCreating(false);
@@ -552,6 +556,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
                     {expense.status === 'pending' && (
                       <button
+                        type="button"
                         className="btn btn-sm btn-secondary"
                         onClick={() => onDeleteExpense(expense)}
                         style={{ marginTop: '0.5rem', width: '100%' }}
