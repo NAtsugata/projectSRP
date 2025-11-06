@@ -1,6 +1,15 @@
-// src/hooks/useMobileUpload.js - Hook central pour l’upload mobile avec détection sécurisée
+// src/hooks/useMobileUpload.js - Hook central pour l'upload mobile avec détection sécurisée
 import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
+import {
+  storeFileForUpload,
+  getPendingUploads,
+  updateUploadStatus,
+  deleteUpload,
+  clearAllUploads,
+  arrayBufferToFile,
+  getCacheStats
+} from '../utils/indexedDBCache';
 
 // ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE
 export const useDeviceCapabilities = () => {
@@ -215,12 +224,37 @@ export const useResilientUpload = () => {
   };
 };
 
-// ✅ HOOK POUR STOCKAGE HORS LIGNE
+// ✅ HOOK POUR STOCKAGE HORS LIGNE AVEC INDEXEDDB
 export const useOfflineUpload = () => {
   const [pendingUploads, setPendingUploads] = useState([]);
+  const [cacheStats, setCacheStats] = useState({
+    count: 0,
+    totalSizeMB: '0.00',
+    pending: 0,
+    uploading: 0,
+    failed: 0,
+    completed: 0
+  });
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+
+  // Charger les uploads en attente au montage
+  useEffect(() => {
+    const loadPendingUploads = async () => {
+      try {
+        const uploads = await getPendingUploads('pending');
+        setPendingUploads(uploads);
+
+        const stats = await getCacheStats();
+        setCacheStats(stats);
+      } catch (error) {
+        console.error('Erreur chargement uploads:', error);
+      }
+    };
+
+    loadPendingUploads();
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -241,25 +275,17 @@ export const useOfflineUpload = () => {
 
   const storeForLaterUpload = useCallback(async (file, metadata) => {
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const uploadItem = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file: arrayBuffer,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        metadata,
-        timestamp: Date.now(),
-        status: 'pending'
-      };
+      const uploadId = await storeFileForUpload(file, metadata);
 
-      // Stockage en localStorage pour simplicité (en production, utilisez IndexedDB)
-      const existing = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-      const updated = [...existing, uploadItem];
-      localStorage.setItem('pendingUploads', JSON.stringify(updated));
+      // Recharger la liste
+      const uploads = await getPendingUploads('pending');
+      setPendingUploads(uploads);
 
-      setPendingUploads(updated);
-      return uploadItem.id;
+      const stats = await getCacheStats();
+      setCacheStats(stats);
+
+      console.log(`✅ Fichier ${file.name} mis en cache (${uploadId})`);
+      return uploadId;
     } catch (err) {
       console.error('Failed to store file for later upload:', err);
       throw err;
@@ -267,44 +293,93 @@ export const useOfflineUpload = () => {
   }, []);
 
   const processPendingUploads = useCallback(async () => {
-    if (!isOnline) return;
-
-    const pending = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-    const stillPending = [];
-
-    for (const item of pending) {
-      if (item.status !== 'pending') continue;
-
-      try {
-        const file = new File([item.file], item.fileName, {
-          type: item.fileType
-        });
-
-        const result = await storageService.uploadInterventionFile(
-          file,
-          item.metadata.interventionId,
-          item.metadata.folder
-        );
-
-        if (!result.error) {
-          // Upload réussi, supprimer de la liste
-          continue;
-        }
-      } catch (err) {
-        console.error('Failed to upload pending file:', err);
-      }
-
-      // Conserver en cas d'échec
-      stillPending.push(item);
+    if (!isOnline) {
+      console.log('⚠️ Hors ligne - uploads en attente');
+      return;
     }
 
-    localStorage.setItem('pendingUploads', JSON.stringify(stillPending));
-    setPendingUploads(stillPending);
+    try {
+      const pending = await getPendingUploads('pending');
+      console.log(`📤 Traitement de ${pending.length} upload(s) en attente...`);
+
+      for (const item of pending) {
+        try {
+          // Marquer comme "uploading"
+          await updateUploadStatus(item.id, 'uploading');
+
+          // Convertir ArrayBuffer en File
+          const file = arrayBufferToFile(item);
+
+          // Upload
+          const result = await storageService.uploadInterventionFile(
+            file,
+            item.metadata.interventionId,
+            item.metadata.folder
+          );
+
+          if (result && !result.error) {
+            // Upload réussi - marquer comme completed
+            await updateUploadStatus(item.id, 'completed', {
+              uploadedUrl: result.url,
+              completedAt: new Date().toISOString()
+            });
+            console.log(`✅ Upload réussi: ${item.fileName}`);
+          } else {
+            // Échec - marquer comme failed
+            await updateUploadStatus(item.id, 'failed', {
+              retryCount: (item.retryCount || 0) + 1,
+              lastError: result?.error?.message || 'Upload failed'
+            });
+            console.error(`❌ Upload échoué: ${item.fileName}`);
+          }
+        } catch (err) {
+          console.error('Failed to upload pending file:', err);
+
+          // Marquer comme failed
+          await updateUploadStatus(item.id, 'failed', {
+            retryCount: (item.retryCount || 0) + 1,
+            lastError: err.message
+          });
+        }
+      }
+
+      // Recharger la liste
+      const updatedUploads = await getPendingUploads('pending');
+      setPendingUploads(updatedUploads);
+
+      const stats = await getCacheStats();
+      setCacheStats(stats);
+
+    } catch (error) {
+      console.error('Erreur processPendingUploads:', error);
+    }
   }, [isOnline]);
 
-  const clearPendingUploads = useCallback(() => {
-    localStorage.removeItem('pendingUploads');
-    setPendingUploads([]);
+  const clearPendingUploads = useCallback(async () => {
+    try {
+      await clearAllUploads();
+      setPendingUploads([]);
+      setCacheStats({
+        count: 0,
+        totalSizeMB: '0.00',
+        pending: 0,
+        uploading: 0,
+        failed: 0,
+        completed: 0
+      });
+    } catch (error) {
+      console.error('Erreur clearPendingUploads:', error);
+    }
+  }, []);
+
+  const retryFailedUpload = useCallback(async (uploadId) => {
+    try {
+      await updateUploadStatus(uploadId, 'pending');
+      const uploads = await getPendingUploads('pending');
+      setPendingUploads(uploads);
+    } catch (error) {
+      console.error('Erreur retryFailedUpload:', error);
+    }
   }, []);
 
   // Auto-traitement quand on revient en ligne
@@ -318,7 +393,9 @@ export const useOfflineUpload = () => {
     storeForLaterUpload,
     processPendingUploads,
     clearPendingUploads,
+    retryFailedUpload,
     pendingUploads,
+    cacheStats,
     isOnline
   };
 };
