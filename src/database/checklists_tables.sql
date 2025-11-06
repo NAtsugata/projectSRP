@@ -48,7 +48,7 @@ COMMENT ON COLUMN public.checklist_templates.items IS 'Array JSON des items: {id
 
 CREATE TABLE IF NOT EXISTS public.checklists (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    intervention_id UUID NOT NULL REFERENCES public.interventions(id) ON DELETE CASCADE,
+    intervention_id BIGINT NOT NULL REFERENCES public.interventions(id) ON DELETE CASCADE,
     template_id UUID NOT NULL REFERENCES public.checklist_templates(id) ON DELETE RESTRICT,
     template_name TEXT NOT NULL, -- Copie du nom pour référence
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
