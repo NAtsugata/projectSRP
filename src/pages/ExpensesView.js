@@ -390,7 +390,11 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
       {/* Formulaire de création */}
       {isCreating && (
-        <div className="expense-form-card">
+        <div
+          className="expense-form-card"
+          onClick={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
           <h3 style={{ marginBottom: '1rem', color: 'var(--copper-dark, #A0522D)' }}>
             📝 Nouvelle Note de Frais
           </h3>
@@ -454,7 +458,11 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
             />
           </div>
 
-          <div className="form-group">
+          <div
+            className="form-group"
+            onClick={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <label>Justificatifs (photos)</label>
             <CustomFileInput
               onChange={handleReceiptCapture}

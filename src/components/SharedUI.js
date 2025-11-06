@@ -119,7 +119,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
   const handleFileChange = (event) => {
     // Empêcher la propagation de l'événement pour éviter de fermer le formulaire
     event.stopPropagation();
-    event.preventDefault();
+    // NE PAS faire preventDefault() car ça peut bloquer le comportement natif du file input sur mobile
 
     console.log('📁 CustomFileInput handleFileChange appelé', event);
     console.log('📁 isMobile:', isMobile, 'isIOS:', isIOS, 'isAndroid:', isAndroid);
@@ -196,14 +196,24 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     e.stopPropagation();
   };
 
+  const handleLabelTouch = (e) => {
+    // Empêcher la propagation des événements tactiles
+    e.stopPropagation();
+  };
+
   const labelClasses = ['mobile-file-input-label', disabled ? 'disabled' : '', isDragOver ? 'drag-over' : '', className].filter(Boolean).join(' ');
 
   return (
-    <div className={className} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={className}
+      onClick={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <label
         htmlFor={inputId.current}
         className={labelClasses}
         onClick={handleLabelClick}
+        onTouchEnd={handleLabelTouch}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
