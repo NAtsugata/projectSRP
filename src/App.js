@@ -8,10 +8,11 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
+import expenseService from './services/expenseService';
 import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import { Toast, ConfirmationModal } from './components/SharedUI';
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon } from './components/SharedUI';
+import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon } from './components/SharedUI';
 import LoginScreen from './pages/LoginScreen';
 import './App.css';
 
@@ -28,6 +29,8 @@ const CoffreNumeriqueView = lazy(() => import('./pages/CoffreNumeriqueView'));
 const AgendaView = lazy(() => import('./pages/AgendaView'));
 const InterventionDetailView = lazy(() => import('./pages/InterventionDetailView'));
 const IRShowerFormsView = lazy(() => import('./pages/IRShowerFormsView'));
+const ExpensesView = lazy(() => import('./pages/ExpensesView'));
+const AdminExpensesView = lazy(() => import('./pages/AdminExpensesView'));
 
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
@@ -41,13 +44,15 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'users', label: 'Employés', icon: <UsersIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
-        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> }, // ⬅️ NEW
+        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> }, // ⬅️ NEW
+        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
       ]
     : [
         { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
         { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
+        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> }, // ⬅️ NEW
         { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> }, // ⬅️ NEW
       ];
 
@@ -112,6 +117,7 @@ function App() {
   const [interventions, setInterventions] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [vaultDocuments, setVaultDocuments] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -127,11 +133,12 @@ function App() {
       try {
         const isAdmin = userProfile.is_admin;
         const userId = userProfile.id;
-        const [profilesRes, interventionsRes, leavesRes, vaultRes] = await Promise.all([
+        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes] = await Promise.all([
           profileService.getAllProfiles(),
           interventionService.getInterventions(isAdmin ? null : userId, false),
           leaveService.getLeaveRequests(isAdmin ? null : userId),
-          vaultService.getVaultDocuments()
+          vaultService.getVaultDocuments(),
+          isAdmin ? expenseService.getAllExpenses() : expenseService.getUserExpenses(userId)
         ]);
 
         if (profilesRes.error) throw profilesRes.error;
@@ -145,6 +152,9 @@ function App() {
 
         if (vaultRes.error) throw vaultRes.error;
         setVaultDocuments(vaultRes.data || []);
+
+        if (expensesRes.error) throw expensesRes.error;
+        setExpenses(expensesRes.data || []);
 
         setDataVersion(Date.now());
       } catch (error) {
@@ -454,6 +464,89 @@ function App() {
     });
   };
 
+  // ✅ Soumettre une note de frais (employé)
+  const handleSubmitExpense = async ({ date, category, amount, description, receipts, userId }) => {
+    try {
+      console.log('💰 handleSubmitExpense appelé avec:', {
+        date,
+        category,
+        amount,
+        description,
+        receiptsCount: receipts.length,
+        userId
+      });
+
+      const { error } = await expenseService.createExpense({
+        userId,
+        date,
+        category,
+        amount,
+        description,
+        receipts
+      });
+
+      if (error) throw error;
+
+      showToast('Note de frais soumise avec succès !', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur lors de la soumission de la note de frais:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  // ✅ Approuver une note de frais (admin)
+  const handleApproveExpense = async (expense, comment = '') => {
+    try {
+      console.log('✅ handleApproveExpense appelé pour:', expense.id);
+
+      const { error } = await expenseService.approveExpense(expense.id, profile.id, comment);
+
+      if (error) throw error;
+
+      showToast('Note de frais approuvée !', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'approbation:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+    }
+  };
+
+  // ✅ Rejeter une note de frais (admin)
+  const handleRejectExpense = async (expense, comment) => {
+    try {
+      console.log('❌ handleRejectExpense appelé pour:', expense.id);
+
+      const { error } = await expenseService.rejectExpense(expense.id, profile.id, comment);
+
+      if (error) throw error;
+
+      showToast('Note de frais rejetée.', 'info');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur lors du rejet:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+    }
+  };
+
+  // ✅ Supprimer une note de frais (employé - seulement si pending)
+  const handleDeleteExpense = (expense) => {
+    showConfirmationModal({
+      title: 'Supprimer la note de frais ?',
+      message: `Êtes-vous sûr de vouloir supprimer cette note de frais de ${expense.amount}€ ? Cette action est irréversible.`,
+      onConfirm: async () => {
+        const { error } = await expenseService.deleteExpense(expense.id, profile.id);
+        if (error) {
+          showToast(`Erreur: ${error.message}`, 'error');
+        } else {
+          showToast('Note de frais supprimée.', 'success');
+        }
+        await refreshData(profile);
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -568,6 +661,11 @@ function App() {
                     </Suspense>
                   }
                 />
+                <Route path="expenses" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} />
+                  </Suspense>
+                } />
                 <Route path="ir-docs" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <IRShowerFormsView />
@@ -609,6 +707,11 @@ function App() {
                 <Route path="vault" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
+                  </Suspense>
+                } />
+                <Route path="expenses" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <ExpensesView expenses={expenses} onSubmitExpense={handleSubmitExpense} onDeleteExpense={handleDeleteExpense} profile={profile} />
                   </Suspense>
                 } />
                 <Route path="ir-docs" element={
