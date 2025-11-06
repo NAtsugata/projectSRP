@@ -2,13 +2,13 @@
 import React, { useState, useMemo } from 'react';
 import {
   DownloadIcon,
-  RefreshIcon,
+  RefreshCwIcon as RefreshIcon,
   TrashIcon,
   SearchIcon,
-  BarChartIcon,
+  LayoutDashboardIcon as BarChartIcon,
   FileTextIcon,
   UsersIcon,
-  AlertCircleIcon
+  AlertTriangleIcon as AlertCircleIcon
 } from '../SharedUI';
 import { getCacheStats, clearCompletedUploads, cleanOldUploads } from '../../utils/indexedDBCache';
 

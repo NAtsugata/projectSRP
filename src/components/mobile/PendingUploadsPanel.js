@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   UploadIcon,
-  RefreshIcon,
+  RefreshCwIcon as RefreshIcon,
   TrashIcon,
   CheckCircleIcon,
-  AlertCircleIcon,
-  ClockIcon,
+  AlertTriangleIcon as AlertCircleIcon,
+  CalendarIcon as ClockIcon,
   FileTextIcon
 } from '../SharedUI';
 import {
