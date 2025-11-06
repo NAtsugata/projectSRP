@@ -318,15 +318,30 @@ export default function IRShowerFormsView() {
   const [signaturePos, setSignaturePos] = useState({ client: null, installer: null });
 
   const handlePhotoCapture = (e, type) => {
+    console.log('📸 handlePhotoCapture appelé, type:', type, 'event:', e);
     const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    console.log('📸 Fichiers détectés:', files.length);
+    if (files.length === 0) {
+      console.warn('⚠️ Aucun fichier capturé');
+      return;
+    }
 
     files.forEach(file => {
+      console.log('📸 Lecture fichier:', file.name, file.size, 'bytes');
       const reader = new FileReader();
       reader.onload = (ev) => {
+        console.log('✅ Fichier lu avec succès:', file.name);
         const photoData = { id: newId(), url: ev.target.result, name: file.name };
-        if (type === 'avant') setPhotosAvant(prev => [...prev, photoData]);
-        else setPhotosApres(prev => [...prev, photoData]);
+        if (type === 'avant') {
+          console.log('📸 Ajout photo AVANT');
+          setPhotosAvant(prev => [...prev, photoData]);
+        } else {
+          console.log('📸 Ajout photo APRÈS');
+          setPhotosApres(prev => [...prev, photoData]);
+        }
+      };
+      reader.onerror = (err) => {
+        console.error('❌ Erreur lecture fichier:', err);
       };
       reader.readAsDataURL(file);
     });

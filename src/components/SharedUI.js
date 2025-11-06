@@ -117,10 +117,18 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
   };
 
   const handleFileChange = (event) => {
+    console.log('📁 CustomFileInput handleFileChange appelé', event);
     const files = event.target.files;
+    console.log('📁 files:', files);
+    console.log('📁 files.length:', files?.length);
+    console.log('📁 onChange callback:', typeof onChange);
+
     if (files && files.length > 0 && onChange) {
+      console.log('✅ Fichiers détectés, appel onChange');
       const newEvent = { target: { files, value: event.target.value } };
       onChange(newEvent);
+    } else {
+      console.warn('⚠️ Pas de fichiers ou pas de onChange callback');
     }
     event.target.value = '';
   };

@@ -396,14 +396,25 @@ function App() {
   // ✅ Envoi coffre-fort
   const handleSendVaultDocument = async ({ file, userId, name, fileSize = null, description = '', tags = [] }) => {
     try {
+      console.log('🏦 handleSendVaultDocument appelé avec:', {
+        fileName: file?.name,
+        fileSize: file?.size,
+        userId,
+        name
+      });
+
       // Validation de la taille du fichier
       const sizeValidation = validateFileSize(file.size, 20); // 20MB max pour coffre-fort
+      console.log('🏦 Validation taille:', sizeValidation);
       if (!sizeValidation.isValid) {
+        console.error('❌ Fichier trop volumineux');
         showToast(sizeValidation.message, 'error');
         return;
       }
 
+      console.log('🏦 Appel uploadVaultFile...');
       const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
+      console.log('🏦 Résultat uploadVaultFile:', { publicURL, filePath, uploadError });
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await vaultService.createVaultDocument({

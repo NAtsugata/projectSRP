@@ -80,13 +80,26 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
   }, [vaultDocuments, users]);
 
   const handleFileSelect = useCallback((event) => {
+    console.log('🔍 handleFileSelect appelé', event);
+    console.log('🔍 event.target:', event.target);
+    console.log('🔍 event.target.files:', event.target.files);
+
     const selectedFile = event.target.files?.[0];
+    console.log('🔍 selectedFile:', selectedFile);
+
     if (selectedFile) {
+      console.log('✅ Fichier sélectionné:', {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type
+      });
       setFile(selectedFile);
       const nameWithoutExt = selectedFile.name.split('.').slice(0, -1).join('.');
       setDocumentName(nameWithoutExt);
       setError(null);
       setSuccess(false);
+    } else {
+      console.warn('⚠️ Aucun fichier sélectionné');
     }
   }, []);
 
@@ -97,12 +110,19 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    console.log('📤 handleSubmit appelé');
+    console.log('📤 file:', file);
+    console.log('📤 selectedUserId:', selectedUserId);
+    console.log('📤 documentName:', documentName);
 
     if (!file || !selectedUserId || !documentName.trim()) {
-      setError('Veuillez remplir tous les champs obligatoires.');
+      const errorMsg = 'Veuillez remplir tous les champs obligatoires.';
+      console.error('❌ Validation échouée:', errorMsg);
+      setError(errorMsg);
       return;
     }
 
+    console.log('✅ Validation passée, début de l\'upload');
     setIsUploading(true);
     setError(null);
     setSuccess(false);
@@ -115,6 +135,14 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
       const tags = tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
 
+      console.log('📤 Appel onSendDocument avec:', {
+        fileName: file.name,
+        fileSize: file.size,
+        userId: selectedUserId,
+        name: documentName.trim(),
+        tags
+      });
+
       await onSendDocument({
         file,
         userId: selectedUserId,
@@ -123,6 +151,8 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         description: description.trim(),
         tags
       });
+
+      console.log('✅ onSendDocument terminé avec succès');
 
       clearInterval(progressInterval);
       setUploadProgress(100);
