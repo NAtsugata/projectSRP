@@ -33,7 +33,14 @@ const expenseService = {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      return { data, error: null };
+
+      // Parser les receipts JSONB en tableaux
+      const parsedData = data?.map(expense => ({
+        ...expense,
+        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
+      })) || [];
+
+      return { data: parsedData, error: null };
     } catch (error) {
       console.error('❌ Erreur getUserExpenses:', error);
       return { data: null, error };
@@ -51,7 +58,14 @@ const expenseService = {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      return { data, error: null };
+
+      // Parser les receipts JSONB en tableaux
+      const parsedData = data?.map(expense => ({
+        ...expense,
+        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
+      })) || [];
+
+      return { data: parsedData, error: null };
     } catch (error) {
       console.error('❌ Erreur getAllExpenses:', error);
       return { data: null, error };

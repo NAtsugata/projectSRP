@@ -36,6 +36,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
       onClick={onClose}
     >
       <button
+        type="button"
         onClick={onClose}
         style={{
           position: 'absolute',
@@ -77,6 +78,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <button
+            type="button"
             onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
             disabled={currentIndex === 0}
             className="btn btn-secondary"
@@ -87,6 +89,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
             {currentIndex + 1} / {receipts.length}
           </span>
           <button
+            type="button"
             onClick={() => setCurrentIndex(prev => Math.min(receipts.length - 1, prev + 1))}
             disabled={currentIndex === receipts.length - 1}
             className="btn btn-secondary"
@@ -138,7 +141,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
 
   return (
     <div className="user-accordion">
-      <button className="accordion-header" onClick={() => setIsOpen(!isOpen)}>
+      <button type="button" className="accordion-header" onClick={() => setIsOpen(!isOpen)}>
         <div className="accordion-title">
           <UserIcon />
           <span>{userName}</span>
@@ -231,6 +234,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                   {/* Justificatifs */}
                   {expense.receipts && expense.receipts.length > 0 && (
                     <button
+                      type="button"
                       onClick={() => setShowReceipts(expense.receipts)}
                       className="btn btn-sm btn-secondary"
                       style={{ width: '100%', marginBottom: '0.75rem' }}
@@ -271,6 +275,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
 
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
+                          type="button"
                           onClick={() => handleApprove(expense)}
                           className="btn btn-success"
                           style={{ flex: 1 }}
@@ -278,6 +283,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                           <CheckCircleIcon /> Approuver
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleReject(expense)}
                           className="btn btn-danger"
                           style={{ flex: 1 }}
@@ -525,24 +531,28 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
       {/* Filtres */}
       <div className="filter-tabs">
         <button
+          type="button"
           className={`filter-tab ${filterStatus === 'all' ? 'active' : ''}`}
           onClick={() => setFilterStatus('all')}
         >
           📋 Toutes ({expenses.length})
         </button>
         <button
+          type="button"
           className={`filter-tab ${filterStatus === 'pending' ? 'active' : ''}`}
           onClick={() => setFilterStatus('pending')}
         >
           ⏳ En attente ({globalStats.pending.count})
         </button>
         <button
+          type="button"
           className={`filter-tab ${filterStatus === 'approved' ? 'active' : ''}`}
           onClick={() => setFilterStatus('approved')}
         >
           ✅ Approuvées ({globalStats.approved.count})
         </button>
         <button
+          type="button"
           className={`filter-tab ${filterStatus === 'rejected' ? 'active' : ''}`}
           onClick={() => setFilterStatus('rejected')}
         >
