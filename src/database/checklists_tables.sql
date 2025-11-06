@@ -33,8 +33,8 @@ CREATE POLICY "Admins can manage checklist templates"
     FOR ALL
     USING (
         EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.is_admin = true
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.is_admin = true
         )
     );
 
@@ -88,8 +88,8 @@ CREATE POLICY "Admins can view all checklists"
     FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.is_admin = true
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.is_admin = true
         )
     );
 
@@ -99,8 +99,8 @@ CREATE POLICY "Admins can manage checklists"
     FOR ALL
     USING (
         EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.is_admin = true
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.is_admin = true
         )
     );
 
