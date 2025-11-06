@@ -1,4 +1,4 @@
-// src/pages/AdminVaultView.js - VERSION AMÉLIORÉE AVEC TRI PAR EMPLOYÉ + OUTILS ADMIN
+// src/pages/AdminVaultView.js - VERSION AMÉLIORÉE AVEC TRI PAR EMPLOYÉ
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   DownloadIcon,
@@ -10,7 +10,6 @@ import {
   UserIcon,
   CustomFileInput // On importe CustomFileInput
 } from '../components/SharedUI';
-import AdminToolsPanel from '../components/admin/AdminToolsPanel';
 
 // Composant Accordion pour chaque employé
 const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) => {
@@ -165,12 +164,6 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
     });
   };
 
-  const handleRefresh = useCallback(() => {
-    if (window.location) {
-      window.location.reload();
-    }
-  }, []);
-
   return (
     <div>
       <style>{`
@@ -252,13 +245,6 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
       `}</style>
 
       <h2 className="view-title">Coffre-fort numérique - Administration</h2>
-
-      {/* --- PANNEAU D'OUTILS ADMIN --- */}
-      <AdminToolsPanel
-        vaultDocuments={vaultDocuments}
-        users={users}
-        onRefresh={handleRefresh}
-      />
 
       {/* --- FORMULAIRE D'ENVOI --- */}
       <div className="vault-form-section">

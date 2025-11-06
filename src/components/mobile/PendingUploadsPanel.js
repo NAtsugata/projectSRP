@@ -10,50 +10,38 @@ import {
   FileTextIcon
 } from '../SharedUI';
 import {
-  getPendingUploads,
-  getCacheStats,
   deleteUpload,
-  updateUploadStatus,
   clearCompletedUploads,
+  updateUploadStatus,
   arrayBufferToFile
 } from '../../utils/indexedDBCache';
 import { storageService } from '../../lib/supabase';
+import useIndexedDBUpload from '../../hooks/useIndexedDBUpload';
 
 export const PendingUploadsPanel = ({ onUploadComplete }) => {
-  const [uploads, setUploads] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    pendingUploads: uploads,
+    cacheStats: stats,
+    loading,
+    loadPendingUploads,
+    retryFailedUpload
+  } = useIndexedDBUpload();
+
   const [uploading, setUploading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Charger les uploads
-  const loadUploads = async () => {
-    try {
-      setLoading(true);
-      const allUploads = await getPendingUploads();
-      setUploads(allUploads);
-
-      const cacheStats = await getCacheStats();
-      setStats(cacheStats);
-    } catch (error) {
-      console.error('Erreur chargement uploads:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadUploads();
+    loadPendingUploads();
 
     // Refresh toutes les 5 secondes si uploads en cours
     const interval = setInterval(() => {
       if (uploads.some(u => u.status === 'uploading' || u.status === 'pending')) {
-        loadUploads();
+        loadPendingUploads();
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadPendingUploads]);
 
   // Uploader un fichier spécifique
   const handleUploadFile = async (uploadItem) => {
@@ -92,14 +80,11 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
         alert(`❌ Échec upload: ${result?.error?.message || 'Erreur inconnue'}`);
       }
 
-      await loadUploads();
+      await loadPendingUploads();
     } catch (error) {
       console.error('Erreur upload:', error);
-      await updateUploadStatus(uploadItem.id, 'failed', {
-        lastError: error.message
-      });
       alert(`❌ Erreur: ${error.message}`);
-      await loadUploads();
+      await loadPendingUploads();
     } finally {
       setUploading(false);
     }
@@ -131,7 +116,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
 
     try {
       await deleteUpload(uploadId);
-      await loadUploads();
+      await loadPendingUploads();
       alert('✅ Upload supprimé');
     } catch (error) {
       console.error('Erreur suppression:', error);
@@ -143,7 +128,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
   const handleClearCompleted = async () => {
     try {
       const count = await clearCompletedUploads();
-      await loadUploads();
+      await loadPendingUploads();
       alert(`✅ ${count} upload(s) complété(s) supprimé(s)`);
     } catch (error) {
       console.error('Erreur nettoyage:', error);
@@ -154,7 +139,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
   // Retry un upload échoué
   const handleRetry = async (uploadId) => {
     try {
-      await updateUploadStatus(uploadId, 'pending');
+      await retryFailedUpload(uploadId);
       const upload = uploads.find(u => u.id === uploadId);
       if (upload) {
         await handleUploadFile(upload);
@@ -271,7 +256,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
             >
               <UploadIcon /> Uploader tout ({stats.pending})
             </button>
-            <button onClick={loadUploads} style={styles.btnSecondary}>
+            <button onClick={loadPendingUploads} style={styles.btnSecondary}>
               <RefreshIcon /> Actualiser
             </button>
             {stats.completed > 0 && (
