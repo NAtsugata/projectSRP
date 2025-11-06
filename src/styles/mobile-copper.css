@@ -66,43 +66,229 @@
       0 2px 4px rgba(184, 115, 51, 0.1) !important;
   }
 
-  /* ==================== BOUTONS ==================== */
+  /* ==================== BOUTONS OPTIMISÉS MOBILE ==================== */
+
+  /* TOUS les boutons - Taille minimum garantie */
   button,
   .btn,
   .button,
   [role="button"],
   input[type="submit"],
-  input[type="button"] {
+  input[type="button"],
+  a.btn,
+  a[role="button"] {
+    /* Taille minimum Apple/Google HIG */
+    min-height: 48px !important;
+    min-width: 48px !important;
+
+    /* Padding généreux pour zone tactile */
+    padding: 14px 24px !important;
+
+    /* Style cuivré */
     background: linear-gradient(145deg, var(--brass) 0%, var(--copper-main) 100%) !important;
     color: white !important;
     border: 2px solid var(--copper-dark) !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
+
+    /* Ombres métalliques */
     box-shadow:
-      0 3px 6px rgba(184, 115, 51, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
-      inset 0 -2px 0 rgba(139, 69, 19, 0.2) !important;
+      0 4px 8px rgba(184, 115, 51, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -2px 0 rgba(139, 69, 19, 0.25) !important;
+
+    /* Texte */
+    font-size: 16px !important;
     font-weight: 600 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-    min-height: 44px !important;
-    padding: 12px 20px !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+    text-align: center !important;
+
+    /* Comportement */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+
+    /* Transition */
     transition: all 0.2s ease !important;
+
+    /* Assurer visibilité */
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 1 !important;
   }
 
+  /* État actif/pressé */
   button:active,
-  .btn:active {
+  .btn:active,
+  [role="button"]:active {
     background: linear-gradient(145deg, var(--copper-main) 0%, var(--copper-dark) 100%) !important;
     box-shadow:
-      inset 0 3px 6px rgba(139, 69, 19, 0.3),
+      inset 0 4px 8px rgba(139, 69, 19, 0.4),
       0 1px 2px rgba(184, 115, 51, 0.2) !important;
-    transform: translateY(2px);
+    transform: translateY(2px) scale(0.98) !important;
+  }
+
+  /* Boutons disabled */
+  button:disabled,
+  .btn:disabled,
+  button[disabled],
+  .btn[disabled] {
+    background: linear-gradient(145deg, #cccccc 0%, #999999 100%) !important;
+    border-color: #666666 !important;
+    color: #ffffff !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
   }
 
   /* Boutons secondaires */
   button.secondary,
-  .btn-secondary {
+  .btn-secondary,
+  button[class*="secondary"],
+  .button-secondary {
     background: linear-gradient(145deg, #F5DEB3 0%, #DEB887 100%) !important;
     color: var(--copper-dark) !important;
     border: 2px solid var(--copper-main) !important;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+  }
+
+  button.secondary:active,
+  .btn-secondary:active {
+    background: linear-gradient(145deg, #DEB887 0%, #D2A679 100%) !important;
+  }
+
+  /* Boutons outline/ghost */
+  button.outline,
+  .btn-outline,
+  button[class*="outline"] {
+    background: transparent !important;
+    color: var(--copper-main) !important;
+    border: 2px solid var(--copper-main) !important;
+    box-shadow: 0 2px 4px rgba(184, 115, 51, 0.15) !important;
+  }
+
+  button.outline:active,
+  .btn-outline:active {
+    background: rgba(218, 165, 32, 0.1) !important;
+    box-shadow: inset 0 2px 4px rgba(184, 115, 51, 0.2) !important;
+  }
+
+  /* Petits boutons (icônes seules) - minimum 44x44px quand même */
+  button.btn-sm,
+  button.small,
+  .btn-small,
+  button.icon-only {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 10px !important;
+    font-size: 14px !important;
+  }
+
+  /* Gros boutons (CTA primaires) */
+  button.btn-lg,
+  button.large,
+  .btn-large,
+  button.primary-action {
+    min-height: 56px !important;
+    padding: 16px 32px !important;
+    font-size: 18px !important;
+    border-radius: 12px !important;
+    box-shadow:
+      0 6px 12px rgba(184, 115, 51, 0.4),
+      inset 0 2px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -3px 0 rgba(139, 69, 19, 0.3) !important;
+  }
+
+  /* Boutons pleine largeur */
+  button.full-width,
+  .btn-full,
+  button[class*="block"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Groupes de boutons - espacement entre eux */
+  .button-group,
+  .btn-group,
+  [class*="button-group"] {
+    display: flex !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+    margin: 8px 0 !important;
+  }
+
+  .button-group button,
+  .btn-group button,
+  .button-group .btn,
+  .btn-group .btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+  }
+
+  /* Boutons dans les cartes - marge pour pas être coupé */
+  .card button,
+  .modern-section button,
+  .document-card button,
+  .intervention-card button {
+    margin: 4px !important;
+  }
+
+  /* Boutons dans les headers/footers */
+  header button,
+  footer button,
+  .header button,
+  .footer button {
+    margin: 4px 8px !important;
+  }
+
+  /* Icônes dans les boutons */
+  button svg,
+  button i,
+  .btn svg,
+  .btn i {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    flex-shrink: 0 !important;
+    color: currentColor !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  /* Icônes seules dans boutons */
+  button svg:only-child,
+  button i:only-child,
+  .btn svg:only-child,
+  .btn i:only-child {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+  }
+
+  /* Assurer que les boutons ne sont pas écrasés par flex */
+  button,
+  .btn,
+  [role="button"] {
+    flex-shrink: 0 !important;
+  }
+
+  /* Boutons dans un conteneur qui scroll - assurer visibilité */
+  .overflow-auto button,
+  .overflow-scroll button,
+  .scroll-container button {
+    margin: 8px !important;
+  }
+
+  /* Liens stylés comme boutons */
+  a.button,
+  a.btn,
+  a[role="button"] {
+    text-decoration: none !important;
+    display: inline-flex !important;
   }
 
   /* ==================== NAVIGATION BOTTOM ==================== */
@@ -129,64 +315,148 @@
     min-height: 60px !important;
   }
 
-  /* Boutons de navigation */
+  /* Boutons de navigation - ACCESSIBILITÉ MAXIMALE */
   .mobile-nav button,
   .mobile-nav a,
   .bottom-nav button,
   .bottom-nav a,
   .mobile-nav [role="button"],
   .bottom-nav [role="button"] {
+    /* Taille généreuse pour doigt */
     flex: 1 !important;
+    min-height: 52px !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
+
+    /* Layout */
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 4px !important;
-    min-height: 44px !important;
-    padding: 8px 4px !important;
+
+    /* Padding confortable */
+    padding: 10px 8px !important;
+    margin: 0 2px !important;
+
+    /* Style */
     background: transparent !important;
     border: none !important;
+    border-radius: 8px !important;
     box-shadow: none !important;
+
+    /* Texte */
     color: white !important;
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
-    transition: all 0.2s ease !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+
+    /* Comportement tactile */
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+    transition: all 0.15s ease !important;
+
+    /* Assurer visibilité */
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 2 !important;
   }
 
+  /* État pressé - feedback tactile clair */
   .mobile-nav button:active,
   .mobile-nav a:active,
   .bottom-nav button:active,
   .bottom-nav a:active {
-    background: rgba(139, 69, 19, 0.2) !important;
-    transform: scale(0.95);
+    background: rgba(139, 69, 19, 0.3) !important;
+    transform: scale(0.92) !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2) !important;
   }
 
-  /* Bouton actif dans navigation */
+  /* Bouton actif/sélectionné dans navigation */
   .mobile-nav button.active,
   .mobile-nav a.active,
+  .mobile-nav button[aria-current="page"],
+  .mobile-nav a[aria-current="page"],
   .bottom-nav button.active,
-  .bottom-nav a.active {
-    background: rgba(255, 255, 255, 0.15) !important;
-    border-radius: 8px !important;
-    box-shadow: inset 0 2px 4px rgba(139, 69, 19, 0.2) !important;
+  .bottom-nav a.active,
+  .bottom-nav button[aria-current="page"],
+  .bottom-nav a[aria-current="page"] {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 10px !important;
+    box-shadow:
+      inset 0 2px 6px rgba(139, 69, 19, 0.3),
+      0 0 0 2px rgba(255, 255, 255, 0.2) !important;
   }
 
-  /* Icônes de navigation */
+  /* Icônes de navigation - TAILLE GÉNÉREUSE */
   .mobile-nav-icon,
   .mobile-nav svg,
   .bottom-nav svg,
   .mobile-nav i,
-  .bottom-nav i {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
+  .bottom-nav i,
+  .mobile-nav button svg,
+  .mobile-nav a svg,
+  .bottom-nav button svg,
+  .bottom-nav a svg,
+  .mobile-nav button i,
+  .mobile-nav a i,
+  .bottom-nav button i,
+  .bottom-nav a i {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
     color: white !important;
     fill: white !important;
     stroke: white !important;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)) !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)) !important;
     flex-shrink: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Labels de navigation - toujours visibles */
+  .mobile-nav button span,
+  .mobile-nav a span,
+  .bottom-nav button span,
+  .bottom-nav a span,
+  .nav-label,
+  .mobile-nav-label {
+    display: block !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: white !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    margin-top: 2px !important;
+  }
+
+  /* Badge/compteur sur icône navigation */
+  .mobile-nav .badge,
+  .mobile-nav .count,
+  .bottom-nav .badge,
+  .bottom-nav .count {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 2px 4px !important;
+    background: #DC3545 !important;
+    color: white !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 9px !important;
+    border: 2px solid var(--copper-dark) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* ==================== ICÔNES GÉNÉRALES ==================== */
@@ -427,11 +697,70 @@
   }
 
   /* ==================== SPACING & LAYOUT ==================== */
-  /* Assurer que le contenu ne passe pas sous la navigation */
+
+  /* Assurer que le contenu ne passe pas sous la navigation bottom */
+  body {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
   main,
   .app-content,
-  .page-content {
-    padding-bottom: 80px !important;
+  .page-content,
+  .main-content,
+  #root,
+  .app-container {
+    padding-bottom: 100px !important;
+    margin-bottom: 0 !important;
+    min-height: calc(100vh - 100px) !important;
+  }
+
+  /* Containers avec scroll */
+  .scroll-container,
+  .overflow-scroll,
+  .overflow-auto {
+    padding-bottom: 100px !important;
+  }
+
+  /* Listes et grids */
+  ul,
+  ol,
+  .list,
+  .grid {
+    padding-bottom: 20px !important;
+  }
+
+  /* Sections en bas de page */
+  section:last-child,
+  .section:last-child,
+  .modern-section:last-child {
+    margin-bottom: 24px !important;
+  }
+
+  /* Footer dans le contenu (pas la nav) */
+  footer:not(.mobile-nav):not(.bottom-nav),
+  .footer:not(.mobile-nav):not(.bottom-nav) {
+    padding-bottom: 100px !important;
+  }
+
+  /* Containers flex/grid */
+  .flex-container,
+  .grid-container {
+    padding-bottom: 20px !important;
+  }
+
+  /* Assurer espacement entre éléments */
+  .card,
+  .modern-section,
+  .document-card {
+    margin-bottom: 16px !important;
+  }
+
+  /* Dernier élément dans container */
+  .card:last-child,
+  .modern-section:last-child,
+  .document-card:last-child {
+    margin-bottom: 24px !important;
   }
 
   /* ==================== TEXTE ==================== */
