@@ -9,10 +9,11 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import expenseService from './services/expenseService';
+import checklistService from './services/checklistService';
 import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import { Toast, ConfirmationModal } from './components/SharedUI';
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon } from './components/SharedUI';
+import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon } from './components/SharedUI';
 import LoginScreen from './pages/LoginScreen';
 import './App.css';
 
@@ -31,6 +32,8 @@ const InterventionDetailView = lazy(() => import('./pages/InterventionDetailView
 const IRShowerFormsView = lazy(() => import('./pages/IRShowerFormsView'));
 const ExpensesView = lazy(() => import('./pages/ExpensesView'));
 const AdminExpensesView = lazy(() => import('./pages/AdminExpensesView'));
+const ChecklistView = lazy(() => import('./pages/ChecklistView'));
+const AdminChecklistTemplatesView = lazy(() => import('./pages/AdminChecklistTemplatesView'));
 
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
@@ -44,7 +47,8 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'users', label: 'Employés', icon: <UsersIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
-        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> }, // ⬅️ NEW
+        { id: 'checklist-templates', label: 'Checklists', icon: <CheckCircleIcon /> },
+        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
         { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
       ]
     : [
@@ -52,8 +56,9 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
-        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> }, // ⬅️ NEW
-        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> }, // ⬅️ NEW
+        { id: 'checklists', label: 'Checklists', icon: <CheckCircleIcon /> },
+        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
+        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
       ];
 
   return (
@@ -118,6 +123,8 @@ function App() {
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [vaultDocuments, setVaultDocuments] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [checklistTemplates, setChecklistTemplates] = useState([]);
+  const [checklists, setChecklists] = useState([]);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -133,12 +140,14 @@ function App() {
       try {
         const isAdmin = userProfile.is_admin;
         const userId = userProfile.id;
-        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes] = await Promise.all([
+        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes, templatesRes, checklistsRes] = await Promise.all([
           profileService.getAllProfiles(),
           interventionService.getInterventions(isAdmin ? null : userId, false),
           leaveService.getLeaveRequests(isAdmin ? null : userId),
           vaultService.getVaultDocuments(),
-          isAdmin ? expenseService.getAllExpenses() : expenseService.getUserExpenses(userId)
+          isAdmin ? expenseService.getAllExpenses() : expenseService.getUserExpenses(userId),
+          checklistService.getAllTemplates(),
+          isAdmin ? checklistService.getAllChecklists() : checklistService.getUserChecklists(userId)
         ]);
 
         if (profilesRes.error) throw profilesRes.error;
@@ -155,6 +164,12 @@ function App() {
 
         if (expensesRes.error) throw expensesRes.error;
         setExpenses(expensesRes.data || []);
+
+        if (templatesRes.error) throw templatesRes.error;
+        setChecklistTemplates(templatesRes.data || []);
+
+        if (checklistsRes.error) throw checklistsRes.error;
+        setChecklists(checklistsRes.data || []);
 
         setDataVersion(Date.now());
       } catch (error) {
@@ -547,6 +562,72 @@ function App() {
     });
   };
 
+  // ✅ Créer un template de checklist (admin)
+  const handleCreateTemplate = async (templateData) => {
+    const { error } = await checklistService.createTemplate(templateData);
+    if (error) {
+      showToast(`Erreur: ${error.message}`, 'error');
+    } else {
+      showToast('Template créé !', 'success');
+      await refreshData(profile);
+    }
+  };
+
+  // ✅ Mettre à jour un template de checklist (admin)
+  const handleUpdateTemplate = async (templateData) => {
+    const { error } = await checklistService.updateTemplate(templateData);
+    if (error) {
+      showToast(`Erreur: ${error.message}`, 'error');
+    } else {
+      showToast('Template mis à jour !', 'success');
+      await refreshData(profile);
+    }
+  };
+
+  // ✅ Supprimer un template de checklist (admin)
+  const handleDeleteTemplate = async (templateId) => {
+    const { error } = await checklistService.deleteTemplate(templateId);
+    if (error) {
+      showToast(`Erreur: ${error.message}`, 'error');
+    } else {
+      showToast('Template supprimé', 'success');
+      await refreshData(profile);
+    }
+  };
+
+  // ✅ Assigner une checklist à une intervention (admin)
+  const handleAssignChecklist = async (interventionId, templateId) => {
+    const intervention = interventions.find(i => i.id === interventionId);
+    if (!intervention || !intervention.assigned_users) {
+      showToast('Aucun employé assigné à cette intervention', 'error');
+      return;
+    }
+
+    const { error } = await checklistService.assignChecklistToIntervention(
+      interventionId,
+      templateId,
+      intervention.assigned_users
+    );
+
+    if (error) {
+      showToast(`Erreur: ${error.message}`, 'error');
+    } else {
+      showToast('Checklist assignée !', 'success');
+      await refreshData(profile);
+    }
+  };
+
+  // ✅ Mettre à jour une checklist (employé)
+  const handleUpdateChecklist = async (checklistData) => {
+    const { error } = await checklistService.updateChecklist(checklistData);
+    if (error) {
+      showToast(`Erreur: ${error.message}`, 'error');
+      throw error;
+    } else {
+      await refreshData(profile);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -626,6 +707,8 @@ function App() {
                         onAddIntervention={handleAddIntervention}
                         onArchive={handleArchiveIntervention}
                         onDelete={handleDeleteIntervention}
+                        checklistTemplates={checklistTemplates}
+                        onAssignChecklist={handleAssignChecklist}
                       />
                     </Suspense>
                   }
@@ -661,6 +744,16 @@ function App() {
                     </Suspense>
                   }
                 />
+                <Route path="checklist-templates" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <AdminChecklistTemplatesView
+                      templates={checklistTemplates}
+                      onCreateTemplate={handleCreateTemplate}
+                      onUpdateTemplate={handleUpdateTemplate}
+                      onDeleteTemplate={handleDeleteTemplate}
+                    />
+                  </Suspense>
+                } />
                 <Route path="expenses" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} />
@@ -707,6 +800,17 @@ function App() {
                 <Route path="vault" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
+                  </Suspense>
+                } />
+                <Route path="checklists" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <ChecklistView
+                      checklists={checklists}
+                      templates={checklistTemplates}
+                      interventions={interventions}
+                      onUpdateChecklist={handleUpdateChecklist}
+                      profile={profile}
+                    />
                   </Suspense>
                 } />
                 <Route path="expenses" element={

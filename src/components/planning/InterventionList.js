@@ -78,6 +78,8 @@ const filterInterventions = (interventions, filters) => {
  * @param {Function} onView - Handler to view details
  * @param {Function} onArchive - Handler to archive
  * @param {Function} onDelete - Handler to delete
+ * @param {Array} checklistTemplates - Available checklist templates
+ * @param {Function} onAssignChecklist - Handler to assign checklist
  * @param {boolean} showFilters - Show filter controls
  * @param {boolean} showSort - Show sort controls
  * @param {boolean} showActions - Show actions on cards (default true)
@@ -87,6 +89,8 @@ const InterventionList = ({
   onView,
   onArchive,
   onDelete,
+  checklistTemplates,
+  onAssignChecklist,
   showFilters = true,
   showSort = true,
   showActions = true
@@ -166,6 +170,8 @@ const InterventionList = ({
                 onView={onView}
                 onArchive={onArchive}
                 onDelete={onDelete}
+                checklistTemplates={checklistTemplates}
+                onAssignChecklist={onAssignChecklist}
                 showActions={showActions}
               />
             </div>

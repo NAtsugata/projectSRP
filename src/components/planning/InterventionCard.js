@@ -5,6 +5,7 @@ import React from 'react';
 import { Button } from '../ui';
 import { EditIcon, ArchiveIcon, TrashIcon } from '../SharedUI';
 import { getAssignedUsersNames } from '../../utils/helpers';
+import AssignChecklistButton from '../intervention/AssignChecklistButton';
 import './InterventionCard.css';
 
 /**
@@ -31,6 +32,8 @@ const STATUS_COLORS = {
  * @param {Function} onView - Handler to view details
  * @param {Function} onArchive - Handler to archive
  * @param {Function} onDelete - Handler to delete
+ * @param {Array} checklistTemplates - Available checklist templates
+ * @param {Function} onAssignChecklist - Handler to assign checklist
  * @param {boolean} showActions - Show action buttons
  */
 const InterventionCard = ({
@@ -38,6 +41,8 @@ const InterventionCard = ({
   onView,
   onArchive,
   onDelete,
+  checklistTemplates,
+  onAssignChecklist,
   showActions = true
 }) => {
   const status = getInterventionStatus(intervention);
@@ -122,6 +127,13 @@ const InterventionCard = ({
           >
             Détails
           </Button>
+          {checklistTemplates && onAssignChecklist && (
+            <AssignChecklistButton
+              intervention={intervention}
+              templates={checklistTemplates}
+              onAssignChecklist={onAssignChecklist}
+            />
+          )}
           <Button
             variant="ghost"
             size="sm"

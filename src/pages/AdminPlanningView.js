@@ -14,7 +14,9 @@ export default function AdminPlanningView({
   users,
   onAddIntervention,
   onArchive,
-  onDelete
+  onDelete,
+  checklistTemplates,
+  onAssignChecklist
 }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -126,6 +128,8 @@ export default function AdminPlanningView({
           onView={handleView}
           onArchive={handleArchive}
           onDelete={handleDelete}
+          checklistTemplates={checklistTemplates}
+          onAssignChecklist={onAssignChecklist}
           showFilters={true}
           showSort={true}
         />
