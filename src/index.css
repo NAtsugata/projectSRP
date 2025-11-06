@@ -15,6 +15,9 @@
 /* 4. Mobile Optimizations - Touch-friendly & Performance */
 @import './styles/mobile-optimizations.css';
 
+/* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
+@import './styles/mobile-fixes.css';
+
 /* ==================== RESET & BASE ==================== */
 *,
 *::before,
