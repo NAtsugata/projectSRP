@@ -18,8 +18,8 @@
 /* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
 @import './styles/mobile-fixes.css';
 
-/* 6. Mobile Simple - Design épuré Bootstrap-like (DOIT être en dernier pour override) */
-@import './styles/mobile-simple.css';
+/* 6. Mobile Copper - Design cuivré/laiton élégant (DOIT être en dernier pour override) */
+@import './styles/mobile-copper.css';
 
 /* ==================== RESET & BASE ==================== */
 *,

@@ -1,0 +1,495 @@
+/* ==========================================
+   MOBILE COPPER/BRASS DESIGN
+   Style cuivré/laiton élégant pour mobile
+   ========================================== */
+
+@media (max-width: 640px) {
+
+  /* ==================== COULEURS CUIVRE/LAITON ==================== */
+  :root {
+    /* Palette Cuivre/Laiton */
+    --copper-light: #D4AF37;    /* Or pâle */
+    --copper-main: #B87333;     /* Cuivre principal */
+    --copper-dark: #8B4513;     /* Cuivre foncé */
+    --brass: #DAA520;           /* Laiton/Or */
+    --bronze: #CD7F32;          /* Bronze */
+    --gold-dark: #B8860B;       /* Or foncé */
+
+    /* Neutrals */
+    --copper-bg: #FFF8DC;       /* Cornsilk - fond crème */
+    --copper-card: #FFFAF0;     /* Floral white */
+    --copper-text: #3E2723;     /* Brun foncé */
+    --copper-text-light: #5D4037; /* Brun moyen */
+  }
+
+  /* ==================== FOND & BODY ==================== */
+  body {
+    background: linear-gradient(135deg, #FFF8DC 0%, #F5DEB3 100%) !important;
+    color: var(--copper-text) !important;
+  }
+
+  /* ==================== CARTES & SECTIONS ==================== */
+  .modern-section,
+  .document-card,
+  .intervention-card,
+  .card,
+  .intervention-item {
+    background: linear-gradient(145deg, #FFFAF0 0%, #FFF8DC 100%) !important;
+    border: 2px solid var(--copper-main) !important;
+    border-radius: 12px !important;
+    box-shadow:
+      0 4px 6px rgba(184, 115, 51, 0.15),
+      0 1px 3px rgba(184, 115, 51, 0.1),
+      inset 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+    position: relative !important;
+  }
+
+  /* Effet métallique sur hover/active */
+  .modern-section:active,
+  .document-card:active,
+  .card:active {
+    box-shadow:
+      0 2px 4px rgba(184, 115, 51, 0.2),
+      inset 0 2px 4px rgba(139, 69, 19, 0.15) !important;
+    transform: translateY(1px);
+  }
+
+  /* ==================== TITRES ==================== */
+  h1, h2, h3, h4, h5, h6,
+  .view-title,
+  .planning-title,
+  .section-title {
+    color: var(--copper-dark) !important;
+    font-weight: 600 !important;
+    text-shadow:
+      0 1px 0 rgba(212, 175, 55, 0.3),
+      0 2px 4px rgba(184, 115, 51, 0.1) !important;
+  }
+
+  /* ==================== BOUTONS ==================== */
+  button,
+  .btn,
+  .button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    background: linear-gradient(145deg, var(--brass) 0%, var(--copper-main) 100%) !important;
+    color: white !important;
+    border: 2px solid var(--copper-dark) !important;
+    border-radius: 8px !important;
+    box-shadow:
+      0 3px 6px rgba(184, 115, 51, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -2px 0 rgba(139, 69, 19, 0.2) !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    min-height: 44px !important;
+    padding: 12px 20px !important;
+    transition: all 0.2s ease !important;
+  }
+
+  button:active,
+  .btn:active {
+    background: linear-gradient(145deg, var(--copper-main) 0%, var(--copper-dark) 100%) !important;
+    box-shadow:
+      inset 0 3px 6px rgba(139, 69, 19, 0.3),
+      0 1px 2px rgba(184, 115, 51, 0.2) !important;
+    transform: translateY(2px);
+  }
+
+  /* Boutons secondaires */
+  button.secondary,
+  .btn-secondary {
+    background: linear-gradient(145deg, #F5DEB3 0%, #DEB887 100%) !important;
+    color: var(--copper-dark) !important;
+    border: 2px solid var(--copper-main) !important;
+  }
+
+  /* ==================== NAVIGATION BOTTOM ==================== */
+  .mobile-nav,
+  .bottom-nav,
+  nav[class*="mobile"],
+  nav[class*="bottom"] {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: linear-gradient(180deg, var(--brass) 0%, var(--copper-main) 100%) !important;
+    border-top: 3px solid var(--copper-dark) !important;
+    box-shadow:
+      0 -4px 12px rgba(184, 115, 51, 0.3),
+      inset 0 1px 0 rgba(212, 175, 55, 0.3) !important;
+    padding: 8px 0 !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 60px !important;
+  }
+
+  /* Boutons de navigation */
+  .mobile-nav button,
+  .mobile-nav a,
+  .bottom-nav button,
+  .bottom-nav a,
+  .mobile-nav [role="button"],
+  .bottom-nav [role="button"] {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    min-height: 44px !important;
+    padding: 8px 4px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .mobile-nav button:active,
+  .mobile-nav a:active,
+  .bottom-nav button:active,
+  .bottom-nav a:active {
+    background: rgba(139, 69, 19, 0.2) !important;
+    transform: scale(0.95);
+  }
+
+  /* Bouton actif dans navigation */
+  .mobile-nav button.active,
+  .mobile-nav a.active,
+  .bottom-nav button.active,
+  .bottom-nav a.active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px !important;
+    box-shadow: inset 0 2px 4px rgba(139, 69, 19, 0.2) !important;
+  }
+
+  /* Icônes de navigation */
+  .mobile-nav-icon,
+  .mobile-nav svg,
+  .bottom-nav svg,
+  .mobile-nav i,
+  .bottom-nav i {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    color: white !important;
+    fill: white !important;
+    stroke: white !important;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ==================== ICÔNES GÉNÉRALES ==================== */
+  svg,
+  i[class*="icon"],
+  .icon {
+    color: var(--copper-main) !important;
+    fill: var(--copper-main) !important;
+    stroke: var(--copper-main) !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    flex-shrink: 0 !important;
+    filter: drop-shadow(0 1px 2px rgba(184, 115, 51, 0.2)) !important;
+  }
+
+  /* Icônes dans les boutons */
+  button svg,
+  .btn svg,
+  button i,
+  .btn i {
+    color: white !important;
+    fill: white !important;
+    stroke: white !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2)) !important;
+  }
+
+  /* ==================== INPUTS & FORMS ==================== */
+  input,
+  textarea,
+  select {
+    background: #FFFAF0 !important;
+    border: 2px solid var(--copper-main) !important;
+    border-radius: 8px !important;
+    color: var(--copper-text) !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    min-height: 44px !important;
+    box-shadow:
+      inset 0 2px 4px rgba(184, 115, 51, 0.1),
+      0 1px 2px rgba(184, 115, 51, 0.05) !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--brass) !important;
+    box-shadow:
+      0 0 0 3px rgba(218, 165, 32, 0.2),
+      inset 0 2px 4px rgba(184, 115, 51, 0.1) !important;
+    outline: none !important;
+  }
+
+  /* Labels */
+  label {
+    color: var(--copper-dark) !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+  }
+
+  /* ==================== BADGES & CHIPS ==================== */
+  .badge,
+  .chip,
+  .tag,
+  .status-badge {
+    background: linear-gradient(145deg, var(--brass) 0%, var(--bronze) 100%) !important;
+    color: white !important;
+    border: 1px solid var(--copper-dark) !important;
+    border-radius: 12px !important;
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 4px rgba(184, 115, 51, 0.2) !important;
+  }
+
+  /* Status colors avec teintes cuivrées */
+  .badge.success,
+  .status-success {
+    background: linear-gradient(145deg, #85A04C 0%, #6B8037 100%) !important;
+  }
+
+  .badge.warning,
+  .status-warning {
+    background: linear-gradient(145deg, #DAA520 0%, #B8860B 100%) !important;
+  }
+
+  .badge.danger,
+  .status-danger {
+    background: linear-gradient(145deg, #CD5C5C 0%, #A0442D 100%) !important;
+  }
+
+  /* ==================== HEADER ==================== */
+  header,
+  .app-header,
+  .page-header {
+    background: linear-gradient(180deg, var(--brass) 0%, var(--copper-main) 100%) !important;
+    color: white !important;
+    border-bottom: 3px solid var(--copper-dark) !important;
+    box-shadow:
+      0 4px 8px rgba(184, 115, 51, 0.3),
+      inset 0 -1px 0 rgba(139, 69, 19, 0.2) !important;
+    padding: 12px 16px !important;
+    padding-top: max(12px, env(safe-area-inset-top)) !important;
+  }
+
+  header h1,
+  .app-header h1,
+  .page-header h1 {
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* ==================== LISTS ==================== */
+  .list-item,
+  li {
+    border-bottom: 1px solid rgba(184, 115, 51, 0.2) !important;
+    padding: 12px 16px !important;
+    min-height: 44px !important;
+  }
+
+  .list-item:active,
+  li:active {
+    background: rgba(218, 165, 32, 0.1) !important;
+  }
+
+  /* ==================== DIVIDERS ==================== */
+  hr,
+  .divider {
+    border: none !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, transparent, var(--copper-main), transparent) !important;
+    margin: 16px 0 !important;
+    box-shadow: 0 1px 2px rgba(184, 115, 51, 0.2) !important;
+  }
+
+  /* ==================== TABS ==================== */
+  .tabs,
+  .tab-list {
+    background: linear-gradient(180deg, #F5DEB3 0%, #DEB887 100%) !important;
+    border-bottom: 2px solid var(--copper-main) !important;
+    padding: 0 !important;
+  }
+
+  .tab,
+  .tab-button {
+    color: var(--copper-dark) !important;
+    border-bottom: 3px solid transparent !important;
+    padding: 12px 16px !important;
+    min-height: 44px !important;
+    font-weight: 600 !important;
+  }
+
+  .tab.active,
+  .tab-button.active {
+    color: var(--brass) !important;
+    border-bottom-color: var(--brass) !important;
+    background: rgba(218, 165, 32, 0.1) !important;
+  }
+
+  /* ==================== MODALS & OVERLAYS ==================== */
+  .modal,
+  .overlay,
+  .dialog {
+    background: rgba(62, 39, 35, 0.8) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  .modal-content,
+  .dialog-content {
+    background: linear-gradient(145deg, #FFFAF0 0%, #FFF8DC 100%) !important;
+    border: 3px solid var(--copper-main) !important;
+    border-radius: 16px !important;
+    box-shadow:
+      0 8px 24px rgba(184, 115, 51, 0.4),
+      inset 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+  }
+
+  /* ==================== LOADING & SPINNERS ==================== */
+  .spinner,
+  .loader,
+  .loading {
+    border-color: var(--copper-main) rgba(184, 115, 51, 0.2) rgba(184, 115, 51, 0.2) !important;
+  }
+
+  /* ==================== LINKS ==================== */
+  a {
+    color: var(--brass) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    text-shadow: 0 1px 1px rgba(184, 115, 51, 0.1) !important;
+  }
+
+  a:active {
+    color: var(--copper-dark) !important;
+  }
+
+  /* ==================== SCROLLBAR ==================== */
+  ::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #FFF8DC !important;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--brass) 0%, var(--copper-main) 100%) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--copper-dark) !important;
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--copper-dark) !important;
+  }
+
+  /* ==================== SHADOWS & EFFECTS ==================== */
+  /* Effet de relief cuivré sur les éléments interactifs */
+  button,
+  .card,
+  .modern-section,
+  input,
+  select {
+    position: relative !important;
+  }
+
+  button::before,
+  .card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 50% !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent) !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+  }
+
+  /* ==================== SPACING & LAYOUT ==================== */
+  /* Assurer que le contenu ne passe pas sous la navigation */
+  main,
+  .app-content,
+  .page-content {
+    padding-bottom: 80px !important;
+  }
+
+  /* ==================== TEXTE ==================== */
+  p, span, div {
+    color: var(--copper-text) !important;
+  }
+
+  /* Texte secondaire */
+  .text-secondary,
+  .subtitle,
+  .description {
+    color: var(--copper-text-light) !important;
+  }
+
+  /* ==================== ACCENTS MÉTALLIQUES ==================== */
+  /* Ajouter des accents dorés sur les éléments importants */
+  .featured,
+  .highlighted,
+  .priority-high {
+    border-left: 4px solid var(--brass) !important;
+    box-shadow:
+      -2px 0 8px rgba(218, 165, 32, 0.3),
+      0 4px 6px rgba(184, 115, 51, 0.15) !important;
+  }
+
+  /* ==================== RESPONSIVE TWEAKS ==================== */
+  @media (max-width: 375px) {
+    /* iPhone SE, petits écrans */
+    .mobile-nav,
+    .bottom-nav {
+      min-height: 56px !important;
+    }
+
+    .mobile-nav-icon,
+    .mobile-nav svg,
+    .bottom-nav svg {
+      width: 20px !important;
+      height: 20px !important;
+      min-width: 20px !important;
+      min-height: 20px !important;
+    }
+
+    button,
+    .btn {
+      padding: 10px 16px !important;
+      font-size: 14px !important;
+    }
+  }
+
+  /* ==================== PRINT ==================== */
+  @media print {
+    body {
+      background: white !important;
+    }
+
+    .mobile-nav,
+    .bottom-nav {
+      display: none !important;
+    }
+  }
+}
