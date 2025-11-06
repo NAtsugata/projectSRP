@@ -151,9 +151,15 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     disabled,
     style: { position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '16px' }
   };
-  if (/image/.test(accept||'')) {
+  // Only add capture attribute if ONLY images are accepted (not mixed with PDFs/docs)
+  const acceptValue = accept || '';
+  const onlyImages = /^image\/?\*?$/i.test(acceptValue.trim()) || acceptValue === 'image/*';
+  if (onlyImages && (isAndroid || isIOS)) {
     if (isAndroid) inputAttributes.capture = 'environment';
     if (isIOS) inputAttributes.capture = true;
+    console.log('📷 Mode capture caméra activé (images seulement)');
+  } else {
+    console.log('📁 Mode sélection fichier normal (pas seulement images)');
   }
 
   const labelClasses = ['mobile-file-input-label', disabled ? 'disabled' : '', isDragOver ? 'drag-over' : '', className].filter(Boolean).join(' ');
