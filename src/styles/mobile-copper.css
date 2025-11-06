@@ -7,16 +7,16 @@
 
   /* ==================== COULEURS CUIVRE/LAITON ==================== */
   :root {
-    /* Palette Cuivre/Laiton */
-    --copper-light: #D4AF37;    /* Or pâle */
-    --copper-main: #B87333;     /* Cuivre principal */
-    --copper-dark: #8B4513;     /* Cuivre foncé */
-    --brass: #DAA520;           /* Laiton/Or */
-    --bronze: #CD7F32;          /* Bronze */
-    --gold-dark: #B8860B;       /* Or foncé */
+    /* Palette Cuivre/Bronze FLASH */
+    --copper-light: #F4A460;    /* Orange cuivré flash */
+    --copper-main: #CD7F32;     /* Bronze flash (plus vif) */
+    --copper-dark: #A0522D;     /* Sienna (cuivre foncé flash) */
+    --brass: #E3A857;           /* Laiton doré flash */
+    --bronze: #E97451;          /* Bronze rougeâtre flash */
+    --gold-dark: #DAA520;       /* Or vif */
 
     /* Neutrals */
-    --copper-bg: #FFF8DC;       /* Cornsilk - fond crème */
+    --copper-bg: #FFF5E1;       /* Wheat - fond crème */
     --copper-card: #FFFAF0;     /* Floral white */
     --copper-text: #3E2723;     /* Brun foncé */
     --copper-text-light: #5D4037; /* Brun moyen */
@@ -24,7 +24,7 @@
 
   /* ==================== FOND & BODY ==================== */
   body {
-    background: linear-gradient(135deg, #FFF8DC 0%, #F5DEB3 100%) !important;
+    background: linear-gradient(135deg, #FFF5E1 0%, #F4A460 100%) !important;
     color: var(--copper-text) !important;
   }
 
@@ -318,7 +318,7 @@
     display: inline-flex !important;
   }
 
-  /* ==================== NAVIGATION BOTTOM ==================== */
+  /* ==================== NAVIGATION BOTTOM - SCROLLABLE HORIZONTALEMENT ==================== */
   .mobile-nav,
   .bottom-nav,
   nav[class*="mobile"],
@@ -329,31 +329,78 @@
     right: 0 !important;
     z-index: 1000 !important;
     background: linear-gradient(180deg, var(--brass) 0%, var(--copper-main) 100%) !important;
-    border-top: 2px solid var(--copper-dark) !important;
+    border-top: 3px solid var(--bronze) !important;
     box-shadow:
-      0 -3px 8px rgba(184, 115, 51, 0.25),
-      inset 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+      0 -4px 12px rgba(205, 127, 50, 0.4),
+      inset 0 1px 0 rgba(244, 164, 96, 0.3) !important;
     padding: 6px 0 !important;
     padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+
+    /* SCROLLABLE HORIZONTAL */
     display: flex !important;
-    justify-content: space-around !important;
+    justify-content: flex-start !important;
     align-items: center !important;
+    gap: 0 !important;
+
+    /* Scroll horizontal */
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+    scroll-snap-type: x proximity !important;
+
     height: auto !important;
     min-height: 56px !important;
+
+    /* Masquer scrollbar mais garder fonctionnalité */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE/Edge */
   }
 
-  /* Boutons de navigation - Compact et accessible */
+  /* Masquer scrollbar Webkit */
+  .mobile-nav::-webkit-scrollbar,
+  .bottom-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Indicateur de scroll (fade sur les bords) */
+  .mobile-nav::before,
+  .bottom-nav::before {
+    content: '' !important;
+    position: sticky !important;
+    left: 0 !important;
+    width: 20px !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, var(--copper-main), transparent) !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  .mobile-nav::after,
+  .bottom-nav::after {
+    content: '' !important;
+    position: sticky !important;
+    right: 0 !important;
+    width: 20px !important;
+    height: 100% !important;
+    background: linear-gradient(270deg, var(--copper-main), transparent) !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  /* Boutons de navigation - Largeur fixe pour scroll horizontal */
   .mobile-nav button,
   .mobile-nav a,
   .bottom-nav button,
   .bottom-nav a,
   .mobile-nav [role="button"],
   .bottom-nav [role="button"] {
-    /* Taille raisonnable pour doigt */
-    flex: 1 !important;
+    /* Largeur FIXE pour permettre scroll */
+    flex: 0 0 auto !important;
+    width: 70px !important;
     min-height: 48px !important;
-    min-width: 56px !important;
-    max-width: 72px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
 
     /* Layout */
     display: flex !important;
@@ -363,34 +410,47 @@
     gap: 3px !important;
 
     /* Padding compact */
-    padding: 8px 6px !important;
-    margin: 0 2px !important;
+    padding: 8px 4px !important;
+    margin: 0 !important;
+
+    /* Scroll snap */
+    scroll-snap-align: start !important;
 
     /* Style */
     background: transparent !important;
     border: none !important;
-    border-radius: 6px !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
 
     /* Texte */
     color: white !important;
     font-size: 11px !important;
     font-weight: 600 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
     text-align: center !important;
     line-height: 1.1 !important;
+    white-space: nowrap !important;
 
     /* Comportement tactile */
     cursor: pointer !important;
     user-select: none !important;
     -webkit-tap-highlight-color: transparent !important;
-    touch-action: manipulation !important;
+    touch-action: pan-x !important;
     transition: all 0.15s ease !important;
 
     /* Assurer visibilité */
     position: relative !important;
     overflow: visible !important;
     z-index: 2 !important;
+  }
+
+  /* Premier bouton sans bordure gauche */
+  .mobile-nav button:first-of-type,
+  .mobile-nav a:first-of-type,
+  .bottom-nav button:first-of-type,
+  .bottom-nav a:first-of-type {
+    border-left: none !important;
   }
 
   /* État pressé - feedback tactile clair */
