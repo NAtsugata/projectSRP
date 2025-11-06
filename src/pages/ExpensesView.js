@@ -1,5 +1,5 @@
 // src/pages/ExpensesView.js - NOTES DE FRAIS EMPLOYÉ
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   PlusIcon,
   TrashIcon,
@@ -14,16 +14,33 @@ import {
 } from '../components/SharedUI';
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
-  const [isCreating, setIsCreating] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    date: new Date().toISOString().split('T')[0],
-    category: 'transport',
-    amount: '',
-    description: '',
-    receipts: []
+  // Restaurer le state depuis sessionStorage si disponible (pour mobile après retour de caméra)
+  const [isCreating, setIsCreating] = useState(() => {
+    const saved = sessionStorage.getItem('expense_form_isCreating');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [newExpense, setNewExpense] = useState(() => {
+    const saved = sessionStorage.getItem('expense_form_data');
+    return saved ? JSON.parse(saved) : {
+      date: new Date().toISOString().split('T')[0],
+      category: 'transport',
+      amount: '',
+      description: '',
+      receipts: []
+    };
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false); // Flag pour éviter fermeture pendant traitement photo
+
+  // Sauvegarder dans sessionStorage à chaque changement (pour persister pendant photo mobile)
+  useEffect(() => {
+    if (isCreating) {
+      sessionStorage.setItem('expense_form_isCreating', JSON.stringify(isCreating));
+      sessionStorage.setItem('expense_form_data', JSON.stringify(newExpense));
+      console.log('💾 Form state sauvegardé dans sessionStorage');
+    }
+  }, [isCreating, newExpense]);
 
   // Calculs statistiques
   const stats = useMemo(() => {
@@ -68,12 +85,18 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     console.log('💰 event.target:', event.target);
     console.log('💰 event.target.files:', event.target.files);
 
+    // Activer le flag pour empêcher fermeture du formulaire
+    setIsProcessingPhoto(true);
+    console.log('🔒 Flag isProcessingPhoto activé');
+
     const files = Array.from(event.target.files);
     console.log('💰 Nombre de fichiers:', files.length);
     console.log('💰 Fichiers:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
 
     if (files.length === 0) {
       console.warn('💰 Aucun fichier à traiter');
+      setIsProcessingPhoto(false);
+      console.log('🔓 Flag isProcessingPhoto désactivé (aucun fichier)');
       return;
     }
 
@@ -116,10 +139,18 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
           console.log('💰 State mis à jour, total receipts:', updated.receipts.length);
           return updated;
         });
+
+        // Désactiver le flag après traitement réussi
+        setTimeout(() => {
+          setIsProcessingPhoto(false);
+          console.log('🔓 Flag isProcessingPhoto désactivé (succès)');
+        }, 500);
       })
       .catch(error => {
         console.error('❌ Erreur lecture fichiers:', error);
         setError('Erreur lors de la lecture des fichiers');
+        setIsProcessingPhoto(false);
+        console.log('🔓 Flag isProcessingPhoto désactivé (erreur)');
       });
   }, []);
 
@@ -150,7 +181,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         userId: profile.id
       });
 
-      // Reset
+      // Reset et nettoyage sessionStorage
       setNewExpense({
         date: new Date().toISOString().split('T')[0],
         category: 'transport',
@@ -159,6 +190,9 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         receipts: []
       });
       setIsCreating(false);
+      sessionStorage.removeItem('expense_form_isCreating');
+      sessionStorage.removeItem('expense_form_data');
+      console.log('🗑️ SessionStorage nettoyé (soumission réussie)');
     } catch (err) {
       console.error('Erreur soumission note de frais:', err);
       setError(`Erreur: ${err.message}`);
@@ -512,12 +546,19 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
               type="button"
               className="btn btn-secondary"
               onClick={() => {
-                setIsCreating(false);
-                setError(null);
+                if (!isProcessingPhoto) {
+                  setIsCreating(false);
+                  setError(null);
+                  sessionStorage.removeItem('expense_form_isCreating');
+                  sessionStorage.removeItem('expense_form_data');
+                  console.log('🗑️ SessionStorage nettoyé (annulé)');
+                } else {
+                  console.warn('⚠️ Annulation bloquée - traitement photo en cours');
+                }
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isProcessingPhoto}
             >
-              Annuler
+              {isProcessingPhoto ? 'Traitement...' : 'Annuler'}
             </button>
           </div>
         </div>
