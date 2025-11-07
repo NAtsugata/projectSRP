@@ -74,6 +74,17 @@ CREATE POLICY "Admins can manage expenses"
         )
     );
 
+-- Policy: Les admins peuvent supprimer n'importe quelle note de frais
+CREATE POLICY "Admins can delete any expense"
+    ON public.expenses
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+        )
+    );
+
 -- Commentaires
 COMMENT ON TABLE public.expenses IS 'Notes de frais soumises par les employés';
 COMMENT ON COLUMN public.expenses.user_id IS 'Employé qui a soumis la note';
