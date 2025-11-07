@@ -140,6 +140,7 @@ export const useResilientUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const { compressImage } = useImageCompression();
 
   const uploadWithRetry = useCallback(async (file, interventionId, options = {}) => {
     const {
@@ -156,7 +157,6 @@ export const useResilientUpload = () => {
     let fileToUpload = file;
     if (file.type.startsWith('image/') && compressionOptions.enabled !== false) {
       try {
-        const { compressImage } = useImageCompression();
         fileToUpload = await compressImage(file, compressionOptions);
       } catch (compressionError) {
         console.warn('Compression failed, using original file:', compressionError);
@@ -198,7 +198,7 @@ export const useResilientUpload = () => {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
-  }, []);
+  }, [compressImage]);
 
   const reset = useCallback(() => {
     setIsUploading(false);
@@ -328,8 +328,7 @@ export const useFileValidation = () => {
   const validateFile = useCallback((file, options = {}) => {
     const {
       maxSize = 10 * 1024 * 1024, // 10MB par défaut
-      allowedTypes = ['image/*', 'application/pdf'],
-      maxFiles = 10
+      allowedTypes = ['image/*', 'application/pdf']
     } = options;
 
     const errors = [];

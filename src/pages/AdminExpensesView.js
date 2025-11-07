@@ -4,7 +4,6 @@ import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
   XCircleIcon,
-  ClockIcon,
   UserIcon,
   ChevronDownIcon,
   CalendarIcon,

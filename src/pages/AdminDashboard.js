@@ -10,8 +10,7 @@ import {
   AlertTriangleIcon,
   CheckIcon,
   UsersIcon,
-  PlusIcon,
-  FolderIcon
+  PlusIcon
 } from '../components/SharedUI';
 import logger from '../utils/logger';
 import './AdminDashboard.css';
