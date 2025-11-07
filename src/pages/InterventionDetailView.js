@@ -903,15 +903,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   style={{width:'100%',height:'100%',objectFit:'cover',cursor:'pointer'}}
                   onClick={() => window.open(file.url, '_blank')}
                 />
-                {isAdmin && (
-                  <button
-                    onClick={() => handleDeleteFile(file.url)}
-                    style={{position:'absolute',top:'4px',right:'4px',background:'rgba(220, 38, 38, 0.9)',color:'white',border:'none',borderRadius:'50%',width:'28px',height:'28px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}
-                    title="Supprimer"
-                  >
-                    ×
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDeleteFile(file.url)}
+                  style={{position:'absolute',top:'4px',right:'4px',background:'rgba(220, 38, 38, 0.9)',color:'white',border:'none',borderRadius:'50%',width:'28px',height:'28px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}
+                  title="Supprimer"
+                >
+                  ×
+                </button>
               </div>
             ))}
             {uploadQueue.filter(item => item.type?.startsWith('image/')).map((item, idx) => (
@@ -942,15 +940,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                      : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
                     <span className="file-name" style={{flex:1}}>{file.name}</span>
                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteFile(file.url)}
-                        className="btn btn-sm btn-danger"
-                        title="Supprimer"
-                      >
-                        ×
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleDeleteFile(file.url)}
+                      className="btn btn-sm btn-danger"
+                      title="Supprimer"
+                    >
+                      ×
+                    </button>
                   </li>
                 ))}
               </ul>

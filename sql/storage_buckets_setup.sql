@@ -66,6 +66,7 @@ DROP POLICY IF EXISTS "Users can view intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Admins can delete intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view intervention files" ON storage.objects;
+DROP POLICY IF EXISTS "Employees can delete own intervention files" ON storage.objects;
 
 -- Politique: UPLOAD - Tous les utilisateurs authentifiés peuvent uploader
 CREATE POLICY "Users can upload intervention files"
@@ -85,17 +86,27 @@ USING (
   bucket_id = 'intervention-files'
 );
 
--- Politique: DELETE - Seuls les admins peuvent supprimer
-CREATE POLICY "Admins can delete intervention files"
+-- Politique: DELETE - Admins peuvent tout supprimer, employés peuvent supprimer leurs propres fichiers
+CREATE POLICY "Users can delete intervention files"
 ON storage.objects
 FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'intervention-files'
-  AND EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.is_admin = true
+  AND (
+    -- Admin peut tout supprimer
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+    -- OU l'utilisateur peut supprimer ses propres fichiers
+    -- (le chemin commence par son user_id ou intervention où il est assigné)
+    OR (storage.foldername(name))[1] IN (
+      SELECT DISTINCT intervention_id::text
+      FROM intervention_assignments
+      WHERE user_id = auth.uid()
+    )
   )
 );
 
