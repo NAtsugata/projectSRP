@@ -522,6 +522,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
   const persistReport = useCallback(async (updated) => {
+    if (!intervention) return;
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -531,7 +532,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       alert('Échec de la sauvegarde du rapport');
     }
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
-  }, [intervention.id, onSaveSilent]);
+  }, [intervention, onSaveSilent]);
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 
