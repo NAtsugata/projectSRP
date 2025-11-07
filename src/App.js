@@ -353,8 +353,12 @@ function App() {
       message: 'Cette action est irréversible.',
       onConfirm: async () => {
         const { error } = await interventionService.deleteIntervention(id);
-        if (error) showToast('Erreur suppression.', 'error');
-        else showToast('Intervention supprimée.');
+        if (error) {
+          showToast('Erreur suppression.', 'error');
+        } else {
+          showToast('Intervention supprimée.');
+          await refreshData(profile);
+        }
       }
     });
   };

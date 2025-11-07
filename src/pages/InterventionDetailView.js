@@ -659,6 +659,53 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         onBack={() => navigate('/planning')}
       />
 
+      {/* DOCUMENTS DE PRÉPARATION (BRIEFING) */}
+      {intervention?.intervention_briefing_documents && intervention.intervention_briefing_documents.length > 0 && (
+        <div className="card-white" style={{marginBottom: '1rem'}}>
+          <h3 style={{fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+            <FileTextIcon />
+            📋 Documents de préparation
+          </h3>
+          <ul className="document-list-optimized" style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {intervention.intervention_briefing_documents.map((doc, idx) => (
+              <li key={doc.id || idx} className="document-item-optimized" style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.5rem', marginBottom: '0.5rem'}}>
+                {doc.file_url && isImageUrl(doc.file_url) ? (
+                  <img
+                    src={doc.file_url}
+                    alt={doc.file_name || 'Document'}
+                    style={{width: '60px', height: '60px', objectFit: 'cover', borderRadius: '0.375rem'}}
+                  />
+                ) : (
+                  <div style={{width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', borderRadius: '0.375rem', color: '#4f46e5'}}>
+                    <FileTextIcon />
+                  </div>
+                )}
+                <div style={{flex: 1, minWidth: 0}}>
+                  <div style={{fontWeight: 500, fontSize: '0.9375rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                    {doc.file_name || 'Document'}
+                  </div>
+                  {doc.uploaded_at && (
+                    <div style={{fontSize: '0.8125rem', color: '#6b7280', marginTop: '0.125rem'}}>
+                      Ajouté le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
+                    </div>
+                  )}
+                </div>
+                <a
+                  href={doc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-secondary"
+                  download={doc.file_name}
+                  style={{flexShrink: 0}}
+                >
+                  <DownloadIcon /> Voir
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="intervention-content">
         {/* ALERTES INTELLIGENTES */}
         <SmartAlerts
