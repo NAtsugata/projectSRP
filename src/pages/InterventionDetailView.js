@@ -23,8 +23,6 @@ import {
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
 import {
-  ImageGallery,
-  ImageGalleryOptimized,
   InterventionHeader,
   QuickActionsBar,
   SmartAlerts,
@@ -58,28 +56,6 @@ const fmtTime = (iso) => {
     const d = new Date(iso);
     return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
   } catch { return '—'; }
-};
-
-// -------- Image lazy/optimisée --------
-const OptimizedImage = ({ src, alt, className, style }) => {
-  const [loadState, setLoadState] = useState('loading');
-  const imgRef = useRef(null);
-  useEffect(() => {
-    if (!src || typeof src !== 'string') { setLoadState('error'); return; }
-    const img = new Image();
-    img.onload = () => setLoadState('loaded');
-    img.onerror = () => setLoadState('error');
-    if ('IntersectionObserver' in window && imgRef.current) {
-      const obs = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) { img.src = src; obs.disconnect(); }
-      }, { rootMargin: '50px' });
-      obs.observe(imgRef.current);
-      return () => obs.disconnect();
-    } else { img.src = src; }
-  }, [src]);
-  if (loadState === 'loading') return (<div ref={imgRef} className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#f3f4f6'}}><LoaderIcon className="animate-spin"/></div>);
-  if (loadState === 'error') return (<div className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'}}><XCircleIcon/></div>);
-  return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style,display:'block'}} loading="lazy"/>;
 };
 
 // -------- Signature en modal plein écran --------
