@@ -1230,7 +1230,14 @@ export default function IRShowerFormsView({ profile }) {
               <div className="photo-grid">
                 {photosAvant.map(photo => (
                   <div key={photo.id} className="photo-item">
-                    <img src={photo.url} alt={photo.name} />
+                    <a
+                      href={photo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <img src={photo.url} alt={photo.name} />
+                    </a>
                     <button className="photo-remove" onClick={() => removePhoto(photo.id, 'avant')}>×</button>
                   </div>
                 ))}
@@ -1259,7 +1266,14 @@ export default function IRShowerFormsView({ profile }) {
               <div className="photo-grid">
                 {photosApres.map(photo => (
                   <div key={photo.id} className="photo-item">
-                    <img src={photo.url} alt={photo.name} />
+                    <a
+                      href={photo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <img src={photo.url} alt={photo.name} />
+                    </a>
                     <button className="photo-remove" onClick={() => removePhoto(photo.id, 'apres')}>×</button>
                   </div>
                 ))}

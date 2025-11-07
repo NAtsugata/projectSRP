@@ -648,7 +648,14 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
               <div className="receipt-grid">
                 {newExpense.receipts.map(receipt => (
                   <div key={receipt.id} className="receipt-item">
-                    <img src={receipt.url} alt={receipt.name} />
+                    <a
+                      href={receipt.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <img src={receipt.url} alt={receipt.name} />
+                    </a>
                     <button
                       type="button"
                       className="receipt-remove"
@@ -738,8 +745,24 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                     <div className="expense-description">{expense.description}</div>
 
                     {expense.receipts && expense.receipts.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        📎 {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                      <div style={{ marginTop: '0.75rem', marginBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                          📎 {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                        </div>
+                        <div className="receipt-grid">
+                          {expense.receipts.map((receipt, idx) => (
+                            <div key={idx} className="receipt-item">
+                              <a
+                                href={receipt.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: 'block', width: '100%', height: '100%' }}
+                              >
+                                <img src={receipt.url} alt={receipt.name || `Reçu ${idx + 1}`} />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
