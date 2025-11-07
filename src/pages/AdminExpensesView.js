@@ -428,7 +428,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           border-radius: 0.5rem;
           margin-bottom: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          overflow: hidden;
+          overflow: visible;
         }
         .accordion-header {
           width: 100%;
