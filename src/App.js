@@ -761,7 +761,7 @@ function App() {
                 } />
                 <Route path="ir-docs" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <IRShowerFormsView />
+                    <IRShowerFormsView profile={profile} />
                   </Suspense>
                 } />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -820,7 +820,7 @@ function App() {
                 } />
                 <Route path="ir-docs" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <IRShowerFormsView />
+                    <IRShowerFormsView profile={profile} />
                   </Suspense>
                 } />
                 <Route path="*" element={<Navigate to="/planning" replace />} />

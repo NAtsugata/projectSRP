@@ -12,6 +12,7 @@ import {
   CalendarIcon,
   CustomFileInput
 } from '../components/SharedUI';
+import { storageService } from '../lib/supabase';
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
   // Restaurer le state depuis localStorage si disponible (pour mobile après retour de caméra)
@@ -161,8 +162,52 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
 
-  // Gestion des photos
-  const handleReceiptCapture = useCallback((event) => {
+  // Compression d'image optimisée
+  const compressImage = useCallback(async(file) => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise(res => {
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        let {width, height} = img;
+        // COMPRESSION AGGRESSIVE POUR MOBILE
+        const MW = 800, MH = 600; // Réduit de 1280x720 à 800x600
+        if (width > height) {
+          if (width > MW) {
+            height *= MW / width;
+            width = MW;
+          }
+        } else {
+          if (height > MH) {
+            width *= MH / height;
+            height = MH;
+          }
+        }
+        c.width = width;
+        c.height = height;
+        // Fond blanc pour éviter transparence
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        // Qualité 0.65 = 40% plus léger !
+        c.toBlob(b => {
+          if (b) {
+            const compressed = new File([b], file.name, {type: 'image/jpeg', lastModified: Date.now()});
+            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+            res(compressed);
+          } else {
+            res(file);
+          }
+        }, 'image/jpeg', 0.65);
+      };
+      img.onerror = () => res(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  // Gestion des photos avec upload cloud
+  const handleReceiptCapture = useCallback(async (event) => {
     console.log('💰 handleReceiptCapture appelé', event);
     console.log('💰 event.target:', event.target);
     console.log('💰 event.target.files:', event.target.files);
@@ -182,59 +227,69 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       return;
     }
 
-    console.log('💰 Début lecture des fichiers...');
+    console.log('💰 Début upload des fichiers vers le cloud...');
 
-    // Lire tous les fichiers en parallèle et mettre à jour le state une seule fois
-    const readPromises = files.map((file, index) => {
-      return new Promise((resolve, reject) => {
-        console.log(`💰 Lecture fichier ${index + 1}/${files.length}:`, file.name);
-        const reader = new FileReader();
+    try {
+      // Uploader tous les fichiers en parallèle
+      const uploadPromises = files.map(async (file, index) => {
+        try {
+          console.log(`💰 Upload fichier ${index + 1}/${files.length}:`, file.name);
 
-        reader.onload = (ev) => {
-          console.log(`✅ Fichier ${index + 1} lu avec succès:`, file.name, 'Taille données:', ev.target.result?.length);
-          resolve({
+          // Compresser l'image d'abord
+          const compressedFile = await compressImage(file);
+
+          // Upload vers le cloud
+          const { publicURL, error } = await storageService.uploadExpenseFile(
+            compressedFile,
+            profile.id,
+            (progress) => {
+              console.log(`📤 Progression ${file.name}: ${progress}%`);
+            }
+          );
+
+          if (error) throw error;
+
+          console.log(`✅ Fichier ${index + 1} uploadé avec succès:`, publicURL);
+
+          return {
             id: Date.now() + Math.random(),
-            url: ev.target.result,
+            url: publicURL, // URL cloud au lieu de base64
             name: file.name,
-            size: file.size
-          });
-        };
-
-        reader.onerror = (err) => {
-          console.error(`❌ Erreur lecture fichier ${index + 1}:`, file.name, err);
-          reject(err);
-        };
-
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(readPromises)
-      .then(newReceipts => {
-        console.log('✅ Tous les fichiers lus:', newReceipts.length);
-        console.log('💰 Ajout des receipts au state...');
-        setNewExpense(prev => {
-          const updated = {
-            ...prev,
-            receipts: [...prev.receipts, ...newReceipts]
+            size: compressedFile.size
           };
-          console.log('💰 State mis à jour, total receipts:', updated.receipts.length);
-          return updated;
-        });
-
-        // Désactiver le flag après traitement réussi
-        setTimeout(() => {
-          setIsProcessingPhoto(false);
-          console.log('🔓 Flag isProcessingPhoto désactivé (succès)');
-        }, 500);
-      })
-      .catch(error => {
-        console.error('❌ Erreur lecture fichiers:', error);
-        setError('Erreur lors de la lecture des fichiers');
-        setIsProcessingPhoto(false);
-        console.log('🔓 Flag isProcessingPhoto désactivé (erreur)');
+        } catch (err) {
+          console.error(`❌ Erreur upload fichier ${index + 1}:`, file.name, err);
+          throw err;
+        }
       });
-  }, []);
+
+      const newReceipts = await Promise.all(uploadPromises);
+
+      console.log('✅ Tous les fichiers uploadés:', newReceipts.length);
+      console.log('💰 Ajout des receipts au state...');
+
+      setNewExpense(prev => {
+        const updated = {
+          ...prev,
+          receipts: [...prev.receipts, ...newReceipts]
+        };
+        console.log('💰 State mis à jour, total receipts:', updated.receipts.length);
+        return updated;
+      });
+
+      // Désactiver le flag après traitement réussi
+      setTimeout(() => {
+        setIsProcessingPhoto(false);
+        console.log('🔓 Flag isProcessingPhoto désactivé (succès)');
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ Erreur upload fichiers:', error);
+      setError('Erreur lors de l\'upload des fichiers');
+      setIsProcessingPhoto(false);
+      console.log('🔓 Flag isProcessingPhoto désactivé (erreur)');
+    }
+  }, [profile.id, compressImage]);
 
   const removeReceipt = (id) => {
     setNewExpense(prev => ({

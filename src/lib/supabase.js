@@ -282,6 +282,43 @@ export const storageService = {
     }
   },
 
+  // ✅ UPLOAD NOTE DE FRAIS OPTIMISÉ
+  async uploadExpenseFile(file, userId, onProgress) {
+    try {
+      logger.log('📤 Upload reçu note de frais:', {
+        fileName: file.name,
+        size: Math.round(file.size / 1024) + 'KB',
+        userId
+      });
+
+      const cleanFileName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${cleanFileName}`;
+      const filePath = `${userId}/expenses/${fileName}`;
+
+      logger.log('🗂️ Chemin de stockage expense:', filePath);
+
+      const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'intervention-files', onProgress);
+
+      if (uploadResult.error) {
+        logger.error('❌ Erreur upload expense:', uploadResult.error);
+        return { publicURL: null, filePath: null, error: uploadResult.error };
+      }
+
+      const { data } = supabase.storage
+        .from('intervention-files')
+        .getPublicUrl(filePath);
+
+      const publicURL = data.publicUrl;
+      logger.log('✅ Fichier expense uploadé avec succès:', publicURL);
+
+      return { publicURL, filePath: filePath, error: null };
+
+    } catch (error) {
+      logger.error('❌ Erreur générale upload expense:', error);
+      return { publicURL: null, filePath: null, error };
+    }
+  },
+
   // ✅ SUPPRESSION VAULT OPTIMISÉE
   async deleteVaultFile(filePath) {
     logger.log('🗑️ Suppression fichier vault:', filePath);
