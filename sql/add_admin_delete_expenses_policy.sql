@@ -4,6 +4,9 @@
 -- À exécuter dans Supabase SQL Editor
 -- Permet aux administrateurs de supprimer n'importe quelle note de frais
 
+-- Supprimer la politique si elle existe déjà
+DROP POLICY IF EXISTS "Admins can delete any expense" ON public.expenses;
+
 -- Policy: Les admins peuvent supprimer n'importe quelle note de frais
 CREATE POLICY "Admins can delete any expense"
     ON public.expenses

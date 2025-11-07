@@ -64,6 +64,7 @@ ON CONFLICT (id) DO UPDATE SET
 DROP POLICY IF EXISTS "Users can upload intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete intervention files" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can delete intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view intervention files" ON storage.objects;
 
 -- Politique: UPLOAD - Tous les utilisateurs authentifiés peuvent uploader
@@ -106,6 +107,7 @@ USING (
 DROP POLICY IF EXISTS "Users can upload vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete vault files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view vault files" ON storage.objects;
 
 -- Politique: UPLOAD - Tous les utilisateurs authentifiés peuvent uploader
