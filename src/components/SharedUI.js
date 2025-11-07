@@ -196,16 +196,9 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     disabled,
     style: { position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '16px' }
   };
-  // Only add capture attribute if ONLY images are accepted (not mixed with PDFs/docs)
-  const acceptValue = accept || '';
-  const onlyImages = /^image\/?\*?$/i.test(acceptValue.trim()) || acceptValue === 'image/*';
-  if (onlyImages && (isAndroid || isIOS)) {
-    if (isAndroid) inputAttributes.capture = 'environment';
-    if (isIOS) inputAttributes.capture = true;
-    console.log('📷 Mode capture caméra activé (images seulement)');
-  } else {
-    console.log('📁 Mode sélection fichier normal (pas seulement images)');
-  }
+
+  // ✅ NE PAS ajouter automatiquement capture - laisse le navigateur mobile proposer le choix Caméra/Galerie
+  console.log('📁 Mode sélection fichier normal (choix caméra/galerie sur mobile)');
 
   const handleLabelClick = (e) => {
     // Empêcher la propagation du clic sur le label

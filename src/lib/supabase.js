@@ -51,8 +51,17 @@ export const authService = {
     try {
       // Vérifie d'abord s'il existe une session active
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Aucune session active : on nettoie uniquement les clés Supabase et on retourne sans erreur
+
+      // Liste des clés d'application à nettoyer lors de la déconnexion
+      const appKeysToClean = [
+        'expense_form_isCreating',
+        'expense_form_data',
+        'intervention_form_state',
+        'shower_form_state'
+      ];
+
+      const cleanupStorage = () => {
+        // Nettoyage des clés Supabase
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('supabase')) {
             localStorage.removeItem(key);
@@ -63,7 +72,18 @@ export const authService = {
             sessionStorage.removeItem(key);
           }
         });
-        logger.info('ℹ️ Aucune session active ; nettoyage Supabase effectué');
+        // Nettoyage des clés d'application
+        appKeysToClean.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+        logger.log('🧹 Storage nettoyé (Supabase + clés application)');
+      };
+
+      if (!session) {
+        // Aucune session active : on nettoie et on retourne
+        cleanupStorage();
+        logger.info('ℹ️ Aucune session active ; nettoyage effectué');
         return { error: null };
       }
 
@@ -72,18 +92,10 @@ export const authService = {
         logger.error('❌ Erreur lors de la déconnexion:', error);
         return { error };
       }
-      // Nettoyage sélectif des clés Supabase uniquement (pas de clear() global)
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('supabase')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-      logger.emoji('✅', 'Déconnexion réussie - Storage Supabase nettoyé');
+
+      // Nettoyage complet après déconnexion réussie
+      cleanupStorage();
+      logger.emoji('✅', 'Déconnexion réussie - Storage nettoyé');
       return { error: null };
     } catch (e) {
       logger.error('❌ Erreur inattendue lors de la déconnexion:', e);

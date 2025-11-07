@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Button } from '../ui';
-import { PlusIcon, XIcon, FileTextIcon } from '../SharedUI';
+import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useForm } from '../../hooks';
 import { validateIntervention } from '../../utils/validators';
 import logger from '../../utils/logger';
@@ -339,21 +339,17 @@ const InterventionForm = ({
 
       {/* File upload */}
       <div className="form-group">
-        <label htmlFor="files" className="form-label">
+        <label className="form-label">
           Documents de préparation <span className="optional">(optionnel)</span>
         </label>
-        <input
-          id="files"
-          type="file"
-          multiple
-          accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+        <CustomFileInput
           onChange={handleFileChange}
+          accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+          multiple={true}
           disabled={isSubmitting}
-          className="file-input"
-        />
-        <label htmlFor="files" className="file-input-label">
+        >
           📎 Choisir ou glisser des fichiers...
-        </label>
+        </CustomFileInput>
 
         {/* File preview list */}
         {briefingFiles.length > 0 && (
