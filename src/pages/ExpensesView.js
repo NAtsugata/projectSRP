@@ -4,7 +4,6 @@ import {
   PlusIcon,
   TrashIcon,
   CameraIcon,
-  FileTextIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
   ClockIcon,
