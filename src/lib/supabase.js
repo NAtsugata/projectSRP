@@ -88,12 +88,16 @@ export const authService = {
       }
 
       const { error } = await supabase.auth.signOut();
-      if (error) {
+
+      // Si l'erreur est "session missing", c'est OK - l'utilisateur est déjà déconnecté
+      if (error && error.message && !error.message.includes('session missing')) {
         logger.error('❌ Erreur lors de la déconnexion:', error);
+        // On nettoie quand même le storage
+        cleanupStorage();
         return { error };
       }
 
-      // Nettoyage complet après déconnexion réussie
+      // Nettoyage complet après déconnexion réussie (ou session déjà expirée)
       cleanupStorage();
       logger.emoji('✅', 'Déconnexion réussie - Storage nettoyé');
       return { error: null };
