@@ -441,6 +441,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           border: none;
           border-bottom: 1px solid #e5e7eb;
           text-align: left;
+          border-radius: 0.5rem 0.5rem 0 0;
         }
         .accordion-header:hover {
           background-color: #f9fafb;
@@ -469,7 +470,9 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           transform: rotate(180deg);
         }
         .accordion-content {
-          padding: 1rem;
+          padding: 0.5rem 1rem 1rem 1rem;
+          max-height: none;
+          overflow: visible;
         }
         .filter-tabs {
           display: flex;
