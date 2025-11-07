@@ -1,5 +1,6 @@
 // src/pages/AdminExpensesView.js - GESTION ADMIN NOTES DE FRAIS
 import React, { useState, useMemo } from 'react';
+import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -139,34 +140,159 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
     setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
   };
 
-  const handleDownload = (expense) => {
-    const categoryInfo = getCategoryInfo(expense.category);
-    const content = `
-NOTE DE FRAIS
-=============
+  const handleDownload = async (expense) => {
+    try {
+      const categoryInfo = getCategoryInfo(expense.category);
 
-Employé: ${userName}
-Date: ${formatDate(expense.date)}
-Catégorie: ${categoryInfo.label}
-Montant: ${formatAmount(expense.amount)}
-Statut: ${expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+      // Créer un nouveau document PDF
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
 
-Description:
-${expense.description}
+      // En-tête
+      pdf.setFontSize(20);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('NOTE DE FRAIS', margin, yPos);
+      yPos += 15;
 
-${expense.admin_comment ? `Commentaire administrateur:\n${expense.admin_comment}\n` : ''}
-${expense.receipts && expense.receipts.length > 0 ? `\nJustificatifs (${expense.receipts.length}):\n${expense.receipts.map(r => `- ${r.name}: ${r.url}`).join('\n')}` : ''}
-    `.trim();
+      // Ligne de séparation
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      // Informations principales
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Employé:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(userName, margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Date:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(formatDate(expense.date), margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Catégorie:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(categoryInfo.label, margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Montant:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(14);
+      pdf.text(formatAmount(expense.amount), margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Statut:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      const statusText = expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté';
+      pdf.text(statusText, margin + 40, yPos);
+      yPos += 12;
+
+      // Description
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Description:', margin, yPos);
+      yPos += 8;
+      pdf.setFont(undefined, 'normal');
+      const descLines = pdf.splitTextToSize(expense.description, pageWidth - 2 * margin);
+      pdf.text(descLines, margin, yPos);
+      yPos += (descLines.length * 6) + 8;
+
+      // Commentaire admin
+      if (expense.admin_comment) {
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Commentaire administrateur:', margin, yPos);
+        yPos += 8;
+        pdf.setFont(undefined, 'normal');
+        const commentLines = pdf.splitTextToSize(expense.admin_comment, pageWidth - 2 * margin);
+        pdf.text(commentLines, margin, yPos);
+        yPos += (commentLines.length * 6) + 8;
+      }
+
+      // Justificatifs
+      if (expense.receipts && expense.receipts.length > 0) {
+        yPos += 5;
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
+        yPos += 10;
+
+        // Charger et ajouter chaque image
+        for (let i = 0; i < expense.receipts.length; i++) {
+          const receipt = expense.receipts[i];
+
+          try {
+            // Vérifier si on a besoin d'une nouvelle page
+            if (yPos + 100 > pageHeight - margin) {
+              pdf.addPage();
+              yPos = margin;
+            }
+
+            pdf.setFont(undefined, 'normal');
+            pdf.setFontSize(10);
+            pdf.text(`${i + 1}. ${receipt.name}`, margin, yPos);
+            yPos += 8;
+
+            // Charger l'image
+            const response = await fetch(receipt.url);
+            const blob = await response.blob();
+
+            // Convertir en base64
+            const base64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+
+            // Calculer les dimensions pour l'image
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = base64;
+            });
+
+            const imgWidth = pageWidth - 2 * margin;
+            const imgHeight = (img.height * imgWidth) / img.width;
+            const maxImgHeight = 120;
+            const finalHeight = Math.min(imgHeight, maxImgHeight);
+            const finalWidth = (img.width * finalHeight) / img.height;
+
+            // Vérifier à nouveau si on a besoin d'une nouvelle page après calcul de la hauteur
+            if (yPos + finalHeight > pageHeight - margin) {
+              pdf.addPage();
+              yPos = margin;
+            }
+
+            // Ajouter l'image au PDF
+            pdf.addImage(base64, 'JPEG', margin, yPos, finalWidth, finalHeight);
+            yPos += finalHeight + 10;
+
+          } catch (error) {
+            console.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
+            pdf.setFontSize(9);
+            pdf.setTextColor(200, 0, 0);
+            pdf.text(`Erreur de chargement: ${receipt.url}`, margin + 5, yPos);
+            pdf.setTextColor(0, 0, 0);
+            yPos += 6;
+          }
+        }
+      }
+
+      // Télécharger le PDF
+      pdf.save(`note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.pdf`);
+
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    }
   };
 
   return (
