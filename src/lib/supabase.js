@@ -415,6 +415,48 @@ export const storageService = {
       return { error };
     }
   },
+
+  /**
+   * Supprimer un fichier individuel d'une intervention
+   * @param {string} fileUrl - L'URL complète du fichier à supprimer
+   * @returns {Promise<{error: Error|null}>}
+   */
+  async deleteInterventionFile(fileUrl) {
+    try {
+      logger.log('🗑️ Suppression fichier intervention:', fileUrl);
+
+      // Extraire le chemin du fichier depuis l'URL
+      // Format URL: https://[PROJECT].supabase.co/storage/v1/object/public/intervention-files/[PATH]
+      const urlParts = fileUrl.split('/intervention-files/');
+      if (urlParts.length < 2) {
+        throw new Error('URL de fichier invalide');
+      }
+
+      // Enlever les paramètres de cache (v=xxx&r=xxx)
+      let filePath = urlParts[1].split('?')[0];
+
+      // Décoder les caractères URL encodés
+      filePath = decodeURIComponent(filePath);
+
+      logger.log('📂 Chemin fichier extrait:', filePath);
+
+      const { error } = await supabase.storage
+        .from('intervention-files')
+        .remove([filePath]);
+
+      if (error) {
+        logger.error('❌ Erreur suppression fichier:', error);
+        return { error };
+      }
+
+      logger.log('✅ Fichier supprimé avec succès');
+      return { error: null };
+
+    } catch (error) {
+      logger.error('❌ Erreur générale suppression fichier:', error);
+      return { error };
+    }
+  },
 }
 
 // ✅ SERVICE INTERVENTIONS OPTIMISÉ

@@ -577,6 +577,34 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     await persistReport(updated);
   };
 
+  // -------- Suppression fichier/photo --------
+  const handleDeleteFile = async (fileUrl) => {
+    if (!window.confirm('Supprimer définitivement ce fichier ?')) return;
+
+    try {
+      // Supprimer du storage
+      const { error: storageError } = await storageService.deleteInterventionFile(fileUrl);
+      if (storageError) {
+        alert(`Erreur lors de la suppression: ${storageError.message}`);
+        return;
+      }
+
+      // Mettre à jour le report (enlever le fichier de la liste)
+      const updated = {
+        ...report,
+        files: (report.files || []).filter(f => f.url !== fileUrl)
+      };
+
+      await persistReport(updated);
+
+      // Rafraîchir l'affichage
+      await refreshData?.();
+    } catch (error) {
+      console.error('Erreur suppression fichier:', error);
+      alert('Erreur lors de la suppression du fichier.');
+    }
+  };
+
   // -------- Arrivé / Départ (nouveau) --------
   const markWithGeo = useCallback(async (kind) => {
     const isArrival = kind === 'arrival';
@@ -865,16 +893,43 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
           </div>
 
-          {/* Galerie d'images optimisée avec pagination et lazy loading */}
-          <ImageGalleryOptimized
-            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-              url: f.url,
-              name: f.name,
-              type: f.type
-            }))}
-            uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
-            emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-          />
+          {/* Galerie d'images avec suppression */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))',gap:'0.75rem',marginBottom:'1rem'}}>
+            {(report.files || []).filter(f => f.type?.startsWith('image/')).map((file, idx) => (
+              <div key={`img-${file.url||idx}`} style={{position:'relative',borderRadius:'0.5rem',overflow:'hidden',aspectRatio:'1/1',background:'#f3f4f6'}}>
+                <img
+                  src={file.url}
+                  alt={file.name}
+                  style={{width:'100%',height:'100%',objectFit:'cover',cursor:'pointer'}}
+                  onClick={() => window.open(file.url, '_blank')}
+                />
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDeleteFile(file.url)}
+                    style={{position:'absolute',top:'4px',right:'4px',background:'rgba(220, 38, 38, 0.9)',color:'white',border:'none',borderRadius:'50%',width:'28px',height:'28px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}
+                    title="Supprimer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            {uploadQueue.filter(item => item.type?.startsWith('image/')).map((item, idx) => (
+              <div key={`upload-${item.id||idx}`} style={{position:'relative',borderRadius:'0.5rem',overflow:'hidden',aspectRatio:'1/1',background:'#f3f4f6',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <LoaderIcon className="animate-spin" />
+                {item.status === 'uploading' && (
+                  <div style={{position:'absolute',bottom:'4px',left:'4px',right:'4px',background:'rgba(0,0,0,0.6)',color:'white',fontSize:'10px',padding:'2px 4px',borderRadius:'2px',textAlign:'center'}}>
+                    {item.progress}%
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {(report.files || []).filter(f => f.type?.startsWith('image/')).length === 0 && uploadQueue.filter(item => item.type?.startsWith('image/')).length === 0 && (
+            <p style={{textAlign:'center',color:'#6b7280',padding:'2rem',background:'#f9fafb',borderRadius:'0.5rem',marginBottom:'1rem'}}>
+              Aucune photo. Utilisez le bouton ci-dessous pour en ajouter.
+            </p>
+          )}
 
           {/* Documents non-image (PDF, audio, etc.) */}
           {report.files?.some(f => !f.type?.startsWith('image/')) && (
@@ -882,11 +937,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <h4 style={{fontSize:'0.9375rem',fontWeight:600,marginBottom:'0.5rem'}}>📎 Autres fichiers</h4>
               <ul className="document-list-optimized">
                 {report.files.filter(f => !f.type?.startsWith('image/')).map((file,idx)=> (
-                  <li key={`${file.url||idx}-${idx}`} className="document-item-optimized">
+                  <li key={`${file.url||idx}-${idx}`} className="document-item-optimized" style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
                     {file.type?.startsWith('audio/') ? <div style={{width:40}}><audio controls src={file.url} style={{height:32}}/></div>
                      : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
-                    <span className="file-name">{file.name}</span>
+                    <span className="file-name" style={{flex:1}}>{file.name}</span>
                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteFile(file.url)}
+                        className="btn btn-sm btn-danger"
+                        title="Supprimer"
+                      >
+                        ×
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
