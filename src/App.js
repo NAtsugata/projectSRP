@@ -615,7 +615,13 @@ function App() {
   // ✅ Assigner une checklist à une intervention (admin)
   const handleAssignChecklist = async (interventionId, templateId) => {
     const intervention = interventions.find(i => i.id === interventionId);
-    if (!intervention || !intervention.assigned_users) {
+
+    // Extraire les user_id depuis intervention_assignments
+    const assignedUserIds = intervention?.intervention_assignments
+      ?.map(assignment => assignment.user_id)
+      .filter(Boolean) || [];
+
+    if (!intervention || assignedUserIds.length === 0) {
       showToast('Aucun employé assigné à cette intervention', 'error');
       return;
     }
@@ -623,7 +629,7 @@ function App() {
     const { error } = await checklistService.assignChecklistToIntervention(
       interventionId,
       templateId,
-      intervention.assigned_users
+      assignedUserIds
     );
 
     if (error) {
