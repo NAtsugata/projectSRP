@@ -14,14 +14,38 @@ import {
 } from '../components/SharedUI';
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
-  // Restaurer le state depuis sessionStorage si disponible (pour mobile après retour de caméra)
+  // Restaurer le state depuis localStorage si disponible (pour mobile après retour de caméra)
+  // Utiliser localStorage au lieu de sessionStorage car certains navigateurs mobiles
+  // vident sessionStorage quand l'onglet est suspendu pour ouvrir la caméra
   const [isCreating, setIsCreating] = useState(() => {
-    const saved = sessionStorage.getItem('expense_form_isCreating');
+    const saved = localStorage.getItem('expense_form_isCreating');
+    console.log('🔄 Restauration isCreating depuis localStorage:', saved);
     return saved ? JSON.parse(saved) : false;
   });
   const [newExpense, setNewExpense] = useState(() => {
-    const saved = sessionStorage.getItem('expense_form_data');
-    return saved ? JSON.parse(saved) : {
+    const saved = localStorage.getItem('expense_form_data');
+    console.log('🔄 Restauration expense_form_data depuis localStorage:', saved ? 'OUI' : 'NON');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        console.log('✅ Données restaurées:', {
+          receipts: parsed.receipts?.length || 0,
+          date: parsed.date,
+          amount: parsed.amount
+        });
+        return parsed;
+      } catch (e) {
+        console.error('❌ Erreur parse localStorage:', e);
+        return {
+          date: new Date().toISOString().split('T')[0],
+          category: 'transport',
+          amount: '',
+          description: '',
+          receipts: []
+        };
+      }
+    }
+    return {
       date: new Date().toISOString().split('T')[0],
       category: 'transport',
       amount: '',
@@ -33,14 +57,72 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   const [error, setError] = useState(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false); // Flag pour éviter fermeture pendant traitement photo
 
-  // Sauvegarder dans sessionStorage à chaque changement (pour persister pendant photo mobile)
+  // Sauvegarder dans localStorage à chaque changement (pour persister pendant photo mobile)
   useEffect(() => {
     if (isCreating) {
-      sessionStorage.setItem('expense_form_isCreating', JSON.stringify(isCreating));
-      sessionStorage.setItem('expense_form_data', JSON.stringify(newExpense));
-      console.log('💾 Form state sauvegardé dans sessionStorage');
+      localStorage.setItem('expense_form_isCreating', JSON.stringify(isCreating));
+      localStorage.setItem('expense_form_data', JSON.stringify(newExpense));
+      console.log('💾 Form state sauvegardé dans localStorage', {
+        receipts: newExpense.receipts?.length || 0
+      });
     }
   }, [isCreating, newExpense]);
+
+  // Écouter les événements de visibilité de page (important pour mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ Page redevenue visible - vérification localStorage...');
+        const saved = localStorage.getItem('expense_form_isCreating');
+        const savedData = localStorage.getItem('expense_form_data');
+
+        if (saved && JSON.parse(saved)) {
+          console.log('🔄 Formulaire devrait être ouvert, forçage du state...');
+          setIsCreating(true);
+
+          if (savedData) {
+            try {
+              const parsed = JSON.parse(savedData);
+              console.log('🔄 Restauration forcée des données:', {
+                receipts: parsed.receipts?.length || 0
+              });
+              setNewExpense(parsed);
+            } catch (e) {
+              console.error('❌ Erreur restauration:', e);
+            }
+          }
+        }
+      } else {
+        console.log('👁️ Page cachée/suspendue');
+      }
+    };
+
+    const handlePageShow = (event) => {
+      console.log('📄 pageshow event', { persisted: event.persisted });
+      if (event.persisted) {
+        // Page restaurée depuis le cache (back/forward)
+        console.log('🔄 Page restaurée depuis cache, rechargement du state...');
+        const saved = localStorage.getItem('expense_form_isCreating');
+        if (saved && JSON.parse(saved)) {
+          setIsCreating(true);
+          const savedData = localStorage.getItem('expense_form_data');
+          if (savedData) {
+            setNewExpense(JSON.parse(savedData));
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('focus', () => console.log('🎯 Window focus'));
+    window.addEventListener('blur', () => console.log('💤 Window blur'));
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, []);
 
   // Calculs statistiques
   const stats = useMemo(() => {
@@ -181,7 +263,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         userId: profile.id
       });
 
-      // Reset et nettoyage sessionStorage
+      // Reset et nettoyage localStorage
       setNewExpense({
         date: new Date().toISOString().split('T')[0],
         category: 'transport',
@@ -190,9 +272,9 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         receipts: []
       });
       setIsCreating(false);
-      sessionStorage.removeItem('expense_form_isCreating');
-      sessionStorage.removeItem('expense_form_data');
-      console.log('🗑️ SessionStorage nettoyé (soumission réussie)');
+      localStorage.removeItem('expense_form_isCreating');
+      localStorage.removeItem('expense_form_data');
+      console.log('🗑️ LocalStorage nettoyé (soumission réussie)');
     } catch (err) {
       console.error('Erreur soumission note de frais:', err);
       setError(`Erreur: ${err.message}`);
@@ -549,9 +631,9 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                 if (!isProcessingPhoto) {
                   setIsCreating(false);
                   setError(null);
-                  sessionStorage.removeItem('expense_form_isCreating');
-                  sessionStorage.removeItem('expense_form_data');
-                  console.log('🗑️ SessionStorage nettoyé (annulé)');
+                  localStorage.removeItem('expense_form_isCreating');
+                  localStorage.removeItem('expense_form_data');
+                  console.log('🗑️ LocalStorage nettoyé (annulé)');
                 } else {
                   console.warn('⚠️ Annulation bloquée - traitement photo en cours');
                 }
