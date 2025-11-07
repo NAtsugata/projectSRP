@@ -562,6 +562,23 @@ function App() {
     });
   };
 
+  // ✅ Supprimer une note de frais (admin - n'importe quel statut)
+  const handleDeleteExpenseAdmin = (expense) => {
+    showConfirmationModal({
+      title: 'Supprimer la note de frais ?',
+      message: `Êtes-vous sûr de vouloir supprimer cette note de frais de ${expense.amount}€ (${expense.status}) ? Cette action est irréversible.`,
+      onConfirm: async () => {
+        const { error } = await expenseService.deleteExpenseAdmin(expense.id);
+        if (error) {
+          showToast(`Erreur: ${error.message}`, 'error');
+        } else {
+          showToast('Note de frais supprimée.', 'success');
+        }
+        await refreshData(profile);
+      }
+    });
+  };
+
   // ✅ Créer un template de checklist (admin)
   const handleCreateTemplate = async (templateData) => {
     const { error } = await checklistService.createTemplate(templateData);
@@ -756,7 +773,7 @@ function App() {
                 } />
                 <Route path="expenses" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} />
+                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} onDeleteExpense={handleDeleteExpenseAdmin} />
                   </Suspense>
                 } />
                 <Route path="ir-docs" element={

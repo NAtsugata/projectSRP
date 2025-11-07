@@ -103,7 +103,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
 };
 
 // Accordion pour chaque employé
-const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, categories, formatDate, formatAmount }) => {
+const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, onDelete, categories, formatDate, formatAmount }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [showReceipts, setShowReceipts] = useState(null);
   const [commentInput, setCommentInput] = useState({});
@@ -137,6 +137,36 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
     }
     await onReject(expense, comment);
     setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
+  };
+
+  const handleDownload = (expense) => {
+    const categoryInfo = getCategoryInfo(expense.category);
+    const content = `
+NOTE DE FRAIS
+=============
+
+Employé: ${userName}
+Date: ${formatDate(expense.date)}
+Catégorie: ${categoryInfo.label}
+Montant: ${formatAmount(expense.amount)}
+Statut: ${expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+
+Description:
+${expense.description}
+
+${expense.admin_comment ? `Commentaire administrateur:\n${expense.admin_comment}\n` : ''}
+${expense.receipts && expense.receipts.length > 0 ? `\nJustificatifs (${expense.receipts.length}):\n${expense.receipts.map(r => `- ${r.name}: ${r.url}`).join('\n')}` : ''}
+    `.trim();
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -273,7 +303,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                         />
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <button
                           type="button"
                           onClick={() => handleApprove(expense)}
@@ -293,6 +323,26 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                       </div>
                     </div>
                   )}
+
+                  {/* Actions disponibles pour toutes les notes */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(expense)}
+                      className="btn btn-secondary"
+                      style={{ flex: 1, fontSize: '0.875rem' }}
+                    >
+                      <DownloadIcon /> Télécharger
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(expense)}
+                      className="btn btn-danger"
+                      style={{ flex: 1, fontSize: '0.875rem' }}
+                    >
+                      🗑️ Supprimer
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -309,7 +359,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
   );
 };
 
-export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense }) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense }) {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // Catégories de frais (même que ExpensesView)
@@ -589,6 +639,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
                   expenses={data.expenses}
                   onApprove={onApproveExpense}
                   onReject={onRejectExpense}
+                  onDelete={onDeleteExpense}
                   categories={categories}
                   formatDate={formatDate}
                   formatAmount={formatAmount}
