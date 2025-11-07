@@ -65,7 +65,7 @@ const AgendaView = ({
 
     logger.log(`AgendaView: ${filtered.length} interventions after filtering`);
     return filtered;
-  }, [interventions, filters, dateRange]);
+  }, [interventions, filters, dateRange, viewMode]);
 
   // Group interventions by date
   const byDate = useMemo(() => {

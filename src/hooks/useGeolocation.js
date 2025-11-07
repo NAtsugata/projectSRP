@@ -1,7 +1,7 @@
 // src/hooks/useGeolocation.js
 // Hook pour gérer la géolocalisation avec retry et gestion d'erreurs
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import logger from '../utils/logger';
 
 /**
@@ -14,12 +14,12 @@ export const useGeolocation = (options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const defaultOptions = {
+  const defaultOptions = useMemo(() => ({
     enableHighAccuracy: true,
     timeout: 15000, // 15s au lieu de 10s
     maximumAge: 0,
     ...options
-  };
+  }), [options]);
 
   const getPosition = useCallback(
     (retries = 2) => {

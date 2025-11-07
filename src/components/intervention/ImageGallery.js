@@ -77,17 +77,6 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
     };
   }, []);
 
-  // Navigation clavier
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') handlePrevious();
-      if (e.key === 'ArrowRight') handleNext();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, images.length]);
-
   // Reset loading state à chaque changement d'image
   useEffect(() => {
     setImageLoaded(false);
@@ -100,6 +89,17 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
   const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
+
+  // Navigation clavier
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') handlePrevious();
+      if (e.key === 'ArrowRight') handleNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNext, handlePrevious, onClose]);
 
   // Swipe detection
   const minSwipeDistance = 50;

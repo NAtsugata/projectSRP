@@ -294,7 +294,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     });
 
     onEndCritical?.(); // fin de la phase critique
-  },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
+  },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback,folder]);
 
   return (
     <div className="mobile-uploader-panel">
@@ -521,7 +521,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
   // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
-  const persistReport = async (updated) => {
+  const persistReport = useCallback(async (updated) => {
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -531,7 +531,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       alert('Échec de la sauvegarde du rapport');
     }
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
-  };
+  }, [intervention.id, onSaveSilent]);
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 

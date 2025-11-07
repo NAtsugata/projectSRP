@@ -233,6 +233,19 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
     };
   }, []);
 
+  // Reset loading
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [currentIndex]);
+
+  const handlePrevious = useCallback(() => {
+    setCurrentIndex((p) => (p === 0 ? images.length - 1 : p - 1));
+  }, [images.length]);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((p) => (p === images.length - 1 ? 0 : p + 1));
+  }, [images.length]);
+
   // Navigation clavier
   useEffect(() => {
     const handleKey = (e) => {
@@ -242,20 +255,7 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentIndex, images.length]);
-
-  // Reset loading
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [currentIndex]);
-
-  const handlePrevious = () => {
-    setCurrentIndex((p) => (p === 0 ? images.length - 1 : p - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((p) => (p === images.length - 1 ? 0 : p + 1));
-  };
+  }, [handleNext, handlePrevious, onClose]);
 
   const handleDownload = () => {
     const link = document.createElement('a');
