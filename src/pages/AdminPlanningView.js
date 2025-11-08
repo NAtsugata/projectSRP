@@ -136,24 +136,22 @@ export default function AdminPlanningView({
       </div>
 
       {/* Delete confirmation dialog */}
-      {deleteConfirm && (
-        <ConfirmDialog
-          title="Supprimer l'intervention ?"
-          message="Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cette intervention ?"
-          onConfirm={confirmDelete}
-          onCancel={() => setDeleteConfirm(null)}
-        />
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        title="Supprimer l'intervention ?"
+        message="Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cette intervention ?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
       {/* Archive confirmation dialog */}
-      {archiveConfirm && (
-        <ConfirmDialog
-          title="Archiver l'intervention ?"
-          message="L'intervention sera déplacée dans les archives. Vous pourrez la restaurer plus tard."
-          onConfirm={confirmArchive}
-          onCancel={() => setArchiveConfirm(null)}
-        />
-      )}
+      <ConfirmDialog
+        isOpen={!!archiveConfirm}
+        title="Archiver l'intervention ?"
+        message="L'intervention sera déplacée dans les archives. Vous pourrez la restaurer plus tard."
+        onConfirm={confirmArchive}
+        onCancel={() => setArchiveConfirm(null)}
+      />
     </div>
   );
 }
