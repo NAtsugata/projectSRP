@@ -878,9 +878,34 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   onClick={() => window.open(file.url, '_blank')}
                 />
                 <button
-                  onClick={() => handleDeleteFile(file.url)}
-                  style={{position:'absolute',top:'4px',right:'4px',background:'rgba(220, 38, 38, 0.9)',color:'white',border:'none',borderRadius:'50%',width:'28px',height:'28px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}
-                  title="Supprimer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFile(file.url);
+                  }}
+                  style={{
+                    position:'absolute',
+                    top:'6px',
+                    right:'6px',
+                    background:'#dc2626',
+                    color:'white',
+                    border:'2px solid white',
+                    borderRadius:'50%',
+                    width:'36px',
+                    height:'36px',
+                    cursor:'pointer',
+                    display:'flex',
+                    alignItems:'center',
+                    justifyContent:'center',
+                    fontSize:'20px',
+                    fontWeight:'bold',
+                    boxShadow:'0 2px 8px rgba(0,0,0,0.3)',
+                    zIndex:10,
+                    transition:'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  title="Supprimer cette image"
+                  aria-label="Supprimer cette image"
                 >
                   ×
                 </button>
