@@ -1252,7 +1252,6 @@ export default function IRShowerFormsView({ profile }) {
                     ref={photoAvantInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     multiple
                     onChange={(e) => handlePhotoCapture(e, 'avant')}
                     style={{ display: 'none' }}
@@ -1288,7 +1287,6 @@ export default function IRShowerFormsView({ profile }) {
                     ref={photoApresInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     multiple
                     onChange={(e) => handlePhotoCapture(e, 'apres')}
                     style={{ display: 'none' }}

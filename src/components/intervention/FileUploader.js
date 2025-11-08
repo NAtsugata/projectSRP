@@ -265,7 +265,6 @@ const FileUploader = ({
         type="file"
         multiple
         accept={accept}
-        capture={capture ? 'environment' : undefined}
         onChange={handleFileChange}
         disabled={state.uploading}
         style={{ display: 'none' }}

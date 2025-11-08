@@ -302,9 +302,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         ref={inputRef}
         type="file"
         multiple
-        // Ouvre directement la caméra sur mobile si possible
         accept="image/*,application/pdf,audio/webm"
-        capture="environment"
         onChange={onChange}
         disabled={state.uploading}
         style={{display:'none'}}
