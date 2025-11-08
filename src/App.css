@@ -472,6 +472,27 @@ body {
     .nav-label {
         display: inline; /* Show labels on desktop */
     }
+
+    /* Fix navigation overflow on desktop */
+    .main-nav {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-start;
+        overflow-x: visible;
+    }
+
+    .nav-button {
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .header-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
 }
 
 /* Login Screen - Mobile Optimized */
