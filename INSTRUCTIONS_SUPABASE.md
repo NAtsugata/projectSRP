@@ -7,6 +7,7 @@ Sans ces scripts SQL, les fonctionnalités suivantes **NE FONCTIONNENT PAS** :
 - ❌ Employés ne peuvent pas uploader d'images dans les interventions
 - ❌ Impossible de supprimer des images/documents d'interventions
 - ❌ Admin ne peut pas supprimer de notes de frais
+- ❌ **Admin ne peut pas supprimer d'interventions**
 - ❌ Erreur lors de la création de notes de frais (catégories manquantes)
 
 ---
@@ -60,9 +61,24 @@ Sans ces scripts SQL, les fonctionnalités suivantes **NE FONCTIONNENT PAS** :
 
 ---
 
+### 4️⃣ **SUPPRESSION ADMIN INTERVENTIONS** (NOUVEAU)
+
+**Fichier:** `sql/add_admin_delete_interventions_policy.sql`
+
+**Ce que ça fait:**
+- ✅ Permet aux admins de supprimer n'importe quelle intervention
+- ✅ Active le bouton de suppression dans le planning
+
+**Comment exécuter:**
+1. **SQL Editor** → **New query**
+2. Copiez-collez le contenu de `sql/add_admin_delete_interventions_policy.sql`
+3. **Run**
+
+---
+
 ## ✅ VÉRIFICATION
 
-Après avoir exécuté les 3 scripts, vérifiez :
+Après avoir exécuté les 4 scripts, vérifiez :
 
 ### Test 1 : Upload d'images
 1. Connectez-vous en tant qu'employé
@@ -84,6 +100,13 @@ Après avoir exécuté les 3 scripts, vérifiez :
 2. ✅ Pas d'erreur de contrainte
 3. En tant qu'admin, essayez de supprimer la note
 4. ✅ La suppression fonctionne
+
+### Test 4 : Suppression d'interventions
+1. Connectez-vous en tant qu'admin
+2. Allez dans le Planning
+3. Cliquez sur le bouton de suppression (poubelle) d'une intervention
+4. Confirmez la suppression
+5. ✅ L'intervention devrait disparaître
 
 ---
 
@@ -109,6 +132,7 @@ Après avoir exécuté les 3 scripts, vérifiez :
 -- 1. Exécuter storage_buckets_setup.sql
 -- 2. Exécuter update_expenses_categories.sql
 -- 3. Exécuter add_admin_delete_expenses_policy.sql
+-- 4. Exécuter add_admin_delete_interventions_policy.sql
 ```
 
 **Une fois fait, TOUTES les fonctionnalités devraient fonctionner !** ✨
