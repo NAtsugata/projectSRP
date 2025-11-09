@@ -43,7 +43,7 @@ CREATE POLICY "Admins can view all scanned documents"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      AND profiles.is_admin = true
     )
   );
 
@@ -68,7 +68,7 @@ CREATE POLICY "Admins can update all scanned documents"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      AND profiles.is_admin = true
     )
   );
 
@@ -86,7 +86,7 @@ CREATE POLICY "Admins can delete all scanned documents"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      AND profiles.is_admin = true
     )
   );
 
