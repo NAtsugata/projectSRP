@@ -7,10 +7,8 @@ import {
   XCircleIcon,
   ChevronLeftIcon,
   RotateCwIcon,
-  CropIcon,
   AdjustmentsIcon,
-  DownloadIcon,
-  TrashIcon
+  DownloadIcon
 } from '../components/SharedUI';
 
 export default function DocumentScannerView({ onSave, onClose }) {

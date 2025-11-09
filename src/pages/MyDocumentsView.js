@@ -7,14 +7,12 @@ import DocumentScannerView from './DocumentScannerView';
 import {
   CameraIcon,
   SearchIcon,
-  FilterIcon,
   DownloadIcon,
   TrashIcon,
   EyeIcon,
   FolderIcon,
   CalendarIcon,
-  UserIcon,
-  TagIcon
+  UserIcon
 } from '../components/SharedUI';
 
 const CATEGORIES = [
@@ -38,8 +36,6 @@ export default function MyDocumentsView({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [selectedDoc, setSelectedDoc] = useState(null);
 
   const isAdmin = profile?.role === 'admin';
 
@@ -512,7 +508,7 @@ export default function MyDocumentsView({
           )}
         </div>
       ) : (
-        <div className={viewMode === 'grid' ? 'docs-grid' : 'docs-list'}>
+        <div className="docs-grid">
           {filteredDocuments.map(doc => (
             <div key={doc.id} className="doc-card">
               {doc.thumbnail_url && (
