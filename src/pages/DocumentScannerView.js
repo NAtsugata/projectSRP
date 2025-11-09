@@ -7,15 +7,20 @@ import {
   XCircleIcon,
   ChevronLeftIcon,
   RotateCwIcon,
-  AdjustmentsIcon,
   DownloadIcon
 } from '../components/SharedUI';
+import {
+  enhanceBlackAndWhite,
+  enhanceColor,
+  enhanceGrayscale
+} from '../utils/documentScanner';
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [mode, setMode] = useState('capture'); // 'capture', 'preview', 'edit'
   const [isProcessing, setIsProcessing] = useState(false);
+  const [enhanceMode, setEnhanceMode] = useState('original'); // 'original', 'bw', 'gray', 'color'
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -72,21 +77,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const newDoc = {
         id: Date.now(),
         url,
+        originalUrl: url, // Garder l'URL originale
         blob,
         timestamp: new Date().toISOString(),
-        enhanced: false,
+        enhanceMode: 'original',
         rotation: 0
       };
 
       setCurrentDoc(newDoc);
       setMode('preview');
+      setEnhanceMode('original');
       setIsProcessing(false);
       stopCamera();
     }, 'image/jpeg', 0.92);
   }, [stopCamera]);
 
-  // Améliorer l'image (contraste, netteté)
-  const enhanceImage = useCallback(() => {
+  // Appliquer un mode d'amélioration
+  const applyEnhanceMode = useCallback((targetMode) => {
     if (!currentDoc || !canvasRef.current) return;
 
     setIsProcessing(true);
@@ -99,21 +106,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      // Augmenter le contraste et la netteté
-      for (let i = 0; i < data.length; i += 4) {
-        // Contraste
-        const factor = 1.3;
-        data[i] = ((data[i] - 128) * factor) + 128;
-        data[i + 1] = ((data[i + 1] - 128) * factor) + 128;
-        data[i + 2] = ((data[i + 2] - 128) * factor) + 128;
-
-        // Clamp values
-        data[i] = Math.min(255, Math.max(0, data[i]));
-        data[i + 1] = Math.min(255, Math.max(0, data[i + 1]));
-        data[i + 2] = Math.min(255, Math.max(0, data[i + 2]));
+      // Appliquer le mode sélectionné
+      switch (targetMode) {
+        case 'bw':
+          imageData = enhanceBlackAndWhite(imageData);
+          break;
+        case 'gray':
+          imageData = enhanceGrayscale(imageData);
+          break;
+        case 'color':
+          imageData = enhanceColor(imageData);
+          break;
+        case 'original':
+        default:
+          // Pas de traitement
+          break;
       }
 
       ctx.putImageData(imageData, 0, 0);
@@ -124,13 +133,15 @@ export default function DocumentScannerView({ onSave, onClose }) {
           ...prev,
           url,
           blob,
-          enhanced: true
+          enhanceMode: targetMode
         }));
+        setEnhanceMode(targetMode);
         setIsProcessing(false);
       }, 'image/jpeg', 0.92);
     };
 
-    img.src = currentDoc.url;
+    // IMPORTANT: Charger l'image originale pour toujours partir de la source
+    img.src = currentDoc.originalUrl || currentDoc.url;
   }, [currentDoc]);
 
   // Rotation de l'image
@@ -542,6 +553,39 @@ export default function DocumentScannerView({ onSave, onClose }) {
           </div>
         )}
 
+        {/* Modes d'amélioration */}
+        {mode === 'preview' && currentDoc && (
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            padding: '1rem',
+            overflowX: 'auto',
+            background: 'rgba(0,0,0,0.3)',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {[
+              { value: 'original', label: '📄 Original', emoji: '📄' },
+              { value: 'bw', label: '⬛ N&B', emoji: '⬛' },
+              { value: 'gray', label: '⚪ Gris', emoji: '⚪' },
+              { value: 'color', label: '🎨 Couleur+', emoji: '🎨' }
+            ].map(modeOption => (
+              <button
+                key={modeOption.value}
+                className={`scanner-btn ${enhanceMode === modeOption.value ? 'primary' : ''}`}
+                onClick={() => applyEnhanceMode(modeOption.value)}
+                disabled={isProcessing}
+                style={{
+                  flex: '1',
+                  minWidth: '100px',
+                  opacity: enhanceMode === modeOption.value ? 1 : 0.7
+                }}
+              >
+                {modeOption.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Boutons selon le mode */}
         <div className="control-buttons">
           {mode === 'capture' && stream && (
@@ -564,17 +608,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
                 <RotateCwIcon /> Rotation
               </button>
               <button
-                className="scanner-btn"
-                onClick={enhanceImage}
-                disabled={isProcessing || currentDoc.enhanced}
-              >
-                <AdjustmentsIcon /> {currentDoc.enhanced ? 'Amélioré ✓' : 'Améliorer'}
-              </button>
-              <button
                 className="scanner-btn danger"
                 onClick={() => {
                   setCurrentDoc(null);
                   setMode('capture');
+                  setEnhanceMode('original');
                   startCamera();
                 }}
               >
