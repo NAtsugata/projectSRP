@@ -857,7 +857,7 @@ function App() {
                       onUpdateDocument={handleUpdateDocument}
                     />
                   </Suspense>
-                }} />
+                } />
                 <Route path="checklist-templates" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <AdminChecklistTemplatesView
@@ -927,7 +927,7 @@ function App() {
                       onUpdateDocument={handleUpdateDocument}
                     />
                   </Suspense>
-                }} />
+                } />
                 <Route path="checklists" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <ChecklistView
