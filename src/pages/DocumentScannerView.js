@@ -33,6 +33,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        // IMPORTANT: Démarrer la lecture de la vidéo
+        videoRef.current.play().catch(err => {
+          console.error('Erreur play:', err);
+        });
         setStream(mediaStream);
       }
     } catch (error) {
@@ -270,12 +274,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
           justify-content: center;
           position: relative;
           background: #000;
+          min-height: 400px;
+          overflow: hidden;
         }
 
         .camera-video {
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          object-fit: cover;
         }
 
         .document-preview {
@@ -493,6 +499,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
               ref={videoRef}
               autoPlay
               playsInline
+              muted
               className="camera-video"
             />
             <div className="guide-frame" />
