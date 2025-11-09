@@ -10,10 +10,11 @@ import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import expenseService from './services/expenseService';
 import checklistService from './services/checklistService';
+import scannedDocumentsService from './services/scannedDocumentsService';
 import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import { Toast, ConfirmationModal } from './components/SharedUI';
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon } from './components/SharedUI';
+import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
 import LoginScreen from './pages/LoginScreen';
 import './App.css';
 
@@ -34,6 +35,7 @@ const ExpensesView = lazy(() => import('./pages/ExpensesView'));
 const AdminExpensesView = lazy(() => import('./pages/AdminExpensesView'));
 const ChecklistView = lazy(() => import('./pages/ChecklistView'));
 const AdminChecklistTemplatesView = lazy(() => import('./pages/AdminChecklistTemplatesView'));
+const MyDocumentsView = lazy(() => import('./pages/MyDocumentsView'));
 
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
@@ -47,6 +49,7 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'users', label: 'Employés', icon: <UsersIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
+        { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
         { id: 'checklist-templates', label: 'Checklists', icon: <CheckCircleIcon /> },
         { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
         { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
@@ -56,6 +59,7 @@ const AppLayout = ({ profile, handleLogout }) => {
         { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
         { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
         { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
+        { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
         { id: 'checklists', label: 'Checklists', icon: <CheckCircleIcon /> },
         { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
         { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
@@ -125,6 +129,7 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [checklistTemplates, setChecklistTemplates] = useState([]);
   const [checklists, setChecklists] = useState([]);
+  const [scannedDocuments, setScannedDocuments] = useState([]);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -140,14 +145,15 @@ function App() {
       try {
         const isAdmin = userProfile.is_admin;
         const userId = userProfile.id;
-        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes, templatesRes, checklistsRes] = await Promise.all([
+        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes, templatesRes, checklistsRes, scannedDocsRes] = await Promise.all([
           profileService.getAllProfiles(),
           interventionService.getInterventions(isAdmin ? null : userId, false),
           leaveService.getLeaveRequests(isAdmin ? null : userId),
           vaultService.getVaultDocuments(),
           isAdmin ? expenseService.getAllExpenses() : expenseService.getUserExpenses(userId),
           checklistService.getAllTemplates(),
-          isAdmin ? checklistService.getAllChecklists() : checklistService.getUserChecklists(userId)
+          isAdmin ? checklistService.getAllChecklists() : checklistService.getUserChecklists(userId),
+          isAdmin ? scannedDocumentsService.getAllDocuments() : scannedDocumentsService.getUserDocuments(userId)
         ]);
 
         if (profilesRes.error) throw profilesRes.error;
@@ -170,6 +176,9 @@ function App() {
 
         if (checklistsRes.error) throw checklistsRes.error;
         setChecklists(checklistsRes.data || []);
+
+        if (scannedDocsRes.error) throw scannedDocsRes.error;
+        setScannedDocuments(scannedDocsRes.data || []);
 
         setDataVersion(Date.now());
       } catch (error) {
@@ -655,6 +664,72 @@ function App() {
     }
   };
 
+  // ===== HANDLERS DOCUMENTS SCANNÉS =====
+
+  // Sauvegarder des documents scannés
+  const handleSaveDocuments = async (scannedDocs, metadata) => {
+    try {
+      if (!scannedDocs || scannedDocs.length === 0) {
+        throw new Error('Aucun document à sauvegarder');
+      }
+
+      // Convertir les blobs en Files pour l'upload
+      const files = scannedDocs.map(doc => doc.blob);
+
+      const { data, error } = await scannedDocumentsService.createMultipleDocuments({
+        userId: metadata.user_id,
+        title: metadata.title,
+        category: metadata.category,
+        tags: metadata.tags || [],
+        files,
+        description: metadata.description || ''
+      });
+
+      if (error) throw error;
+
+      showToast(`${files.length} document(s) sauvegardé(s) !`, 'success');
+      await refreshData(profile);
+      return { data, error: null };
+    } catch (error) {
+      console.error('❌ Erreur handleSaveDocuments:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  // Supprimer un document scanné
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      const doc = scannedDocuments.find(d => d.id === documentId);
+      if (!doc) throw new Error('Document introuvable');
+
+      const { error } = await scannedDocumentsService.deleteDocument(documentId, doc.file_url);
+      if (error) throw error;
+
+      showToast('Document supprimé', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur handleDeleteDocument:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  // Mettre à jour un document scanné
+  const handleUpdateDocument = async (documentId, updates) => {
+    try {
+      const { error } = await scannedDocumentsService.updateDocument(documentId, updates);
+      if (error) throw error;
+
+      showToast('Document mis à jour', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur handleUpdateDocument:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -771,6 +846,18 @@ function App() {
                     </Suspense>
                   }
                 />
+                <Route path="documents" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <MyDocumentsView
+                      scannedDocuments={scannedDocuments}
+                      profile={profile}
+                      users={users}
+                      onSaveDocuments={handleSaveDocuments}
+                      onDeleteDocument={handleDeleteDocument}
+                      onUpdateDocument={handleUpdateDocument}
+                    />
+                  </Suspense>
+                }} />
                 <Route path="checklist-templates" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <AdminChecklistTemplatesView
@@ -829,6 +916,18 @@ function App() {
                     <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
                   </Suspense>
                 } />
+                <Route path="documents" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <MyDocumentsView
+                      scannedDocuments={scannedDocuments}
+                      profile={profile}
+                      users={users}
+                      onSaveDocuments={handleSaveDocuments}
+                      onDeleteDocument={handleDeleteDocument}
+                      onUpdateDocument={handleUpdateDocument}
+                    />
+                  </Suspense>
+                }} />
                 <Route path="checklists" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <ChecklistView
