@@ -48,9 +48,12 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Détection en temps réel sur le flux vidéo
   useEffect(() => {
+    console.log('[LIVE DETECTION] useEffect triggered', { mode, hasStream: !!stream, hasVideo: !!videoRef.current, hasOverlay: !!overlayCanvasRef.current });
+
     if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current) {
       // Nettoyer l'interval si on n'est plus en mode capture
       if (detectionIntervalRef.current) {
+        console.log('[LIVE DETECTION] Clearing interval');
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
@@ -59,15 +62,20 @@ export default function DocumentScannerView({ onSave, onClose }) {
       return;
     }
 
+    console.log('[LIVE DETECTION] Starting real-time detection loop');
+
     const detectLive = async () => {
       const video = videoRef.current;
       const overlayCanvas = overlayCanvasRef.current;
 
       if (!video || !overlayCanvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        console.log('[LIVE DETECTION] Not ready', { hasVideo: !!video, hasCanvas: !!overlayCanvas, readyState: video?.readyState });
         return;
       }
 
       try {
+        console.log('[LIVE DETECTION] Capturing frame...');
+
         // Capturer une frame du flux vidéo
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = video.videoWidth;
@@ -82,6 +90,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
         const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
 
+        console.log('[LIVE DETECTION] Calling OpenCV detection...');
+
         // Détecter avec OpenCV (paramètres optimisés pour la vitesse)
         const result = await documentDetectorUtils.detectDocument(file, {
           minArea: 0.05, // Plus sensible (5% au lieu de 10%)
@@ -89,7 +99,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
           drawContours: false
         });
 
+        console.log('[LIVE DETECTION] Detection result:', { detected: result.detected, hasContour: !!result.contour, contourLength: result.contour?.length });
+
         if (result.detected && result.contour && result.contour.length === 4) {
+          console.log('[LIVE DETECTION] Document detected! Drawing overlay...');
           setLiveCorners(result.contour);
           setDetectionConfidence(100);
 
@@ -121,8 +134,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
             overlayCtx.arc(corner.x, corner.y, 8, 0, Math.PI * 2);
             overlayCtx.fill();
           });
+
+          console.log('[LIVE DETECTION] Overlay drawn successfully');
         } else {
           // Pas de document détecté
+          console.log('[LIVE DETECTION] No document detected');
           setLiveCorners(null);
           setDetectionConfidence(0);
           // Effacer l'overlay
@@ -131,15 +147,17 @@ export default function DocumentScannerView({ onSave, onClose }) {
         }
       } catch (error) {
         // Ignorer les erreurs de détection en temps réel
-        console.debug('Live detection error:', error);
+        console.error('[LIVE DETECTION] Error:', error);
       }
     };
 
     // Lancer la détection toutes les 400ms
+    console.log('[LIVE DETECTION] Setting interval (400ms)');
     detectionIntervalRef.current = setInterval(detectLive, 400);
 
     return () => {
       if (detectionIntervalRef.current) {
+        console.log('[LIVE DETECTION] Cleanup - clearing interval');
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
