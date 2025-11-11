@@ -2,7 +2,22 @@
 
 Ce dossier contient les modèles ONNX utilisés pour la détection de documents.
 
-## 📥 Comment obtenir un modèle YOLO
+## ☁️ **NOUVEAU : Déploiement Vercel avec CDN**
+
+Pour un déploiement sur **Vercel**, l'application utilise maintenant un modèle YOLO hébergé sur **Hugging Face CDN**.
+
+✅ **Aucun fichier local nécessaire** - Le modèle est chargé automatiquement depuis :
+```
+https://huggingface.co/Xenova/yolov8n/resolve/main/onnx/model.onnx
+```
+
+✅ **Configuration automatique** - Aucune modification nécessaire pour Vercel
+
+✅ **Fonctionnement en local** - Le modèle se télécharge automatiquement au premier chargement
+
+---
+
+## 📥 Comment obtenir un modèle YOLO (développement local)
 
 ### Option 1 : Modèle YOLOv8 Nano (Test rapide)
 
