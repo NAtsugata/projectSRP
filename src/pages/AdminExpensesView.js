@@ -7,7 +7,8 @@ import {
   UserIcon,
   ChevronDownIcon,
   CalendarIcon,
-  FileTextIcon
+  FileTextIcon,
+  DownloadIcon
 } from '../components/SharedUI';
 
 // Modal de visualisation des justificatifs
