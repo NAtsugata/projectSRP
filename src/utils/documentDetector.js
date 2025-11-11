@@ -54,6 +54,25 @@ const orderPoints = (points) => {
 };
 
 /**
+ * Reduce n points to 4 corners by finding extreme points
+ * @param {Array} points - Array of n points
+ * @returns {Array} 4 corner points
+ */
+const orderPointsToQuad = (points) => {
+  // Trouver les 4 coins extrêmes
+  const topLeft = points.reduce((min, p) =>
+    (p.x + p.y < min.x + min.y) ? p : min, points[0]);
+  const topRight = points.reduce((max, p) =>
+    (p.x - p.y > max.x - max.y) ? p : max, points[0]);
+  const bottomRight = points.reduce((max, p) =>
+    (p.x + p.y > max.x + max.y) ? p : max, points[0]);
+  const bottomLeft = points.reduce((min, p) =>
+    (p.y - p.x > min.y - min.x) ? p : min, points[0]);
+
+  return [topLeft, topRight, bottomRight, bottomLeft];
+};
+
+/**
  * Calculate the perimeter of a contour
  * @param {Object} contour - OpenCV contour
  * @returns {number} Perimeter
@@ -84,18 +103,52 @@ const findDocumentContour = (contours, imageArea, minArea = 0.1) => {
     }
 
     // Approximate the contour to a polygon
+    // Utiliser une tolérance plus élevée (0.03 au lieu de 0.02) pour être plus flexible
     const perimeter = getContourPerimeter(contour);
     const approx = new window.cv.Mat();
-    window.cv.approxPolyDP(contour, approx, 0.02 * perimeter, true);
+    window.cv.approxPolyDP(contour, approx, 0.03 * perimeter, true);
 
     // Check if the approximated contour has 4 points (quadrilateral)
-    if (approx.rows === 4 && area > maxArea) {
-      if (bestApprox) bestApprox.delete();
-      if (bestContour) bestContour.delete();
+    // Accepter aussi 5 ou 6 points si l'aire est grande (souvent causé par des coins légèrement arrondis)
+    const isQuadrilateral = approx.rows === 4 || (approx.rows >= 5 && approx.rows <= 6 && area > maxArea);
 
-      maxArea = area;
-      bestContour = contour;
-      bestApprox = approx;
+    if (isQuadrilateral && area > maxArea) {
+      // Si on a plus de 4 points, les réduire à 4 en prenant les coins extrêmes
+      if (approx.rows > 4) {
+        const points = [];
+        for (let j = 0; j < approx.rows; j++) {
+          points.push({
+            x: approx.data32S[j * 2],
+            y: approx.data32S[j * 2 + 1]
+          });
+        }
+
+        // Trouver les 4 coins les plus extrêmes
+        const orderedPoints = orderPointsToQuad(points);
+
+        // Créer un nouveau Mat avec 4 points
+        const newApprox = new window.cv.Mat(4, 1, window.cv.CV_32SC2);
+        for (let j = 0; j < 4; j++) {
+          newApprox.data32S[j * 2] = orderedPoints[j].x;
+          newApprox.data32S[j * 2 + 1] = orderedPoints[j].y;
+        }
+
+        approx.delete();
+        if (bestApprox) bestApprox.delete();
+        if (bestContour) bestContour.delete();
+
+        maxArea = area;
+        bestContour = contour;
+        bestApprox = newApprox;
+      } else {
+        // Exactement 4 points, parfait !
+        if (bestApprox) bestApprox.delete();
+        if (bestContour) bestContour.delete();
+
+        maxArea = area;
+        bestContour = contour;
+        bestApprox = approx;
+      }
     } else {
       contour.delete();
       approx.delete();
@@ -234,22 +287,34 @@ export const detectDocument = async (input, options = {}) => {
       const gray = new window.cv.Mat();
       const blurred = new window.cv.Mat();
       const edges = new window.cv.Mat();
+      const dilated = new window.cv.Mat();
 
       // Convert to grayscale
       window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
 
-      // Apply Gaussian blur
+      // Améliorer le contraste avec CLAHE (Contrast Limited Adaptive Histogram Equalization)
+      const clahe = new window.cv.CLAHE(2.0, new window.cv.Size(8, 8));
+      clahe.apply(gray, gray);
+
+      // Apply Gaussian blur pour réduire le bruit
       const ksize = new window.cv.Size(5, 5);
       window.cv.GaussianBlur(gray, blurred, ksize, 0);
 
-      // Detect edges using Canny
-      window.cv.Canny(blurred, edges, 50, 150);
+      // Detect edges using Canny avec des seuils plus bas pour plus de sensibilité
+      window.cv.Canny(blurred, edges, 30, 100);
+
+      // Dilater les bords pour mieux connecter les contours
+      const kernel = window.cv.getStructuringElement(
+        window.cv.MORPH_RECT,
+        new window.cv.Size(3, 3)
+      );
+      window.cv.dilate(edges, dilated, kernel);
 
       // Find contours
       const contours = new window.cv.MatVector();
       const hierarchy = new window.cv.Mat();
       window.cv.findContours(
-        edges,
+        dilated,
         contours,
         hierarchy,
         window.cv.RETR_EXTERNAL,
@@ -281,6 +346,8 @@ export const detectDocument = async (input, options = {}) => {
       gray.delete();
       blurred.delete();
       edges.delete();
+      dilated.delete();
+      kernel.delete();
       contours.delete();
       hierarchy.delete();
     }

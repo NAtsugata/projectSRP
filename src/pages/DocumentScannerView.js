@@ -26,10 +26,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [corners, setCorners] = useState(null); // Coins ajustables [topLeft, topRight, bottomRight, bottomLeft]
   const [draggedCorner, setDraggedCorner] = useState(null); // Index du coin en cours de drag
   const [originalImage, setOriginalImage] = useState(null); // Image originale pour l'ajustement
+  const [liveCorners, setLiveCorners] = useState(null); // Coins détectés en temps réel sur la caméra
+  const [detectionConfidence, setDetectionConfidence] = useState(0); // Niveau de confiance 0-100
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
+  const overlayCanvasRef = useRef(null); // Canvas pour l'overlay en temps réel
   const fileInputRef = useRef(null);
+  const detectionIntervalRef = useRef(null);
   const [stream, setStream] = useState(null);
 
   // Appliquer le stream à la vidéo quand il est disponible
@@ -41,6 +45,106 @@ export default function DocumentScannerView({ onSave, onClose }) {
       });
     }
   }, [stream]);
+
+  // Détection en temps réel sur le flux vidéo
+  useEffect(() => {
+    if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current) {
+      // Nettoyer l'interval si on n'est plus en mode capture
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
+      }
+      setLiveCorners(null);
+      setDetectionConfidence(0);
+      return;
+    }
+
+    const detectLive = async () => {
+      const video = videoRef.current;
+      const overlayCanvas = overlayCanvasRef.current;
+
+      if (!video || !overlayCanvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        return;
+      }
+
+      try {
+        // Capturer une frame du flux vidéo
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        // Convertir en blob
+        const blob = await new Promise(resolve => {
+          tempCanvas.toBlob(resolve, 'image/jpeg', 0.7); // Qualité réduite pour la vitesse
+        });
+
+        const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
+
+        // Détecter avec OpenCV (paramètres optimisés pour la vitesse)
+        const result = await documentDetectorUtils.detectDocument(file, {
+          minArea: 0.05, // Plus sensible (5% au lieu de 10%)
+          autoTransform: false,
+          drawContours: false
+        });
+
+        if (result.detected && result.contour && result.contour.length === 4) {
+          setLiveCorners(result.contour);
+          setDetectionConfidence(100);
+
+          // Dessiner l'overlay sur le canvas
+          overlayCanvas.width = video.videoWidth;
+          overlayCanvas.height = video.videoHeight;
+          const overlayCtx = overlayCanvas.getContext('2d');
+          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+          // Dessiner le polygone vert autour du document
+          overlayCtx.strokeStyle = '#10b981';
+          overlayCtx.lineWidth = 4;
+          overlayCtx.shadowColor = '#10b981';
+          overlayCtx.shadowBlur = 15;
+          overlayCtx.beginPath();
+          overlayCtx.moveTo(result.contour[0].x, result.contour[0].y);
+          for (let i = 1; i < result.contour.length; i++) {
+            overlayCtx.lineTo(result.contour[i].x, result.contour[i].y);
+          }
+          overlayCtx.closePath();
+          overlayCtx.stroke();
+
+          // Dessiner les coins avec des cercles
+          result.contour.forEach(corner => {
+            overlayCtx.fillStyle = '#10b981';
+            overlayCtx.shadowColor = '#10b981';
+            overlayCtx.shadowBlur = 10;
+            overlayCtx.beginPath();
+            overlayCtx.arc(corner.x, corner.y, 8, 0, Math.PI * 2);
+            overlayCtx.fill();
+          });
+        } else {
+          // Pas de document détecté
+          setLiveCorners(null);
+          setDetectionConfidence(0);
+          // Effacer l'overlay
+          const overlayCtx = overlayCanvas.getContext('2d');
+          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+      } catch (error) {
+        // Ignorer les erreurs de détection en temps réel
+        console.debug('Live detection error:', error);
+      }
+    };
+
+    // Lancer la détection toutes les 400ms
+    detectionIntervalRef.current = setInterval(detectLive, 400);
+
+    return () => {
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
+      }
+    };
+  }, [mode, stream]);
 
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
@@ -488,6 +592,45 @@ export default function DocumentScannerView({ onSave, onClose }) {
           object-fit: cover;
         }
 
+        .camera-overlay-canvas {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          object-fit: cover;
+        }
+
+        .detection-indicator {
+          position: absolute;
+          top: 1rem;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(16, 185, 129, 0.95);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 2rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: translateX(-50%) scale(1.05);
+          }
+        }
+
         .document-preview {
           width: 100%;
           height: 100%;
@@ -793,7 +936,17 @@ export default function DocumentScannerView({ onSave, onClose }) {
               muted
               className="camera-video"
             />
-            <div className="guide-frame" />
+            <canvas
+              ref={overlayCanvasRef}
+              className="camera-overlay-canvas"
+            />
+            {!liveCorners && <div className="guide-frame" />}
+            {liveCorners && detectionConfidence > 0 && (
+              <div className="detection-indicator">
+                <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
+                Document détecté !
+              </div>
+            )}
           </>
         )}
 
