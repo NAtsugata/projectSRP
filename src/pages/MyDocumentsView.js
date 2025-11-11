@@ -37,7 +37,7 @@ export default function MyDocumentsView({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.is_admin === true;
 
   // Filtrer les documents
   const filteredDocuments = useMemo(() => {
