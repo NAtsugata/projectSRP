@@ -12,6 +12,8 @@ import {
   CalendarIcon,
   CustomFileInput
 } from '../components/SharedUI';
+import DocumentCropPreview from '../components/DocumentCropPreview';
+import { detectDocument } from '../utils/documentDetector';
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
   // Restaurer le state depuis localStorage si disponible (pour mobile après retour de caméra)
@@ -56,6 +58,11 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false); // Flag pour éviter fermeture pendant traitement photo
+
+  // États pour la détection de documents
+  const [documentDetectionResult, setDocumentDetectionResult] = useState(null);
+  const [currentPhotoFile, setCurrentPhotoFile] = useState(null);
+  const [pendingPhotos, setPendingPhotos] = useState([]); // File d'attente des photos à traiter
 
   // Sauvegarder dans localStorage à chaque changement (pour persister pendant photo mobile)
   useEffect(() => {
@@ -161,6 +168,55 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
 
+  // Traiter la prochaine photo dans la file d'attente
+  const processNextPhoto = useCallback(async () => {
+    if (pendingPhotos.length === 0) {
+      setIsProcessingPhoto(false);
+      console.log('🔓 Toutes les photos traitées, flag isProcessingPhoto désactivé');
+      return;
+    }
+
+    const file = pendingPhotos[0];
+    setCurrentPhotoFile(file);
+    console.log('📸 Traitement de la photo:', file.name);
+
+    try {
+      // Détecter le document dans l'image
+      console.log('🔍 Début détection de document...');
+      const result = await detectDocument(file, {
+        minArea: 0.1,
+        autoTransform: true,
+        drawContours: true
+      });
+
+      console.log('✅ Détection terminée:', result.detected ? 'Document détecté' : 'Aucun document');
+      setDocumentDetectionResult(result);
+
+    } catch (error) {
+      console.error('❌ Erreur détection document:', error);
+      // En cas d'erreur, utiliser l'image originale
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const fallbackResult = {
+          detected: false,
+          original: e.target.result,
+          preview: null,
+          transformed: null,
+          corners: null
+        };
+        setDocumentDetectionResult(fallbackResult);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [pendingPhotos]);
+
+  // Traiter la photo suivante quand la file d'attente change
+  useEffect(() => {
+    if (pendingPhotos.length > 0 && !documentDetectionResult && !currentPhotoFile) {
+      processNextPhoto();
+    }
+  }, [pendingPhotos, documentDetectionResult, currentPhotoFile, processNextPhoto]);
+
   // Gestion des photos
   const handleReceiptCapture = useCallback((event) => {
     console.log('💰 handleReceiptCapture appelé', event);
@@ -182,58 +238,62 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       return;
     }
 
-    console.log('💰 Début lecture des fichiers...');
+    console.log('💰 Ajout des fichiers à la file d\'attente pour détection...');
+    setPendingPhotos(files);
 
-    // Lire tous les fichiers en parallèle et mettre à jour le state une seule fois
-    const readPromises = files.map((file, index) => {
-      return new Promise((resolve, reject) => {
-        console.log(`💰 Lecture fichier ${index + 1}/${files.length}:`, file.name);
-        const reader = new FileReader();
+  }, []);
 
-        reader.onload = (ev) => {
-          console.log(`✅ Fichier ${index + 1} lu avec succès:`, file.name, 'Taille données:', ev.target.result?.length);
-          resolve({
-            id: Date.now() + Math.random(),
-            url: ev.target.result,
-            name: file.name,
-            size: file.size
-          });
-        };
+  // Accepter le recadrage du document
+  const handleAcceptCrop = useCallback((croppedImageUrl) => {
+    console.log('✅ Utilisateur accepte le recadrage');
+    const receipt = {
+      id: Date.now() + Math.random(),
+      url: croppedImageUrl,
+      name: currentPhotoFile.name,
+      size: currentPhotoFile.size
+    };
 
-        reader.onerror = (err) => {
-          console.error(`❌ Erreur lecture fichier ${index + 1}:`, file.name, err);
-          reject(err);
-        };
+    setNewExpense(prev => ({
+      ...prev,
+      receipts: [...prev.receipts, receipt]
+    }));
 
-        reader.readAsDataURL(file);
-      });
-    });
+    // Passer à la photo suivante
+    setDocumentDetectionResult(null);
+    setCurrentPhotoFile(null);
+    setPendingPhotos(prev => prev.slice(1));
+  }, [currentPhotoFile]);
 
-    Promise.all(readPromises)
-      .then(newReceipts => {
-        console.log('✅ Tous les fichiers lus:', newReceipts.length);
-        console.log('💰 Ajout des receipts au state...');
-        setNewExpense(prev => {
-          const updated = {
-            ...prev,
-            receipts: [...prev.receipts, ...newReceipts]
-          };
-          console.log('💰 State mis à jour, total receipts:', updated.receipts.length);
-          return updated;
-        });
+  // Utiliser l'image originale
+  const handleUseOriginal = useCallback((originalImageUrl) => {
+    console.log('📷 Utilisateur utilise l\'image originale');
+    const receipt = {
+      id: Date.now() + Math.random(),
+      url: originalImageUrl,
+      name: currentPhotoFile.name,
+      size: currentPhotoFile.size
+    };
 
-        // Désactiver le flag après traitement réussi
-        setTimeout(() => {
-          setIsProcessingPhoto(false);
-          console.log('🔓 Flag isProcessingPhoto désactivé (succès)');
-        }, 500);
-      })
-      .catch(error => {
-        console.error('❌ Erreur lecture fichiers:', error);
-        setError('Erreur lors de la lecture des fichiers');
-        setIsProcessingPhoto(false);
-        console.log('🔓 Flag isProcessingPhoto désactivé (erreur)');
-      });
+    setNewExpense(prev => ({
+      ...prev,
+      receipts: [...prev.receipts, receipt]
+    }));
+
+    // Passer à la photo suivante
+    setDocumentDetectionResult(null);
+    setCurrentPhotoFile(null);
+    setPendingPhotos(prev => prev.slice(1));
+  }, [currentPhotoFile]);
+
+  // Annuler et ne pas ajouter la photo
+  const handleCancelCrop = useCallback(() => {
+    console.log('❌ Utilisateur annule la photo');
+
+    // Vider la file d'attente
+    setDocumentDetectionResult(null);
+    setCurrentPhotoFile(null);
+    setPendingPhotos([]);
+    setIsProcessingPhoto(false);
   }, []);
 
   const removeReceipt = (id) => {
@@ -727,6 +787,17 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
           </div>
         )}
       </div>
+
+      {/* Document Crop Preview Modal */}
+      {documentDetectionResult && (
+        <DocumentCropPreview
+          detectionResult={documentDetectionResult}
+          onAccept={handleAcceptCrop}
+          onUseOriginal={handleUseOriginal}
+          onCancel={handleCancelCrop}
+          isProcessing={false}
+        />
+      )}
     </div>
   );
 }
