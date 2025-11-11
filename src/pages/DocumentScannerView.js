@@ -166,6 +166,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
         // Détecter avec le détecteur sélectionné (OpenCV ou YOLO)
         const result = await detectDocumentWithCurrentDetector(file);
 
+        console.log(`[LIVE DETECTION] Result from ${detectorType}:`, {
+          detected: result.detected,
+          method: result.method,
+          confidence: result.confidence,
+          contourLength: result.contour?.length,
+          contour: result.contour
+        });
+
         // Ajouter à l'historique
         detectionHistoryRef.current.push({
           detected: result.detected,
@@ -204,6 +212,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           }
 
           console.log('[LIVE DETECTION] Document detected (stable)! Drawing overlay...');
+          console.log('[LIVE DETECTION] Smoothed corners (%):', smoothedCorners);
           setLiveCorners(smoothedCorners);
           setDetectionConfidence(100);
 
@@ -213,21 +222,30 @@ export default function DocumentScannerView({ onSave, onClose }) {
           const overlayCtx = overlayCanvas.getContext('2d');
           overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
+          // CORRECTION: Convertir les pourcentages en pixels absolus
+          const cornersInPixels = smoothedCorners.map(corner => ({
+            x: (corner.x / 100) * video.videoWidth,
+            y: (corner.y / 100) * video.videoHeight
+          }));
+
+          console.log('[LIVE DETECTION] Corners in pixels:', cornersInPixels);
+          console.log('[LIVE DETECTION] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+
           // Dessiner le polygone vert autour du document
           overlayCtx.strokeStyle = '#10b981';
           overlayCtx.lineWidth = 5;
           overlayCtx.shadowColor = '#10b981';
           overlayCtx.shadowBlur = 20;
           overlayCtx.beginPath();
-          overlayCtx.moveTo(smoothedCorners[0].x, smoothedCorners[0].y);
-          for (let i = 1; i < smoothedCorners.length; i++) {
-            overlayCtx.lineTo(smoothedCorners[i].x, smoothedCorners[i].y);
+          overlayCtx.moveTo(cornersInPixels[0].x, cornersInPixels[0].y);
+          for (let i = 1; i < cornersInPixels.length; i++) {
+            overlayCtx.lineTo(cornersInPixels[i].x, cornersInPixels[i].y);
           }
           overlayCtx.closePath();
           overlayCtx.stroke();
 
           // Dessiner les coins avec des cercles plus gros
-          smoothedCorners.forEach(corner => {
+          cornersInPixels.forEach(corner => {
             overlayCtx.fillStyle = '#10b981';
             overlayCtx.shadowColor = '#10b981';
             overlayCtx.shadowBlur = 15;
