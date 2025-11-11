@@ -34,6 +34,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const overlayCanvasRef = useRef(null); // Canvas pour l'overlay en temps réel
   const fileInputRef = useRef(null);
   const detectionIntervalRef = useRef(null);
+  const detectionHistoryRef = useRef([]); // Historique des dernières détections pour lissage
   const [stream, setStream] = useState(null);
 
   // Appliquer le stream à la vidéo quand il est disponible
@@ -46,7 +47,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stream]);
 
-  // Détection en temps réel sur le flux vidéo
+  // Détection en temps réel sur le flux vidéo avec lissage
   useEffect(() => {
     console.log('[LIVE DETECTION] useEffect triggered', { mode, hasStream: !!stream, hasVideo: !!videoRef.current, hasOverlay: !!overlayCanvasRef.current });
 
@@ -57,6 +58,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
+      detectionHistoryRef.current = []; // Reset l'historique
       setLiveCorners(null);
       setDetectionConfidence(0);
       return;
@@ -69,13 +71,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const overlayCanvas = overlayCanvasRef.current;
 
       if (!video || !overlayCanvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
-        console.log('[LIVE DETECTION] Not ready', { hasVideo: !!video, hasCanvas: !!overlayCanvas, readyState: video?.readyState });
         return;
       }
 
       try {
-        console.log('[LIVE DETECTION] Capturing frame...');
-
         // Capturer une frame du flux vidéo
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = video.videoWidth;
@@ -85,25 +84,57 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
         // Convertir en blob
         const blob = await new Promise(resolve => {
-          tempCanvas.toBlob(resolve, 'image/jpeg', 0.7); // Qualité réduite pour la vitesse
+          tempCanvas.toBlob(resolve, 'image/jpeg', 0.8);
         });
 
         const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
 
-        console.log('[LIVE DETECTION] Calling OpenCV detection...');
-
-        // Détecter avec OpenCV (paramètres optimisés pour la vitesse)
+        // Détecter avec OpenCV (paramètres optimisés)
         const result = await documentDetectorUtils.detectDocument(file, {
-          minArea: 0.05, // Plus sensible (5% au lieu de 10%)
+          minArea: 0.08, // 8% minimum (plus strict que 5%)
           autoTransform: false,
           drawContours: false
         });
 
-        console.log('[LIVE DETECTION] Detection result:', { detected: result.detected, hasContour: !!result.contour, contourLength: result.contour?.length });
+        // Ajouter à l'historique
+        detectionHistoryRef.current.push({
+          detected: result.detected,
+          contour: result.contour,
+          timestamp: Date.now()
+        });
 
-        if (result.detected && result.contour && result.contour.length === 4) {
-          console.log('[LIVE DETECTION] Document detected! Drawing overlay...');
-          setLiveCorners(result.contour);
+        // Garder seulement les 4 dernières détections
+        if (detectionHistoryRef.current.length > 4) {
+          detectionHistoryRef.current.shift();
+        }
+
+        // Calculer le taux de succès sur les 4 dernières détections
+        const recentDetections = detectionHistoryRef.current;
+        const successCount = recentDetections.filter(d => d.detected && d.contour?.length === 4).length;
+        const successRate = successCount / recentDetections.length;
+
+        console.log('[LIVE DETECTION] Success rate:', successRate, `(${successCount}/${recentDetections.length})`);
+
+        // Afficher seulement si au moins 75% de succès (3/4)
+        if (successRate >= 0.75 && result.detected && result.contour && result.contour.length === 4) {
+          // Moyenner les coins des détections récentes qui ont réussi
+          const successfulDetections = recentDetections.filter(d => d.detected && d.contour?.length === 4);
+          const smoothedCorners = [];
+
+          for (let i = 0; i < 4; i++) {
+            let sumX = 0, sumY = 0;
+            successfulDetections.forEach(detection => {
+              sumX += detection.contour[i].x;
+              sumY += detection.contour[i].y;
+            });
+            smoothedCorners.push({
+              x: sumX / successfulDetections.length,
+              y: sumY / successfulDetections.length
+            });
+          }
+
+          console.log('[LIVE DETECTION] Document detected (stable)! Drawing overlay...');
+          setLiveCorners(smoothedCorners);
           setDetectionConfidence(100);
 
           // Dessiner l'overlay sur le canvas
@@ -114,46 +145,59 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
           // Dessiner le polygone vert autour du document
           overlayCtx.strokeStyle = '#10b981';
-          overlayCtx.lineWidth = 4;
+          overlayCtx.lineWidth = 5;
           overlayCtx.shadowColor = '#10b981';
-          overlayCtx.shadowBlur = 15;
+          overlayCtx.shadowBlur = 20;
           overlayCtx.beginPath();
-          overlayCtx.moveTo(result.contour[0].x, result.contour[0].y);
-          for (let i = 1; i < result.contour.length; i++) {
-            overlayCtx.lineTo(result.contour[i].x, result.contour[i].y);
+          overlayCtx.moveTo(smoothedCorners[0].x, smoothedCorners[0].y);
+          for (let i = 1; i < smoothedCorners.length; i++) {
+            overlayCtx.lineTo(smoothedCorners[i].x, smoothedCorners[i].y);
           }
           overlayCtx.closePath();
           overlayCtx.stroke();
 
-          // Dessiner les coins avec des cercles
-          result.contour.forEach(corner => {
+          // Dessiner les coins avec des cercles plus gros
+          smoothedCorners.forEach(corner => {
             overlayCtx.fillStyle = '#10b981';
             overlayCtx.shadowColor = '#10b981';
-            overlayCtx.shadowBlur = 10;
+            overlayCtx.shadowBlur = 15;
             overlayCtx.beginPath();
-            overlayCtx.arc(corner.x, corner.y, 8, 0, Math.PI * 2);
+            overlayCtx.arc(corner.x, corner.y, 12, 0, Math.PI * 2);
             overlayCtx.fill();
+
+            // Bordure blanche
+            overlayCtx.strokeStyle = '#ffffff';
+            overlayCtx.lineWidth = 3;
+            overlayCtx.stroke();
           });
 
           console.log('[LIVE DETECTION] Overlay drawn successfully');
         } else {
-          // Pas de document détecté
-          console.log('[LIVE DETECTION] No document detected');
+          // Pas assez stable ou pas de document détecté
+          console.log('[LIVE DETECTION] No stable document detected');
           setLiveCorners(null);
-          setDetectionConfidence(0);
+          setDetectionConfidence(Math.round(successRate * 100));
           // Effacer l'overlay
           const overlayCtx = overlayCanvas.getContext('2d');
           overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
       } catch (error) {
-        // Ignorer les erreurs de détection en temps réel
         console.error('[LIVE DETECTION] Error:', error);
+        // Ajouter une détection échouée à l'historique
+        detectionHistoryRef.current.push({
+          detected: false,
+          contour: null,
+          timestamp: Date.now()
+        });
+        if (detectionHistoryRef.current.length > 4) {
+          detectionHistoryRef.current.shift();
+        }
       }
     };
 
-    // Lancer la détection toutes les 400ms
-    console.log('[LIVE DETECTION] Setting interval (400ms)');
-    detectionIntervalRef.current = setInterval(detectLive, 400);
+    // Lancer la détection toutes les 600ms (plus stable)
+    console.log('[LIVE DETECTION] Setting interval (600ms)');
+    detectionIntervalRef.current = setInterval(detectLive, 600);
 
     return () => {
       if (detectionIntervalRef.current) {
@@ -161,6 +205,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
+      detectionHistoryRef.current = [];
     };
   }, [mode, stream]);
 
