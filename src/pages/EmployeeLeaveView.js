@@ -17,6 +17,7 @@ export default function EmployeeLeaveView({
   showToast
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const showForm = searchParams.get('new') === 'true';
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const openForm = useCallback(() => {

@@ -58,19 +58,6 @@ const fmtTime = (iso) => {
     return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
   } catch { return '—'; }
 };
-    img.onerror = () => setLoadState('error');
-    if ('IntersectionObserver' in window && imgRef.current) {
-      const obs = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) { img.src = src; obs.disconnect(); }
-      }, { rootMargin: '50px' });
-      obs.observe(imgRef.current);
-      return () => obs.disconnect();
-    } else { img.src = src; }
-  }, [src]);
-  if (loadState === 'loading') return (<div ref={imgRef} className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#f3f4f6'}}><LoaderIcon className="animate-spin"/></div>);
-  if (loadState === 'error') return (<div className={className} style={{...style,display:'flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'}}><XCircleIcon/></div>);
-  return <img ref={imgRef} src={src} alt={alt} className={className} style={{...style,display:'block'}} loading="lazy"/>;
-};
 
 // -------- Signature en modal plein écran --------
 const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
