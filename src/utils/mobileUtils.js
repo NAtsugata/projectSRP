@@ -454,7 +454,7 @@ export const initMobileOptimizations = () => {
   });
 };
 
-export default {
+const mobileUtils = {
   initFastClick,
   isTouchDevice,
   isMobile,
@@ -474,3 +474,5 @@ export default {
   initDoubleTap,
   initMobileOptimizations,
 };
+
+export default mobileUtils;

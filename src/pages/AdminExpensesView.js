@@ -3,12 +3,10 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircleIcon,
   XCircleIcon,
-  ClockIcon,
   UserIcon,
   ChevronDownIcon,
   CalendarIcon,
-  FileTextIcon,
-  DownloadIcon
+  FileTextIcon
 } from '../components/SharedUI';
 
 // Modal de visualisation des justificatifs

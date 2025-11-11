@@ -178,7 +178,6 @@ export const filterInterventions = (interventions, filters) => {
   return interventions.filter(intervention => {
     // Filter by employees
     if (filters.employees && filters.employees.length > 0) {
-      const assignees = getAssignees(intervention);
       const assigneeIds = intervention.intervention_assignments?.map(a => a.profiles?.id) || [];
       const hasSelectedEmployee = filters.employees.some(id => assigneeIds.includes(id));
       if (!hasSelectedEmployee) return false;

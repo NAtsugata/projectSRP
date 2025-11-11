@@ -2,11 +2,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   CheckCircleIcon,
-  XCircleIcon,
   CameraIcon,
-  AlertTriangleIcon,
   ClockIcon,
-  FileTextIcon,
   CustomFileInput
 } from '../components/SharedUI';
 

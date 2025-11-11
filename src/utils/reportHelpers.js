@@ -71,7 +71,9 @@ export const validateReport = (report) => {
   };
 };
 
-export default {
+const reportHelpers = {
   buildSanitizedReport,
   validateReport
 };
+
+export default reportHelpers;

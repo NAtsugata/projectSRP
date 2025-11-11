@@ -23,7 +23,6 @@ import {
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
 import {
-  ImageGallery,
   ImageGalleryOptimized,
   InterventionHeader,
   QuickActionsBar,
@@ -59,15 +58,6 @@ const fmtTime = (iso) => {
     return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
   } catch { return '—'; }
 };
-
-// -------- Image lazy/optimisée --------
-const OptimizedImage = ({ src, alt, className, style }) => {
-  const [loadState, setLoadState] = useState('loading');
-  const imgRef = useRef(null);
-  useEffect(() => {
-    if (!src || typeof src !== 'string') { setLoadState('error'); return; }
-    const img = new Image();
-    img.onload = () => setLoadState('loaded');
     img.onerror = () => setLoadState('error');
     if ('IntersectionObserver' in window && imgRef.current) {
       const obs = new IntersectionObserver((entries) => {
@@ -319,7 +309,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     });
 
     onEndCritical?.(); // fin de la phase critique
-  },[compressImage,interventionId,onUploadComplete,onEndCritical,clearCriticalFallback]);
+  },[compressImage,interventionId,folder,onUploadComplete,onEndCritical,clearCriticalFallback]);
 
   return (
     <div className="mobile-uploader-panel">
@@ -546,7 +536,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
   // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
-  const persistReport = async (updated) => {
+  const persistReport = useCallback(async (updated) => {
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -556,7 +546,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       alert('Échec de la sauvegarde du rapport');
     }
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
-  };
+  }, [intervention, onSaveSilent]);
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 

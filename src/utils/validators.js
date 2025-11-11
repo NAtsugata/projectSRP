@@ -236,7 +236,7 @@ export const validateFileType = (fileName, allowedTypes = ['jpg', 'jpeg', 'png',
   return { isValid: true, message: '' };
 };
 
-export default {
+const validators = {
   isValidEmail,
   validatePassword,
   isValidDate,
@@ -248,3 +248,5 @@ export default {
   validateFileSize,
   validateFileType
 };
+
+export default validators;
