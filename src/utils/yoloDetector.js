@@ -129,6 +129,11 @@ class YOLODocumentDetector {
       const outputName = this.session.outputNames[0];
       const output = results[outputName];
 
+      console.log(`📦 YOLO output name: ${outputName}`);
+      console.log(`📏 YOLO output dims: [${output.dims}]`);
+      console.log(`📊 YOLO output data size: ${output.data.length}`);
+      console.log(`🔢 First 20 values: [${Array.from(output.data.slice(0, 20)).map(v => v.toFixed(3)).join(', ')}]`);
+
       // Décoder les détections YOLO
       const detections = this.decodeYOLOOutput(
         output.data,
@@ -172,13 +177,24 @@ class YOLODocumentDetector {
   /**
    * Décode la sortie YOLO en détections
    * Format YOLOv8: [1, 84, 8400] où 84 = [x, y, w, h, ...80 classes]
+   *
+   * Classes COCO acceptées comme "documents" :
+   * - 73: book (livre)
+   * - 63: laptop (ordinateur)
+   * - 67: cell phone (téléphone)
+   * - Ou tout objet rectangulaire suffisamment grand
    */
   decodeYOLOOutput(data, dims, confThreshold, iouThreshold, maxDetections) {
     const detections = [];
 
+    // Classes COCO considérées comme des documents potentiels
+    const DOCUMENT_LIKE_CLASSES = [73, 63, 67, 84]; // book, laptop, cell phone
+
     // YOLOv8 output format: [batch, 84, anchors]
     const numAnchors = dims[2] || 8400;
     const numClasses = (dims[1] || 84) - 4; // Soustraire x, y, w, h
+
+    console.log(`📊 YOLO Output dims: [${dims}], anchors: ${numAnchors}, classes: ${numClasses}`);
 
     // Parcourir toutes les ancres
     for (let i = 0; i < numAnchors; i++) {
@@ -200,8 +216,14 @@ class YOLODocumentDetector {
         }
       }
 
-      // Filtrer par seuil de confiance
-      if (maxConf >= confThreshold) {
+      // SOLUTION 1: Accepter les classes "document-like"
+      // SOLUTION 2: Accepter TOUS les objets rectangulaires avec confiance > seuil bas
+      const isDocumentLike = DOCUMENT_LIKE_CLASSES.includes(maxClassId);
+      const isLargeRectangle = w > 50 && h > 50; // Suffisamment grand
+      const meetsThreshold = maxConf >= (isDocumentLike ? confThreshold : confThreshold * 0.3);
+
+      // Filtrer par seuil de confiance (plus permissif pour les documents)
+      if (meetsThreshold && (isDocumentLike || isLargeRectangle)) {
         detections.push({
           bbox: [
             x - w / 2,  // x1
@@ -212,8 +234,14 @@ class YOLODocumentDetector {
           confidence: maxConf,
           classId: maxClassId
         });
+
+        if (detections.length <= 5) {
+          console.log(`✓ Détection YOLO: classe=${maxClassId}, conf=${maxConf.toFixed(3)}, bbox=[${x.toFixed(1)}, ${y.toFixed(1)}, ${w.toFixed(1)}, ${h.toFixed(1)}]`);
+        }
       }
     }
+
+    console.log(`📍 Total détections avant NMS: ${detections.length}`);
 
     // Appliquer NMS (Non-Maximum Suppression)
     const nmsDetections = this.nonMaxSuppression(detections, iouThreshold);

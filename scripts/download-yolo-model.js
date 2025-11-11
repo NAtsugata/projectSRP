@@ -8,7 +8,9 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const MODEL_URL = 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.onnx';
+// Modèle YOLO depuis ONNX Model Zoo (Microsoft)
+// Alternative: YOLOv8n depuis un autre CDN fiable
+const MODEL_URL = 'https://storage.googleapis.com/ailia-models/yolov8/yolov8n.onnx';
 const OUTPUT_DIR = path.join(__dirname, '..', 'public', 'models');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'document_detector.onnx');
 
