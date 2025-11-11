@@ -19,12 +19,16 @@ import documentDetectorUtils from '../utils/documentDetector';
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
   const [currentDoc, setCurrentDoc] = useState(null);
-  const [mode, setMode] = useState('capture'); // 'capture', 'preview', 'edit', 'detection'
+  const [mode, setMode] = useState('capture'); // 'capture', 'scanning', 'adjust', 'preview'
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhanceMode, setEnhanceMode] = useState('original'); // 'original', 'bw', 'gray', 'color'
-  const [detectionResult, setDetectionResult] = useState(null); // Résultat OpenCV
+  const [scanProgress, setScanProgress] = useState(0); // Animation de scan 0-100
+  const [corners, setCorners] = useState(null); // Coins ajustables [topLeft, topRight, bottomRight, bottomLeft]
+  const [draggedCorner, setDraggedCorner] = useState(null); // Index du coin en cours de drag
+  const [originalImage, setOriginalImage] = useState(null); // Image originale pour l'ajustement
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const previewCanvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const [stream, setStream] = useState(null);
 
@@ -65,7 +69,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stream]);
 
-  // Capturer une photo avec détection OpenCV automatique
+  // Capturer une photo avec animation de scan et détection OpenCV
   const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -77,8 +81,28 @@ export default function DocumentScannerView({ onSave, onClose }) {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    setIsProcessing(true);
+    // Démarrer l'animation de scan
+    setMode('scanning');
+    setScanProgress(0);
     stopCamera();
+
+    // Animer le scan de haut en bas
+    const animateScan = () => {
+      return new Promise((resolve) => {
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 5;
+          setScanProgress(progress);
+          if (progress >= 100) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 30); // Animation de ~600ms
+      });
+    };
+
+    await animateScan();
+    setIsProcessing(true);
 
     try {
       // Créer un fichier temporaire pour OpenCV
@@ -87,48 +111,54 @@ export default function DocumentScannerView({ onSave, onClose }) {
       });
 
       const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+      const imgUrl = URL.createObjectURL(blob);
+
+      // Charger l'image pour avoir ses dimensions réelles
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = imgUrl;
+      });
+
+      setOriginalImage(imgUrl);
 
       // Lancer la détection OpenCV
       const result = await documentDetectorUtils.detectDocument(file, {
         minArea: 0.1,
-        autoTransform: true,
-        drawContours: true
+        autoTransform: false, // On veut juste les coins, pas la transformation
+        drawContours: false
       });
 
-      if (result.detected) {
-        // Document détecté avec succès
-        setDetectionResult(result);
-        setMode('detection');
+      if (result.detected && result.contour) {
+        // Convertir les coins en pourcentages pour être responsive
+        const cornersData = result.contour.map(point => ({
+          x: (point.x / img.width) * 100,
+          y: (point.y / img.height) * 100
+        }));
+        setCorners(cornersData);
+        setMode('adjust');
       } else {
-        // Pas de document détecté, utiliser l'original
-        const url = URL.createObjectURL(blob);
-        setCurrentDoc({
-          id: Date.now(),
-          url,
-          originalUrl: url,
-          blob,
-          timestamp: new Date().toISOString(),
-          enhanceMode: 'original',
-          rotation: 0
-        });
-        setMode('preview');
+        // Pas de document détecté, utiliser les coins par défaut
+        const defaultCorners = [
+          { x: 10, y: 10 },
+          { x: 90, y: 10 },
+          { x: 90, y: 90 },
+          { x: 10, y: 90 }
+        ];
+        setCorners(defaultCorners);
+        setMode('adjust');
       }
     } catch (error) {
       console.error('Erreur détection OpenCV:', error);
-      // En cas d'erreur, utiliser l'image originale
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        setCurrentDoc({
-          id: Date.now(),
-          url,
-          originalUrl: url,
-          blob,
-          timestamp: new Date().toISOString(),
-          enhanceMode: 'original',
-          rotation: 0
-        });
-        setMode('preview');
-      }, 'image/jpeg', 0.92);
+      // En cas d'erreur, utiliser les coins par défaut
+      const defaultCorners = [
+        { x: 10, y: 10 },
+        { x: 90, y: 10 },
+        { x: 90, y: 90 },
+        { x: 10, y: 90 }
+      ];
+      setCorners(defaultCorners);
+      setMode('adjust');
     } finally {
       setIsProcessing(false);
     }
@@ -186,56 +216,126 @@ export default function DocumentScannerView({ onSave, onClose }) {
     img.src = currentDoc.originalUrl || currentDoc.url;
   }, [currentDoc]);
 
-  // Accepter la détection OpenCV (utiliser le document recadré)
-  const acceptDetection = useCallback(() => {
-    if (!detectionResult) return;
+  // Gérer le drag des coins
+  const handleCornerMouseDown = useCallback((index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggedCorner(index);
+  }, []);
 
-    // Utiliser l'image transformée (recadrée et redressée)
-    const transformedUrl = detectionResult.transformed;
+  const handleCornerTouchStart = useCallback((index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggedCorner(index);
+  }, []);
 
-    fetch(transformedUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const url = URL.createObjectURL(blob);
+  const handleMouseMove = useCallback((e) => {
+    if (draggedCorner === null || !previewCanvasRef.current) return;
+
+    const canvas = previewCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setCorners(prev => {
+      const newCorners = [...prev];
+      newCorners[draggedCorner] = {
+        x: Math.max(0, Math.min(100, x)),
+        y: Math.max(0, Math.min(100, y))
+      };
+      return newCorners;
+    });
+  }, [draggedCorner]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (draggedCorner === null || !previewCanvasRef.current) return;
+    e.preventDefault();
+
+    const canvas = previewCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = ((touch.clientX - rect.left) / rect.width) * 100;
+    const y = ((touch.clientY - rect.top) / rect.height) * 100;
+
+    setCorners(prev => {
+      const newCorners = [...prev];
+      newCorners[draggedCorner] = {
+        x: Math.max(0, Math.min(100, x)),
+        y: Math.max(0, Math.min(100, y))
+      };
+      return newCorners;
+    });
+  }, [draggedCorner]);
+
+  const handleMouseUp = useCallback(() => {
+    setDraggedCorner(null);
+  }, []);
+
+  // Valider l'ajustement et appliquer la transformation perspective
+  const validateAdjustment = useCallback(async () => {
+    if (!corners || !originalImage || !canvasRef.current) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Charger l'image originale
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = originalImage;
+      });
+
+      // Convertir les coins en pixels absolus
+      const absoluteCorners = corners.map(corner => ({
+        x: (corner.x / 100) * img.width,
+        y: (corner.y / 100) * img.height
+      }));
+
+      // Créer un fichier depuis l'image originale
+      const response = await fetch(originalImage);
+      const blob = await response.blob();
+      const file = new File([blob], 'adjusted.jpg', { type: 'image/jpeg' });
+
+      // Appliquer la transformation perspective avec les coins ajustés
+      const result = await documentDetectorUtils.detectDocument(file, {
+        manualCorners: absoluteCorners,
+        autoTransform: true,
+        drawContours: false
+      });
+
+      if (result.transformed) {
+        // Utiliser l'image transformée
+        const transformedBlob = await fetch(result.transformed).then(r => r.blob());
+        const url = URL.createObjectURL(transformedBlob);
         setCurrentDoc({
           id: Date.now(),
           url,
           originalUrl: url,
-          blob,
+          blob: transformedBlob,
           timestamp: new Date().toISOString(),
           enhanceMode: 'original',
           rotation: 0,
           wasDetected: true
         });
-        setDetectionResult(null);
         setMode('preview');
-      });
-  }, [detectionResult]);
+        setCorners(null);
+        setOriginalImage(null);
+      }
+    } catch (error) {
+      console.error('Erreur transformation:', error);
+      alert('Erreur lors de la transformation du document');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [corners, originalImage]);
 
-  // Refuser la détection (utiliser l'image originale)
-  const rejectDetection = useCallback(() => {
-    if (!detectionResult) return;
-
-    // Utiliser l'image originale sans recadrage
-    const originalUrl = detectionResult.original;
-
-    fetch(originalUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const url = URL.createObjectURL(blob);
-        setCurrentDoc({
-          id: Date.now(),
-          url,
-          originalUrl: url,
-          blob,
-          timestamp: new Date().toISOString(),
-          enhanceMode: 'original',
-          rotation: 0
-        });
-        setDetectionResult(null);
-        setMode('preview');
-      });
-  }, [detectionResult]);
+  // Annuler l'ajustement
+  const cancelAdjustment = useCallback(() => {
+    setMode('capture');
+    setCorners(null);
+    setOriginalImage(null);
+    startCamera();
+  }, [startCamera]);
 
   // Rotation de l'image
   const rotateImage = useCallback(() => {
@@ -542,6 +642,93 @@ export default function DocumentScannerView({ onSave, onClose }) {
         input[type="file"] {
           display: none;
         }
+
+        .scan-line {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(to right, transparent, #10b981, transparent);
+          box-shadow: 0 0 20px #10b981, 0 0 40px #10b981;
+          animation: scanGlow 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes scanGlow {
+          from {
+            box-shadow: 0 0 20px #10b981, 0 0 40px #10b981;
+          }
+          to {
+            box-shadow: 0 0 30px #10b981, 0 0 60px #10b981;
+          }
+        }
+
+        .adjust-container {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          touch-action: none;
+        }
+
+        .adjust-image {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          user-select: none;
+        }
+
+        .adjust-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
+        .corner-handle {
+          position: absolute;
+          width: 50px;
+          height: 50px;
+          margin-left: -25px;
+          margin-top: -25px;
+          cursor: move;
+          pointer-events: all;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .corner-handle::before {
+          content: '';
+          width: 24px;
+          height: 24px;
+          background: #10b981;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .corner-handle:active::before {
+          transform: scale(1.3);
+        }
+
+        .adjust-hint {
+          position: absolute;
+          bottom: 1rem;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0,0,0,0.8);
+          color: white;
+          padding: 0.75rem 1.5rem;
+          border-radius: 2rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+          z-index: 5;
+        }
       `}</style>
 
       {/* Header */}
@@ -610,42 +797,135 @@ export default function DocumentScannerView({ onSave, onClose }) {
           </>
         )}
 
+        {mode === 'scanning' && (
+          <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+            <canvas
+              ref={canvasRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain'
+              }}
+            />
+            <div
+              className="scan-line"
+              style={{ top: `${scanProgress}%` }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              color: '#10b981',
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              textAlign: 'center',
+              pointerEvents: 'none'
+            }}>
+              📄 Scan en cours...
+            </div>
+          </div>
+        )}
+
+        {mode === 'adjust' && originalImage && corners && (
+          <div
+            className="adjust-container"
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
+          >
+            <img
+              ref={previewCanvasRef}
+              src={originalImage}
+              alt="Document à ajuster"
+              className="adjust-image"
+            />
+            <svg
+              className="adjust-overlay"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%'
+              }}
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+            >
+              {/* Overlay sombre sur tout sauf la zone du document */}
+              <defs>
+                <mask id="docMask">
+                  <rect x="0" y="0" width="100" height="100" fill="white" />
+                  <polygon
+                    points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+                    fill="black"
+                  />
+                </mask>
+              </defs>
+              <rect
+                x="0"
+                y="0"
+                width="100"
+                height="100"
+                fill="rgba(0,0,0,0.6)"
+                mask="url(#docMask)"
+              />
+
+              {/* Bordures du document détecté */}
+              <polygon
+                points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="0.5"
+                strokeLinejoin="round"
+                filter="drop-shadow(0 0 2px #10b981)"
+              />
+
+              {/* Lignes de connexion */}
+              {corners.map((corner, i) => {
+                const nextCorner = corners[(i + 1) % corners.length];
+                return (
+                  <line
+                    key={i}
+                    x1={corner.x}
+                    y1={corner.y}
+                    x2={nextCorner.x}
+                    y2={nextCorner.y}
+                    stroke="#10b981"
+                    strokeWidth="0.3"
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Poignées pour déplacer les coins */}
+            {corners.map((corner, index) => (
+              <div
+                key={index}
+                className="corner-handle"
+                style={{
+                  left: `${corner.x}%`,
+                  top: `${corner.y}%`
+                }}
+                onMouseDown={(e) => handleCornerMouseDown(index, e)}
+                onTouchStart={(e) => handleCornerTouchStart(index, e)}
+              />
+            ))}
+
+            <div className="adjust-hint">
+              ✋ Déplacez les coins pour ajuster la zone
+            </div>
+          </div>
+        )}
+
         {mode === 'preview' && currentDoc && (
           <img
             src={currentDoc.url}
             alt="Document scanné"
             className="document-preview"
           />
-        )}
-
-        {mode === 'detection' && detectionResult && (
-          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <img
-              src={detectionResult.preview || detectionResult.original}
-              alt="Document détecté"
-              className="document-preview"
-              style={{ objectFit: 'contain' }}
-            />
-            <div style={{
-              position: 'absolute',
-              top: '1rem',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(16, 185, 129, 0.95)',
-              color: 'white',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '2rem',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
-              Document détecté automatiquement
-            </div>
-          </div>
         )}
 
         {isProcessing && (
@@ -660,7 +940,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {/* Contrôles */}
       <div className="scanner-controls">
         {/* Galerie des documents scannés */}
-        {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'detection' && (
+        {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'adjust' && mode !== 'scanning' && (
           <div className="docs-gallery">
             {scannedDocs.map(doc => (
               <div key={doc.id} className="doc-thumbnail">
@@ -721,23 +1001,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
             </button>
           )}
 
-          {mode === 'detection' && detectionResult && (
+          {mode === 'adjust' && corners && (
             <>
               <button
                 className="scanner-btn danger"
-                onClick={rejectDetection}
+                onClick={cancelAdjustment}
                 disabled={isProcessing}
                 style={{ flex: 1 }}
               >
-                <XCircleIcon /> Utiliser l'original
+                <XCircleIcon /> Annuler
               </button>
               <button
                 className="scanner-btn success"
-                onClick={acceptDetection}
+                onClick={validateAdjustment}
                 disabled={isProcessing}
                 style={{ flex: 1 }}
               >
-                <CheckCircleIcon /> Accepter le recadrage
+                <CheckCircleIcon /> Valider & Recadrer
               </button>
             </>
           )}

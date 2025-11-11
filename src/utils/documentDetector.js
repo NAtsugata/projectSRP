@@ -193,7 +193,8 @@ export const detectDocument = async (input, options = {}) => {
   const {
     minArea = 0.1,        // Minimum area as percentage of image
     autoTransform = true,  // Automatically apply perspective transform
-    drawContours = true    // Draw detected contours on preview
+    drawContours = true,   // Draw detected contours on preview
+    manualCorners = null   // Manual corners [{x, y}, {x, y}, {x, y}, {x, y}]
   } = options;
 
   try {
@@ -212,55 +213,79 @@ export const detectDocument = async (input, options = {}) => {
 
     // Convert to OpenCV Mat
     const src = window.cv.imread(canvas);
-    const gray = new window.cv.Mat();
-    const blurred = new window.cv.Mat();
-    const edges = new window.cv.Mat();
-
-    // Convert to grayscale
-    window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
-
-    // Apply Gaussian blur
-    const ksize = new window.cv.Size(5, 5);
-    window.cv.GaussianBlur(gray, blurred, ksize, 0);
-
-    // Detect edges using Canny
-    window.cv.Canny(blurred, edges, 50, 150);
-
-    // Find contours
-    const contours = new window.cv.MatVector();
-    const hierarchy = new window.cv.Mat();
-    window.cv.findContours(
-      edges,
-      contours,
-      hierarchy,
-      window.cv.RETR_EXTERNAL,
-      window.cv.CHAIN_APPROX_SIMPLE
-    );
-
-    // Find document contour
-    const imageArea = src.rows * src.cols;
-    const documentContour = findDocumentContour(contours, imageArea, minArea);
 
     let result = {
       detected: false,
       original: canvas.toDataURL('image/jpeg', 0.9),
       preview: null,
       transformed: null,
-      corners: null
+      contour: null
     };
 
-    if (documentContour && documentContour.rows === 4) {
-      result.detected = true;
+    let corners = null;
 
-      // Extract corner points
-      const corners = [];
-      for (let i = 0; i < 4; i++) {
-        corners.push({
-          x: documentContour.data32S[i * 2],
-          y: documentContour.data32S[i * 2 + 1]
-        });
+    // If manual corners are provided, use them directly
+    if (manualCorners && Array.isArray(manualCorners) && manualCorners.length === 4) {
+      result.detected = true;
+      corners = manualCorners;
+      result.contour = corners;
+    } else {
+      // Otherwise, detect automatically with OpenCV
+      const gray = new window.cv.Mat();
+      const blurred = new window.cv.Mat();
+      const edges = new window.cv.Mat();
+
+      // Convert to grayscale
+      window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
+
+      // Apply Gaussian blur
+      const ksize = new window.cv.Size(5, 5);
+      window.cv.GaussianBlur(gray, blurred, ksize, 0);
+
+      // Detect edges using Canny
+      window.cv.Canny(blurred, edges, 50, 150);
+
+      // Find contours
+      const contours = new window.cv.MatVector();
+      const hierarchy = new window.cv.Mat();
+      window.cv.findContours(
+        edges,
+        contours,
+        hierarchy,
+        window.cv.RETR_EXTERNAL,
+        window.cv.CHAIN_APPROX_SIMPLE
+      );
+
+      // Find document contour
+      const imageArea = src.rows * src.cols;
+      const documentContour = findDocumentContour(contours, imageArea, minArea);
+
+      if (documentContour && documentContour.rows === 4) {
+        result.detected = true;
+
+        // Extract corner points
+        corners = [];
+        for (let i = 0; i < 4; i++) {
+          corners.push({
+            x: documentContour.data32S[i * 2],
+            y: documentContour.data32S[i * 2 + 1]
+          });
+        }
+        result.contour = corners;
+
+        // Cleanup
+        documentContour.delete();
       }
-      result.corners = corners;
+
+      // Cleanup
+      gray.delete();
+      blurred.delete();
+      edges.delete();
+      contours.delete();
+      hierarchy.delete();
+    }
+
+    if (result.detected && corners) {
 
       // Draw contours on preview if requested (CCleaner-style overlay)
       if (drawContours) {
@@ -351,17 +376,10 @@ export const detectDocument = async (input, options = {}) => {
       if (autoTransform) {
         result.transformed = applyPerspectiveTransform(src, corners);
       }
-
-      documentContour.delete();
     }
 
     // Cleanup
     src.delete();
-    gray.delete();
-    blurred.delete();
-    edges.delete();
-    contours.delete();
-    hierarchy.delete();
 
     return result;
 
