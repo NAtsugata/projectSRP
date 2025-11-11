@@ -14,13 +14,15 @@ import {
   enhanceColor,
   enhanceGrayscale
 } from '../utils/documentScanner';
+import documentDetectorUtils from '../utils/documentDetector';
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
   const [currentDoc, setCurrentDoc] = useState(null);
-  const [mode, setMode] = useState('capture'); // 'capture', 'preview', 'edit'
+  const [mode, setMode] = useState('capture'); // 'capture', 'preview', 'edit', 'detection'
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhanceMode, setEnhanceMode] = useState('original'); // 'original', 'bw', 'gray', 'color'
+  const [detectionResult, setDetectionResult] = useState(null); // Résultat OpenCV
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -63,8 +65,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stream]);
 
-  // Capturer une photo
-  const capturePhoto = useCallback(() => {
+  // Capturer une photo avec détection OpenCV automatique
+  const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -76,25 +78,60 @@ export default function DocumentScannerView({ onSave, onClose }) {
     ctx.drawImage(video, 0, 0);
 
     setIsProcessing(true);
+    stopCamera();
 
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const newDoc = {
-        id: Date.now(),
-        url,
-        originalUrl: url, // Garder l'URL originale
-        blob,
-        timestamp: new Date().toISOString(),
-        enhanceMode: 'original',
-        rotation: 0
-      };
+    try {
+      // Créer un fichier temporaire pour OpenCV
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.92);
+      });
 
-      setCurrentDoc(newDoc);
-      setMode('preview');
-      setEnhanceMode('original');
+      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+
+      // Lancer la détection OpenCV
+      const result = await documentDetectorUtils.detectDocument(file, {
+        minArea: 0.1,
+        autoTransform: true,
+        drawContours: true
+      });
+
+      if (result.detected) {
+        // Document détecté avec succès
+        setDetectionResult(result);
+        setMode('detection');
+      } else {
+        // Pas de document détecté, utiliser l'original
+        const url = URL.createObjectURL(blob);
+        setCurrentDoc({
+          id: Date.now(),
+          url,
+          originalUrl: url,
+          blob,
+          timestamp: new Date().toISOString(),
+          enhanceMode: 'original',
+          rotation: 0
+        });
+        setMode('preview');
+      }
+    } catch (error) {
+      console.error('Erreur détection OpenCV:', error);
+      // En cas d'erreur, utiliser l'image originale
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        setCurrentDoc({
+          id: Date.now(),
+          url,
+          originalUrl: url,
+          blob,
+          timestamp: new Date().toISOString(),
+          enhanceMode: 'original',
+          rotation: 0
+        });
+        setMode('preview');
+      }, 'image/jpeg', 0.92);
+    } finally {
       setIsProcessing(false);
-      stopCamera();
-    }, 'image/jpeg', 0.92);
+    }
   }, [stopCamera]);
 
   // Appliquer un mode d'amélioration
@@ -148,6 +185,57 @@ export default function DocumentScannerView({ onSave, onClose }) {
     // IMPORTANT: Charger l'image originale pour toujours partir de la source
     img.src = currentDoc.originalUrl || currentDoc.url;
   }, [currentDoc]);
+
+  // Accepter la détection OpenCV (utiliser le document recadré)
+  const acceptDetection = useCallback(() => {
+    if (!detectionResult) return;
+
+    // Utiliser l'image transformée (recadrée et redressée)
+    const transformedUrl = detectionResult.transformed;
+
+    fetch(transformedUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        setCurrentDoc({
+          id: Date.now(),
+          url,
+          originalUrl: url,
+          blob,
+          timestamp: new Date().toISOString(),
+          enhanceMode: 'original',
+          rotation: 0,
+          wasDetected: true
+        });
+        setDetectionResult(null);
+        setMode('preview');
+      });
+  }, [detectionResult]);
+
+  // Refuser la détection (utiliser l'image originale)
+  const rejectDetection = useCallback(() => {
+    if (!detectionResult) return;
+
+    // Utiliser l'image originale sans recadrage
+    const originalUrl = detectionResult.original;
+
+    fetch(originalUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        setCurrentDoc({
+          id: Date.now(),
+          url,
+          originalUrl: url,
+          blob,
+          timestamp: new Date().toISOString(),
+          enhanceMode: 'original',
+          rotation: 0
+        });
+        setDetectionResult(null);
+        setMode('preview');
+      });
+  }, [detectionResult]);
 
   // Rotation de l'image
   const rotateImage = useCallback(() => {
@@ -530,9 +618,39 @@ export default function DocumentScannerView({ onSave, onClose }) {
           />
         )}
 
+        {mode === 'detection' && detectionResult && (
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <img
+              src={detectionResult.preview || detectionResult.original}
+              alt="Document détecté"
+              className="document-preview"
+              style={{ objectFit: 'contain' }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: '1rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(16, 185, 129, 0.95)',
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '2rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
+              Document détecté automatiquement
+            </div>
+          </div>
+        )}
+
         {isProcessing && (
           <div className="processing-overlay">
-            ⚙️ Traitement en cours...
+            ⚙️ Détection en cours...
           </div>
         )}
 
@@ -542,7 +660,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {/* Contrôles */}
       <div className="scanner-controls">
         {/* Galerie des documents scannés */}
-        {scannedDocs.length > 0 && mode !== 'preview' && (
+        {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'detection' && (
           <div className="docs-gallery">
             {scannedDocs.map(doc => (
               <div key={doc.id} className="doc-thumbnail">
@@ -601,6 +719,27 @@ export default function DocumentScannerView({ onSave, onClose }) {
             >
               <CameraIcon style={{ width: '32px', height: '32px', color: '#667eea' }} />
             </button>
+          )}
+
+          {mode === 'detection' && detectionResult && (
+            <>
+              <button
+                className="scanner-btn danger"
+                onClick={rejectDetection}
+                disabled={isProcessing}
+                style={{ flex: 1 }}
+              >
+                <XCircleIcon /> Utiliser l'original
+              </button>
+              <button
+                className="scanner-btn success"
+                onClick={acceptDetection}
+                disabled={isProcessing}
+                style={{ flex: 1 }}
+              >
+                <CheckCircleIcon /> Accepter le recadrage
+              </button>
+            </>
           )}
 
           {mode === 'preview' && currentDoc && (
