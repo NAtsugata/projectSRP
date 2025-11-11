@@ -15,6 +15,7 @@ import {
   enhanceGrayscale
 } from '../utils/documentScanner';
 import documentDetectorUtils from '../utils/documentDetector';
+import { getYOLODetector } from '../utils/yoloDetector';
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
@@ -28,6 +29,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [originalImage, setOriginalImage] = useState(null); // Image originale pour l'ajustement
   const [liveCorners, setLiveCorners] = useState(null); // Coins détectés en temps réel sur la caméra
   const [detectionConfidence, setDetectionConfidence] = useState(0); // Niveau de confiance 0-100
+  const [detectorType, setDetectorType] = useState('opencv'); // 'opencv' ou 'yolo'
+  const [yoloModelLoaded, setYoloModelLoaded] = useState(false);
+  const [yoloModelPath] = useState('/models/document_detector.onnx'); // Chemin vers le modèle YOLO
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
@@ -46,6 +50,75 @@ export default function DocumentScannerView({ onSave, onClose }) {
       });
     }
   }, [stream]);
+
+  // Charger le modèle YOLO au démarrage (si mode YOLO sélectionné)
+  useEffect(() => {
+    const loadYOLOModel = async () => {
+      if (detectorType === 'yolo' && !yoloModelLoaded) {
+        try {
+          console.log('🚀 Chargement du modèle YOLO...');
+          const detector = getYOLODetector();
+          await detector.loadModel(yoloModelPath);
+          setYoloModelLoaded(true);
+          console.log('✅ Modèle YOLO chargé avec succès !');
+        } catch (error) {
+          console.error('❌ Erreur chargement modèle YOLO:', error);
+          console.warn('⚠️ Retour au mode OpenCV');
+          setDetectorType('opencv'); // Fallback vers OpenCV
+        }
+      }
+    };
+
+    loadYOLOModel();
+  }, [detectorType, yoloModelLoaded, yoloModelPath]);
+
+  // Fonction helper pour détecter avec le bon détecteur
+  const detectDocumentWithCurrentDetector = useCallback(async (file, options = {}) => {
+    if (detectorType === 'yolo' && yoloModelLoaded) {
+      // Détecter avec YOLO
+      const detector = getYOLODetector();
+      const result = await detector.detectDocument(file, {
+        confidenceThreshold: 0.5,
+        ...options
+      });
+
+      // Convertir le format YOLO au format attendu (avec contour)
+      if (result.detected && result.detections.length > 0) {
+        // Prendre la détection avec la plus haute confiance
+        const bestDetection = result.detections.reduce((best, det) =>
+          det.confidence > best.confidence ? det : best
+        );
+
+        // Convertir bbox en coins (format compatible avec le scanner)
+        const corners = detector.bboxToCorners(
+          bestDetection.bbox,
+          result.originalSize.width,
+          result.originalSize.height
+        );
+
+        return {
+          detected: true,
+          contour: corners,
+          confidence: bestDetection.confidence,
+          method: 'yolo'
+        };
+      }
+
+      return {
+        detected: false,
+        contour: null,
+        method: 'yolo'
+      };
+    } else {
+      // Détecter avec OpenCV
+      return await documentDetectorUtils.detectDocument(file, {
+        minArea: 0.08,
+        autoTransform: false,
+        drawContours: false,
+        ...options
+      });
+    }
+  }, [detectorType, yoloModelLoaded]);
 
   // Détection en temps réel sur le flux vidéo avec lissage
   useEffect(() => {
@@ -89,12 +162,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
         const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
 
-        // Détecter avec OpenCV (paramètres optimisés)
-        const result = await documentDetectorUtils.detectDocument(file, {
-          minArea: 0.08, // 8% minimum (plus strict que 5%)
-          autoTransform: false,
-          drawContours: false
-        });
+        // Détecter avec le détecteur sélectionné (OpenCV ou YOLO)
+        const result = await detectDocumentWithCurrentDetector(file);
 
         // Ajouter à l'historique
         detectionHistoryRef.current.push({
@@ -207,7 +276,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }
       detectionHistoryRef.current = [];
     };
-  }, [mode, stream]);
+  }, [mode, stream, detectDocumentWithCurrentDetector]);
 
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
@@ -289,12 +358,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       setOriginalImage(imgUrl);
 
-      // Lancer la détection OpenCV
-      const result = await documentDetectorUtils.detectDocument(file, {
-        minArea: 0.1,
-        autoTransform: false, // On veut juste les coins, pas la transformation
-        drawContours: false
-      });
+      // Lancer la détection avec le détecteur sélectionné
+      const result = await detectDocumentWithCurrentDetector(file);
 
       if (result.detected && result.contour) {
         // Convertir les coins en pourcentages pour être responsive
@@ -329,7 +394,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera]);
+  }, [stopCamera, detectDocumentWithCurrentDetector]);
 
   // Appliquer un mode d'amélioration
   const applyEnhanceMode = useCallback((targetMode) => {
@@ -464,10 +529,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const file = new File([blob], 'adjusted.jpg', { type: 'image/jpeg' });
 
       // Appliquer la transformation perspective avec les coins ajustés
-      const result = await documentDetectorUtils.detectDocument(file, {
+      const result = await detectDocumentWithCurrentDetector(file, {
         manualCorners: absoluteCorners,
-        autoTransform: true,
-        drawContours: false
+        autoTransform: true
       });
 
       if (result.transformed) {
@@ -494,7 +558,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [corners, originalImage]);
+  }, [corners, originalImage, detectDocumentWithCurrentDetector]);
 
   // Annuler l'ajustement
   const cancelAdjustment = useCallback(() => {
@@ -962,9 +1026,47 @@ export default function DocumentScannerView({ onSave, onClose }) {
         {mode === 'capture' && !stream && (
           <div style={{ textAlign: 'center', color: 'white' }}>
             <CameraIcon style={{ width: '64px', height: '64px', margin: '0 auto 1rem' }} />
-            <p style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>
+            <p style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
               Prêt à scanner un document
             </p>
+
+            {/* Sélecteur de détecteur */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.5rem',
+              padding: '0.5rem',
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '8px',
+              maxWidth: '400px',
+              margin: '0 auto 1.5rem'
+            }}>
+              <button
+                className={`scanner-btn ${detectorType === 'opencv' ? 'primary' : ''}`}
+                onClick={() => setDetectorType('opencv')}
+                style={{
+                  flex: 1,
+                  fontSize: '0.875rem',
+                  padding: '0.5rem 1rem',
+                  opacity: detectorType === 'opencv' ? 1 : 0.5
+                }}
+              >
+                OpenCV (Rapide)
+              </button>
+              <button
+                className={`scanner-btn ${detectorType === 'yolo' ? 'primary' : ''}`}
+                onClick={() => setDetectorType('yolo')}
+                style={{
+                  flex: 1,
+                  fontSize: '0.875rem',
+                  padding: '0.5rem 1rem',
+                  opacity: detectorType === 'yolo' ? 1 : 0.5
+                }}
+              >
+                YOLO (IA) {yoloModelLoaded && '✓'}
+              </button>
+            </div>
             <button
               className="scanner-btn primary"
               onClick={startCamera}
@@ -1004,6 +1106,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
               className="camera-overlay-canvas"
             />
             {!liveCorners && <div className="guide-frame" />}
+
+            {/* Indicateur du détecteur actif */}
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: detectorType === 'yolo' && yoloModelLoaded ? 'rgba(16, 185, 129, 0.9)' : 'rgba(59, 130, 246, 0.9)',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
+              fontSize: '0.875rem',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}>
+              {detectorType === 'yolo' && yoloModelLoaded ? '🤖 YOLO' : '📐 OpenCV'}
+            </div>
+
             {liveCorners && detectionConfidence > 0 && (
               <div className="detection-indicator">
                 <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
