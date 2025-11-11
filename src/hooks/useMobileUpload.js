@@ -152,16 +152,9 @@ export const useResilientUpload = () => {
     setError(null);
     setUploadProgress(0);
 
-    // Compression si c'est une image
-    let fileToUpload = file;
-    if (file.type.startsWith('image/') && compressionOptions.enabled !== false) {
-      try {
-        const { compressImage } = useImageCompression();
-        fileToUpload = await compressImage(file, compressionOptions);
-      } catch (compressionError) {
-        console.warn('Compression failed, using original file:', compressionError);
-      }
-    }
+    // Note: Compression is handled by the parent hook (useMobileUpload)
+    // to avoid calling hooks inside callbacks
+    const fileToUpload = file;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -328,8 +321,7 @@ export const useFileValidation = () => {
   const validateFile = useCallback((file, options = {}) => {
     const {
       maxSize = 10 * 1024 * 1024, // 10MB par défaut
-      allowedTypes = ['image/*', 'application/pdf'],
-      maxFiles = 10
+      allowedTypes = ['image/*', 'application/pdf']
     } = options;
 
     const errors = [];

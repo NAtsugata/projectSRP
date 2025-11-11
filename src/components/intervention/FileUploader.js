@@ -2,7 +2,7 @@
 // Composant d'upload de fichiers avec compression, queue et retry
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Button, LoadingSpinner } from '../ui';
+import { Button } from '../ui';
 import { storageService } from '../../lib/supabase';
 import { LoaderIcon, CheckCircleIcon, AlertTriangleIcon, UploadIcon } from '../SharedUI';
 import './FileUploader.css';

@@ -9,8 +9,7 @@ import {
   getAssignees,
   getUserColor,
   START_MIN,
-  END_MIN,
-  DAY_SPAN
+  END_MIN
 } from '../../utils/agendaHelpers';
 import './AgendaDay.css';
 

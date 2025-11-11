@@ -829,7 +829,7 @@ export const initializeSupabase = async () => {
 
     for (const bucketName of buckets) {
       try {
-        const { data: bucketData, error: bucketError } = await supabase.storage
+        const { error: bucketError } = await supabase.storage
           .from(bucketName)
           .list('', { limit: 1 });
 
@@ -880,7 +880,7 @@ export const useSupabasePerformance = () => {
 }
 
 // ✅ EXPORT PRINCIPAL AVEC TOUTES LES OPTIMISATIONS
-export default {
+const supabaseClient = {
   supabase,
   authService,
   profileService,
@@ -891,5 +891,7 @@ export default {
   monitoringService,
   initializeSupabase,
   useSupabasePerformance
-}
+};
+
+export default supabaseClient;
 

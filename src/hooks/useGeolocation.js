@@ -14,16 +14,15 @@ export const useGeolocation = (options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const defaultOptions = {
-    enableHighAccuracy: true,
-    timeout: 15000, // 15s au lieu de 10s
-    maximumAge: 0,
-    ...options
-  };
-
   const getPosition = useCallback(
     (retries = 2) => {
       return new Promise((resolve, reject) => {
+        const defaultOptions = {
+          enableHighAccuracy: true,
+          timeout: 15000, // 15s au lieu de 10s
+          maximumAge: 0,
+          ...options
+        };
         if (!navigator.geolocation) {
           const err = new Error('Géolocalisation non supportée sur ce navigateur');
           setError(err);
@@ -77,7 +76,7 @@ export const useGeolocation = (options = {}) => {
         attemptGeolocation(retries);
       });
     },
-    [defaultOptions]
+    [options]
   );
 
   // Fonction helper pour obtenir un message d'erreur user-friendly

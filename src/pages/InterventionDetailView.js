@@ -15,7 +15,6 @@ import {
   LoaderIcon,
   ExpandIcon,
   RefreshCwIcon,
-  XCircleIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
   MicIcon,

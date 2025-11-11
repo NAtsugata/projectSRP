@@ -4,9 +4,6 @@ import {
   PlusIcon,
   TrashIcon,
   EditIcon,
-  CheckCircleIcon,
-  AlertTriangleIcon,
-  CameraIcon,
   SaveIcon
 } from '../components/SharedUI';
 
