@@ -1,6 +1,6 @@
 // src/pages/DocumentScannerView.js
 // Scanner de documents style ClearScanner - Interface moderne et épurée
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   CameraIcon,
   CheckCircleIcon,
@@ -26,6 +26,16 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const fileInputRef = useRef(null);
   const [stream, setStream] = useState(null);
 
+  // Appliquer le stream à la vidéo quand il est disponible
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(err => {
+        console.error('Erreur play:', err);
+      });
+    }
+  }, [stream]);
+
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
     try {
@@ -36,14 +46,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
           height: { ideal: 1080 }
         }
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        // IMPORTANT: Démarrer la lecture de la vidéo
-        videoRef.current.play().catch(err => {
-          console.error('Erreur play:', err);
-        });
-        setStream(mediaStream);
-      }
+
+      // Le useEffect se chargera d'appliquer le stream à la vidéo
+      setStream(mediaStream);
     } catch (error) {
       console.error('Erreur caméra:', error);
       alert('Impossible d\'accéder à la caméra');
