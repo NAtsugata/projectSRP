@@ -20,10 +20,13 @@ class YOLODocumentDetector {
   async loadModel(modelPath) {
     try {
       console.log('🔄 Chargement du modèle YOLO ONNX...');
+      console.log('📁 Chemin du modèle:', modelPath);
 
       // Configurer ONNX Runtime pour utiliser WebGL (plus rapide)
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.simd = true;
+
+      console.log('⚙️ Configuration ONNX Runtime...');
 
       // Charger le modèle
       this.session = await ort.InferenceSession.create(modelPath, {
@@ -36,13 +39,16 @@ class YOLODocumentDetector {
       // Récupérer les informations du modèle
       const inputName = this.session.inputNames[0];
 
-      console.log('✅ Modèle YOLO chargé avec succès');
-      console.log('📊 Input:', inputName);
-      console.log('📊 Outputs:', this.session.outputNames);
+      console.log('✅ Modèle YOLO chargé avec succès !');
+      console.log('📊 Input name:', inputName);
+      console.log('📊 Output names:', this.session.outputNames);
+      console.log('🎯 MODE DEBUG ACTIVÉ - Détectera TOUS les objets');
 
       return true;
     } catch (error) {
       console.error('❌ Erreur lors du chargement du modèle YOLO:', error);
+      console.error('📄 Détails de l\'erreur:', error.message);
+      console.error('📄 Stack:', error.stack);
       throw error;
     }
   }
@@ -218,12 +224,16 @@ class YOLODocumentDetector {
 
       // SOLUTION 1: Accepter les classes "document-like"
       // SOLUTION 2: Accepter TOUS les objets rectangulaires avec confiance > seuil bas
+      // SOLUTION 3: MODE DEBUG - Accepter TOUT pour tester
       const isDocumentLike = DOCUMENT_LIKE_CLASSES.includes(maxClassId);
       const isLargeRectangle = w > 50 && h > 50; // Suffisamment grand
-      const meetsThreshold = maxConf >= (isDocumentLike ? confThreshold : confThreshold * 0.3);
 
-      // Filtrer par seuil de confiance (plus permissif pour les documents)
-      if (meetsThreshold && (isDocumentLike || isLargeRectangle)) {
+      // MODE DEBUG: Accepter TOUTES les détections avec confiance > 0.1
+      const DEBUG_MODE = true;
+      const meetsThreshold = DEBUG_MODE ? maxConf >= 0.1 : maxConf >= (isDocumentLike ? confThreshold : confThreshold * 0.3);
+
+      // Filtrer par seuil de confiance (très permissif en mode debug)
+      if (DEBUG_MODE ? meetsThreshold : (meetsThreshold && (isDocumentLike || isLargeRectangle))) {
         detections.push({
           bbox: [
             x - w / 2,  // x1
