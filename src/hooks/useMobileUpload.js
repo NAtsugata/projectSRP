@@ -144,8 +144,7 @@ export const useResilientUpload = () => {
   const uploadWithRetry = useCallback(async (file, interventionId, options = {}) => {
     const {
       maxRetries = 3,
-      folder = 'report',
-      compressionOptions = {}
+      folder = 'report'
     } = options;
 
     setIsUploading(true);

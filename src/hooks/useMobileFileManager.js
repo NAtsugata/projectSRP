@@ -247,11 +247,12 @@ export const useMobileFileManager = (interventionId) => {
 
   // Nettoyage à la désactivation du composant
   useEffect(() => {
+    const cache = imageCache.current;
+    const controller = abortController.current;
     return () => {
-      if (abortController.current) {
-        abortController.current.abort();
+      if (controller) {
+        controller.abort();
       }
-      const cache = imageCache.current;
       if (cache) {
         cache.clear();
       }
