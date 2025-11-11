@@ -262,37 +262,89 @@ export const detectDocument = async (input, options = {}) => {
       }
       result.corners = corners;
 
-      // Draw contours on preview if requested
+      // Draw contours on preview if requested (CCleaner-style overlay)
       if (drawContours) {
-        const preview = src.clone();
-        const contourVec = new window.cv.MatVector();
-        contourVec.push_back(documentContour);
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = src.cols;
+        previewCanvas.height = src.rows;
+        const ctx = previewCanvas.getContext('2d');
 
-        window.cv.drawContours(
-          preview,
-          contourVec,
-          0,
-          new window.cv.Scalar(0, 255, 0, 255),
-          3
-        );
+        // Draw original image
+        window.cv.imshow(previewCanvas, src);
 
-        // Draw corner points
+        // Create dark overlay on entire image
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+        // Create path for the document area (to cut it out from overlay)
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < corners.length; i++) {
+          ctx.lineTo(corners[i].x, corners[i].y);
+        }
+        ctx.closePath();
+
+        // Cut out the document area from the dark overlay (using destination-out)
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+        ctx.fill();
+
+        // Add bright green glow effect around the document
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Outer glow (larger, more transparent)
+        ctx.shadowColor = 'rgba(0, 255, 0, 0.8)';
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.9)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Inner bright border
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Draw corner points with glow effect
         corners.forEach((corner, idx) => {
-          window.cv.circle(
-            preview,
-            new window.cv.Point(corner.x, corner.y),
-            10,
-            new window.cv.Scalar(255, 0, 0, 255),
-            -1
-          );
+          // Outer glow
+          ctx.beginPath();
+          ctx.arc(corner.x, corner.y, 15, 0, 2 * Math.PI);
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+          ctx.fill();
+
+          // Middle circle
+          ctx.beginPath();
+          ctx.arc(corner.x, corner.y, 10, 0, 2 * Math.PI);
+          ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
+          ctx.fill();
+
+          // Inner bright dot
+          ctx.beginPath();
+          ctx.arc(corner.x, corner.y, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = '#ff0000';
+          ctx.fill();
+
+          // White center
+          ctx.beginPath();
+          ctx.arc(corner.x, corner.y, 3, 0, 2 * Math.PI);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          // Label corners (optional)
+          ctx.font = 'bold 14px Arial';
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          const labels = ['TL', 'TR', 'BR', 'BL'];
+          ctx.strokeText(labels[idx], corner.x + 18, corner.y + 5);
+          ctx.fillText(labels[idx], corner.x + 18, corner.y + 5);
         });
 
-        const previewCanvas = document.createElement('canvas');
-        window.cv.imshow(previewCanvas, preview);
-        result.preview = previewCanvas.toDataURL('image/jpeg', 0.9);
-
-        preview.delete();
-        contourVec.delete();
+        result.preview = previewCanvas.toDataURL('image/jpeg', 0.95);
       }
 
       // Apply perspective transform if requested
