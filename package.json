@@ -18,7 +18,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "node scripts/download-yolo-model.js",
     "build": "react-scripts build",
+    "postinstall": "node scripts/download-yolo-model.js",
     "test": "react-scripts test"
   },
   "eslintConfig": {

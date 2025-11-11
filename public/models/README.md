@@ -2,18 +2,25 @@
 
 Ce dossier contient les modèles ONNX utilisés pour la détection de documents.
 
-## ☁️ **NOUVEAU : Déploiement Vercel avec CDN**
+## ☁️ **Déploiement Vercel Automatique**
 
-Pour un déploiement sur **Vercel**, l'application utilise maintenant un modèle YOLO hébergé sur **Hugging Face CDN**.
+Pour un déploiement sur **Vercel**, le modèle YOLO est téléchargé **automatiquement pendant le build**.
 
-✅ **Aucun fichier local nécessaire** - Le modèle est chargé automatiquement depuis :
-```
-https://huggingface.co/Xenova/yolov8n/resolve/main/onnx/model.onnx
-```
+✅ **Script de build automatique** - Le modèle se télécharge via `npm run prebuild`
 
-✅ **Configuration automatique** - Aucune modification nécessaire pour Vercel
+✅ **Aucune configuration manuelle** - Fonctionne directement sur Vercel
 
-✅ **Fonctionnement en local** - Le modèle se télécharge automatiquement au premier chargement
+✅ **Dépôt Git léger** - Pas de fichier volumineux dans Git (~6 MB économisés)
+
+✅ **Fonctionnement en local** - Exécutez `npm run postinstall` ou `npm run prebuild`
+
+### Comment ça fonctionne ?
+
+Le script `scripts/download-yolo-model.js` :
+1. Télécharge automatiquement YOLOv8n depuis GitHub Releases
+2. Le sauvegarde dans `public/models/document_detector.onnx`
+3. S'exécute avant chaque build Vercel (via `prebuild`)
+4. S'exécute après `npm install` (via `postinstall`)
 
 ---
 

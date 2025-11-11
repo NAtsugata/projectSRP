@@ -31,10 +31,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [detectionConfidence, setDetectionConfidence] = useState(0); // Niveau de confiance 0-100
   const [detectorType, setDetectorType] = useState('opencv'); // 'opencv' ou 'yolo'
   const [yoloModelLoaded, setYoloModelLoaded] = useState(false);
-  // Utiliser CDN public Hugging Face pour déploiement Vercel (pas besoin de fichier local)
-  const [yoloModelPath] = useState(
-    'https://huggingface.co/Xenova/yolov8n/resolve/main/onnx/model.onnx'
-  );
+  // Modèle téléchargé automatiquement pendant le build Vercel (via prebuild script)
+  const [yoloModelPath] = useState('/models/document_detector.onnx');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
