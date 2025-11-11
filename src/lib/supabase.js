@@ -51,8 +51,17 @@ export const authService = {
     try {
       // Vérifie d'abord s'il existe une session active
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Aucune session active : on nettoie uniquement les clés Supabase et on retourne sans erreur
+
+      // Liste des clés d'application à nettoyer lors de la déconnexion
+      const appKeysToClean = [
+        'expense_form_isCreating',
+        'expense_form_data',
+        'intervention_form_state',
+        'shower_form_state'
+      ];
+
+      const cleanupStorage = () => {
+        // Nettoyage des clés Supabase
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('supabase')) {
             localStorage.removeItem(key);
@@ -63,27 +72,34 @@ export const authService = {
             sessionStorage.removeItem(key);
           }
         });
-        logger.info('ℹ️ Aucune session active ; nettoyage Supabase effectué');
+        // Nettoyage des clés d'application
+        appKeysToClean.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+        logger.log('🧹 Storage nettoyé (Supabase + clés application)');
+      };
+
+      if (!session) {
+        // Aucune session active : on nettoie et on retourne
+        cleanupStorage();
+        logger.info('ℹ️ Aucune session active ; nettoyage effectué');
         return { error: null };
       }
 
       const { error } = await supabase.auth.signOut();
-      if (error) {
+
+      // Si l'erreur est "session missing", c'est OK - l'utilisateur est déjà déconnecté
+      if (error && error.message && !error.message.includes('session missing')) {
         logger.error('❌ Erreur lors de la déconnexion:', error);
+        // On nettoie quand même le storage
+        cleanupStorage();
         return { error };
       }
-      // Nettoyage sélectif des clés Supabase uniquement (pas de clear() global)
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('supabase')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-      logger.emoji('✅', 'Déconnexion réussie - Storage Supabase nettoyé');
+
+      // Nettoyage complet après déconnexion réussie (ou session déjà expirée)
+      cleanupStorage();
+      logger.emoji('✅', 'Déconnexion réussie - Storage nettoyé');
       return { error: null };
     } catch (e) {
       logger.error('❌ Erreur inattendue lors de la déconnexion:', e);
@@ -282,6 +298,43 @@ export const storageService = {
     }
   },
 
+  // ✅ UPLOAD NOTE DE FRAIS OPTIMISÉ
+  async uploadExpenseFile(file, userId, onProgress) {
+    try {
+      logger.log('📤 Upload reçu note de frais:', {
+        fileName: file.name,
+        size: Math.round(file.size / 1024) + 'KB',
+        userId
+      });
+
+      const cleanFileName = sanitizeFileName(file.name);
+      const fileName = `${Date.now()}_${cleanFileName}`;
+      const filePath = `${userId}/expenses/${fileName}`;
+
+      logger.log('🗂️ Chemin de stockage expense:', filePath);
+
+      const uploadResult = await this.uploadWithProgressAndRetry(filePath, file, 'intervention-files', onProgress);
+
+      if (uploadResult.error) {
+        logger.error('❌ Erreur upload expense:', uploadResult.error);
+        return { publicURL: null, filePath: null, error: uploadResult.error };
+      }
+
+      const { data } = supabase.storage
+        .from('intervention-files')
+        .getPublicUrl(filePath);
+
+      const publicURL = data.publicUrl;
+      logger.log('✅ Fichier expense uploadé avec succès:', publicURL);
+
+      return { publicURL, filePath: filePath, error: null };
+
+    } catch (error) {
+      logger.error('❌ Erreur générale upload expense:', error);
+      return { publicURL: null, filePath: null, error };
+    }
+  },
+
   // ✅ SUPPRESSION VAULT OPTIMISÉE
   async deleteVaultFile(filePath) {
     logger.log('🗑️ Suppression fichier vault:', filePath);
@@ -362,6 +415,48 @@ export const storageService = {
       return { error };
     }
   },
+
+  /**
+   * Supprimer un fichier individuel d'une intervention
+   * @param {string} fileUrl - L'URL complète du fichier à supprimer
+   * @returns {Promise<{error: Error|null}>}
+   */
+  async deleteInterventionFile(fileUrl) {
+    try {
+      logger.log('🗑️ Suppression fichier intervention:', fileUrl);
+
+      // Extraire le chemin du fichier depuis l'URL
+      // Format URL: https://[PROJECT].supabase.co/storage/v1/object/public/intervention-files/[PATH]
+      const urlParts = fileUrl.split('/intervention-files/');
+      if (urlParts.length < 2) {
+        throw new Error('URL de fichier invalide');
+      }
+
+      // Enlever les paramètres de cache (v=xxx&r=xxx)
+      let filePath = urlParts[1].split('?')[0];
+
+      // Décoder les caractères URL encodés
+      filePath = decodeURIComponent(filePath);
+
+      logger.log('📂 Chemin fichier extrait:', filePath);
+
+      const { error } = await supabase.storage
+        .from('intervention-files')
+        .remove([filePath]);
+
+      if (error) {
+        logger.error('❌ Erreur suppression fichier:', error);
+        return { error };
+      }
+
+      logger.log('✅ Fichier supprimé avec succès');
+      return { error: null };
+
+    } catch (error) {
+      logger.error('❌ Erreur générale suppression fichier:', error);
+      return { error };
+    }
+  },
 }
 
 // ✅ SERVICE INTERVENTIONS OPTIMISÉ
@@ -371,7 +466,7 @@ export const interventionService = {
 
     let query = supabase
       .from('interventions')
-      .select('*, intervention_assignments(profiles(full_name)), intervention_briefing_documents(*)')
+      .select('*, intervention_assignments(user_id), intervention_briefing_documents(*)')
       .eq('is_archived', archived)
       .order('date', { ascending: true })
       .order('time', { ascending: true });

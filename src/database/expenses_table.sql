@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('transport', 'meals', 'accommodation', 'supplies', 'other')),
+    category TEXT NOT NULL CHECK (category IN ('transport', 'meals', 'accommodation', 'supplies', 'phone', 'parking', 'fuel', 'other')),
     amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
     description TEXT NOT NULL,
     receipts JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array de {id, url, name, size}
@@ -74,10 +74,21 @@ CREATE POLICY "Admins can manage expenses"
         )
     );
 
+-- Policy: Les admins peuvent supprimer n'importe quelle note de frais
+CREATE POLICY "Admins can delete any expense"
+    ON public.expenses
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+        )
+    );
+
 -- Commentaires
 COMMENT ON TABLE public.expenses IS 'Notes de frais soumises par les employés';
 COMMENT ON COLUMN public.expenses.user_id IS 'Employé qui a soumis la note';
-COMMENT ON COLUMN public.expenses.category IS 'Catégorie: transport, meals, accommodation, supplies, other';
+COMMENT ON COLUMN public.expenses.category IS 'Catégorie: transport, meals, accommodation, supplies, phone, parking, fuel, other';
 COMMENT ON COLUMN public.expenses.amount IS 'Montant en euros';
 COMMENT ON COLUMN public.expenses.receipts IS 'Justificatifs (photos) en JSONB: [{id, url, name, size}]';
 COMMENT ON COLUMN public.expenses.status IS 'Statut: pending, approved, rejected';

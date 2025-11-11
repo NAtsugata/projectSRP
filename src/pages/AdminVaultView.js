@@ -245,7 +245,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
           border-radius: 0.5rem;
           margin-bottom: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          overflow: hidden;
+          overflow: visible;
         }
         .accordion-header {
           width: 100%;
@@ -264,7 +264,12 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         .document-count { font-size: 0.875rem; color: #6c757d; font-weight: normal; background-color: #e9ecef; padding: 2px 8px; border-radius: 12px; }
         .accordion-chevron { transition: transform 0.2s ease; color: #6c757d; }
         .accordion-chevron.open { transform: rotate(180deg); }
-        .accordion-content { padding: 0.5rem; }
+        .accordion-content {
+          padding: 0.5rem;
+          max-height: 600px;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
         .document-item-compact { display: flex; align-items: center; padding: 0.75rem; border-radius: 0.375rem; margin-bottom: 0.25rem; }
         .document-item-compact:hover { background-color: #f0f3f5; }
         .document-icon { color: #495057; margin-right: 0.75rem; flex-shrink: 0; }

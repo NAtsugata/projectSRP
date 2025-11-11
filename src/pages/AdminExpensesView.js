@@ -1,5 +1,6 @@
 // src/pages/AdminExpensesView.js - GESTION ADMIN NOTES DE FRAIS
 import React, { useState, useMemo } from 'react';
+import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -101,7 +102,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
 };
 
 // Accordion pour chaque employé
-const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, categories, formatDate, formatAmount }) => {
+const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, onDelete, categories, formatDate, formatAmount }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [showReceipts, setShowReceipts] = useState(null);
   const [commentInput, setCommentInput] = useState({});
@@ -135,6 +136,161 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
     }
     await onReject(expense, comment);
     setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
+  };
+
+  const handleDownload = async (expense) => {
+    try {
+      const categoryInfo = getCategoryInfo(expense.category);
+
+      // Créer un nouveau document PDF
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // En-tête
+      pdf.setFontSize(20);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('NOTE DE FRAIS', margin, yPos);
+      yPos += 15;
+
+      // Ligne de séparation
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+
+      // Informations principales
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Employé:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(userName, margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Date:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(formatDate(expense.date), margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Catégorie:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(categoryInfo.label, margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Montant:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(14);
+      pdf.text(formatAmount(expense.amount), margin + 40, yPos);
+      yPos += 8;
+
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Statut:', margin, yPos);
+      pdf.setFont(undefined, 'normal');
+      const statusText = expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté';
+      pdf.text(statusText, margin + 40, yPos);
+      yPos += 12;
+
+      // Description
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Description:', margin, yPos);
+      yPos += 8;
+      pdf.setFont(undefined, 'normal');
+      const descLines = pdf.splitTextToSize(expense.description, pageWidth - 2 * margin);
+      pdf.text(descLines, margin, yPos);
+      yPos += (descLines.length * 6) + 8;
+
+      // Commentaire admin
+      if (expense.admin_comment) {
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Commentaire administrateur:', margin, yPos);
+        yPos += 8;
+        pdf.setFont(undefined, 'normal');
+        const commentLines = pdf.splitTextToSize(expense.admin_comment, pageWidth - 2 * margin);
+        pdf.text(commentLines, margin, yPos);
+        yPos += (commentLines.length * 6) + 8;
+      }
+
+      // Justificatifs
+      if (expense.receipts && expense.receipts.length > 0) {
+        yPos += 5;
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
+        yPos += 10;
+
+        // Charger et ajouter chaque image
+        for (let i = 0; i < expense.receipts.length; i++) {
+          const receipt = expense.receipts[i];
+
+          try {
+            // Vérifier si on a besoin d'une nouvelle page
+            if (yPos + 100 > pageHeight - margin) {
+              pdf.addPage();
+              yPos = margin;
+            }
+
+            pdf.setFont(undefined, 'normal');
+            pdf.setFontSize(10);
+            pdf.text(`${i + 1}. ${receipt.name}`, margin, yPos);
+            yPos += 8;
+
+            // Charger l'image
+            const response = await fetch(receipt.url);
+            const blob = await response.blob();
+
+            // Convertir en base64
+            const base64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+
+            // Calculer les dimensions pour l'image
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = base64;
+            });
+
+            const imgWidth = pageWidth - 2 * margin;
+            const imgHeight = (img.height * imgWidth) / img.width;
+            const maxImgHeight = 120;
+            const finalHeight = Math.min(imgHeight, maxImgHeight);
+            const finalWidth = (img.width * finalHeight) / img.height;
+
+            // Vérifier à nouveau si on a besoin d'une nouvelle page après calcul de la hauteur
+            if (yPos + finalHeight > pageHeight - margin) {
+              pdf.addPage();
+              yPos = margin;
+            }
+
+            // Ajouter l'image au PDF
+            pdf.addImage(base64, 'JPEG', margin, yPos, finalWidth, finalHeight);
+            yPos += finalHeight + 10;
+
+          } catch (error) {
+            console.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
+            pdf.setFontSize(9);
+            pdf.setTextColor(200, 0, 0);
+            pdf.text(`Erreur de chargement: ${receipt.url}`, margin + 5, yPos);
+            pdf.setTextColor(0, 0, 0);
+            yPos += 6;
+          }
+        }
+      }
+
+      // Télécharger le PDF
+      pdf.save(`note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.pdf`);
+
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    }
   };
 
   return (
@@ -271,7 +427,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                         />
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <button
                           type="button"
                           onClick={() => handleApprove(expense)}
@@ -291,6 +447,26 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                       </div>
                     </div>
                   )}
+
+                  {/* Actions disponibles pour toutes les notes */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(expense)}
+                      className="btn btn-secondary"
+                      style={{ flex: 1, fontSize: '0.875rem' }}
+                    >
+                      <DownloadIcon /> Télécharger
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(expense)}
+                      className="btn btn-danger"
+                      style={{ flex: 1, fontSize: '0.875rem' }}
+                    >
+                      🗑️ Supprimer
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -307,7 +483,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
   );
 };
 
-export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense }) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense }) {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // Catégories de frais (même que ExpensesView)
@@ -426,7 +602,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           border-radius: 0.5rem;
           margin-bottom: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          overflow: hidden;
+          overflow: visible;
         }
         .accordion-header {
           width: 100%;
@@ -439,6 +615,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           border: none;
           border-bottom: 1px solid #e5e7eb;
           text-align: left;
+          border-radius: 0.5rem 0.5rem 0 0;
         }
         .accordion-header:hover {
           background-color: #f9fafb;
@@ -467,7 +644,9 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           transform: rotate(180deg);
         }
         .accordion-content {
-          padding: 1rem;
+          padding: 0.5rem 1rem 1rem 1rem;
+          max-height: none;
+          overflow: visible;
         }
         .filter-tabs {
           display: flex;
@@ -584,6 +763,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
                   expenses={data.expenses}
                   onApprove={onApproveExpense}
                   onReject={onRejectExpense}
+                  onDelete={onDeleteExpense}
                   categories={categories}
                   formatDate={formatDate}
                   formatAmount={formatAmount}

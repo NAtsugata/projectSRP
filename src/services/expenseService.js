@@ -205,6 +205,36 @@ const expenseService = {
   },
 
   /**
+   * Supprimer une note de frais (admin - n'importe quel statut)
+   */
+  async deleteExpenseAdmin(expenseId) {
+    try {
+      // Vérifier que la note existe
+      const { data: expense, error: fetchError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expenseId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!expense) throw new Error('Note de frais introuvable');
+
+      const { error: deleteError } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (deleteError) throw deleteError;
+
+      console.log('✅ Note de frais supprimée (admin):', expenseId);
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('❌ Erreur deleteExpenseAdmin:', error);
+      return { data: null, error };
+    }
+  },
+
+  /**
    * Récupérer les statistiques des notes de frais
    */
   async getExpenseStats(userId = null) {

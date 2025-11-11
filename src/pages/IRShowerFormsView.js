@@ -1,5 +1,6 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
+import { storageService, supabase } from '../lib/supabase';
 
 /**
  * IRShowerFormsView — Version améliorée
@@ -267,8 +268,21 @@ const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
 };
 
 /* ---------- Main ---------- */
-export default function IRShowerFormsView() {
+export default function IRShowerFormsView({ profile }) {
   const [tab, setTab] = useState("etude");
+
+  // Obtenir l'userId depuis profile ou session
+  const [userId, setUserId] = useState(profile?.id || null);
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setUserId(user.id);
+      }
+    };
+    fetchUserId();
+  }, [userId]);
 
   /* ÉTUDE */
   const [study, setStudy] = useState({
@@ -317,7 +331,51 @@ export default function IRShowerFormsView() {
   const [isDrawingSignature, setIsDrawingSignature] = useState({ client: false, installer: false });
   const [signaturePos, setSignaturePos] = useState({ client: null, installer: null });
 
-  const handlePhotoCapture = (e, type) => {
+  // Compression d'image optimisée
+  const compressImage = async (file) => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise(res => {
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        let {width, height} = img;
+        // COMPRESSION AGGRESSIVE POUR MOBILE
+        const MW = 800, MH = 600;
+        if (width > height) {
+          if (width > MW) {
+            height *= MW / width;
+            width = MW;
+          }
+        } else {
+          if (height > MH) {
+            width *= MH / height;
+            height = MH;
+          }
+        }
+        c.width = width;
+        c.height = height;
+        // Fond blanc pour éviter transparence
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        // Qualité 0.65 = 40% plus léger !
+        c.toBlob(b => {
+          if (b) {
+            const compressed = new File([b], file.name, {type: 'image/jpeg', lastModified: Date.now()});
+            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+            res(compressed);
+          } else {
+            res(file);
+          }
+        }, 'image/jpeg', 0.65);
+      };
+      img.onerror = () => res(file);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handlePhotoCapture = async (e, type) => {
     console.log('📸 handlePhotoCapture appelé, type:', type, 'event:', e);
     const files = Array.from(e.target.files);
     console.log('📸 Fichiers détectés:', files.length);
@@ -326,25 +384,63 @@ export default function IRShowerFormsView() {
       return;
     }
 
-    files.forEach(file => {
-      console.log('📸 Lecture fichier:', file.name, file.size, 'bytes');
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        console.log('✅ Fichier lu avec succès:', file.name);
-        const photoData = { id: newId(), url: ev.target.result, name: file.name };
-        if (type === 'avant') {
-          console.log('📸 Ajout photo AVANT');
-          setPhotosAvant(prev => [...prev, photoData]);
-        } else {
-          console.log('📸 Ajout photo APRÈS');
-          setPhotosApres(prev => [...prev, photoData]);
+    if (!userId) {
+      console.error('❌ Pas d\'userId disponible pour l\'upload');
+      return;
+    }
+
+    console.log('📸 Début upload des fichiers vers le cloud...');
+
+    try {
+      // Uploader tous les fichiers en parallèle
+      const uploadPromises = files.map(async (file) => {
+        try {
+          console.log('📸 Upload fichier:', file.name);
+
+          // Compresser l'image d'abord
+          const compressedFile = await compressImage(file);
+
+          // Upload vers le cloud
+          const { publicURL, error } = await storageService.uploadExpenseFile(
+            compressedFile,
+            userId,
+            (progress) => {
+              console.log(`📤 Progression ${file.name}: ${progress}%`);
+            }
+          );
+
+          if (error) throw error;
+
+          console.log('✅ Fichier uploadé avec succès:', publicURL);
+
+          return {
+            id: newId(),
+            url: publicURL, // URL cloud au lieu de base64
+            name: file.name
+          };
+        } catch (err) {
+          console.error('❌ Erreur upload fichier:', file.name, err);
+          throw err;
         }
-      };
-      reader.onerror = (err) => {
-        console.error('❌ Erreur lecture fichier:', err);
-      };
-      reader.readAsDataURL(file);
-    });
+      });
+
+      const uploadedPhotos = await Promise.all(uploadPromises);
+
+      console.log('✅ Tous les fichiers uploadés:', uploadedPhotos.length);
+
+      if (type === 'avant') {
+        console.log('📸 Ajout photos AVANT');
+        setPhotosAvant(prev => [...prev, ...uploadedPhotos]);
+      } else {
+        console.log('📸 Ajout photos APRÈS');
+        setPhotosApres(prev => [...prev, ...uploadedPhotos]);
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur upload fichiers:', error);
+      alert('Erreur lors de l\'upload des photos');
+    }
+
     e.target.value = '';
   };
 
@@ -1134,7 +1230,14 @@ export default function IRShowerFormsView() {
               <div className="photo-grid">
                 {photosAvant.map(photo => (
                   <div key={photo.id} className="photo-item">
-                    <img src={photo.url} alt={photo.name} />
+                    <a
+                      href={photo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <img src={photo.url} alt={photo.name} />
+                    </a>
                     <button className="photo-remove" onClick={() => removePhoto(photo.id, 'avant')}>×</button>
                   </div>
                 ))}
@@ -1149,7 +1252,6 @@ export default function IRShowerFormsView() {
                     ref={photoAvantInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     multiple
                     onChange={(e) => handlePhotoCapture(e, 'avant')}
                     style={{ display: 'none' }}
@@ -1163,7 +1265,14 @@ export default function IRShowerFormsView() {
               <div className="photo-grid">
                 {photosApres.map(photo => (
                   <div key={photo.id} className="photo-item">
-                    <img src={photo.url} alt={photo.name} />
+                    <a
+                      href={photo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <img src={photo.url} alt={photo.name} />
+                    </a>
                     <button className="photo-remove" onClick={() => removePhoto(photo.id, 'apres')}>×</button>
                   </div>
                 ))}
@@ -1178,7 +1287,6 @@ export default function IRShowerFormsView() {
                     ref={photoApresInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     multiple
                     onChange={(e) => handlePhotoCapture(e, 'apres')}
                     style={{ display: 'none' }}

@@ -121,7 +121,10 @@ const InterventionCard = ({
             variant="ghost"
             size="sm"
             icon={<EditIcon width={18} height={18} />}
-            onClick={() => onView?.(intervention)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onView?.(intervention);
+            }}
             title="Voir les détails"
             aria-label={`Voir les détails de l'intervention ${intervention.client}`}
           >
@@ -138,7 +141,10 @@ const InterventionCard = ({
             variant="ghost"
             size="sm"
             icon={<ArchiveIcon />}
-            onClick={() => onArchive?.(intervention.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onArchive?.(intervention.id);
+            }}
             title="Archiver"
             aria-label={`Archiver l'intervention ${intervention.client}`}
           />
@@ -146,7 +152,11 @@ const InterventionCard = ({
             variant="danger"
             size="sm"
             icon={<TrashIcon width={18} height={18} />}
-            onClick={() => onDelete?.(intervention.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('🗑️ Bouton suppression cliqué, intervention ID:', intervention.id);
+              onDelete?.(intervention.id);
+            }}
             title="Supprimer"
             aria-label={`Supprimer l'intervention ${intervention.client}`}
           />
