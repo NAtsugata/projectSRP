@@ -1,0 +1,11 @@
+# Ignore ONNX models (too large for git, user-specific)
+*.onnx
+
+# Ignore PyTorch models
+*.pt
+*.pth
+
+# Ignore temporary Python files
+__pycache__/
+*.pyc
+*.pyo
