@@ -2,6 +2,7 @@
 // Système de notifications optimisé pour mobile avec vibrations et animations
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircleIcon, AlertTriangleIcon, AlertCircleIcon, XIcon } from '../SharedUI';
+import './MobileNotifications.css';
 
 /**
  * Hook pour gérer les notifications mobiles

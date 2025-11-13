@@ -13,8 +13,19 @@ export const NotificationPermissionBanner = ({ onEnable, onDismiss }) => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   const handleDismiss = () => {
+    console.log('🔔 [Banner] Bouton "Plus tard" cliqué');
     setIsDismissed(true);
     if (onDismiss) onDismiss();
+  };
+
+  const handleEnable = () => {
+    console.log('🔔 [Banner] Bouton "Activer" cliqué');
+    console.log('🔔 [Banner] onEnable est:', typeof onEnable, onEnable);
+    if (onEnable) {
+      onEnable();
+    } else {
+      console.error('❌ [Banner] onEnable n\'est pas défini !');
+    }
   };
 
   if (isDismissed) return null;
@@ -31,7 +42,7 @@ export const NotificationPermissionBanner = ({ onEnable, onDismiss }) => {
       <div className="notification-permission-actions">
         <button
           className="notification-permission-button notification-permission-button-enable"
-          onClick={onEnable}
+          onClick={handleEnable}
         >
           Activer
         </button>
@@ -170,13 +181,24 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
   };
 
   const handleExplainNotifications = async () => {
-    const confirmed = await modal.confirm(
-      '🔔 Notifications',
-      'Recevez des alertes sur votre téléphone quand une intervention vous est assignée ou modifiée.'
-    );
+    console.log('🔔 [1/4] handleExplainNotifications appelé - Affichage modal...');
 
-    if (confirmed) {
-      handleEnableNotifications();
+    try {
+      const confirmed = await modal.confirm(
+        '🔔 Notifications',
+        'Recevez des alertes sur votre téléphone quand une intervention vous est assignée ou modifiée.'
+      );
+
+      console.log('🔔 [2/4] Réponse modal:', confirmed);
+
+      if (confirmed) {
+        console.log('🔔 [3/4] Utilisateur a confirmé - Appel handleEnableNotifications...');
+        handleEnableNotifications();
+      } else {
+        console.log('🔔 [3/4] Utilisateur a annulé');
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans handleExplainNotifications:', error);
     }
   };
 
