@@ -1,7 +1,7 @@
 // src/components/mobile/NotificationPermissionPrompt.js
 // Composant pour demander la permission des notifications
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMobileNotifications, MobileNotificationContainer, useMobileModal, MobileModalContainer } from './MobileNotifications';
 import { BellIcon, BellOffIcon, CheckCircleIcon } from '../SharedUI';
 import './NotificationPermissionPrompt.css';
@@ -125,7 +125,29 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
     pushNotifications?.isSupported && !pushNotifications?.isEnabled
   );
 
+  // Logs de débogage
+  useEffect(() => {
+    console.log('🔔 NotificationPermissionManager - État:', {
+      userId,
+      isSupported: pushNotifications?.isSupported,
+      isEnabled: pushNotifications?.isEnabled,
+      permission: pushNotifications?.permission,
+      isRegistering: pushNotifications?.isRegistering,
+      hasRequestPermission: typeof pushNotifications?.requestPermission === 'function'
+    });
+  }, [userId, pushNotifications]);
+
   const handleEnableNotifications = async () => {
+    console.log('🔔 Tentative d\'activation des notifications...');
+
+    if (!pushNotifications || !pushNotifications.requestPermission) {
+      console.error('❌ pushNotifications non disponible:', pushNotifications);
+      notifications.error('Notifications non disponibles', {
+        duration: 4000
+      });
+      return;
+    }
+
     try {
       const granted = await pushNotifications.requestPermission();
 
@@ -141,8 +163,8 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
       }
     } catch (error) {
       console.error('Erreur activation notifications:', error);
-      notifications.error('Erreur lors de l\'activation', {
-        duration: 4000
+      notifications.error('Erreur: ' + error.message, {
+        duration: 5000
       });
     }
   };
@@ -190,7 +212,7 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
 export const useNotificationPermissionPrompt = (pushNotifications, delay = 5000) => {
   const [shouldShow, setShouldShow] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!pushNotifications?.isSupported || pushNotifications?.isEnabled) {
       return;
     }

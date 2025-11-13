@@ -280,9 +280,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         ref={inputRef}
         type="file"
         multiple
-        // Ouvre directement la caméra sur mobile si possible
+        // ✅ NE PAS utiliser capture avec multiple - incompatible sur iOS/Android
+        // capture="environment" force la caméra et bloque la sélection multiple
         accept="image/*,application/pdf,audio/webm"
-        capture="environment"
         onChange={onChange}
         disabled={state.uploading}
         style={{display:'none'}}
