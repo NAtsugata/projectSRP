@@ -16,6 +16,8 @@ import { validateIntervention, validateUser, validateLeaveRequest, validateFileS
 import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
 import LoginScreen from './pages/LoginScreen';
+import { useRealtimePushNotifications } from './hooks/usePushNotifications';
+import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
@@ -136,6 +138,9 @@ function App() {
   const navigate = useNavigate();
 
   const [dataVersion, setDataVersion] = useState(Date.now());
+
+  // ✅ Hook de notifications push en temps réel
+  const pushNotifications = useRealtimePushNotifications(profile?.id);
 
   const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
   const showConfirmationModal = useCallback((config) => setModal(config), []);
@@ -966,6 +971,14 @@ function App() {
           </Route>
         )}
       </Routes>
+
+      {/* ✅ Gestionnaire de notifications push pour tous les utilisateurs */}
+      {profile && (
+        <NotificationPermissionManager
+          userId={profile.id}
+          pushNotifications={pushNotifications}
+        />
+      )}
     </>
   );
 }
