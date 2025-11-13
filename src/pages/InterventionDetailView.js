@@ -248,53 +248,30 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'error',error:String(err.message||err)}:it)}));
       }
     }
+    // ✅ Sauvegarder les fichiers uploadés
     if(uploaded.length){
       try{
         await onUploadComplete(uploaded);
-        // Attendre un peu pour que le refresh se fasse
         await new Promise(resolve => setTimeout(resolve, 500));
       }catch(err){
         setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."}));
       }
     }
 
-    // ✅ Attendre que TOUS les uploads soient terminés avant de nettoyer
-    // Utiliser le state actuel au lieu de la variable queue initiale
-    await new Promise((resolve) => {
-      const checkCompleted = () => {
-        setState(currentState => {
-          const allDone = currentState.queue.length > 0 &&
-            currentState.queue.every(item =>
-              item.status === 'completed' || item.status === 'error'
-            );
-
-          if (allDone) {
-            // ✅ Tous terminés, nettoyer maintenant
-            setTimeout(() => {
-              currentState.queue.forEach(item => {
-                if (item.preview) {
-                  URL.revokeObjectURL(item.preview);
-                }
-              });
-              setState(s => ({...s, uploading: false, queue: []}));
-              resolve();
-            }, 200);
-            return currentState;
-          } else if (currentState.queue.length > 0) {
-            // Pas encore tous terminés, vérifier à nouveau dans 100ms
-            setTimeout(checkCompleted, 100);
-            return currentState;
-          } else {
-            // Queue vide, on peut résoudre
-            resolve();
-            return currentState;
+    // ✅ Nettoyage simplifié : tous les uploads sont déjà terminés (boucle for séquentielle)
+    setTimeout(() => {
+      setState(s => {
+        // Révoquer toutes les previews
+        s.queue.forEach(item => {
+          if (item.preview) {
+            URL.revokeObjectURL(item.preview);
           }
         });
-      };
-      checkCompleted();
-    });
-
-    onEndCritical?.(); // fin de la phase critique
+        // Reset de la queue
+        return { uploading: false, queue: [], error: s.error };
+      });
+      onEndCritical?.(); // fin de la phase critique
+    }, 200);
   },[compressImage,interventionId,folder,onUploadComplete,onEndCritical,clearCriticalFallback]);
 
   return (
@@ -571,8 +548,15 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     saveScroll(); pendingRestoreRef.current = true; if (!document.body.dataset.__scrollLocked) lock();
 
     const finalize = async (updated, msg) => {
-      await persistReport(updated); // persistReport gère déjà unlock + restore
-      if (msg) alert(msg);
+      try {
+        await persistReport(updated);
+        if (msg) alert(msg);
+      } finally {
+        // ✅ Toujours déverrouiller et restaurer le scroll
+        unlock();
+        restoreScroll();
+        pendingRestoreRef.current = false;
+      }
     };
 
     if (!('geolocation' in navigator)) {
@@ -602,7 +586,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       };
       await finalize(updated, 'Géolocalisation refusée. Heure enregistrée sans position.');
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report, lock, saveScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [report, lock, unlock, saveScroll, restoreScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
