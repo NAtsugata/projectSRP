@@ -3,7 +3,18 @@ import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import MobileFileInput from '../components/MobileFileInput';
-import { ChevronLeftIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon } from '../components/SharedUI';
+import { ChevronLeftIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, AlertCircleIcon } from '../components/SharedUI';
+
+// ✅ LOGS DÉTAILLÉS pour diagnostic
+const logUpload = (message, data = {}) => {
+    const timestamp = new Date().toISOString();
+    const userAgent = navigator.userAgent;
+    console.log(`[UPLOAD ${timestamp}] ${message}`, {
+        ...data,
+        userAgent,
+        online: navigator.onLine,
+    });
+};
 
 // =================================================================================
 // COMPOSANT PRINCIPAL DE LA PAGE D'UPLOAD
@@ -82,8 +93,19 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
     }, []);
 
     const handleFileSelect = useCallback(async (event) => {
+        logUpload('📤 handleFileSelect appelé');
+
         const files = Array.from(event.target.files);
-        if (files.length === 0) return;
+        logUpload(`📁 ${files.length} fichier(s) sélectionné(s)`, {
+            fileNames: files.map(f => f.name),
+            fileSizes: files.map(f => f.size),
+            fileTypes: files.map(f => f.type)
+        });
+
+        if (files.length === 0) {
+            logUpload('⚠️ Aucun fichier sélectionné');
+            return;
+        }
 
         const queueItems = files.map((file, index) => ({
             id: `${file.name}-${Date.now()}-${index}`,
@@ -96,18 +118,34 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
         setUploadState({ isUploading: true, queue: queueItems, error: null });
         setUploadComplete(false);
 
+        logUpload('✅ État d\'upload initialisé');
+
         const successfulUploads = [];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             const queueItem = queueItems[i];
-            try {
-                let fileToUpload = await compressImage(file);
+            logUpload(`🔄 Traitement fichier ${i + 1}/${files.length}`, {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
+            });
 
+            try {
+                logUpload(`📦 Compression de ${file.name}...`);
+                let fileToUpload = await compressImage(file);
+                logUpload(`✅ Compression terminée`, {
+                    originalSize: file.size,
+                    compressedSize: fileToUpload.size,
+                    ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
+                });
+
+                logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
                 const result = await storageService.uploadInterventionFile(
                     fileToUpload,
                     interventionId,
                     'report',
                     (progress) => {
+                        logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
                         setUploadState(prev => ({
                             ...prev,
                             queue: prev.queue.map(item =>
@@ -117,8 +155,12 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     }
                 );
 
-                if (result.error) throw result.error;
+                if (result.error) {
+                    logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
+                    throw result.error;
+                }
 
+                logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
                 successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
                 setUploadState(prev => ({
                     ...prev,
@@ -128,6 +170,13 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                 }));
 
             } catch (error) {
+                logUpload(`❌ ERREUR lors du traitement`, {
+                    fileName: file.name,
+                    errorMessage: error.message,
+                    errorStack: error.stack,
+                    errorType: error.constructor.name
+                });
+
                 setUploadState(prev => ({
                     ...prev,
                     queue: prev.queue.map(item =>
@@ -168,7 +217,21 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     <ChevronLeftIcon />
                 </button>
                 <h2>Ajouter des fichiers</h2>
-                <div style={{width: 24}}></div>
+                <button
+                    onClick={() => navigate('/mobile-diagnostics')}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: '#6b7280'
+                    }}
+                    title="Diagnostic"
+                >
+                    <AlertCircleIcon />
+                </button>
             </header>
 
             <main className="mobile-upload-content">

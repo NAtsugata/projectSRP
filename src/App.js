@@ -36,6 +36,7 @@ const AdminExpensesView = lazy(() => import('./pages/AdminExpensesView'));
 const ChecklistView = lazy(() => import('./pages/ChecklistView'));
 const AdminChecklistTemplatesView = lazy(() => import('./pages/AdminChecklistTemplatesView'));
 const MyDocumentsView = lazy(() => import('./pages/MyDocumentsView'));
+const MobileDiagnosticsPage = lazy(() => import('./pages/MobileDiagnosticsPage'));
 
 // --- Composant de Layout (structure de la page) ---
 const AppLayout = ({ profile, handleLogout }) => {
@@ -878,6 +879,11 @@ function App() {
                     <IRShowerFormsView profile={profile} />
                   </Suspense>
                 } />
+                <Route path="mobile-diagnostics" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <MobileDiagnosticsPage />
+                  </Suspense>
+                } />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </>
             ) : (
@@ -947,6 +953,11 @@ function App() {
                 <Route path="ir-docs" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                     <IRShowerFormsView profile={profile} />
+                  </Suspense>
+                } />
+                <Route path="mobile-diagnostics" element={
+                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <MobileDiagnosticsPage />
                   </Suspense>
                 } />
                 <Route path="*" element={<Navigate to="/planning" replace />} />
