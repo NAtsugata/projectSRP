@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import MobileFileInput from '../components/MobileFileInput';
 import { ChevronLeftIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, AlertCircleIcon } from '../components/SharedUI';
+import { useMobileNotifications, MobileNotificationContainer } from '../components/mobile/MobileNotifications';
+import '../components/mobile/MobileNotifications.css';
 
 // ✅ LOGS DÉTAILLÉS pour diagnostic
 const logUpload = (message, data = {}) => {
@@ -28,6 +30,9 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
         error: null
     });
     const [uploadComplete, setUploadComplete] = useState(false); // Pour afficher le message de succès
+
+    // ✅ Hook de notifications mobiles
+    const notifications = useMobileNotifications();
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -120,6 +125,11 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
 
         logUpload('✅ État d\'upload initialisé');
 
+        // ✅ Notification de début
+        notifications.info(`Envoi de ${files.length} fichier${files.length > 1 ? 's' : ''}...`, {
+            duration: 2000
+        });
+
         const successfulUploads = [];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -177,6 +187,11 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     errorType: error.constructor.name
                 });
 
+                // ✅ Notification d'erreur
+                notifications.error(`Échec: ${file.name}`, {
+                    duration: 5000
+                });
+
                 setUploadState(prev => ({
                     ...prev,
                     queue: prev.queue.map(item =>
@@ -192,6 +207,9 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                 await onFilesUploaded(interventionId, successfulUploads);
             } catch (error) {
                 console.error('Erreur lors de la sauvegarde des fichiers:', error);
+                notifications.error('Fichiers uploadés mais pas enregistrés dans la base', {
+                    duration: 7000
+                });
                 setUploadState(prev => ({
                     ...prev,
                     error: 'Les fichiers ont été uploadés mais pas enregistrés dans la base de données'
@@ -202,11 +220,36 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
         setUploadState(prev => ({...prev, isUploading: false}));
         setUploadComplete(true); // Affiche le message de succès
 
-    }, [interventionId, compressImage, onFilesUploaded]);
+        // ✅ Notification finale
+        const failedCount = files.length - successfulUploads.length;
+        if (failedCount === 0) {
+            notifications.success(`${successfulUploads.length} fichier${successfulUploads.length > 1 ? 's' : ''} envoyé${successfulUploads.length > 1 ? 's' : ''} !`, {
+                duration: 4000
+            });
+        } else if (successfulUploads.length > 0) {
+            notifications.warning(`${successfulUploads.length} réussi${successfulUploads.length > 1 ? 's' : ''}, ${failedCount} échoué${failedCount > 1 ? 's' : ''}`, {
+                duration: 5000
+            });
+        } else {
+            notifications.error('Tous les fichiers ont échoué', {
+                duration: 5000,
+                action: {
+                    label: 'Diagnostic',
+                    onClick: () => navigate('/mobile-diagnostics')
+                }
+            });
+        }
+
+    }, [interventionId, compressImage, onFilesUploaded, notifications, navigate]);
 
     const handleUploadError = useCallback((errors) => {
         setUploadState(prev => ({ ...prev, error: errors.join(' • ') }));
-    }, []);
+
+        // ✅ Notification d'erreur de validation
+        notifications.error(errors[0], {
+            duration: 5000
+        });
+    }, [notifications]);
 
     const intervention = interventions.find(i => i.id.toString() === interventionId);
 
@@ -298,6 +341,12 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     </div>
                 )}
             </main>
+
+            {/* ✅ Container de notifications mobiles */}
+            <MobileNotificationContainer
+                notifications={notifications.notifications}
+                onDismiss={notifications.removeNotification}
+            />
         </div>
     );
 }
