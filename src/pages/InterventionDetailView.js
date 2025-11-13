@@ -513,6 +513,115 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
 
+  // -------- Suppression d'image --------
+  const handleDeleteImage = useCallback(async (image) => {
+    try {
+      console.log('🗑️ Suppression de l\'image:', image.url);
+
+      // Supprimer du stockage Supabase
+      const { error: storageError } = await storageService.deleteInterventionFile(image.url);
+
+      if (storageError) {
+        console.error('Erreur suppression stockage:', storageError);
+        throw new Error('Impossible de supprimer le fichier du stockage');
+      }
+
+      // Supprimer du rapport
+      const updatedFiles = (report.files || []).filter(f => f.url !== image.url);
+      const updated = { ...report, files: updatedFiles };
+
+      // Persister
+      await persistReport(updated);
+
+      console.log('✅ Image supprimée avec succès');
+    } catch (error) {
+      console.error('❌ Erreur suppression image:', error);
+      throw error;
+    }
+  }, [report, persistReport]);
+
+  // -------- Téléchargement de tous les fichiers en ZIP --------
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+
+  const handleDownloadAllAsZip = useCallback(async () => {
+    if (!window.JSZip) {
+      alert('Erreur: Librairie de compression non disponible');
+      return;
+    }
+
+    if (!report.files || report.files.length === 0) {
+      alert('Aucun fichier à télécharger');
+      return;
+    }
+
+    setIsDownloadingZip(true);
+    try {
+      const JSZip = window.JSZip;
+      const zip = new JSZip();
+
+      console.log('📦 Création du ZIP avec', report.files.length, 'fichier(s)');
+
+      // Télécharger tous les fichiers et les ajouter au ZIP
+      for (let i = 0; i < report.files.length; i++) {
+        const file = report.files[i];
+        try {
+          console.log(`📥 Téléchargement ${i + 1}/${report.files.length}:`, file.name);
+
+          // Fetch le fichier avec timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+          const response = await fetch(file.url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const blob = await response.blob();
+
+          // Ajouter au ZIP avec un nom unique si nécessaire
+          let fileName = file.name || `fichier-${i + 1}`;
+          // Éviter les doublons
+          let counter = 1;
+          let uniqueName = fileName;
+          while (zip.file(uniqueName)) {
+            const ext = fileName.match(/\.[^.]+$/)?.[0] || '';
+            const base = fileName.replace(/\.[^.]+$/, '');
+            uniqueName = `${base}-${counter}${ext}`;
+            counter++;
+          }
+
+          zip.file(uniqueName, blob);
+          console.log(`✅ Ajouté au ZIP: ${uniqueName}`);
+        } catch (error) {
+          console.error(`❌ Erreur téléchargement ${file.name}:`, error);
+          // Continuer avec les autres fichiers
+        }
+      }
+
+      // Générer le ZIP
+      console.log('🗜️ Compression du ZIP...');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Télécharger le ZIP
+      const zipName = `Intervention-${intervention.client || intervention.id}-Fichiers.zip`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = zipName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      console.log('✅ ZIP téléchargé:', zipName);
+      alert(`✅ Tous les fichiers ont été téléchargés dans ${zipName}`);
+    } catch (error) {
+      console.error('❌ Erreur création ZIP:', error);
+      alert('Erreur lors de la création du fichier ZIP: ' + error.message);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  }, [report.files, intervention]);
+
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
   const [needsOpen, setNeedsOpen] = useState(true);
@@ -774,8 +883,27 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <h3 className="section-title">
               <span className="section-title-icon">📷</span>
               Photos et Documents
+              {report.files && report.files.length > 0 && (
+                <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
+                  ({report.files.length})
+                </span>
+              )}
             </h3>
-            <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {report.files && report.files.length > 1 && (
+                <button
+                  onClick={handleDownloadAllAsZip}
+                  disabled={isDownloadingZip}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  title="Télécharger tous les fichiers en ZIP"
+                >
+                  <DownloadIcon />
+                  {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
+                </button>
+              )}
+              <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
+            </div>
           </div>
 
           {/* Galerie d'images optimisée avec pagination et lazy loading */}
@@ -787,6 +915,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             }))}
             uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
+            onDeleteImage={handleDeleteImage}
           />
 
           {/* Documents non-image (PDF, audio, etc.) */}

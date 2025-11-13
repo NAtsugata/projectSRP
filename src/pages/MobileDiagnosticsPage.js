@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { runMobileDiagnostics, generateDiagnosticReport, testFileUpload } from '../utils/mobileDiagnostics';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon } from '../components/SharedUI';
+import {
+  isNotificationSupported,
+  isNotificationEnabled,
+  requestNotificationPermission,
+  testNotification
+} from '../services/pushNotificationService';
 
 export default function MobileDiagnosticsPage() {
   const navigate = useNavigate();
@@ -11,11 +17,23 @@ export default function MobileDiagnosticsPage() {
   const [report, setReport] = useState('');
   const [testResults, setTestResults] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState({
+    supported: false,
+    permission: 'default',
+    enabled: false
+  });
 
   useEffect(() => {
     const diag = runMobileDiagnostics();
     setDiagnostics(diag);
     setReport(generateDiagnosticReport(diag));
+
+    // Vérifier le statut des notifications
+    setNotificationStatus({
+      supported: isNotificationSupported(),
+      permission: isNotificationSupported() ? Notification.permission : 'default',
+      enabled: isNotificationEnabled()
+    });
   }, []);
 
   const handleFileTest = async (event) => {
@@ -47,6 +65,33 @@ export default function MobileDiagnosticsPage() {
       }).catch(console.error);
     } else {
       copyReport();
+    }
+  };
+
+  const handleRequestNotificationPermission = async () => {
+    try {
+      const granted = await requestNotificationPermission();
+      setNotificationStatus({
+        supported: isNotificationSupported(),
+        permission: Notification.permission,
+        enabled: granted
+      });
+      if (granted) {
+        alert('✅ Permission accordée ! Vous pouvez maintenant tester les notifications.');
+      } else {
+        alert('❌ Permission refusée. Veuillez activer les notifications dans les paramètres de votre navigateur.');
+      }
+    } catch (error) {
+      alert('Erreur: ' + error.message);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await testNotification();
+      alert('✅ Notification de test envoyée !');
+    } catch (error) {
+      alert('❌ Erreur: ' + error.message);
     }
   };
 
@@ -155,6 +200,79 @@ export default function MobileDiagnosticsPage() {
               {diagnostics.storage.percentUsed})
             </div>
           </div>
+        </div>
+
+        {/* Test de notifications */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>🔔 Notifications Push</h3>
+          <div
+            style={{
+              fontSize: '0.875rem',
+              backgroundColor: '#f9fafb',
+              padding: '0.75rem',
+              borderRadius: '0.375rem',
+              marginBottom: '0.5rem',
+            }}
+          >
+            <div>
+              <strong>Support:</strong> {notificationStatus.supported ? '✅ Supporté' : '❌ Non supporté'}
+            </div>
+            <div>
+              <strong>Permission:</strong>{' '}
+              {notificationStatus.permission === 'granted'
+                ? '✅ Accordée'
+                : notificationStatus.permission === 'denied'
+                ? '❌ Refusée'
+                : '⚠️ Pas encore demandée'}
+            </div>
+            <div>
+              <strong>Statut:</strong> {notificationStatus.enabled ? '✅ Activées' : '❌ Désactivées'}
+            </div>
+          </div>
+          {notificationStatus.supported && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {!notificationStatus.enabled && (
+                <button
+                  onClick={handleRequestNotificationPermission}
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                  }}
+                >
+                  Demander la permission
+                </button>
+              )}
+              {notificationStatus.enabled && (
+                <button
+                  onClick={handleTestNotification}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                  }}
+                >
+                  🧪 Tester une notification
+                </button>
+              )}
+            </div>
+          )}
+          {notificationStatus.permission === 'denied' && (
+            <p
+              style={{
+                marginTop: '0.5rem',
+                fontSize: '0.8125rem',
+                color: '#dc2626',
+                fontStyle: 'italic',
+              }}
+            >
+              ⚠️ Pour activer les notifications, allez dans les paramètres de votre navigateur.
+            </p>
+          )}
         </div>
 
         {/* Test de fichier */}

@@ -98,7 +98,8 @@ const ImageGalleryOptimized = ({
   images,
   uploadQueue = [],
   emptyMessage = "Aucune photo. Ajoutez-en avec le bouton ci-dessous.",
-  imagesPerPage = 12
+  imagesPerPage = 12,
+  onDeleteImage
 }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -210,6 +211,7 @@ const ImageGalleryOptimized = ({
           images={images} // Seulement les images complètes (pas upload queue)
           initialIndex={lightboxIndex}
           onClose={closeLightbox}
+          onDelete={onDeleteImage}
         />
       )}
     </>
@@ -219,9 +221,11 @@ const ImageGalleryOptimized = ({
 /**
  * Lightbox - Vue plein écran simple et rapide
  */
-const Lightbox = ({ images, initialIndex, onClose }) => {
+const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentImage = images[currentIndex] || images[0];
 
@@ -265,6 +269,31 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
     link.click();
   };
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await onDelete(currentImage);
+
+      // Fermer le lightbox si c'était la dernière image
+      if (images.length === 1) {
+        onClose();
+      } else {
+        // Ajuster l'index si on supprime la dernière image
+        if (currentIndex >= images.length - 1) {
+          setCurrentIndex(Math.max(0, images.length - 2));
+        }
+      }
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Erreur suppression image:', error);
+      alert('Erreur lors de la suppression de l\'image');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!currentImage) return null;
 
   return (
@@ -284,6 +313,16 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
             <button className="lightbox-btn" onClick={handleDownload} title="Télécharger">
               <DownloadIcon />
             </button>
+            {onDelete && (
+              <button
+                className="lightbox-btn lightbox-btn-delete"
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Supprimer"
+                style={{ color: '#dc2626' }}
+              >
+                🗑️
+              </button>
+            )}
             <button className="lightbox-btn" onClick={onClose} title="Fermer">
               <XIcon />
             </button>
@@ -324,6 +363,68 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
           </>
         )}
       </div>
+
+      {/* Confirmation de suppression */}
+      {showDeleteConfirm && (
+        <div
+          className="lightbox-delete-confirm"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '0.5rem',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+            zIndex: 10,
+            maxWidth: '90%',
+            width: '400px'
+          }}
+        >
+          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.125rem', fontWeight: 600 }}>
+            Confirmer la suppression
+          </h3>
+          <p style={{ margin: '0 0 1.5rem 0', color: '#6b7280' }}>
+            Voulez-vous vraiment supprimer cette image ? Cette action est irréversible.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                background: 'white',
+                color: '#374151',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 500
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '0.375rem',
+                background: '#dc2626',
+                color: 'white',
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                opacity: isDeleting ? 0.6 : 1
+              }}
+            >
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

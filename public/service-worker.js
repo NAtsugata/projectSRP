@@ -83,3 +83,11 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('notificationclose', (event) => {
   console.log('[Service Worker] Notification fermée:', event);
 });
+
+// ✅ IMPORTANT: Passer tous les fetch au réseau (ne pas intercepter)
+// Cela évite les erreurs "Request interrupted by user" lors des uploads/downloads
+self.addEventListener('fetch', (event) => {
+  // Ne rien faire - laisser passer toutes les requêtes normalement
+  // Pas de event.respondWith() = requêtes passent directement au réseau
+  return;
+});
