@@ -62,14 +62,21 @@ const MobileFileInput = ({
          // Si on a des fichiers valides, on appelle onChange
          if (validFiles.length > 0 && onChange) {
            let filesToSend;
-           // Certains navigateurs anciens ou mobiles ne supportent pas DataTransfer
-           if (typeof DataTransfer !== 'undefined') {
-             const dt = new DataTransfer();
-             validFiles.forEach(file => dt.items.add(file));
-             filesToSend = dt.files;
-           } else {
-             // Fallback : utiliser directement le tableau
-             // eslint-disable-next-line no-undef
+
+           // ✅ CORRECTION iOS/Android : Support amélioré pour DataTransfer
+           // DataTransfer n'est pas toujours disponible sur iOS Safari ancien
+           try {
+             if (typeof DataTransfer !== 'undefined' && DataTransfer.prototype.hasOwnProperty('items')) {
+               const dt = new DataTransfer();
+               validFiles.forEach(file => dt.items.add(file));
+               filesToSend = dt.files;
+             } else {
+               // Fallback pour iOS Safari ancien : créer un objet FileList-like
+               filesToSend = validFiles;
+             }
+           } catch (err) {
+             // Si DataTransfer échoue (certains navigateurs), utiliser le tableau directement
+             console.warn('DataTransfer non supporté, utilisation du fallback:', err);
              filesToSend = validFiles;
            }
 
@@ -162,6 +169,8 @@ const MobileFileInput = ({
             car il force l'ouverture de la caméra et est INCOMPATIBLE avec 'multiple'
             sur iOS et certains Android. Pour l'upload multiple, on laisse le navigateur
             ouvrir le sélecteur de fichiers natif qui permet de choisir plusieurs photos.
+
+            iOS moderne (13+) préfère 'environment' au lieu de 'true' (obsolète)
           */}
           <input
              ref={inputRef}
@@ -171,9 +180,7 @@ const MobileFileInput = ({
              onChange={handleFileChange}
              disabled={disabled}
              {...(isMobile && accept && accept.includes('image') && !multiple
-               ? (isAndroid
-                   ? { capture: 'environment' }
-                   : (isIOS ? { capture: true } : {}))
+               ? { capture: 'environment' }
                : {})}
              style={{
                position: 'absolute',

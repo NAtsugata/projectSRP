@@ -22,34 +22,62 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
 
     const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
-        return new Promise((resolve) => {
+
+        return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             const img = new Image();
+            let objectUrl = null;
+
+            // ✅ CORRECTION iOS/Android : Timeout pour éviter blocages sur Android ancien
+            const timeoutId = setTimeout(() => {
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                console.warn('Timeout compression image, utilisation du fichier original');
+                resolve(file);
+            }, 30000); // 30 secondes max
+
             img.onload = () => {
-                const maxWidth = 1280;
-                const maxHeight = 720;
-                let { width, height } = img;
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height *= maxWidth / width;
-                        width = maxWidth;
+                try {
+                    const maxWidth = 1280;
+                    const maxHeight = 720;
+                    let { width, height } = img;
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
                     }
-                } else {
-                    if (height > maxHeight) {
-                        width *= maxHeight / height;
-                        height = maxHeight;
-                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        clearTimeout(timeoutId);
+                        // ✅ CORRECTION : Nettoyage URL.createObjectURL pour éviter fuite mémoire
+                        if (objectUrl) URL.revokeObjectURL(objectUrl);
+                        resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
+                    }, 'image/jpeg', 0.8);
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                    console.error('Erreur compression:', error);
+                    resolve(file);
                 }
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => {
-                    resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
-                }, 'image/jpeg', 0.8);
             };
-            img.onerror = () => resolve(file);
-            img.src = URL.createObjectURL(file);
+
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                resolve(file);
+            };
+
+            objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
         });
     }, []);
 
@@ -109,8 +137,17 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
             }
         }
 
-        if (successfulUploads.length > 0) {
-            await onFilesUploaded(interventionId, successfulUploads);
+        // ✅ CORRECTION : Vérification que onFilesUploaded existe avant appel
+        if (successfulUploads.length > 0 && onFilesUploaded) {
+            try {
+                await onFilesUploaded(interventionId, successfulUploads);
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde des fichiers:', error);
+                setUploadState(prev => ({
+                    ...prev,
+                    error: 'Les fichiers ont été uploadés mais pas enregistrés dans la base de données'
+                }));
+            }
         }
 
         setUploadState(prev => ({...prev, isUploading: false}));
