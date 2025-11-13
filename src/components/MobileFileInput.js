@@ -157,6 +157,12 @@ const MobileFileInput = ({
         touchAction: 'manipulation'
       }}
     >
+          {/*
+            ⚠️ IMPORTANT: L'attribut 'capture' ne doit être utilisé que pour l'upload UNIQUE
+            car il force l'ouverture de la caméra et est INCOMPATIBLE avec 'multiple'
+            sur iOS et certains Android. Pour l'upload multiple, on laisse le navigateur
+            ouvrir le sélecteur de fichiers natif qui permet de choisir plusieurs photos.
+          */}
           <input
              ref={inputRef}
              type="file"
@@ -164,7 +170,7 @@ const MobileFileInput = ({
              multiple={multiple}
              onChange={handleFileChange}
              disabled={disabled}
-             {...(isMobile && accept && accept.includes('image')
+             {...(isMobile && accept && accept.includes('image') && !multiple
                ? (isAndroid
                    ? { capture: 'environment' }
                    : (isIOS ? { capture: true } : {}))
