@@ -620,7 +620,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     } finally {
       setIsDownloadingZip(false);
     }
-  }, [report.files, intervention]);
+  }, [report?.files, intervention]);
 
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
