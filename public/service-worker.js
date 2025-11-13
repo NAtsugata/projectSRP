@@ -1,7 +1,7 @@
 // public/service-worker.js
 // Service Worker pour gérer les notifications push natives
 
-const CACHE_NAME = 'srp-app-v1';
+const CACHE_NAME = 'srp-app-v2';
 const NOTIFICATION_TAG = 'srp-notification';
 
 // Installation du Service Worker
@@ -13,7 +13,20 @@ self.addEventListener('install', (event) => {
 // Activation du Service Worker
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activation...');
-  event.waitUntil(self.clients.claim());
+
+  // Nettoyer les anciens caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Suppression ancien cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 // Gestion des notifications push
@@ -60,21 +73,38 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  // Gérer les actions spécifiques
+  if (event.action === 'dismiss') {
+    console.log('[Service Worker] Notification ignorée');
+    return;
+  }
+
+  // Construire l'URL complète
+  const urlPath = event.notification.data?.url || '/';
+  const urlToOpen = new URL(urlPath, self.location.origin).href;
+
+  console.log('[Service Worker] URL à ouvrir:', urlToOpen);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Si l'app est déjà ouverte, la mettre au premier plan
+      console.log('[Service Worker] Clients trouvés:', clientList.length);
+
+      // Chercher une fenêtre déjà ouverte de l'app
       for (let client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
+        const clientOrigin = new URL(client.url).origin;
+        if (clientOrigin === self.location.origin && 'focus' in client && 'navigate' in client) {
+          console.log('[Service Worker] Navigation vers:', urlToOpen);
+          return client.navigate(urlToOpen).then(client => client.focus());
         }
       }
 
       // Sinon, ouvrir une nouvelle fenêtre
       if (self.clients.openWindow) {
+        console.log('[Service Worker] Ouverture nouvelle fenêtre:', urlToOpen);
         return self.clients.openWindow(urlToOpen);
       }
+    }).catch(error => {
+      console.error('[Service Worker] Erreur navigation:', error);
     })
   );
 });

@@ -194,10 +194,14 @@ export const notifyMessage = async (message, sender) => {
 export const testNotification = async () => {
   const title = '✅ Notifications activées !';
   const options = {
-    body: 'Vous recevrez des notifications pour vos interventions.',
+    body: 'Cliquez ici pour aller au planning. Vous recevrez des notifications pour vos interventions.',
     tag: 'test',
     requireInteraction: false,
-    vibrate: [200, 100, 200]
+    vibrate: [200, 100, 200],
+    data: {
+      url: '/planning',
+      type: 'test'
+    }
   };
 
   await showLocalNotification(title, options);
