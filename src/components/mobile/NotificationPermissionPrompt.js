@@ -210,7 +210,7 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
     <>
       {showBanner && (
         <NotificationPermissionBanner
-          onEnable={handleExplainNotifications}
+          onEnable={handleEnableNotifications}
           onDismiss={() => setShowBanner(false)}
         />
       )}
