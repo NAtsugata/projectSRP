@@ -75,8 +75,10 @@ const FileUploader = ({
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
 
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
         let { width, height } = img;
         const MAX_WIDTH = 1280;
         const MAX_HEIGHT = 720;
@@ -114,8 +116,11 @@ const FileUploader = ({
         );
       };
 
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
+        resolve(file);
+      };
+      img.src = objectUrl;
     });
   }, []);
 

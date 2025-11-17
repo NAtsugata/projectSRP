@@ -135,7 +135,13 @@ export default function AdminArchiveView({ showToast, showConfirmationModal }) {
 
       await Promise.all(tasks);
       const content = await zip.generateAsync({ type:'blob' });
-      const link = document.createElement('a'); link.href = URL.createObjectURL(content); link.download = `Archive-Intervention-${intervention.id}-${safeName(intervention.client||'')}.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `Archive-Intervention-${intervention.id}-${safeName(intervention.client||'')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href); // ✅ Nettoyage mémoire
     } catch (error) {
       showToast('Erreur lors de l\'exportation: ' + (error?.message || String(error)), 'error');
     } finally { setExportingId(null); }

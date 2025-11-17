@@ -185,7 +185,9 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     if(!file.type.startsWith('image/')) return file;
     return new Promise(res=>{
       const c=document.createElement('canvas');const ctx=c.getContext('2d');const img=new Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload=()=>{
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
         let {width,height}=img;
         // 🚀 COMPRESSION AGGRESSIVE POUR MOBILE
         const MW=800,MH=600; // Réduit de 1280x720 à 800x600
@@ -207,8 +209,11 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
           }
         },'image/jpeg',0.65);
       };
-      img.onerror=()=>res(file);
-      img.src=URL.createObjectURL(file);
+      img.onerror=()=>{
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
+        res(file);
+      };
+      img.src=objectUrl;
     });
   },[]);
 

@@ -73,6 +73,15 @@ export default function DocumentScannerView({ onSave, onClose }) {
     loadYOLOModel();
   }, [detectorType, yoloModelLoaded, yoloModelPath]);
 
+  // ✅ Nettoyage mémoire pour originalImage
+  useEffect(() => {
+    return () => {
+      if (originalImage && typeof originalImage === 'string' && originalImage.startsWith('blob:')) {
+        URL.revokeObjectURL(originalImage);
+      }
+    };
+  }, [originalImage]);
+
   // Fonction helper pour détecter avec le bon détecteur
   const detectDocumentWithCurrentDetector = useCallback(async (file, options = {}) => {
     if (detectorType === 'yolo' && yoloModelLoaded) {

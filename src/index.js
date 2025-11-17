@@ -6,6 +6,8 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import reportWebVitals from './reportWebVitals';
 import { initMobileOptimizations } from './utils/mobileUtils';
+// ✅ Désactiver console.log en production pour réduire l'exposition d'informations sensibles
+import './utils/consoleOverride';
 
 // Initialize mobile optimizations (fast-click, touch detection, etc.)
 initMobileOptimizations();

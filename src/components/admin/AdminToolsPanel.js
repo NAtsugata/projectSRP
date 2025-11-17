@@ -111,6 +111,7 @@ export const AdminToolsPanel = ({ vaultDocuments = [], users = [], onRefresh }) 
     link.href = URL.createObjectURL(blob);
     link.download = `coffre-fort-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(link.href); // ✅ Nettoyage mémoire
   };
 
   // Documents filtrés par recherche

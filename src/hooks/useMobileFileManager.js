@@ -77,7 +77,9 @@ export const useMobileFileManager = (interventionId) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
         let maxWidth, maxHeight, quality;
         if (deviceInfo.isMobile) {
           maxWidth = deviceInfo.connectionType === '2g' ? 800 : 1280;
@@ -109,8 +111,11 @@ export const useMobileFileManager = (interventionId) => {
           }
         }, outputFormat, quality);
       };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
+        resolve(file);
+      };
+      img.src = objectUrl;
     });
   }, [deviceInfo]);
 

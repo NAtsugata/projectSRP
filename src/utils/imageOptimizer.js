@@ -19,8 +19,10 @@ export const optimizeImage = async (file, options = {}) => {
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    const objectUrl = URL.createObjectURL(file);
 
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
       try {
         // 1. Calculer dimensions pour image full
         let { width, height } = img;
@@ -100,10 +102,11 @@ export const optimizeImage = async (file, options = {}) => {
     };
 
     img.onerror = () => {
+      URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
       reject(new Error('Erreur chargement image'));
     };
 
-    img.src = URL.createObjectURL(file);
+    img.src = objectUrl;
   });
 };
 
