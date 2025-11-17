@@ -13,3 +13,4 @@ export { default as QuickActionsBar } from './QuickActionsBar';
 export { default as SmartAlerts } from './SmartAlerts';
 export { default as TimeTrackerEnhanced } from './TimeTrackerEnhanced';
 export { default as CallButtons } from './CallButtons';
+export { default as ScheduledDatesEditor } from './ScheduledDatesEditor';

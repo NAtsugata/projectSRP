@@ -1,0 +1,161 @@
+/* src/components/intervention/ScheduledDatesEditor.css */
+
+.scheduled-dates-editor {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin: 0 0 0.5rem 0;
+}
+
+.section-description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 1rem 0;
+}
+
+.add-date-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.date-input {
+  flex: 1;
+  padding: 0.625rem;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-input:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-add-date {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: #0ea5e9;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-add-date:hover:not(:disabled) {
+  background-color: #0284c7;
+}
+
+.btn-add-date:disabled {
+  background-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.scheduled-dates-list {
+  margin-top: 0.75rem;
+}
+
+.dates-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin-bottom: 0.75rem;
+}
+
+.dates-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.date-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+}
+
+.date-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #0c4a6e;
+  text-transform: capitalize;
+}
+
+.btn-remove-date {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  color: #dc2626;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-remove-date:hover:not(:disabled) {
+  background-color: #fee2e2;
+}
+
+.btn-remove-date:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+  margin: 0;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .scheduled-dates-editor {
+    padding: 0.75rem;
+  }
+
+  .add-date-form {
+    flex-direction: column;
+  }
+
+  .btn-add-date {
+    width: 100%;
+    justify-content: center;
+  }
+}

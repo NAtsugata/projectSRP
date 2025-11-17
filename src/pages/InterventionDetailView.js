@@ -27,7 +27,8 @@ import {
   QuickActionsBar,
   SmartAlerts,
   TimeTrackerEnhanced,
-  CallButtons
+  CallButtons,
+  ScheduledDatesEditor
 } from '../components/intervention';
 import './InterventionDetailView_Modern.css';
 
@@ -355,7 +356,7 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndC
   );
 };
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -756,6 +757,15 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             disabled={!!isAdmin}
           />
         </div>
+
+        {/* ÉDITEUR DE DATES PLANIFIÉES (Admin uniquement) */}
+        {isAdmin && onUpdateScheduledDates && (
+          <ScheduledDatesEditor
+            scheduledDates={intervention.scheduled_dates || []}
+            onUpdate={(dates) => onUpdateScheduledDates(intervention.id, dates)}
+            disabled={false}
+          />
+        )}
 
       {/* ANCIEN CONTENU (conservé) */}
       <div className="card-white">

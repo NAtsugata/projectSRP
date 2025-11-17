@@ -16,6 +16,17 @@ Cette fonctionnalité permet de planifier une même intervention sur plusieurs j
 6. Les dates s'affichent dans la liste avec la possibilité de les retirer
 7. Soumettez le formulaire
 
+### Modifier les dates d'une intervention existante (Admin uniquement)
+
+1. Ouvrez les détails de l'intervention
+2. Faites défiler vers la section "📅 Planification multi-jours"
+3. Pour ajouter une date :
+   - Sélectionnez la date dans le champ
+   - Cliquez sur "Ajouter"
+4. Pour retirer une date :
+   - Cliquez sur l'icône ❌ à côté de la date
+5. Les modifications sont sauvegardées automatiquement
+
 ### Affichage
 
 #### Dans le planning
@@ -52,10 +63,13 @@ Le champ `scheduled_dates` est un tableau JSON de dates au format ISO (YYYY-MM-D
 
 ### Composants modifiés
 
-1. **InterventionForm.js** - Ajout de la gestion multi-dates
+1. **InterventionForm.js** - Ajout de la gestion multi-dates lors de la création
 2. **InterventionCard.js** - Affichage des dates planifiées
 3. **AgendaView.js** - Expansion des interventions multi-jours dans l'agenda
 4. **supabase.js** - Support du champ scheduled_dates lors de la création
+5. **ScheduledDatesEditor.js** - Nouveau composant pour éditer les dates d'interventions existantes
+6. **InterventionDetailView.js** - Intégration de l'éditeur de dates (admin uniquement)
+7. **App.js** - Ajout de la fonction handleUpdateScheduledDates
 
 ### Rétrocompatibilité
 

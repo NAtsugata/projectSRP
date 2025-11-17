@@ -384,6 +384,22 @@ function App() {
     else showToast('Intervention archivée.');
   };
 
+  const handleUpdateScheduledDates = async (interventionId, scheduledDates) => {
+    try {
+      const { error } = await interventionService.updateIntervention(interventionId, {
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null
+      });
+
+      if (error) throw error;
+
+      showToast('Dates planifiées mises à jour.', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      showToast('Erreur lors de la mise à jour des dates: ' + (error.message || 'Erreur inconnue'), 'error');
+      throw error;
+    }
+  };
+
   const handleSubmitLeaveRequest = async (requestData) => {
     try {
       // Validation de la demande de congé
@@ -751,6 +767,7 @@ function App() {
     onSaveSilent: handleUpdateInterventionReportSilent,
     isAdmin: profile?.is_admin,
     onAddBriefingDocuments: handleAddBriefingDocuments,
+    onUpdateScheduledDates: handleUpdateScheduledDates,
     dataVersion,
     refreshData: () => refreshData(profile)
   };
