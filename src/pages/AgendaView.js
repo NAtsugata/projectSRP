@@ -55,15 +55,36 @@ const AgendaView = ({
     const startStr = dateRange.start.toISOString().split('T')[0];
     const endStr = dateRange.end.toISOString().split('T')[0];
 
-    const inRange = interventions.filter(itv => {
-      if (!itv.date) return false;
-      return itv.date >= startStr && itv.date <= endStr;
-    });
+    // Expand multi-day interventions: create a separate entry for each scheduled date
+    const expanded = [];
+    for (const itv of interventions) {
+      if (!itv.date) continue;
+
+      // Check if intervention has scheduled dates
+      if (itv.scheduled_dates && Array.isArray(itv.scheduled_dates) && itv.scheduled_dates.length > 0) {
+        // For each scheduled date, check if it's in range and add it
+        for (const scheduledDate of itv.scheduled_dates) {
+          if (scheduledDate >= startStr && scheduledDate <= endStr) {
+            expanded.push({
+              ...itv,
+              date: scheduledDate,
+              _isMultiDay: true,
+              _originalDate: itv.date
+            });
+          }
+        }
+      } else {
+        // Regular intervention with single date
+        if (itv.date >= startStr && itv.date <= endStr) {
+          expanded.push(itv);
+        }
+      }
+    }
 
     // Then apply user filters
-    const filtered = filterInterventions(inRange, filters);
+    const filtered = filterInterventions(expanded, filters);
 
-    logger.log(`AgendaView: ${filtered.length} interventions after filtering`);
+    logger.log(`AgendaView: ${filtered.length} interventions after filtering (including multi-day expansions)`);
     return filtered;
   }, [interventions, filters, dateRange, viewMode]);
 

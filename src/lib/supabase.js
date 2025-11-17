@@ -508,6 +508,7 @@ export const interventionService = {
           client_email: intervention.client_email || null,
           ticket_number: intervention.ticket_number || null,
           km_start: intervention.km_start ? parseInt(intervention.km_start) : null,
+          scheduled_dates: intervention.scheduled_dates || null,
         }])
         .select();
 

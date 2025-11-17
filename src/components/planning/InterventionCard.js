@@ -96,6 +96,26 @@ const InterventionCard = ({
             </span>
           </p>
 
+          {/* Afficher les dates planifiées si présentes */}
+          {intervention.scheduled_dates && intervention.scheduled_dates.length > 0 && (
+            <p className="info-item multi-day-info">
+              <span className="info-icon">🗓️</span>
+              <span className="info-text">
+                <strong>Planifié sur {intervention.scheduled_dates.length} jours :</strong>
+                <br />
+                {intervention.scheduled_dates.map((date, index) => (
+                  <span key={date} className="scheduled-date-chip">
+                    {new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short'
+                    })}
+                    {index < intervention.scheduled_dates.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </span>
+            </p>
+          )}
+
           {assignedNames && assignedNames !== 'Non assigné' && (
             <p className="info-item">
               <span className="info-icon">👥</span>

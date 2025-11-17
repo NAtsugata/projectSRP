@@ -49,8 +49,15 @@ const InterventionForm = ({
     validateIntervention,
     async (formData) => {
       logger.log('InterventionForm: Submitting...', formData);
+
+      // Ajouter les dates planifiées aux données du formulaire
+      const formDataWithScheduledDates = {
+        ...formData,
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null
+      };
+
       await onSubmit({
-        formData,
+        formData: formDataWithScheduledDates,
         assignedUsers,
         files: briefingFiles.map(f => f.fileObject)
       });
@@ -60,6 +67,7 @@ const InterventionForm = ({
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [briefingFiles, setBriefingFiles] = useState([]);
   const [uploadError, setUploadError] = useState('');
+  const [scheduledDates, setScheduledDates] = useState([]);
 
   const handleUserAssignmentChange = useCallback((userId) => {
     setAssignedUsers(prev =>
@@ -75,6 +83,28 @@ const InterventionForm = ({
     const dateStr = date.toISOString().split('T')[0];
     handleChange({ target: { name: 'date', value: dateStr } });
   }, [handleChange]);
+
+  const handleAddScheduledDate = useCallback(() => {
+    const dateValue = values.date;
+    if (!dateValue) {
+      alert('Veuillez sélectionner une date d\'abord');
+      return;
+    }
+
+    // Vérifier si la date n'est pas déjà dans la liste
+    if (scheduledDates.includes(dateValue)) {
+      alert('Cette date est déjà dans la liste');
+      return;
+    }
+
+    setScheduledDates(prev => [...prev, dateValue].sort());
+    logger.log('InterventionForm: Date ajoutée au planning multi-jours', dateValue);
+  }, [values.date, scheduledDates]);
+
+  const handleRemoveScheduledDate = useCallback((dateToRemove) => {
+    setScheduledDates(prev => prev.filter(d => d !== dateToRemove));
+    logger.log('InterventionForm: Date retirée du planning', dateToRemove);
+  }, []);
 
   const handleFileChange = useCallback((e) => {
     setUploadError('');
@@ -112,6 +142,7 @@ const InterventionForm = ({
     setAssignedUsers([]);
     setBriefingFiles([]);
     setUploadError('');
+    setScheduledDates([]);
     onCancel();
   }, [reset, onCancel]);
 
@@ -314,6 +345,59 @@ const InterventionForm = ({
         >
           Dans 1 semaine
         </Button>
+      </div>
+
+      {/* Planification multi-jours */}
+      <div className="form-group multi-day-scheduling">
+        <label className="form-label">
+          📅 Planification multi-jours <span className="optional">(optionnel)</span>
+        </label>
+        <p className="form-hint">
+          Ajoutez plusieurs dates pour planifier cette intervention sur plusieurs jours différents (ex: le 1er, le 6 et le 12).
+        </p>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleAddScheduledDate}
+            disabled={isSubmitting || !values.date}
+          >
+            <PlusIcon /> Ajouter la date au planning
+          </Button>
+        </div>
+
+        {/* Liste des dates planifiées */}
+        {scheduledDates.length > 0 && (
+          <div className="scheduled-dates-list">
+            <h4 className="scheduled-dates-title">Dates planifiées ({scheduledDates.length}):</h4>
+            <ul className="scheduled-dates-items">
+              {scheduledDates.map(date => {
+                const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+                return (
+                  <li key={date} className="scheduled-date-item">
+                    <span className="scheduled-date-text">📅 {formattedDate}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveScheduledDate(date)}
+                      disabled={isSubmitting}
+                      className="btn-remove-date"
+                      title="Retirer cette date"
+                      aria-label={`Retirer la date du ${formattedDate}`}
+                    >
+                      <XIcon />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Kilométrage départ */}
