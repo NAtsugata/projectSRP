@@ -19,6 +19,7 @@ import LoginScreen from './pages/LoginScreen';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import { debounce } from './utils/debounce';
+import { setToastFunction, overrideAlert } from './utils/alertOverride';
 import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
@@ -145,6 +146,13 @@ function App() {
 
   const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
   const showConfirmationModal = useCallback((config) => setModal(config), []);
+
+  // ✅ Override window.alert pour utiliser des toasts
+  useEffect(() => {
+    setToastFunction(showToast);
+    overrideAlert();
+    console.log('✅ alert() remplacé par des toasts');
+  }, [showToast]);
 
   const refreshData = useCallback(
     async (userProfile) => {
