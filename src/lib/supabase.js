@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import logger from '../utils/logger'
+import { safeStorage } from '../utils/safeStorage'
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
@@ -61,23 +62,54 @@ export const authService = {
       ];
 
       const cleanupStorage = () => {
-        // Nettoyage des clés Supabase
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('supabase')) {
-            localStorage.removeItem(key);
+        try {
+          // ✅ Nettoyage sécurisé des clés Supabase
+          const keysToRemove = [];
+
+          // Collecter les clés d'abord (évite erreur de modification pendant itération)
+          if (safeStorage.isAvailable('localStorage')) {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('supabase')) {
+                keysToRemove.push({ type: 'localStorage', key });
+              }
+            }
           }
-        });
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.startsWith('supabase')) {
-            sessionStorage.removeItem(key);
+
+          if (safeStorage.isAvailable('sessionStorage')) {
+            for (let i = 0; i < sessionStorage.length; i++) {
+              const key = sessionStorage.key(i);
+              if (key && key.startsWith('supabase')) {
+                keysToRemove.push({ type: 'sessionStorage', key });
+              }
+            }
           }
-        });
-        // Nettoyage des clés d'application
-        appKeysToClean.forEach(key => {
-          localStorage.removeItem(key);
-          sessionStorage.removeItem(key);
-        });
-        logger.log('🧹 Storage nettoyé (Supabase + clés application)');
+
+          // Supprimer ensuite
+          keysToRemove.forEach(({ type, key }) => {
+            try {
+              safeStorage.removeItem(key, type);
+            } catch (e) {
+              console.error('Failed to remove key:', key, e);
+            }
+          });
+
+          // Nettoyage des clés d'application
+          appKeysToClean.forEach(key => {
+            try {
+              safeStorage.removeItem(key, 'localStorage');
+              safeStorage.removeItem(key, 'sessionStorage');
+            } catch (e) {
+              console.error('Failed to remove app key:', key, e);
+            }
+          });
+
+          logger.log('🧹 Storage nettoyé (Supabase + clés application)');
+        } catch (error) {
+          console.error('❌ Erreur nettoyage storage:', error);
+          // Fallback: forcer reload pour nettoyer (uniquement en cas d'erreur critique)
+          // window.location.reload();
+        }
       };
 
       if (!session) {

@@ -1,6 +1,7 @@
-// src/hooks/useMobileUpload.js - Hook central pour l’upload mobile avec détection sécurisée
+// src/hooks/useMobileUpload.js - Hook central pour l'upload mobile avec détection sécurisée
 import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
+import { safeStorage } from '../utils/safeStorage';
 
 // ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE
 export const useDeviceCapabilities = () => {
@@ -246,9 +247,9 @@ export const useOfflineUpload = () => {
       };
 
       // Stockage en localStorage pour simplicité (en production, utilisez IndexedDB)
-      const existing = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
+      const existing = safeStorage.getJSON('pendingUploads', []);
       const updated = [...existing, uploadItem];
-      localStorage.setItem('pendingUploads', JSON.stringify(updated));
+      safeStorage.setJSON('pendingUploads', updated);
 
       setPendingUploads(updated);
       return uploadItem.id;
@@ -261,7 +262,7 @@ export const useOfflineUpload = () => {
   const processPendingUploads = useCallback(async () => {
     if (!isOnline) return;
 
-    const pending = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
+    const pending = safeStorage.getJSON('pendingUploads', []);
     const stillPending = [];
 
     for (const item of pending) {
@@ -290,12 +291,12 @@ export const useOfflineUpload = () => {
       stillPending.push(item);
     }
 
-    localStorage.setItem('pendingUploads', JSON.stringify(stillPending));
+    safeStorage.setJSON('pendingUploads', stillPending);
     setPendingUploads(stillPending);
   }, [isOnline]);
 
   const clearPendingUploads = useCallback(() => {
-    localStorage.removeItem('pendingUploads');
+    safeStorage.removeItem('pendingUploads');
     setPendingUploads([]);
   }, []);
 

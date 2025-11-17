@@ -5,7 +5,7 @@
 // - handleUpdateInterventionReport(report) idem + statut
 // - INTÉGRATION de la page IRShowerFormsView (import + nav + routes admin & employé)
 // =============================
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import expenseService from './services/expenseService';
@@ -18,6 +18,7 @@ import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon,
 import LoginScreen from './pages/LoginScreen';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
+import { debounce } from './utils/debounce';
 import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
@@ -233,27 +234,40 @@ function App() {
       };
       initialLoad();
 
+      // ✅ Créer une version debounced de refreshData pour éviter les race conditions
+      // Debounce avec leading: true pour un premier rafraîchissement immédiat,
+      // puis regroupe les autres appels dans les 1000ms suivantes
+      const refreshDebounced = debounce(
+        (prof) => {
+          console.log('🔄 Refresh debounced triggered');
+          refreshData(prof);
+        },
+        1000,
+        { leading: true, trailing: true }
+      );
+
       // Optimisation : écouter uniquement les tables pertinentes au lieu de toutes les tables
       const sub = supabase
         .channel('app-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-          refreshData(profile);
+          refreshDebounced(profile);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'interventions' }, () => {
-          refreshData(profile);
+          refreshDebounced(profile);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'intervention_assignments' }, () => {
-          refreshData(profile);
+          refreshDebounced(profile);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => {
-          refreshData(profile);
+          refreshDebounced(profile);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'vault_documents' }, () => {
-          refreshData(profile);
+          refreshDebounced(profile);
         })
         .subscribe();
 
       return () => {
+        refreshDebounced.cancel(); // ✅ Annuler les debounces en cours
         supabase.removeChannel(sub);
       };
     }

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import logger from '../utils/logger';
+import { safeStorage } from '../utils/safeStorage';
 
 /**
  * Hook pour synchroniser l'état avec localStorage
@@ -13,51 +14,42 @@ import logger from '../utils/logger';
 export const useLocalStorage = (key, initialValue) => {
   // Fonction pour récupérer la valeur initiale
   const getInitialValue = useCallback(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      logger.warn(`Erreur lecture localStorage pour clé "${key}":`, error);
-      return initialValue;
-    }
+    return safeStorage.getJSON(key, initialValue);
   }, [key, initialValue]);
 
   const [storedValue, setStoredValue] = useState(getInitialValue);
 
   // Fonction pour sauvegarder
+  // ✅ Utilise functional update pour éviter stale closure
   const setValue = useCallback((value) => {
-    try {
-      // Permet de passer une fonction comme avec useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+    setStoredValue(currentValue => {
+      // Utiliser functional update pour éviter stale closure
+      const valueToStore = value instanceof Function
+        ? value(currentValue)
+        : value;
 
-      setStoredValue(valueToStore);
-
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      // Sauvegarder de manière sécurisée
+      safeStorage.setJSON(key, valueToStore);
       logger.log(`💾 localStorage saved: ${key}`);
-    } catch (error) {
-      logger.error(`Erreur sauvegarde localStorage pour clé "${key}":`, error);
-    }
-  }, [key, storedValue]);
+
+      return valueToStore;
+    });
+  }, [key]); // ✅ Seulement key dans les deps
 
   // Fonction pour supprimer
   const remove = useCallback(() => {
-    try {
-      window.localStorage.removeItem(key);
-      setStoredValue(initialValue);
-      logger.log(`🗑️ localStorage removed: ${key}`);
-    } catch (error) {
-      logger.error(`Erreur suppression localStorage pour clé "${key}":`, error);
-    }
+    safeStorage.removeItem(key);
+    setStoredValue(initialValue);
+    logger.log(`🗑️ localStorage removed: ${key}`);
   }, [key, initialValue]);
 
   // Synchronise avec les changements dans d'autres onglets
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === key && e.newValue !== null) {
-        try {
-          setStoredValue(JSON.parse(e.newValue));
-        } catch (error) {
-          logger.warn('Erreur parsing storage event:', error);
+        const parsed = safeStorage.getJSON(key, null);
+        if (parsed !== null) {
+          setStoredValue(parsed);
         }
       }
     };

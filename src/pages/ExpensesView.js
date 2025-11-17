@@ -14,6 +14,7 @@ import {
 } from '../components/SharedUI';
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { detectDocument } from '../utils/documentDetector';
+import { safeStorage } from '../utils/safeStorage';
 
 // Modal de visualisation des justificatifs
 const ReceiptsModal = ({ receipts, onClose }) => {
@@ -111,40 +112,28 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   // Utiliser localStorage au lieu de sessionStorage car certains navigateurs mobiles
   // vident sessionStorage quand l'onglet est suspendu pour ouvrir la caméra
   const [isCreating, setIsCreating] = useState(() => {
-    const saved = localStorage.getItem('expense_form_isCreating');
+    const saved = safeStorage.getJSON('expense_form_isCreating', false);
     console.log('🔄 Restauration isCreating depuis localStorage:', saved);
-    return saved ? JSON.parse(saved) : false;
+    return saved;
   });
   const [newExpense, setNewExpense] = useState(() => {
-    const saved = localStorage.getItem('expense_form_data');
-    console.log('🔄 Restauration expense_form_data depuis localStorage:', saved ? 'OUI' : 'NON');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        console.log('✅ Données restaurées:', {
-          receipts: parsed.receipts?.length || 0,
-          date: parsed.date,
-          amount: parsed.amount
-        });
-        return parsed;
-      } catch (e) {
-        console.error('❌ Erreur parse localStorage:', e);
-        return {
-          date: new Date().toISOString().split('T')[0],
-          category: 'transport',
-          amount: '',
-          description: '',
-          receipts: []
-        };
-      }
-    }
-    return {
+    const defaultExpense = {
       date: new Date().toISOString().split('T')[0],
       category: 'transport',
       amount: '',
       description: '',
       receipts: []
     };
+    const saved = safeStorage.getJSON('expense_form_data', defaultExpense);
+    console.log('🔄 Restauration expense_form_data depuis localStorage:', saved !== defaultExpense ? 'OUI' : 'NON');
+    if (saved && saved !== defaultExpense) {
+      console.log('✅ Données restaurées:', {
+        receipts: saved.receipts?.length || 0,
+        date: saved.date,
+        amount: saved.amount
+      });
+    }
+    return saved;
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -159,8 +148,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   // Sauvegarder dans localStorage à chaque changement (pour persister pendant photo mobile)
   useEffect(() => {
     if (isCreating) {
-      localStorage.setItem('expense_form_isCreating', JSON.stringify(isCreating));
-      localStorage.setItem('expense_form_data', JSON.stringify(newExpense));
+      safeStorage.setJSON('expense_form_isCreating', isCreating);
+      safeStorage.setJSON('expense_form_data', newExpense);
       console.log('💾 Form state sauvegardé dans localStorage', {
         receipts: newExpense.receipts?.length || 0
       });
@@ -172,23 +161,18 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('👁️ Page redevenue visible - vérification localStorage...');
-        const saved = localStorage.getItem('expense_form_isCreating');
-        const savedData = localStorage.getItem('expense_form_data');
+        const saved = safeStorage.getJSON('expense_form_isCreating', false);
+        const savedData = safeStorage.getJSON('expense_form_data', null);
 
-        if (saved && JSON.parse(saved)) {
+        if (saved) {
           console.log('🔄 Formulaire devrait être ouvert, forçage du state...');
           setIsCreating(true);
 
           if (savedData) {
-            try {
-              const parsed = JSON.parse(savedData);
-              console.log('🔄 Restauration forcée des données:', {
-                receipts: parsed.receipts?.length || 0
-              });
-              setNewExpense(parsed);
-            } catch (e) {
-              console.error('❌ Erreur restauration:', e);
-            }
+            console.log('🔄 Restauration forcée des données:', {
+              receipts: savedData.receipts?.length || 0
+            });
+            setNewExpense(savedData);
           }
         }
       } else {
@@ -201,12 +185,12 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       if (event.persisted) {
         // Page restaurée depuis le cache (back/forward)
         console.log('🔄 Page restaurée depuis cache, rechargement du state...');
-        const saved = localStorage.getItem('expense_form_isCreating');
-        if (saved && JSON.parse(saved)) {
+        const saved = safeStorage.getJSON('expense_form_isCreating', false);
+        if (saved) {
           setIsCreating(true);
-          const savedData = localStorage.getItem('expense_form_data');
+          const savedData = safeStorage.getJSON('expense_form_data', null);
           if (savedData) {
-            setNewExpense(JSON.parse(savedData));
+            setNewExpense(savedData);
           }
         }
       }
