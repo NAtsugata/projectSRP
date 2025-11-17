@@ -104,6 +104,12 @@ export const sanitizeURL = (url) => {
  * @returns {Object} Objet avec toutes les chaînes nettoyées
  */
 export const sanitizeObject = (obj, strict = true) => {
+  // Nettoyer les strings directement
+  if (typeof obj === 'string') {
+    const sanitizeFunc = strict ? sanitizeText : sanitizeHTML;
+    return sanitizeFunc(obj);
+  }
+
   if (!obj || typeof obj !== 'object') return obj;
 
   const sanitizeFunc = strict ? sanitizeText : sanitizeHTML;

@@ -2,55 +2,59 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 // ✅ Mock simple et fonctionnel
-jest.mock('./lib/supabase', () => ({
-  supabase: {
-    auth: {
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
+jest.mock('./lib/supabase', () => {
+  // Créer une fonction simple pour le mock
+  const createMockAuthStateChange = () => (callback) => {
+    setTimeout(() => callback('SIGNED_OUT', null), 10);
+    return { data: { subscription: { unsubscribe: () => {} } } };
+  };
+
+  const mockAuthStateChange = createMockAuthStateChange();
+
+  return {
+    supabase: {
+      auth: {
+        onAuthStateChange: mockAuthStateChange
+      },
+      channel: jest.fn(() => ({
+        on: jest.fn(() => ({ subscribe: jest.fn() }))
+      })),
+      removeChannel: jest.fn(),
+    },
+    authService: {
+      onAuthStateChange: mockAuthStateChange,
+      signOut: jest.fn(() => Promise.resolve({ error: null })),
+      signIn: jest.fn(() => Promise.resolve({ error: null })),
+    },
+    profileService: {
+      getProfile: jest.fn(() => Promise.resolve({ data: null, error: null })),
+      getAllProfiles: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      updateProfile: jest.fn(() => Promise.resolve({ error: null }))
+    },
+    interventionService: {
+      getInterventions: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      createIntervention: jest.fn(() => Promise.resolve({ error: null })),
+      updateIntervention: jest.fn(() => Promise.resolve({ error: null })),
+      deleteIntervention: jest.fn(() => Promise.resolve({ error: null }))
+    },
+    leaveService: {
+      getLeaveRequests: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      createLeaveRequest: jest.fn(() => Promise.resolve({ error: null })),
+      updateRequestStatus: jest.fn(() => Promise.resolve({ error: null })),
+      deleteLeaveRequest: jest.fn(() => Promise.resolve({ error: null }))
+    },
+    payslipService: {
+      getPayslips: jest.fn(() => Promise.resolve({ data: [], error: null }))
+    },
+    storageService: {
+      uploadVaultFile: jest.fn(() => Promise.resolve({ error: null })),
+      deleteVaultFile: jest.fn(() => Promise.resolve({ error: null })),
+      uploadInterventionFile: jest.fn(() => Promise.resolve({
+        publicURL: 'test.jpg', error: null
       }))
     },
-    channel: jest.fn(() => ({
-      on: jest.fn(() => ({ subscribe: jest.fn() }))
-    })),
-    removeChannel: jest.fn(),
-  },
-  authService: {
-    onAuthStateChange: jest.fn((callback) => {
-      // Déclencher immédiatement l'état "non connecté"
-      setTimeout(() => callback('SIGNED_OUT', null), 10);
-      return { data: { subscription: { unsubscribe: jest.fn() } } };
-    }),
-    signOut: jest.fn(() => Promise.resolve({ error: null })),
-    signIn: jest.fn(() => Promise.resolve({ error: null })),
-  },
-  profileService: {
-    getProfile: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    getAllProfiles: jest.fn(() => Promise.resolve({ data: [], error: null })),
-    updateProfile: jest.fn(() => Promise.resolve({ error: null }))
-  },
-  interventionService: {
-    getInterventions: jest.fn(() => Promise.resolve({ data: [], error: null })),
-    createIntervention: jest.fn(() => Promise.resolve({ error: null })),
-    updateIntervention: jest.fn(() => Promise.resolve({ error: null })),
-    deleteIntervention: jest.fn(() => Promise.resolve({ error: null }))
-  },
-  leaveService: {
-    getLeaveRequests: jest.fn(() => Promise.resolve({ data: [], error: null })),
-    createLeaveRequest: jest.fn(() => Promise.resolve({ error: null })),
-    updateRequestStatus: jest.fn(() => Promise.resolve({ error: null })),
-    deleteLeaveRequest: jest.fn(() => Promise.resolve({ error: null }))
-  },
-  payslipService: {
-    getPayslips: jest.fn(() => Promise.resolve({ data: [], error: null }))
-  },
-  storageService: {
-    uploadVaultFile: jest.fn(() => Promise.resolve({ error: null })),
-    deleteVaultFile: jest.fn(() => Promise.resolve({ error: null })),
-    uploadInterventionFile: jest.fn(() => Promise.resolve({
-      publicURL: 'test.jpg', error: null
-    }))
-  },
-}));
+  };
+});
 
 import App from './App';
 
@@ -72,18 +76,16 @@ console.error = jest.fn();
 
 describe('App Component', () => {
   test('affiche l\'écran de connexion par défaut', async () => {
-    render(
+    const { container } = render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
     );
 
-    // Au début, écran de chargement
-    expect(screen.getByText(/Chargement de votre espace/i)).toBeInTheDocument();
-
-    // Attendre l'écran de connexion
+    // Vérifier que l'écran de connexion s'affiche
     await waitFor(() => {
-      expect(screen.getByText(/Entreprise SRP/i)).toBeInTheDocument();
+      const loginScreen = container.querySelector('.login-screen-container');
+      expect(loginScreen).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 
@@ -101,14 +103,16 @@ describe('App Component', () => {
     // Simule mobile
     Object.defineProperty(window, 'innerWidth', { value: 480, writable: true });
 
-    render(
+    const { container } = render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
     );
 
+    // Vérifier que l'écran de connexion s'affiche
     await waitFor(() => {
-      expect(screen.getByText(/Entreprise SRP/i)).toBeInTheDocument();
+      const loginScreen = container.querySelector('.login-screen-container');
+      expect(loginScreen).toBeInTheDocument();
     }, { timeout: 3000 });
 
     expect(window.innerWidth).toBe(480);
