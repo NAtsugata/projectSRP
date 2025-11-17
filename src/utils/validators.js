@@ -1,6 +1,9 @@
 // src/utils/validators.js
 // Fonctions de validation pour sécuriser les entrées utilisateur
 
+import { sanitizeText } from './sanitize';
+import { FILE_SIZE, fileUtils } from '../config/fileConfig';
+
 /**
  * Valide une adresse email
  * @param {string} email - Email à valider
@@ -182,31 +185,32 @@ export const validateLeaveRequest = (leaveRequest) => {
 
 /**
  * Nettoie une chaîne de caractères pour éviter les injections
+ * ✅ Utilise DOMPurify pour une sanitisation XSS robuste
  * @param {string} str - Chaîne à nettoyer
  * @returns {string}
  */
 export const sanitizeString = (str) => {
   if (typeof str !== 'string') return '';
-  // Retire les caractères dangereux potentiels
-  return str
-    .trim()
-    .replace(/[<>]/g, '') // Retire < et > pour éviter XSS basique
-    .substring(0, 1000); // Limite la longueur
+  // ✅ Utilise DOMPurify pour une sanitisation robuste contre XSS
+  const cleaned = sanitizeText(str);
+  // Limite la longueur
+  return cleaned.substring(0, 1000);
 };
 
 /**
  * Valide une taille de fichier
+ * ✅ Utilise fileConfig pour les limites centralisées
  * @param {number} fileSize - Taille en bytes
  * @param {number} maxSize - Taille maximale en MB (défaut: 10MB)
  * @returns {{ isValid: boolean, message: string }}
  */
 export const validateFileSize = (fileSize, maxSize = 10) => {
-  const maxBytes = maxSize * 1024 * 1024;
+  const maxBytes = fileUtils.mbToBytes(maxSize);
 
   if (fileSize > maxBytes) {
     return {
       isValid: false,
-      message: `Le fichier est trop volumineux (max: ${maxSize}MB)`
+      message: `Le fichier est trop volumineux (max: ${fileUtils.formatFileSize(maxBytes)})`
     };
   }
 
