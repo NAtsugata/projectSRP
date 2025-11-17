@@ -9,10 +9,102 @@ import {
   ClockIcon,
   XCircleIcon,
   CalendarIcon,
-  CustomFileInput
+  CustomFileInput,
+  FileTextIcon
 } from '../components/SharedUI';
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { detectDocument } from '../utils/documentDetector';
+
+// Modal de visualisation des justificatifs
+const ReceiptsModal = ({ receipts, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!receipts || receipts.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          background: 'white',
+          border: 'none',
+          borderRadius: '50%',
+          width: '40px',
+          height: '40px',
+          fontSize: '24px',
+          cursor: 'pointer',
+          zIndex: 10000
+        }}
+      >
+        ×
+      </button>
+
+      <img
+        src={receipts[currentIndex].url}
+        alt={receipts[currentIndex].name || `Justificatif ${currentIndex + 1}`}
+        style={{
+          maxWidth: '90%',
+          maxHeight: '80vh',
+          objectFit: 'contain',
+          borderRadius: '8px'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {receipts.length > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            marginTop: '1rem',
+            color: 'white'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+            disabled={currentIndex === 0}
+            className="btn btn-secondary"
+          >
+            ← Précédent
+          </button>
+          <span style={{ lineHeight: '40px' }}>
+            {currentIndex + 1} / {receipts.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentIndex(prev => Math.min(receipts.length - 1, prev + 1))}
+            disabled={currentIndex === receipts.length - 1}
+            className="btn btn-secondary"
+          >
+            Suivant →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
   // Restaurer le state depuis localStorage si disponible (pour mobile après retour de caméra)
@@ -57,6 +149,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false); // Flag pour éviter fermeture pendant traitement photo
+  const [showReceipts, setShowReceipts] = useState(null); // État pour afficher le modal des justificatifs
 
   // États pour la détection de documents
   const [documentDetectionResult, setDocumentDetectionResult] = useState(null);
@@ -742,9 +835,14 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                     <div className="expense-description">{expense.description}</div>
 
                     {expense.receipts && expense.receipts.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        📎 {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowReceipts(expense.receipts)}
+                        className="btn btn-sm btn-secondary"
+                        style={{ width: '100%', marginBottom: '0.75rem' }}
+                      >
+                        <FileTextIcon /> Voir les {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                      </button>
                     )}
 
                     {expense.admin_comment && (
@@ -795,6 +893,14 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
           onUseOriginal={handleUseOriginal}
           onCancel={handleCancelCrop}
           isProcessing={false}
+        />
+      )}
+
+      {/* Receipts Modal */}
+      {showReceipts && (
+        <ReceiptsModal
+          receipts={showReceipts}
+          onClose={() => setShowReceipts(null)}
         />
       )}
     </div>
