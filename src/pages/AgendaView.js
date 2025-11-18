@@ -1,8 +1,15 @@
-// src/pages/AgendaView_v2.js
-// Version améliorée de l'agenda avec navigation, filtres et accessibilité
+// src/pages/AgendaView.js
+// Version améliorée de l'agenda avec dashboard, vue ressource, filtres sauvegardés
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { AgendaDay, DateNavigation, AgendaFilters } from '../components/agenda';
+import {
+  AgendaDay,
+  DateNavigation,
+  AgendaFilters,
+  AgendaDashboard,
+  ResourceView,
+  SavedFilters
+} from '../components/agenda';
 import { EmptyState, LoadingSpinner } from '../components/ui';
 import { CalendarIcon } from '../components/SharedUI';
 import {
@@ -14,22 +21,24 @@ import logger from '../utils/logger';
 import './AgendaView.css';
 
 /**
- * AgendaView Component (v2 - Refactored)
+ * AgendaView Component (v3 - Enhanced)
  * @param {Array} interventions - List of interventions
  * @param {Function} onSelect - Handler when an intervention is clicked
  * @param {Array} employees - List of employees for filtering
  * @param {boolean} loading - Loading state
  * @param {Error} error - Error state
+ * @param {string} currentUserId - Current user ID for personalized filters
  */
 const AgendaView = ({
   interventions = [],
   onSelect,
   employees = [],
   loading = false,
-  error = null
+  error = null,
+  currentUserId
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('week');
+  const [viewMode, setViewMode] = useState('week'); // 'day', 'week', 'month', 'resource'
   const [filters, setFilters] = useState({
     employees: [],
     showUrgentOnly: false,
@@ -39,7 +48,7 @@ const AgendaView = ({
 
   // Get current date range
   const dateRange = useMemo(() => {
-    return getDateRange(currentDate, viewMode);
+    return getDateRange(currentDate, viewMode === 'resource' ? 'week' : viewMode);
   }, [currentDate, viewMode]);
 
   // Filter interventions by date range and filters
@@ -103,12 +112,12 @@ const AgendaView = ({
 
   // Navigation handlers
   const handlePrevious = useCallback(() => {
-    const newDate = navigatePeriod(currentDate, viewMode, 'previous');
+    const newDate = navigatePeriod(currentDate, viewMode === 'resource' ? 'week' : viewMode, 'previous');
     setCurrentDate(newDate);
   }, [currentDate, viewMode]);
 
   const handleNext = useCallback(() => {
-    const newDate = navigatePeriod(currentDate, viewMode, 'next');
+    const newDate = navigatePeriod(currentDate, viewMode === 'resource' ? 'week' : viewMode, 'next');
     setCurrentDate(newDate);
   }, [currentDate, viewMode]);
 
@@ -134,6 +143,11 @@ const AgendaView = ({
       searchText: ''
     });
     logger.log('AgendaView: Filters cleared');
+  }, []);
+
+  const handleApplyFilters = useCallback((newFilters) => {
+    setFilters(newFilters);
+    logger.log('AgendaView: Applying saved filters', newFilters);
   }, []);
 
   // Error state
@@ -164,6 +178,21 @@ const AgendaView = ({
     <div className="agenda-view">
       <h2 className="view-title">Agenda</h2>
 
+      {/* Dashboard de statistiques */}
+      <AgendaDashboard
+        interventions={filteredInterventions}
+        allInterventions={interventions}
+        employees={employees}
+        dateRange={dateRange}
+      />
+
+      {/* Filtres rapides sauvegardés */}
+      <SavedFilters
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        currentUserId={currentUserId}
+      />
+
       {/* Date Navigation */}
       <DateNavigation
         startDate={dateRange.start}
@@ -183,32 +212,43 @@ const AgendaView = ({
         onClearFilters={handleClearFilters}
       />
 
-      {/* Days list */}
-      {dates.length > 0 ? (
-        <div className="agenda-days-list">
-          {dates.map((date) => (
-            <AgendaDay
-              key={date}
-              date={date}
-              interventions={byDate[date] || []}
-              onSelect={onSelect}
-              showDate={true}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={<CalendarIcon />}
-          title="Aucune intervention"
-          message={
-            filters.employees?.length > 0 ||
-            filters.showUrgentOnly ||
-            filters.showSAVOnly ||
-            filters.searchText
-              ? "Aucune intervention ne correspond aux filtres sélectionnés."
-              : "Aucune intervention prévue pour cette période."
-          }
+      {/* Content based on view mode */}
+      {viewMode === 'resource' ? (
+        /* Vue par ressource */
+        <ResourceView
+          interventions={filteredInterventions}
+          employees={employees}
+          onInterventionClick={onSelect}
+          dateRange={dateRange}
         />
+      ) : (
+        /* Vue par jour (timeline) */
+        dates.length > 0 ? (
+          <div className="agenda-days-list">
+            {dates.map((date) => (
+              <AgendaDay
+                key={date}
+                date={date}
+                interventions={byDate[date] || []}
+                onSelect={onSelect}
+                showDate={true}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<CalendarIcon />}
+            title="Aucune intervention"
+            message={
+              filters.employees?.length > 0 ||
+              filters.showUrgentOnly ||
+              filters.showSAVOnly ||
+              filters.searchText
+                ? "Aucune intervention ne correspond aux filtres sélectionnés."
+                : "Aucune intervention prévue pour cette période."
+            }
+          />
+        )
       )}
     </div>
   );

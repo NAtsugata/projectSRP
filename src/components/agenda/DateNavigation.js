@@ -13,7 +13,7 @@ const formatDateRange = (startDate, endDate, viewMode) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  if (viewMode === 'week') {
+  if (viewMode === 'week' || viewMode === 'resource') {
     const startMonth = start.toLocaleDateString('fr-FR', { month: 'short' });
     const endMonth = end.toLocaleDateString('fr-FR', { month: 'short' });
     const startDay = start.getDate();
@@ -48,7 +48,7 @@ const formatDateRange = (startDate, endDate, viewMode) => {
  * @param {Function} onPrevious - Handler for previous period
  * @param {Function} onNext - Handler for next period
  * @param {Function} onToday - Handler to jump to today
- * @param {'day'|'week'|'month'} viewMode - Current view mode
+ * @param {'day'|'week'|'month'|'resource'} viewMode - Current view mode
  * @param {Function} onViewModeChange - Handler for view mode change
  */
 const DateNavigation = ({
@@ -120,6 +120,15 @@ const DateNavigation = ({
             onClick={() => onViewModeChange('month')}
           >
             Mois
+          </button>
+          <button
+            role="tab"
+            aria-selected={viewMode === 'resource'}
+            className={`view-mode-btn ${viewMode === 'resource' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('resource')}
+            title="Vue par employé"
+          >
+            👤 Par ressource
           </button>
         </div>
       )}

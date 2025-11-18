@@ -265,4 +265,141 @@ export const navigatePeriod = (currentDate, viewMode, direction) => {
   return date;
 };
 
+/**
+ * Parse une durée estimée d'intervention (en heures)
+ * Par défaut: 2h
+ */
+export const getInterventionDuration = (intervention) => {
+  // Si durée définie explicitement
+  if (intervention.estimated_duration) {
+    return intervention.estimated_duration;
+  }
+
+  // Sinon, estimation par défaut
+  return 2; // 2 heures
+};
+
+/**
+ * Vérifie si deux interventions se chevauchent dans le temps
+ * @param {Object} itv1 - Première intervention
+ * @param {Object} itv2 - Deuxième intervention
+ * @returns {boolean} - true si chevauchement
+ */
+export const doIntervensionsOverlap = (itv1, itv2) => {
+  // Même date ?
+  if (itv1.date !== itv2.date) return false;
+
+  // Parser les heures
+  const start1 = parseTimeToMin(itv1.time || '08:00');
+  const start2 = parseTimeToMin(itv2.time || '08:00');
+
+  if (start1 === null || start2 === null) return false;
+
+  // Calculer les fins
+  const duration1 = getInterventionDuration(itv1);
+  const duration2 = getInterventionDuration(itv2);
+  const end1 = start1 + (duration1 * 60);
+  const end2 = start2 + (duration2 * 60);
+
+  // Vérifier le chevauchement
+  // itv1 commence avant la fin de itv2 ET itv1 se termine après le début de itv2
+  return start1 < end2 && end1 > start2;
+};
+
+/**
+ * Détecte les conflits d'horaires pour un employé
+ * @param {string} employeeId - ID de l'employé
+ * @param {Array} allInterventions - Toutes les interventions
+ * @param {Object} newIntervention - Nouvelle intervention à vérifier (optionnel)
+ * @returns {Array} - Liste des conflits
+ */
+export const detectScheduleConflicts = (employeeId, allInterventions, newIntervention = null) => {
+  const conflicts = [];
+
+  // Filtrer les interventions de cet employé
+  const employeeInterventions = allInterventions.filter(itv => {
+    return itv.assigned_to && itv.assigned_to.includes(employeeId);
+  });
+
+  // Si on vérifie une nouvelle intervention
+  if (newIntervention && newIntervention.assigned_to && newIntervention.assigned_to.includes(employeeId)) {
+    // Vérifier contre toutes les interventions existantes
+    employeeInterventions.forEach(existing => {
+      if (existing.id !== newIntervention.id && doIntervensionsOverlap(existing, newIntervention)) {
+        conflicts.push({
+          intervention: existing,
+          type: 'overlap',
+          employee: employeeId
+        });
+      }
+    });
+  } else {
+    // Vérifier les conflits dans les interventions existantes
+    for (let i = 0; i < employeeInterventions.length; i++) {
+      for (let j = i + 1; j < employeeInterventions.length; j++) {
+        if (doIntervensionsOverlap(employeeInterventions[i], employeeInterventions[j])) {
+          conflicts.push({
+            intervention1: employeeInterventions[i],
+            intervention2: employeeInterventions[j],
+            type: 'overlap',
+            employee: employeeId
+          });
+        }
+      }
+    }
+  }
+
+  return conflicts;
+};
+
+/**
+ * Détecte tous les conflits pour tous les employés
+ * @param {Array} interventions - Liste des interventions
+ * @param {Array} employees - Liste des employés
+ * @returns {Object} - Conflits groupés par employé
+ */
+export const detectAllConflicts = (interventions, employees) => {
+  const conflictsByEmployee = {};
+
+  employees.forEach(emp => {
+    const conflicts = detectScheduleConflicts(emp.id, interventions);
+    if (conflicts.length > 0) {
+      conflictsByEmployee[emp.id] = {
+        employee: emp,
+        conflicts
+      };
+    }
+  });
+
+  return conflictsByEmployee;
+};
+
+/**
+ * Vérifie si un employé est surchargé pour une date donnée
+ * @param {string} employeeId - ID de l'employé
+ * @param {string} date - Date à vérifier (YYYY-MM-DD)
+ * @param {Array} interventions - Liste des interventions
+ * @param {number} maxHours - Nombre max d'heures (défaut: 8)
+ * @returns {Object} - { overloaded: boolean, hours: number, interventions: [] }
+ */
+export const checkEmployeeOverload = (employeeId, date, interventions, maxHours = 8) => {
+  // Filtrer les interventions de cet employé pour cette date
+  const dayInterventions = interventions.filter(itv => {
+    return itv.date === date && itv.assigned_to && itv.assigned_to.includes(employeeId);
+  });
+
+  // Calculer le total d'heures
+  const totalHours = dayInterventions.reduce((sum, itv) => {
+    return sum + getInterventionDuration(itv);
+  }, 0);
+
+  return {
+    overloaded: totalHours > maxHours,
+    hours: totalHours,
+    maxHours,
+    interventions: dayInterventions,
+    count: dayInterventions.length
+  };
+};
+
 export { START_MIN, END_MIN, DAY_SPAN };
