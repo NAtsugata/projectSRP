@@ -11,10 +11,31 @@ const NOTIFICATION_TAG = 'srp-notification';
 // Liste des caches valides
 const VALID_CACHES = [CACHE_NAME, RUNTIME_CACHE, API_CACHE];
 
-// Assets à pré-charger (optionnel)
+// Assets à pré-charger pour mode hors ligne
+// IMPORTANT: Ces URLs seront disponibles même si jamais visitées
 const PRECACHE_ASSETS = [
   '/',
-  '/offline.html'
+  '/offline.html',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.ico'
+];
+
+// Routes de l'app à pré-charger (React Router SPA)
+// Toutes ces routes serviront index.html
+const APP_ROUTES = [
+  '/agenda',
+  '/expenses',
+  '/dashboard',
+  '/planning',
+  '/leave',
+  '/vault',
+  '/users',
+  '/archive',
+  '/ir-docs',
+  '/checklists',
+  '/my-documents',
+  '/diagnostics'
 ];
 
 // Installation du Service Worker
@@ -178,11 +199,71 @@ self.addEventListener('fetch', (event) => {
   } else if (isStaticAsset(request, url)) {
     // Assets statiques: Cache-First
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
-  } else if (request.destination === 'document') {
-    // Pages HTML: Network-First
-    event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE));
+  } else if (request.destination === 'document' || isAppRoute(url)) {
+    // Pages HTML et routes de l'app: Servir index.html (React Router SPA)
+    event.respondWith(handleNavigationRequest(request, url));
   }
 });
+
+/**
+ * Vérifie si c'est une route de l'app React
+ */
+function isAppRoute(url) {
+  // Vérifier si l'URL correspond à une route de l'app
+  // Exemple: /agenda, /expenses, /dashboard, etc.
+  const pathname = url.pathname;
+
+  // Ignore les fichiers avec extension
+  if (pathname.match(/\.[a-z]+$/i)) {
+    return false;
+  }
+
+  // Vérifier si ça correspond à une route connue
+  return APP_ROUTES.some(route => pathname.startsWith(route)) || pathname === '/';
+}
+
+/**
+ * Gère les requêtes de navigation (routes React Router)
+ * Sert toujours index.html pour que React Router gère le routing
+ */
+async function handleNavigationRequest(request, url) {
+  try {
+    // 1. Essayer le réseau d'abord
+    const networkResponse = await fetchWithTimeout(request, 5000);
+
+    // 2. Mettre en cache
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // 3. Mode hors ligne : servir index.html depuis le cache
+    console.log('[SW] Mode hors ligne - Serving index.html pour:', url.pathname);
+
+    // Essayer de servir index.html en cache
+    const cachedIndex = await caches.match('/');
+    if (cachedIndex) {
+      return cachedIndex;
+    }
+
+    // Fallback: essayer /index.html
+    const cachedIndexHtml = await caches.match('/index.html');
+    if (cachedIndexHtml) {
+      return cachedIndexHtml;
+    }
+
+    // Dernier fallback: page offline
+    const offlinePage = await caches.match('/offline.html');
+    if (offlinePage) {
+      return offlinePage;
+    }
+
+    // Si vraiment rien ne fonctionne
+    return new Response('Offline', { status: 503 });
+  }
+}
 
 /**
  * Vérifie si c'est une requête API Supabase
