@@ -11,19 +11,19 @@ export const FILE_SIZE = {
   GB: 1024 * 1024 * 1024,
 
   // Limites par type de fichier
-  MAX_IMAGE: 10 * 1024 * 1024,        // 10 MB
+  MAX_IMAGE: 50 * 1024 * 1024,        // 50 MB
   MAX_IMAGE_MOBILE_2G: 5 * 1024 * 1024,  // 5 MB pour 2G
-  MAX_IMAGE_MOBILE_4G: 10 * 1024 * 1024, // 10 MB pour 4G
-  MAX_DOCUMENT: 20 * 1024 * 1024,     // 20 MB
-  MAX_PDF: 20 * 1024 * 1024,          // 20 MB
+  MAX_IMAGE_MOBILE_4G: 50 * 1024 * 1024, // 50 MB pour 4G
+  MAX_DOCUMENT: 50 * 1024 * 1024,     // 50 MB
+  MAX_PDF: 50 * 1024 * 1024,          // 50 MB
   MAX_VIDEO: 100 * 1024 * 1024,       // 100 MB
-  MAX_AUDIO: 10 * 1024 * 1024,        // 10 MB
+  MAX_AUDIO: 50 * 1024 * 1024,        // 50 MB
 
   // Limites par contexte
-  MAX_VAULT_FILE: 20 * 1024 * 1024,   // 20 MB pour coffre-fort
-  MAX_EXPENSE_RECEIPT: 10 * 1024 * 1024, // 10 MB pour justificatifs notes de frais
-  MAX_INTERVENTION_FILE: 10 * 1024 * 1024, // 10 MB pour fichiers intervention
-  MAX_BRIEFING_FILE: 20 * 1024 * 1024, // 20 MB pour documents de préparation
+  MAX_VAULT_FILE: 50 * 1024 * 1024,   // 50 MB pour coffre-fort
+  MAX_EXPENSE_RECEIPT: 50 * 1024 * 1024, // 50 MB pour justificatifs notes de frais
+  MAX_INTERVENTION_FILE: 50 * 1024 * 1024, // 50 MB pour fichiers intervention
+  MAX_BRIEFING_FILE: 50 * 1024 * 1024, // 50 MB pour documents de préparation
 
   // Compression
   MAX_COMPRESSED_IMAGE: 1 * 1024 * 1024, // 1 MB après compression

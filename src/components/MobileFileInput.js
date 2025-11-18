@@ -13,7 +13,7 @@ const MobileFileInput = ({
   children,
   className = "",
   maxFiles = 10,
-  maxSize = 10 * 1024 * 1024, // 10MB par défaut
+  maxSize = 50 * 1024 * 1024, // 50MB par défaut
   onError
 }) => {
   const inputRef = useRef(null);

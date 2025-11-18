@@ -320,7 +320,7 @@ export const useOfflineUpload = () => {
 export const useFileValidation = () => {
   const validateFile = useCallback((file, options = {}) => {
     const {
-      maxSize = 10 * 1024 * 1024, // 10MB par défaut
+      maxSize = 50 * 1024 * 1024, // 50MB par défaut
       allowedTypes = ['image/*', 'application/pdf']
     } = options;
 

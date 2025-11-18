@@ -294,7 +294,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                             multiple
                             accept="image/*,application/pdf"
                             maxFiles={10}
-                            maxSize={isMobile ? 5 * 1024 * 1024 : 10 * 1024 * 1024}
+                            maxSize={50 * 1024 * 1024}
                             onError={handleUploadError}
                         >
                             {uploadState.isUploading ? 'Envoi en cours...' : 'Appuyez pour choisir'}

@@ -167,7 +167,7 @@ export const useMobileFileManager = (interventionId) => {
       const validFiles = [];
       const invalidFiles = [];
       for (const file of Array.from(files)) {
-        const maxSize = deviceInfo.connectionType === '2g' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+        const maxSize = deviceInfo.connectionType === '2g' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
         if (file.size <= maxSize && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
           validFiles.push(file);
         } else {

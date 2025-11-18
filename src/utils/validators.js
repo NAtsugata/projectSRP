@@ -201,10 +201,10 @@ export const sanitizeString = (str) => {
  * Valide une taille de fichier
  * ✅ Utilise fileConfig pour les limites centralisées
  * @param {number} fileSize - Taille en bytes
- * @param {number} maxSize - Taille maximale en MB (défaut: 10MB)
+ * @param {number} maxSize - Taille maximale en MB (défaut: 50MB)
  * @returns {{ isValid: boolean, message: string }}
  */
-export const validateFileSize = (fileSize, maxSize = 10) => {
+export const validateFileSize = (fileSize, maxSize = 50) => {
   const maxBytes = fileUtils.mbToBytes(maxSize);
 
   if (fileSize > maxBytes) {
