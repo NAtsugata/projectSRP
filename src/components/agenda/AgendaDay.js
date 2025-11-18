@@ -1,7 +1,7 @@
 // src/components/agenda/AgendaDay.js
 // Composant pour afficher une journée dans l'agenda
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   layoutEvents,
   getUrgentCount,
@@ -9,8 +9,11 @@ import {
   getAssignees,
   getUserColor,
   START_MIN,
-  END_MIN
+  END_MIN,
+  validateInterventionMove
 } from '../../utils/agendaHelpers';
+import DraggableIntervention from './DraggableIntervention';
+import DroppableTimeSlot from './DroppableTimeSlot';
 import './AgendaDay.css';
 
 const HOUR_MARKS = Array.from({ length: END_MIN / 60 - START_MIN / 60 + 1 }, (_, i) => 6 + i);
@@ -19,15 +22,24 @@ const HOUR_MARKS = Array.from({ length: END_MIN / 60 - START_MIN / 60 + 1 }, (_,
  * AgendaDay Component
  * @param {string} date - Date in YYYY-MM-DD format
  * @param {Array} interventions - List of interventions for this day
+ * @param {Array} allInterventions - All interventions (for conflict detection)
+ * @param {Array} employees - List of employees
  * @param {Function} onSelect - Handler when an intervention is clicked
+ * @param {Function} onInterventionMove - Handler when an intervention is moved
  * @param {boolean} showDate - Whether to show the date header
+ * @param {boolean} enableDragDrop - Enable drag & drop functionality
  */
 const AgendaDay = ({
   date,
   interventions = [],
+  allInterventions = [],
+  employees = [],
   onSelect,
-  showDate = true
+  onInterventionMove,
+  showDate = true,
+  enableDragDrop = true
 }) => {
+  const [draggedIntervention, setDraggedIntervention] = useState(null);
   const { positioned, allDay } = useMemo(
     () => layoutEvents(interventions),
     [interventions]
@@ -49,6 +61,43 @@ const AgendaDay = ({
     month: "long",
     day: "numeric",
   });
+
+  // Handlers for drag & drop
+  const handleDragStart = (intervention) => {
+    setDraggedIntervention(intervention);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIntervention(null);
+  };
+
+  const handleValidateDrop = (dropInfo) => {
+    if (!draggedIntervention) return false;
+
+    const validation = validateInterventionMove({
+      intervention: draggedIntervention,
+      targetDate: dropInfo.targetDate,
+      targetTime: dropInfo.targetTime,
+      targetEmployeeId: dropInfo.targetEmployeeId,
+      allInterventions: allInterventions.length > 0 ? allInterventions : interventions,
+      employees
+    });
+
+    return validation.valid;
+  };
+
+  const handleDrop = (dropInfo) => {
+    if (!draggedIntervention || !onInterventionMove) return;
+
+    onInterventionMove({
+      intervention: draggedIntervention,
+      targetDate: dropInfo.targetDate,
+      targetTime: dropInfo.targetTime,
+      targetEmployeeId: dropInfo.targetEmployeeId
+    });
+
+    setDraggedIntervention(null);
+  };
 
   return (
     <section className="agenda-day">
@@ -126,11 +175,19 @@ const AgendaDay = ({
         </div>
 
         {/* Events column */}
-        <div className="events-col">
-          {/* Background hour rows */}
-          {HOUR_MARKS.map((h) => (
-            <div key={h} className="hour-row" aria-hidden="true" />
-          ))}
+        <DroppableTimeSlot
+          date={date}
+          time="08:00"
+          employeeId={null}
+          onDrop={handleDrop}
+          onValidateDrop={handleValidateDrop}
+          disabled={!enableDragDrop || !onInterventionMove}
+        >
+          <div className="events-col">
+            {/* Background hour rows */}
+            {HOUR_MARKS.map((h) => (
+              <div key={h} className="hour-row" aria-hidden="true" />
+            ))}
 
           {/* Positioned events */}
           {positioned.map((it) => {
@@ -139,9 +196,8 @@ const AgendaDay = ({
             const assignees = getAssignees(it);
             const { top, height, left, width } = it._layout;
 
-            return (
+            const eventCard = (
               <button
-                key={it.id}
                 className="event-card"
                 style={{
                   top: `${top}%`,
@@ -187,8 +243,23 @@ const AgendaDay = ({
                 </div>
               </button>
             );
+
+            return enableDragDrop ? (
+              <DraggableIntervention
+                key={it.id}
+                intervention={it}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                disabled={!onInterventionMove}
+              >
+                {eventCard}
+              </DraggableIntervention>
+            ) : (
+              <React.Fragment key={it.id}>{eventCard}</React.Fragment>
+            );
           })}
-        </div>
+          </div>
+        </DroppableTimeSlot>
       </div>
 
       {/* Empty state */}

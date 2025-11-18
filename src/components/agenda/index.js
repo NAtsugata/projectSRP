@@ -8,3 +8,5 @@ export { default as AgendaDashboard } from './AgendaDashboard';
 export { default as ResourceView } from './ResourceView';
 export { default as EmployeeSelect } from './EmployeeSelect';
 export { default as SavedFilters } from './SavedFilters';
+export { default as DraggableIntervention } from './DraggableIntervention';
+export { default as DroppableTimeSlot } from './DroppableTimeSlot';

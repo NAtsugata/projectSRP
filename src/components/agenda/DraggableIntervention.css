@@ -1,0 +1,71 @@
+/* src/components/agenda/DraggableIntervention.css */
+/* Styles pour les interventions draggables */
+
+.draggable-intervention {
+  cursor: move;
+  cursor: grab;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  position: relative;
+}
+
+.draggable-intervention:active {
+  cursor: grabbing;
+}
+
+.draggable-intervention.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+.draggable-intervention.drag-disabled {
+  cursor: default;
+  user-select: auto;
+}
+
+/* Indicateur visuel pendant le drag */
+.draggable-intervention::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+.draggable-intervention:hover::before {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.draggable-intervention.dragging::before {
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+/* Animation de feedback */
+@keyframes drag-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+}
+
+.draggable-intervention.dragging {
+  animation: drag-pulse 1.5s ease-in-out infinite;
+}
+
+/* Support mobile/tactile */
+@media (hover: none) and (pointer: coarse) {
+  .draggable-intervention {
+    cursor: default;
+  }
+
+  .draggable-intervention:active {
+    cursor: default;
+  }
+}

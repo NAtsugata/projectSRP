@@ -402,4 +402,121 @@ export const checkEmployeeOverload = (employeeId, date, interventions, maxHours 
   };
 };
 
+/**
+ * Valide si une intervention peut être déplacée vers une nouvelle position
+ * @param {Object} params - Paramètres de validation
+ * @param {Object} params.intervention - Intervention à déplacer
+ * @param {string} params.targetDate - Date cible (YYYY-MM-DD)
+ * @param {string} params.targetTime - Heure cible (HH:MM)
+ * @param {string} params.targetEmployeeId - ID de l'employé cible
+ * @param {Array} params.allInterventions - Toutes les interventions
+ * @param {Array} params.employees - Tous les employés
+ * @returns {Object} - { valid: boolean, reason: string }
+ */
+export const validateInterventionMove = ({
+  intervention,
+  targetDate,
+  targetTime,
+  targetEmployeeId,
+  allInterventions,
+  employees
+}) => {
+  // Vérifier que l'employé cible existe
+  const targetEmployee = employees.find(e => e.id === targetEmployeeId);
+  if (!targetEmployee) {
+    return {
+      valid: false,
+      reason: 'Employé introuvable'
+    };
+  }
+
+  // Créer une version temporaire de l'intervention avec la nouvelle position
+  const movedIntervention = {
+    ...intervention,
+    date: targetDate,
+    time: targetTime,
+    assigned_to: [targetEmployeeId]
+  };
+
+  // Vérifier les conflits avec les autres interventions de l'employé
+  const otherInterventions = allInterventions.filter(itv =>
+    itv.id !== intervention.id &&
+    itv.assigned_to &&
+    itv.assigned_to.includes(targetEmployeeId)
+  );
+
+  for (const existing of otherInterventions) {
+    if (doIntervensionsOverlap(movedIntervention, existing)) {
+      return {
+        valid: false,
+        reason: `Conflit avec une autre intervention à ${existing.time}`
+      };
+    }
+  }
+
+  // Vérifier la charge de travail
+  const overloadCheck = checkEmployeeOverload(
+    targetEmployeeId,
+    targetDate,
+    [...otherInterventions, movedIntervention]
+  );
+
+  if (overloadCheck.overloaded) {
+    return {
+      valid: true, // On autorise quand même mais on alerte
+      warning: `L'employé dépassera ${overloadCheck.maxHours}h de travail (${overloadCheck.hours.toFixed(1)}h)`
+    };
+  }
+
+  return {
+    valid: true,
+    reason: 'Déplacement autorisé'
+  };
+};
+
+/**
+ * Applique le déplacement d'une intervention
+ * @param {Object} params - Paramètres du déplacement
+ * @param {string} params.interventionId - ID de l'intervention
+ * @param {string} params.targetDate - Nouvelle date
+ * @param {string} params.targetTime - Nouvelle heure
+ * @param {string} params.targetEmployeeId - Nouvel employé
+ * @param {Array} params.interventions - Liste des interventions
+ * @returns {Array} - Nouvelle liste d'interventions
+ */
+export const applyInterventionMove = ({
+  interventionId,
+  targetDate,
+  targetTime,
+  targetEmployeeId,
+  interventions
+}) => {
+  return interventions.map(itv => {
+    if (itv.id === interventionId) {
+      return {
+        ...itv,
+        date: targetDate,
+        time: targetTime,
+        assigned_to: targetEmployeeId ? [targetEmployeeId] : itv.assigned_to,
+        // Mettre à jour aussi les assignments si nécessaire
+        intervention_assignments: targetEmployeeId ? [{
+          profiles: { id: targetEmployeeId }
+        }] : itv.intervention_assignments
+      };
+    }
+    return itv;
+  });
+};
+
+/**
+ * Formate les minutes en heures:minutes (HH:MM)
+ * @param {number} minutes - Minutes depuis minuit
+ * @returns {string} - Format HH:MM
+ */
+export const formatMinutesToTime = (minutes) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
 export { START_MIN, END_MIN, DAY_SPAN };

@@ -150,6 +150,34 @@ const AgendaView = ({
     logger.log('AgendaView: Applying saved filters', newFilters);
   }, []);
 
+  const handleInterventionMove = useCallback((moveData) => {
+    logger.log('AgendaView: Intervention drag & drop', {
+      interventionId: moveData.intervention.id,
+      from: {
+        date: moveData.intervention.date,
+        time: moveData.intervention.time
+      },
+      to: {
+        date: moveData.targetDate,
+        time: moveData.targetTime,
+        employeeId: moveData.targetEmployeeId
+      }
+    });
+
+    // TODO: Appeler l'API Supabase pour mettre à jour l'intervention
+    // Exemple:
+    // await supabase
+    //   .from('interventions')
+    //   .update({
+    //     date: moveData.targetDate,
+    //     time: moveData.targetTime,
+    //     assigned_to: moveData.targetEmployeeId ? [moveData.targetEmployeeId] : undefined
+    //   })
+    //   .eq('id', moveData.intervention.id);
+
+    console.warn('⚠️ Drag & drop détecté mais pas encore connecté à la base de données. Voir handleInterventionMove dans AgendaView.js');
+  }, []);
+
   // Error state
   if (error) {
     return (
@@ -230,8 +258,12 @@ const AgendaView = ({
                 key={date}
                 date={date}
                 interventions={byDate[date] || []}
+                allInterventions={interventions}
+                employees={employees}
                 onSelect={onSelect}
+                onInterventionMove={handleInterventionMove}
                 showDate={true}
+                enableDragDrop={true}
               />
             ))}
           </div>
