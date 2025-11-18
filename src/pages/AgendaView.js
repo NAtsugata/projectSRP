@@ -77,13 +77,16 @@ const AgendaView = ({
 
       // Check if intervention has scheduled dates
       if (itv.scheduled_dates && Array.isArray(itv.scheduled_dates) && itv.scheduled_dates.length > 0) {
-        // For each scheduled date, check if it's in range and add it
-        for (const scheduledDate of itv.scheduled_dates) {
-          if (scheduledDate >= startStr && scheduledDate <= endStr) {
+        // Collect all unique dates (original date + scheduled dates)
+        const allDates = new Set([itv.date, ...itv.scheduled_dates]);
+
+        // For each unique date, check if it's in range and add it
+        for (const date of allDates) {
+          if (date >= startStr && date <= endStr) {
             expanded.push({
               ...itv,
-              date: scheduledDate,
-              _isMultiDay: true,
+              date: date,
+              _isMultiDay: allDates.size > 1,
               _originalDate: itv.date
             });
           }

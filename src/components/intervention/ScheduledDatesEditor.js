@@ -3,6 +3,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { PlusIcon, XIcon } from '../SharedUI';
+import { useToast } from '../../contexts/ToastContext';
 import logger from '../../utils/logger';
 import './ScheduledDatesEditor.css';
 
@@ -15,16 +16,17 @@ import './ScheduledDatesEditor.css';
 const ScheduledDatesEditor = ({ scheduledDates = [], onUpdate, disabled = false }) => {
   const [newDate, setNewDate] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
 
   const handleAddDate = useCallback(async () => {
     if (!newDate) {
-      alert('Veuillez sélectionner une date');
+      toast.warning('Veuillez sélectionner une date');
       return;
     }
 
     // Vérifier si la date n'est pas déjà dans la liste
     if (scheduledDates.includes(newDate)) {
-      alert('Cette date est déjà dans la liste');
+      toast.warning('Cette date est déjà planifiée');
       return;
     }
 
@@ -34,14 +36,15 @@ const ScheduledDatesEditor = ({ scheduledDates = [], onUpdate, disabled = false 
     try {
       await onUpdate(updatedDates);
       setNewDate('');
+      toast.success('Date ajoutée avec succès');
       logger.log('ScheduledDatesEditor: Date ajoutée', newDate);
     } catch (error) {
       logger.error('ScheduledDatesEditor: Erreur ajout date', error);
-      alert('Erreur lors de l\'ajout de la date');
+      toast.error('Erreur lors de l\'ajout de la date');
     } finally {
       setIsSaving(false);
     }
-  }, [newDate, scheduledDates, onUpdate]);
+  }, [newDate, scheduledDates, onUpdate, toast]);
 
   const handleRemoveDate = useCallback(async (dateToRemove) => {
     const updatedDates = scheduledDates.filter(d => d !== dateToRemove);
@@ -49,14 +52,15 @@ const ScheduledDatesEditor = ({ scheduledDates = [], onUpdate, disabled = false 
     setIsSaving(true);
     try {
       await onUpdate(updatedDates);
+      toast.success('Date retirée avec succès');
       logger.log('ScheduledDatesEditor: Date retirée', dateToRemove);
     } catch (error) {
       logger.error('ScheduledDatesEditor: Erreur suppression date', error);
-      alert('Erreur lors de la suppression de la date');
+      toast.error('Erreur lors de la suppression de la date');
     } finally {
       setIsSaving(false);
     }
-  }, [scheduledDates, onUpdate]);
+  }, [scheduledDates, onUpdate, toast]);
 
   return (
     <div className="scheduled-dates-editor">

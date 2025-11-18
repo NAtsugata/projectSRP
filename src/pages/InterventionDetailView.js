@@ -21,6 +21,7 @@ import {
   StopCircleIcon,
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
+import logger from '../utils/logger';
 import {
   ImageGalleryOptimized,
   InterventionHeader,
@@ -46,7 +47,7 @@ const withCacheBust = (url) => {
   if (!url || typeof url !== 'string') return url;
   const sep = url.includes('?') ? '&' : '?';
   const cacheBusted = `${url}${sep}v=${Date.now()}&r=${Math.random().toString(36).substring(7)}`;
-  console.log('🖼️ Cache-bust URL:', cacheBusted);
+  logger.log('🖼️ Cache-bust URL:', cacheBusted);
   return cacheBusted;
 };
 
@@ -162,7 +163,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
   // Notifier le parent quand la queue change
   useEffect(() => {
     const activeQueue = state.queue.filter(item => item.status === 'uploading' || item.status === 'pending');
-    console.log('🔔 Notification queue change:', activeQueue.length, 'items', activeQueue);
+    logger.log('🔔 Notification queue change:', activeQueue.length, 'items', activeQueue);
     onQueueChange?.(activeQueue);
   }, [state.queue, onQueueChange]);
 
@@ -202,7 +203,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         c.toBlob(b=>{
           if(b){
             const compressed = new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()});
-            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+            logger.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
             res(compressed);
           }else{
             res(file);
@@ -223,7 +224,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     // Débloquer tout de suite si rien n'a été choisi (annulation)
     if (!files.length) { onEndCritical?.(); if(inputRef.current) inputRef.current.value=''; return; }
 
-    console.log('📸 Fichiers sélectionnés:', files.length);
+    logger.log('📸 Fichiers sélectionnés:', files.length);
     if(inputRef.current) inputRef.current.value='';
     // Créer des previews pour les images
     const queue = files.map((f,i)=>{
@@ -231,11 +232,11 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
       // Ajouter preview pour les images
       if (f.type.startsWith('image/')) {
         item.preview = URL.createObjectURL(f);
-        console.log('🖼️ Preview créée pour:', f.name, '→', item.preview);
+        logger.log('🖼️ Preview créée pour:', f.name, '→', item.preview);
       }
       return item;
     });
-    console.log('📦 Queue initiale:', queue);
+    logger.log('📦 Queue initiale:', queue);
     setState({uploading:true,queue,error:null});
     const uploaded=[];
     for (let i=0;i<files.length;i++) {
@@ -373,7 +374,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
-    console.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
+    logger.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
   }, [uploadQueue]);
 
   // === Scroll locks + restauration ===
@@ -522,7 +523,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Suppression d'image --------
   const handleDeleteImage = useCallback(async (image) => {
     try {
-      console.log('🗑️ Suppression de l\'image:', image.url);
+      logger.log('🗑️ Suppression de l\'image:', image.url);
 
       // Supprimer du stockage Supabase
       const { error: storageError } = await storageService.deleteInterventionFile(image.url);
@@ -539,7 +540,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       // Persister
       await persistReport(updated);
 
-      console.log('✅ Image supprimée avec succès');
+      logger.log('✅ Image supprimée avec succès');
     } catch (error) {
       console.error('❌ Erreur suppression image:', error);
       throw error;
@@ -565,13 +566,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       const JSZip = window.JSZip;
       const zip = new JSZip();
 
-      console.log('📦 Création du ZIP avec', report.files.length, 'fichier(s)');
+      logger.log('📦 Création du ZIP avec', report.files.length, 'fichier(s)');
 
       // Télécharger tous les fichiers et les ajouter au ZIP
       for (let i = 0; i < report.files.length; i++) {
         const file = report.files[i];
         try {
-          console.log(`📥 Téléchargement ${i + 1}/${report.files.length}:`, file.name);
+          logger.log(`📥 Téléchargement ${i + 1}/${report.files.length}:`, file.name);
 
           // Fetch le fichier avec timeout
           const controller = new AbortController();
@@ -597,7 +598,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           }
 
           zip.file(uniqueName, blob);
-          console.log(`✅ Ajouté au ZIP: ${uniqueName}`);
+          logger.log(`✅ Ajouté au ZIP: ${uniqueName}`);
         } catch (error) {
           console.error(`❌ Erreur téléchargement ${file.name}:`, error);
           // Continuer avec les autres fichiers
@@ -605,7 +606,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       }
 
       // Générer le ZIP
-      console.log('🗜️ Compression du ZIP...');
+      logger.log('🗜️ Compression du ZIP...');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
 
       // Télécharger le ZIP
@@ -618,7 +619,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
 
-      console.log('✅ ZIP téléchargé:', zipName);
+      logger.log('✅ ZIP téléchargé:', zipName);
       alert(`✅ Tous les fichiers ont été téléchargés dans ${zipName}`);
     } catch (error) {
       console.error('❌ Erreur création ZIP:', error);
@@ -745,13 +746,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         {/* ACTIONS RAPIDES */}
         <QuickActionsBar
           intervention={intervention}
-          onAction={(action) => console.log('Action:', action)}
+          onAction={(action) => logger.log('Action:', action)}
         />
 
         {/* BOUTONS D'APPEL ULTRA-VISIBLES */}
         <CallButtons
           intervention={intervention}
-          onCall={(label) => console.log('Appel vers:', label)}
+          onCall={(label) => logger.log('Appel vers:', label)}
         />
 
         {/* CHRONOMÈTRE AVANCÉ AVEC PAUSE/REPRISE */}

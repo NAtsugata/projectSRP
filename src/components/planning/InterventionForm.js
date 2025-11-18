@@ -5,6 +5,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useForm } from '../../hooks';
+import { useToast } from '../../contexts/ToastContext';
 import { validateIntervention } from '../../utils/validators';
 import logger from '../../utils/logger';
 import './InterventionForm.css';
@@ -51,9 +52,10 @@ const InterventionForm = ({
       logger.log('InterventionForm: Submitting...', formData);
 
       // Ajouter les dates planifiées aux données du formulaire
+      // Forcer le tri pour garantir l'ordre chronologique
       const formDataWithScheduledDates = {
         ...formData,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.sort() : null
       };
 
       await onSubmit({
@@ -68,6 +70,7 @@ const InterventionForm = ({
   const [briefingFiles, setBriefingFiles] = useState([]);
   const [uploadError, setUploadError] = useState('');
   const [scheduledDates, setScheduledDates] = useState([]);
+  const toast = useToast();
 
   const handleUserAssignmentChange = useCallback((userId) => {
     setAssignedUsers(prev =>
@@ -87,19 +90,20 @@ const InterventionForm = ({
   const handleAddScheduledDate = useCallback(() => {
     const dateValue = values.date;
     if (!dateValue) {
-      alert('Veuillez sélectionner une date d\'abord');
+      toast.warning('Veuillez sélectionner une date d\'abord');
       return;
     }
 
     // Vérifier si la date n'est pas déjà dans la liste
     if (scheduledDates.includes(dateValue)) {
-      alert('Cette date est déjà dans la liste');
+      toast.warning('Cette date est déjà planifiée');
       return;
     }
 
     setScheduledDates(prev => [...prev, dateValue].sort());
+    toast.success('Date ajoutée au planning');
     logger.log('InterventionForm: Date ajoutée au planning multi-jours', dateValue);
-  }, [values.date, scheduledDates]);
+  }, [values.date, scheduledDates, toast]);
 
   const handleRemoveScheduledDate = useCallback((dateToRemove) => {
     setScheduledDates(prev => prev.filter(d => d !== dateToRemove));
