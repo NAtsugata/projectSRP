@@ -8,7 +8,9 @@ import {
   AgendaFilters,
   AgendaDashboard,
   ResourceView,
-  SavedFilters
+  SavedFilters,
+  ExportMenu,
+  AbsenceManager
 } from '../components/agenda';
 import { EmptyState, LoadingSpinner } from '../components/ui';
 import { CalendarIcon } from '../components/SharedUI';
@@ -17,11 +19,12 @@ import {
   getDateRange,
   navigatePeriod
 } from '../utils/agendaHelpers';
+import { getAgendaNotifications } from '../utils/notificationHelper';
 import logger from '../utils/logger';
 import './AgendaView.css';
 
 /**
- * AgendaView Component (v3 - Enhanced)
+ * AgendaView Component (v4 - Full Featured)
  * @param {Array} interventions - List of interventions
  * @param {Function} onSelect - Handler when an intervention is clicked
  * @param {Array} employees - List of employees for filtering
@@ -231,6 +234,19 @@ const AgendaView = ({
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
       />
+
+      {/* Actions Bar - Export & Absences */}
+      <div className="agenda-actions-bar">
+        <ExportMenu
+          interventions={filteredInterventions}
+          employees={employees}
+          dateRange={dateRange}
+          viewMode={viewMode}
+        />
+        <AbsenceManager
+          employees={employees}
+        />
+      </div>
 
       {/* Filters */}
       <AgendaFilters

@@ -10,3 +10,5 @@ export { default as EmployeeSelect } from './EmployeeSelect';
 export { default as SavedFilters } from './SavedFilters';
 export { default as DraggableIntervention } from './DraggableIntervention';
 export { default as DroppableTimeSlot } from './DroppableTimeSlot';
+export { default as ExportMenu } from './ExportMenu';
+export { default as AbsenceManager } from './AbsenceManager';

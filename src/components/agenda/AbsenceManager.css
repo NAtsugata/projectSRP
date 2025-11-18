@@ -1,0 +1,320 @@
+/* src/components/agenda/AbsenceManager.css */
+
+.absence-manager {
+  position: relative;
+  display: inline-block;
+}
+
+.absence-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.absence-toggle-btn:hover {
+  background: #f8fafc;
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.absence-btn-text {
+  font-size: 14px;
+}
+
+.absence-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.absence-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.absence-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 420px;
+  max-height: 600px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  animation: absencePanelAppear 0.2s ease;
+}
+
+@keyframes absencePanelAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.absence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.absence-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.absence-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.absence-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.absence-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.absence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.absence-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.absence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.absence-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.absence-card.current {
+  border-left: 3px solid #ef4444;
+  background: #fef2f2;
+}
+
+.absence-card.upcoming {
+  border-left: 3px solid #f59e0b;
+}
+
+.absence-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.absence-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.absence-employee {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.absence-employee svg {
+  width: 16px;
+  height: 16px;
+  color: #64748b;
+}
+
+.absence-employee-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.absence-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.absence-delete:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.absence-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.absence-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.absence-dates svg {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.absence-reason {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.absence-notes {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  padding-left: 20px;
+}
+
+.absence-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.absence-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.absence-form-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.absence-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.absence-add-btn:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .absence-panel {
+    width: 340px;
+  }
+
+  .absence-btn-text {
+    display: none;
+  }
+
+  .absence-toggle-btn {
+    padding: 10px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

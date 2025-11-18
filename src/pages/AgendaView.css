@@ -429,3 +429,22 @@
     border-color: #7f1d1d;
   }
 }
+
+/* ==================== ACTIONS BAR ==================== */
+.agenda-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: var(--spacing-4) 0;
+  padding: var(--spacing-3);
+  background: white;
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 768px) {
+  .agenda-actions-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
