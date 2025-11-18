@@ -22,7 +22,6 @@ SELECT
   COUNT(*) as count,
   COALESCE(SUM(amount), 0) as total_amount
 FROM expenses
-WHERE deleted_at IS NULL  -- Exclure les suppressions soft
 GROUP BY status, is_paid;
 
 -- Index pour accélérer les requêtes
@@ -49,7 +48,6 @@ SELECT
   COALESCE(AVG(amount), 0) as avg_amount,
   MAX(date) as last_expense_date
 FROM expenses
-WHERE deleted_at IS NULL
 GROUP BY user_id, status, is_paid;
 
 -- Index pour accélérer les requêtes par utilisateur
@@ -78,8 +76,7 @@ SELECT
   COALESCE(SUM(amount), 0) as total_amount,
   COALESCE(AVG(amount), 0) as avg_amount
 FROM expenses
-WHERE deleted_at IS NULL
-  AND date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')  -- Seulement les 12 derniers mois
+WHERE date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')  -- Seulement les 12 derniers mois
 GROUP BY DATE_TRUNC('month', date), user_id, status, is_paid
 ORDER BY month DESC;
 
@@ -107,8 +104,7 @@ SELECT
   COUNT(*) as count,
   COALESCE(SUM(amount), 0) as total_amount
 FROM expenses
-WHERE deleted_at IS NULL
-  AND date >= CURRENT_DATE - INTERVAL '30 days'
+WHERE date >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY DATE_TRUNC('day', date), status, is_paid
 ORDER BY day DESC;
 
@@ -133,8 +129,7 @@ SELECT
   MIN(date) as oldest_expense_date,
   MAX(date) as newest_expense_date
 FROM expenses
-WHERE deleted_at IS NULL
-  AND status = 'approved'
+WHERE status = 'approved'
   AND is_paid = false
 GROUP BY user_id;
 
