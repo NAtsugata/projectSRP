@@ -208,29 +208,6 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     };
   }, []);
 
-  // Calculs statistiques
-  const stats = useMemo(() => {
-    const pending = expenses.filter(e => e.status === 'pending');
-    const approved = expenses.filter(e => e.status === 'approved');
-    const rejected = expenses.filter(e => e.status === 'rejected');
-
-    return {
-      pending: {
-        count: pending.length,
-        total: pending.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      approved: {
-        count: approved.length,
-        total: approved.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      rejected: {
-        count: rejected.length,
-        total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-    };
-  }, [expenses]);
-
   // Catégories de frais
   const categories = [
     { value: 'transport', label: '🚗 Transport', color: '#3b82f6' },
