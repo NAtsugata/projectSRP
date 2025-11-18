@@ -200,12 +200,11 @@ $$ LANGUAGE plpgsql;
 
 -- Trigger sur INSERT/UPDATE/DELETE
 -- DÉCOMMENTER SI VOUS VOULEZ L'AUTO-REFRESH:
-/*
-CREATE TRIGGER expense_stats_refresh_trigger
-AFTER INSERT OR UPDATE OR DELETE ON expenses
-FOR EACH STATEMENT
-EXECUTE FUNCTION trigger_refresh_expense_stats();
-*/
+--
+-- CREATE TRIGGER expense_stats_refresh_trigger
+-- AFTER INSERT OR UPDATE OR DELETE ON expenses
+-- FOR EACH STATEMENT
+-- EXECUTE FUNCTION trigger_refresh_expense_stats();
 
 
 -- ========================================
@@ -215,22 +214,22 @@ EXECUTE FUNCTION trigger_refresh_expense_stats();
 -- Dans Supabase: Extensions > pg_cron > Enable
 --
 -- Rafraîchir toutes les 15 minutes:
-/*
-SELECT cron.schedule(
-  'refresh-expense-stats',
-  '*/15 * * * *',
-  'SELECT refresh_realtime_expense_stats();'
-);
-*/
+-- DÉCOMMENTER SI VOUS VOULEZ ACTIVER LE CRON:
+--
+-- SELECT cron.schedule(
+--   'refresh-expense-stats',
+--   '*/15 * * * *',
+--   'SELECT refresh_realtime_expense_stats();'
+-- );
 --
 -- Rafraîchir les stats mensuelles 1x/jour à minuit:
-/*
-SELECT cron.schedule(
-  'refresh-monthly-stats',
-  '0 0 * * *',
-  'REFRESH MATERIALIZED VIEW CONCURRENTLY expense_stats_by_month;'
-);
-*/
+-- DÉCOMMENTER SI VOUS VOULEZ ACTIVER LE CRON:
+--
+-- SELECT cron.schedule(
+--   'refresh-monthly-stats',
+--   '0 0 * * *',
+--   'REFRESH MATERIALIZED VIEW CONCURRENTLY expense_stats_by_month;'
+-- );
 
 
 -- ========================================
