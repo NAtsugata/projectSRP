@@ -1,31 +1,62 @@
 // public/service-worker.js
-// Service Worker pour gérer les notifications push natives
+// Service Worker pour gérer les notifications push natives et le mode hors ligne
 
-const CACHE_NAME = 'srp-app-v2';
+// Noms des caches (version unique)
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
+const API_CACHE = `srp-api-${CACHE_VERSION}`;
 const NOTIFICATION_TAG = 'srp-notification';
+
+// Liste des caches valides
+const VALID_CACHES = [CACHE_NAME, RUNTIME_CACHE, API_CACHE];
+
+// Assets à pré-charger (optionnel)
+const PRECACHE_ASSETS = [
+  '/',
+  '/offline.html'
+];
 
 // Installation du Service Worker
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installation...');
-  self.skipWaiting();
+
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[Service Worker] Pré-cache des assets essentiels');
+        // Essayer de pré-charger, mais ne pas bloquer l'installation si ça échoue
+        return cache.addAll(PRECACHE_ASSETS).catch(err => {
+          console.warn('[Service Worker] Erreur pré-cache (non bloquant):', err);
+        });
+      })
+      .then(() => {
+        console.log('[Service Worker] Installation terminée');
+        return self.skipWaiting(); // Activer immédiatement
+      })
+  );
 });
 
 // Activation du Service Worker
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activation...');
 
-  // Nettoyer les anciens caches
+  // Nettoyer les anciens caches (garder seulement la version actuelle)
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // Supprimer les caches qui ne sont pas dans VALID_CACHES
+          if (!VALID_CACHES.includes(cacheName) && cacheName.startsWith('srp-')) {
             console.log('[Service Worker] Suppression ancien cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log('[Service Worker] Activation terminée');
+      return self.clients.claim(); // Prendre le contrôle immédiatement
+    })
   );
 });
 
@@ -117,9 +148,7 @@ self.addEventListener('notificationclose', (event) => {
 // ========================================
 // MODE HORS LIGNE - CACHE INTELLIGENT
 // ========================================
-
-const RUNTIME_CACHE = 'srp-runtime-v1';
-const API_CACHE = 'srp-api-v1';
+// RUNTIME_CACHE et API_CACHE sont définis en haut du fichier
 
 // Intercepter les requêtes pour le mode hors ligne
 self.addEventListener('fetch', (event) => {
