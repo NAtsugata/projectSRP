@@ -18,7 +18,10 @@
 /* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
 @import './styles/mobile-fixes.css';
 
-/* 6. Mobile Copper - Design cuivré/laiton élégant (DÉSACTIVÉ pour revenir au design de base) */
+/* 6. Mobile Simple - Design "L'Œil de Bronze" (Premium Iris/Cuivre) */
+@import './styles/mobile-simple.css';
+
+/* 7. Mobile Copper - Design cuivré/laiton élégant (DÉSACTIVÉ) */
 /* @import './styles/mobile-copper.css'; */
 
 /* ==================== RESET & BASE ==================== */
