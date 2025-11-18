@@ -3,10 +3,7 @@
    Ordre d'import important pour la cascade CSS
    ============================================ */
 
-/* 0. THÈME PREMIUM - Variables NOIR/CUIVRE (EN PREMIER) */
-@import './styles/theme-premium.css';
-
-/* 1. Design System - Variables et fondations (DÉSORMAIS SECONDAIRE) */
+/* 1. Design System - Variables et fondations */
 @import './styles/design-system.css';
 
 /* 2. Animations - Keyframes et transitions */
@@ -21,7 +18,7 @@
 /* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
 @import './styles/mobile-fixes.css';
 
-/* 6. Mobile Copper PREMIUM - Design NOIR/CUIVRE luxe (DOIT être en dernier pour override) */
+/* 6. Mobile Copper - Design cuivré/laiton élégant (DOIT être en dernier pour override) */
 @import './styles/mobile-copper.css';
 
 /* ==================== RESET & BASE ==================== */
