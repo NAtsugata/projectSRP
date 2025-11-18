@@ -1,176 +1,205 @@
 /* =================================================================
-   MOBILE PREMIUM - "L'Œil de Bronze"
-   Fusion de la structure simple et du design Iris/Cuivre
+   MOBILE PREMIUM - "ÉPURÉ & CLASSE"
+   Correction des contrastes et Design Luxe
    ================================================================= */
 
 @media (max-width: 640px) {
 
-  /* --- 1. PALETTE DE COULEURS DE LUXE --- */
+  /* --- 0. RESET OBLIGATOIRE (ANTI-BUG COULEURS) --- */
+  /* Force le navigateur à ne pas inverser les couleurs en mode sombre */
   :root {
-    --iris-black: #0a0a0a;       /* Noir profond (Pupille) */
-    --iris-copper: #B87333;      /* Cuivre pur (Iris) */
-    --iris-gold: #D4AF37;        /* Reflet Or */
-    --bg-cream: #fdfbf7;         /* Fond Crème (Papier luxe) */
-    --glass-white: rgba(255, 255, 255, 0.92); /* Verre fumé */
-    --text-dark: #2c1810;        /* Marron très sombre (plus doux que le noir) */
+    color-scheme: light !important;
   }
 
-  /* --- 2. FOND & AMBIANCE --- */
-  body {
-    background: var(--bg-cream) !important;
-    color: var(--text-dark) !important;
-    font-family: 'Inter', -apple-system, sans-serif !important;
-    background-image: radial-gradient(circle at top right, rgba(184, 115, 51, 0.05), transparent 40%) !important;
-  }
-
-  /* Nettoyage des vieux styles */
   *, *::before, *::after {
-    background-image: none; /* On reset sauf si on le redéfinit */
+    -webkit-font-smoothing: antialiased; /* Texte plus net */
+    box-sizing: border-box;
   }
 
-  /* --- 3. BOUTONS "IRIS" (L'Effet Signature) --- */
-  button, .btn, .btn-primary, [role="button"], a.btn {
-    /* L'Effet Iris Inversé : Pupille Noire au centre -> Iris Cuivre autour */
-    background: radial-gradient(circle at center, var(--iris-black) 0%, #2a1b0e 35%, var(--iris-copper) 100%) !important;
-    color: #ffffff !important;
-    border: 1px solid var(--iris-black) !important;
-    border-radius: 30px !important; /* Forme organique */
+  /* --- 1. PALETTE DE COULEURS (LISIBILITÉ MAXIMALE) --- */
+  :root {
+    /* TEXTES */
+    --text-main: #1a1a1a;        /* Noir Anthracite (Plus doux que #000) */
+    --text-muted: #666666;       /* Gris moyen pour les infos secondaires */
+    --text-inverse: #ffffff;     /* Blanc pour sur fond sombre */
 
-    padding: 14px 24px !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
+    /* FONDS */
+    --bg-page: #f8f5f2;          /* Blanc Cassé / Crème très subtil (Luxe) */
+    --bg-card: #ffffff;          /* Blanc Pur */
 
-    /* Ombre portée cuivrée diffuse */
-    box-shadow: 0 8px 20px -5px rgba(184, 115, 51, 0.4) !important;
-
-    min-height: 50px !important;
-    position: relative !important;
-    overflow: hidden !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    /* ACCENTS */
+    --accent-copper: #B87333;    /* Cuivre */
+    --accent-gold: #D4AF37;      /* Or (Bordures) */
+    --accent-black: #000000;     /* Noir Profond (Boutons) */
   }
 
-  /* Micro-interaction au clic : La pupille s'agrandit */
-  button:active, .btn:active {
-    transform: scale(0.96) !important;
-    background: radial-gradient(circle at center, var(--iris-black) 0%, var(--iris-black) 60%, var(--iris-copper) 100%) !important;
-    box-shadow: 0 4px 10px rgba(184, 115, 51, 0.2) !important;
+  /* --- 2. FOND DE PAGE & TEXTE GLOBAL --- */
+  body {
+    background: var(--bg-page) !important;
+    color: var(--text-main) !important; /* Force le texte en NOIR par défaut */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
   }
 
-  /* Boutons Secondaires (Ghost) */
-  .btn-secondary, button[type="button"]:not(.btn-primary) {
-    background: transparent !important;
-    color: var(--iris-copper) !important;
-    border: 1px solid var(--iris-copper) !important;
+  /* Force la couleur noire sur TOUS les textes courants pour éviter le "blanc sur blanc" */
+  p, h1, h2, h3, h4, h5, h6, span, div, li, td, th, label, strong, b {
+    color: var(--text-main);
+  }
+
+  /* Textes secondaires (dates, petits détails) */
+  small, .text-muted, .text-secondary, .subtitle {
+    color: var(--text-muted) !important;
+  }
+
+  /* --- 3. CARTES & CONTENEURS (LISIBILITÉ) --- */
+  .card, .modern-section, .document-card, .intervention-card, .stat-card, .white-container {
+    background: var(--bg-card) !important; /* Fond BLANC forcé */
+    border: 1px solid rgba(0, 0, 0, 0.05) !important; /* Bordure très fine */
+    border-radius: 16px !important;
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+    /* Ombre douce et diffuse ("Soft UI") */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  /* Titres dans les cartes */
+  .card h2, .card h3, .modern-section h3, .view-title {
+    color: var(--accent-black) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px !important;
+    margin-bottom: 16px !important;
+    background: none !important;
+    -webkit-text-fill-color: initial !important; /* Annule les dégradés de texte bizarres */
+  }
+
+  /* --- 4. INPUTS (PROBLÈME NOIR SUR NOIR RÉSOLU) --- */
+  input, textarea, select, .form-control {
+    background: #ffffff !important;       /* Fond BLANC */
+    color: #000000 !important;            /* Texte NOIR */
+    border: 1px solid #e0e0e0 !important; /* Bordure Grise Claire */
+    border-radius: 12px !important;
+    padding: 14px !important;
+    font-size: 16px !important;
     box-shadow: none !important;
   }
 
-  /* --- 4. CARTES EN "VERRE" (Glassmorphism) --- */
-  .card, .modern-section, .document-card, .intervention-card, .stat-card {
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-copper) !important;
+    box-shadow: 0 0 0 1px var(--accent-copper) !important; /* Lueur cuivre fine */
     background: #ffffff !important;
-    border: 1px solid rgba(184, 115, 51, 0.15) !important; /* Bordure cuivre subtile */
-    border-radius: 20px !important;
-    box-shadow: 0 10px 40px -10px rgba(44, 24, 16, 0.08) !important; /* Ombre douce marron */
-    padding: 20px !important;
-    margin-bottom: 16px !important;
-    backdrop-filter: blur(10px);
   }
 
-  /* En-têtes de cartes */
-  .card h2, .card h3, .view-title, h2, h3 {
-    color: var(--text-dark) !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.5px !important;
+  /* Placeholder (Texte d'aide) */
+  ::placeholder {
+    color: #999999 !important;
+    opacity: 1 !important;
   }
 
-  /* --- 5. NAVIGATION FLOTTANTE DE LUXE --- */
+  /* --- 5. BOUTONS "IRIS" (CONTRASTE CORRIGÉ) --- */
+  /* Le texte doit être BLANC sur le bouton sombre */
+  button, .btn, .btn-primary, a.btn-primary {
+    /* Dégradé Iris : Noir -> Cuivre */
+    background: radial-gradient(circle at center, #000000 0%, #1a110a 40%, #B87333 100%) !important;
+
+    /* TEXTE BLANC OBLIGATOIRE */
+    color: #ffffff !important;
+
+    /* Style */
+    border: 1px solid #000000 !important;
+    border-radius: 50px !important; /* Pilule */
+    padding: 14px 24px !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    box-shadow: 0 8px 16px rgba(184, 115, 51, 0.25) !important;
+    text-shadow: none !important;
+
+    /* Positionnement */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  /* Icônes DANS les boutons (Forcer en blanc) */
+  button svg, .btn svg, button i, .btn i {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+  }
+
+  /* Boutons Secondaires (Annuler/Retour) */
+  .btn-secondary, button.secondary, button[type="button"]:not(.btn-primary) {
+    background: transparent !important;
+    color: var(--text-main) !important; /* Texte Noir */
+    border: 1px solid #e0e0e0 !important;
+    box-shadow: none !important;
+  }
+
+  /* --- 6. NAVIGATION DU BAS (FLOTTANTE & PROPRE) --- */
   .mobile-nav {
-    position: fixed !important;
-    bottom: 24px !important;
-    left: 20px !important;
-    right: 20px !important;
-
-    /* Effet Verre Givré */
-    background: var(--glass-white) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.95) !important; /* Blanc presque opaque */
+    border-top: none !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
     border-radius: 24px !important;
 
-    /* Ombre "Elevated" */
-    box-shadow:
-      0 20px 40px -5px rgba(0,0,0,0.1),
-      0 0 0 1px rgba(184, 115, 51, 0.1) !important;
+    /* Position Flottante */
+    bottom: 20px !important;
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
 
-    padding: 12px 16px !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+    /* Ombre de luxe */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+    padding: 12px 20px !important;
   }
 
-  /* Icônes Navigation */
   .mobile-nav-item {
-    color: #9ca3af !important; /* Gris doux par défaut */
-    transition: color 0.3s ease !important;
+    color: #999999 !important; /* Icônes inactives en gris */
   }
 
   .mobile-nav-item.active {
-    color: var(--iris-copper) !important;
-    transform: translateY(-2px);
+    color: var(--accent-copper) !important; /* Icône active en Cuivre */
+    background: none !important;
   }
 
-  /* Point lumineux sous l'icône active */
-  .mobile-nav-item.active::after {
-    content: '' !important;
-    display: block !important;
-    width: 4px !important;
-    height: 4px !important;
-    background: var(--iris-copper) !important;
-    border-radius: 50% !important;
-    margin: 4px auto 0 auto !important;
-    box-shadow: 0 0 8px var(--iris-copper) !important;
+  .mobile-nav-item.active svg {
+    stroke: var(--accent-copper) !important;
+    stroke-width: 2.5px !important;
   }
 
-  /* --- 6. INPUTS ET FORMULAIRES SOIGNÉS --- */
-  input, select, textarea {
-    background: #ffffff !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 12px !important;
-    padding: 14px !important;
-    font-size: 16px !important; /* Évite le zoom auto sur iPhone */
-    color: var(--text-dark) !important;
-    transition: all 0.3s ease !important;
+  /* --- 7. TABLEAUX & LISTES --- */
+  table {
+    background: white !important;
+    color: var(--text-main) !important;
   }
 
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--iris-copper) !important;
-    box-shadow: 0 0 0 4px rgba(184, 115, 51, 0.1) !important;
-    outline: none !important;
-  }
-
-  /* --- 7. DÉTAILS PREMIUM --- */
-
-  /* Badges (Statut) */
-  .badge {
-    border-radius: 8px !important;
-    font-weight: 600 !important;
+  th {
+    color: var(--text-muted) !important;
     text-transform: uppercase !important;
     font-size: 11px !important;
-    letter-spacing: 0.5px !important;
-    padding: 6px 10px !important;
+    letter-spacing: 1px !important;
+    border-bottom: 1px solid #eee !important;
   }
 
-  /* Séparateurs */
-  hr {
-    border-top: 1px dashed rgba(184, 115, 51, 0.3) !important;
-    margin: 24px 0 !important;
+  td {
+    color: var(--text-main) !important;
+    border-bottom: 1px solid #f5f5f5 !important;
   }
 
-  /* Icônes */
-  svg {
-    stroke-width: 1.5px !important; /* Plus fin et élégant */
+  /* --- 8. CORRECTIFS SPÉCIAUX --- */
+
+  /* Badges de statut (Succès/Erreur) - Texte lisible */
+  .badge {
+    color: #fff !important;
+    font-weight: bold !important;
+    border: none !important;
+  }
+  .badge-success { background: #2e7d32 !important; } /* Vert forêt */
+  .badge-warning { background: #ed6c02 !important; } /* Orange foncé */
+  .badge-danger { background: #d32f2f !important; }  /* Rouge sombre */
+
+  /* Liens */
+  a {
+    color: var(--accent-copper) !important;
+    text-decoration: none !important;
   }
 }
