@@ -139,6 +139,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   const [error, setError] = useState(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false); // Flag pour éviter fermeture pendant traitement photo
   const [showReceipts, setShowReceipts] = useState(null); // État pour afficher le modal des justificatifs
+  const [filterStatus, setFilterStatus] = useState('all'); // Filtre de statut
 
   // États pour la détection de documents
   const [documentDetectionResult, setDocumentDetectionResult] = useState(null);
@@ -243,6 +244,47 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   ];
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
+
+  // Statistiques et filtrage
+  const { stats, filteredExpenses } = useMemo(() => {
+    const pending = expenses.filter(e => e.status === 'pending');
+    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+    const paid = expenses.filter(e => e.is_paid);
+    const rejected = expenses.filter(e => e.status === 'rejected');
+
+    const statistics = {
+      pending: {
+        count: pending.length,
+        total: pending.reduce((sum, e) => sum + (e.amount || 0), 0)
+      },
+      approved: {
+        count: approved.length,
+        total: approved.reduce((sum, e) => sum + (e.amount || 0), 0)
+      },
+      paid: {
+        count: paid.length,
+        total: paid.reduce((sum, e) => sum + (e.amount || 0), 0)
+      },
+      rejected: {
+        count: rejected.length,
+        total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0)
+      }
+    };
+
+    // Filtrage
+    let filtered = expenses;
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'paid') {
+        filtered = expenses.filter(e => e.is_paid);
+      } else if (filterStatus === 'approved') {
+        filtered = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+      } else {
+        filtered = expenses.filter(e => e.status === filterStatus);
+      }
+    }
+
+    return { stats: statistics, filteredExpenses: filtered };
+  }, [expenses, filterStatus]);
 
   // Traiter la prochaine photo dans la file d'attente
   const processNextPhoto = useCallback(async () => {
@@ -435,8 +477,13 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     }).format(amount);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
+  const getStatusBadge = (expense) => {
+    // Si payé, c'est prioritaire sur approved
+    if (expense.is_paid) {
+      return { icon: '💰', label: 'Payé', color: '#6366f1', bg: '#eff6ff' };
+    }
+
+    switch (expense.status) {
       case 'pending':
         return { icon: <ClockIcon />, label: 'En attente', color: '#f59e0b', bg: '#fef3c7' };
       case 'approved':
@@ -782,22 +829,132 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         </div>
       )}
 
+      {/* Statistiques */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: '#fef3c7', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#92400e', marginBottom: '0.25rem' }}>⏳ EN ATTENTE</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>{stats.pending.count}</div>
+          <div style={{ fontSize: '0.875rem', color: '#92400e' }}>{formatAmount(stats.pending.total)}</div>
+        </div>
+        <div style={{ background: '#d1fae5', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#065f46', marginBottom: '0.25rem' }}>✅ APPROUVÉ</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>{stats.approved.count}</div>
+          <div style={{ fontSize: '0.875rem', color: '#065f46' }}>{formatAmount(stats.approved.total)}</div>
+        </div>
+        <div style={{ background: '#eff6ff', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#1e3a8a', marginBottom: '0.25rem' }}>💰 PAYÉ</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#6366f1' }}>{stats.paid.count}</div>
+          <div style={{ fontSize: '0.875rem', color: '#1e3a8a' }}>{formatAmount(stats.paid.total)}</div>
+        </div>
+        <div style={{ background: '#fee2e2', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', color: '#991b1b', marginBottom: '0.25rem' }}>❌ REJETÉ</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>{stats.rejected.count}</div>
+          <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>{formatAmount(stats.rejected.total)}</div>
+        </div>
+      </div>
+
+      {/* Filtres */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setFilterStatus('all')}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: filterStatus === 'all' ? '2px solid #3b82f6' : '1px solid #d1d5db',
+            background: filterStatus === 'all' ? '#eff6ff' : 'white',
+            color: filterStatus === 'all' ? '#1e40af' : '#6b7280',
+            fontWeight: filterStatus === 'all' ? '600' : '400',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          📋 Toutes ({expenses.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterStatus('pending')}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: filterStatus === 'pending' ? '2px solid #f59e0b' : '1px solid #d1d5db',
+            background: filterStatus === 'pending' ? '#fef3c7' : 'white',
+            color: filterStatus === 'pending' ? '#92400e' : '#6b7280',
+            fontWeight: filterStatus === 'pending' ? '600' : '400',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          ⏳ En attente ({stats.pending.count})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterStatus('approved')}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: filterStatus === 'approved' ? '2px solid #10b981' : '1px solid #d1d5db',
+            background: filterStatus === 'approved' ? '#d1fae5' : 'white',
+            color: filterStatus === 'approved' ? '#065f46' : '#6b7280',
+            fontWeight: filterStatus === 'approved' ? '600' : '400',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          ✅ Approuvées ({stats.approved.count})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterStatus('paid')}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: filterStatus === 'paid' ? '2px solid #6366f1' : '1px solid #d1d5db',
+            background: filterStatus === 'paid' ? '#eff6ff' : 'white',
+            color: filterStatus === 'paid' ? '#1e3a8a' : '#6b7280',
+            fontWeight: filterStatus === 'paid' ? '600' : '400',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          💰 Payées ({stats.paid.count})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterStatus('rejected')}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: filterStatus === 'rejected' ? '2px solid #ef4444' : '1px solid #d1d5db',
+            background: filterStatus === 'rejected' ? '#fee2e2' : 'white',
+            color: filterStatus === 'rejected' ? '#991b1b' : '#6b7280',
+            fontWeight: filterStatus === 'rejected' ? '600' : '400',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          ❌ Rejetées ({stats.rejected.count})
+        </button>
+      </div>
+
       {/* Liste des notes de frais */}
       <div className="card-white">
-        <h3 style={{ marginBottom: '1rem' }}>📋 Historique</h3>
+        <h3 style={{ marginBottom: '1rem' }}>📋 {filterStatus === 'all' ? 'Historique' : filterStatus === 'pending' ? 'En attente' : filterStatus === 'approved' ? 'Approuvées (à payer)' : filterStatus === 'paid' ? 'Payées' : 'Rejetées'}</h3>
 
-        {expenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state-title">Aucune note de frais</p>
-            <p className="empty-state-subtitle">Créez votre première note de frais ci-dessus</p>
+            <p className="empty-state-subtitle">
+              {filterStatus === 'all' ? 'Créez votre première note de frais ci-dessus' : `Aucune note de frais ${filterStatus === 'pending' ? 'en attente' : filterStatus === 'approved' ? 'approuvée' : filterStatus === 'paid' ? 'payée' : 'rejetée'}`}
+            </p>
           </div>
         ) : (
           <div>
-            {expenses
+            {filteredExpenses
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .map(expense => {
                 const categoryInfo = getCategoryInfo(expense.category);
-                const statusInfo = getStatusBadge(expense.status);
+                const statusInfo = getStatusBadge(expense);
 
                 return (
                   <div key={expense.id} className="expense-item">
@@ -832,6 +989,21 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                     {expense.admin_comment && (
                       <div className="admin-comment">
                         <strong>💬 Commentaire admin:</strong> {expense.admin_comment}
+                      </div>
+                    )}
+
+                    {expense.is_paid && expense.paid_date && (
+                      <div
+                        style={{
+                          background: '#eff6ff',
+                          borderLeft: '3px solid #6366f1',
+                          padding: '0.5rem 0.75rem',
+                          marginBottom: '0.75rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        <strong>💰 Payé le:</strong> {formatDate(expense.paid_date)}
                       </div>
                     )}
 
