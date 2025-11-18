@@ -119,7 +119,7 @@ const SavedFilters = ({
 
   // Supprimer un preset custom
   const handleDeletePreset = (presetId) => {
-    if (!confirm('Supprimer ce filtre sauvegardé ?')) return;
+    if (!window.confirm('Supprimer ce filtre sauvegardé ?')) return;
 
     const updated = savedPresets.filter(p => p.id !== presetId);
     setSavedPresets(updated);
