@@ -15,6 +15,7 @@ import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
+import { ToastProvider } from './contexts/ToastContext';
 import LoginScreen from './pages/LoginScreen';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
@@ -795,7 +796,7 @@ function App() {
   };
 
   return (
-    <>
+    <ToastProvider>
       <style>{`
         .desktop-nav { display: none; }
         .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; border-top: 1px solid #e5e7eb; z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
@@ -1018,7 +1019,7 @@ function App() {
           pushNotifications={pushNotifications}
         />
       )}
-    </>
+    </ToastProvider>
   );
 }
 

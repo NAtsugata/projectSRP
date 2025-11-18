@@ -20,6 +20,8 @@ import {
   navigatePeriod
 } from '../utils/agendaHelpers';
 import { getAgendaNotifications } from '../utils/notificationHelper';
+import { supabase } from '../lib/supabase';
+import { useToast } from '../contexts/ToastContext';
 import logger from '../utils/logger';
 import './AgendaView.css';
 
@@ -40,6 +42,7 @@ const AgendaView = ({
   error = null,
   currentUserId
 }) => {
+  const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('week'); // 'day', 'week', 'month', 'resource'
   const [filters, setFilters] = useState({
@@ -153,33 +156,65 @@ const AgendaView = ({
     logger.log('AgendaView: Applying saved filters', newFilters);
   }, []);
 
-  const handleInterventionMove = useCallback((moveData) => {
-    logger.log('AgendaView: Intervention drag & drop', {
-      interventionId: moveData.intervention.id,
-      from: {
-        date: moveData.intervention.date,
-        time: moveData.intervention.time
-      },
-      to: {
-        date: moveData.targetDate,
-        time: moveData.targetTime,
-        employeeId: moveData.targetEmployeeId
+  const handleInterventionMove = useCallback(async (moveData) => {
+    try {
+      logger.log('AgendaView: Intervention drag & drop', {
+        interventionId: moveData.intervention.id,
+        from: {
+          date: moveData.intervention.date,
+          time: moveData.intervention.time
+        },
+        to: {
+          date: moveData.targetDate,
+          time: moveData.targetTime,
+          employeeId: moveData.targetEmployeeId
+        }
+      });
+
+      // 1. Mettre à jour l'intervention dans Supabase
+      const { error: updateError } = await supabase
+        .from('interventions')
+        .update({
+          date: moveData.targetDate,
+          time: moveData.targetTime
+        })
+        .eq('id', moveData.intervention.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Si employé changé, mettre à jour les assignments
+      if (moveData.targetEmployeeId) {
+        // Supprimer les anciens assignments
+        const { error: deleteError } = await supabase
+          .from('intervention_assignments')
+          .delete()
+          .eq('intervention_id', moveData.intervention.id);
+
+        if (deleteError) throw deleteError;
+
+        // Créer le nouvel assignment
+        const { error: insertError } = await supabase
+          .from('intervention_assignments')
+          .insert({
+            intervention_id: moveData.intervention.id,
+            user_id: moveData.targetEmployeeId
+          });
+
+        if (insertError) throw insertError;
       }
-    });
 
-    // TODO: Appeler l'API Supabase pour mettre à jour l'intervention
-    // Exemple:
-    // await supabase
-    //   .from('interventions')
-    //   .update({
-    //     date: moveData.targetDate,
-    //     time: moveData.targetTime,
-    //     assigned_to: moveData.targetEmployeeId ? [moveData.targetEmployeeId] : undefined
-    //   })
-    //   .eq('id', moveData.intervention.id);
+      logger.log('✅ Intervention déplacée avec succès');
+      toast.success('Intervention déplacée avec succès');
 
-    console.warn('⚠️ Drag & drop détecté mais pas encore connecté à la base de données. Voir handleInterventionMove dans AgendaView.js');
-  }, []);
+      // TODO: Recharger les données
+      // await onRefreshInterventions();
+
+    } catch (error) {
+      logger.error('❌ Erreur lors du déplacement:', error);
+      console.error('Erreur déplacement intervention:', error);
+      toast.error('Impossible de déplacer l\'intervention. Veuillez réessayer.');
+    }
+  }, [toast]);
 
   // Error state
   if (error) {

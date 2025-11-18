@@ -2,12 +2,11 @@
 // Gestionnaire d'absences et de congés des employés
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '../ui';
+import { Button, LoadingSpinner } from '../ui';
 import { UserIcon, PlusIcon, XIcon, CalendarIcon } from '../SharedUI';
-import { safeStorage } from '../../utils/safeStorage';
+import { useToast } from '../../contexts/ToastContext';
+import * as absenceService from '../../lib/absenceService';
 import './AbsenceManager.css';
-
-const STORAGE_KEY = 'employee_absences';
 
 /**
  * AbsenceManager Component
@@ -20,9 +19,11 @@ const AbsenceManager = ({
   employees = [],
   onAbsencesChange
 }) => {
+  const toast = useToast();
   const [absences, setAbsences] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [newAbsence, setNewAbsence] = useState({
     employeeId: '',
     startDate: '',
@@ -33,62 +34,96 @@ const AbsenceManager = ({
 
   // Charger les absences au montage
   useEffect(() => {
-    const stored = safeStorage.getJSON(STORAGE_KEY, []);
-    setAbsences(stored);
-
-    if (onAbsencesChange) {
-      onAbsencesChange(stored);
-    }
+    loadAbsences();
   }, []);
 
-  // Persister dans localStorage
-  const persistAbsences = (newAbsences) => {
-    safeStorage.setJSON(STORAGE_KEY, newAbsences);
-    setAbsences(newAbsences);
+  const loadAbsences = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await absenceService.getAllAbsences();
+      if (error) throw error;
 
-    if (onAbsencesChange) {
-      onAbsencesChange(newAbsences);
+      const formattedAbsences = (data || []).map(absence => ({
+        id: absence.id,
+        employeeId: absence.employee_id,
+        startDate: absence.start_date,
+        endDate: absence.end_date,
+        reason: absence.reason,
+        notes: absence.notes,
+        createdAt: absence.created_at
+      }));
+
+      setAbsences(formattedAbsences);
+
+      if (onAbsencesChange) {
+        onAbsencesChange(formattedAbsences);
+      }
+    } catch (error) {
+      console.error('Erreur chargement absences:', error);
+      toast.error('Impossible de charger les absences');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Ajouter une absence
-  const handleAddAbsence = () => {
+  const handleAddAbsence = async () => {
     if (!newAbsence.employeeId || !newAbsence.startDate || !newAbsence.endDate) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      toast.warning('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
     if (newAbsence.startDate > newAbsence.endDate) {
-      alert('La date de fin doit être après la date de début');
+      toast.error('La date de fin doit être après la date de début');
       return;
     }
 
-    const absence = {
-      id: `absence-${Date.now()}`,
-      ...newAbsence,
-      createdAt: new Date().toISOString()
-    };
+    setLoading(true);
+    try {
+      const { error } = await absenceService.createAbsence(newAbsence);
+      if (error) throw error;
 
-    const updated = [...absences, absence];
-    persistAbsences(updated);
+      toast.success('Absence enregistrée avec succès');
 
-    // Reset form
-    setNewAbsence({
-      employeeId: '',
-      startDate: '',
-      endDate: '',
-      reason: 'Congés',
-      notes: ''
-    });
-    setIsAdding(false);
+      // Reset form
+      setNewAbsence({
+        employeeId: '',
+        startDate: '',
+        endDate: '',
+        reason: 'Congés',
+        notes: ''
+      });
+      setIsAdding(false);
+
+      // Reload absences
+      await loadAbsences();
+    } catch (error) {
+      console.error('Erreur ajout absence:', error);
+      toast.error('Impossible d\'enregistrer l\'absence');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Supprimer une absence
-  const handleDeleteAbsence = (absenceId) => {
+  const handleDeleteAbsence = async (absenceId) => {
     if (!window.confirm('Supprimer cette absence ?')) return;
 
-    const updated = absences.filter(a => a.id !== absenceId);
-    persistAbsences(updated);
+    setLoading(true);
+    try {
+      const { error } = await absenceService.deleteAbsence(absenceId);
+      if (error) throw error;
+
+      toast.success('Absence supprimée');
+
+      // Reload absences
+      await loadAbsences();
+    } catch (error) {
+      console.error('Erreur suppression absence:', error);
+      toast.error('Impossible de supprimer l\'absence');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Vérifier si un employé est absent à une date donnée
@@ -176,8 +211,15 @@ const AbsenceManager = ({
             </div>
 
             <div className="absence-body">
+              {/* Loading state */}
+              {loading && (
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                  <LoadingSpinner text="Chargement..." />
+                </div>
+              )}
+
               {/* Absences en cours */}
-              {currentAbsences.length > 0 && (
+              {!loading && currentAbsences.length > 0 && (
                 <div className="absence-section">
                   <h5 className="absence-section-title">
                     🔴 Absents actuellement ({currentAbsences.length})
@@ -220,7 +262,7 @@ const AbsenceManager = ({
               )}
 
               {/* Absences à venir */}
-              {upcomingAbsences.length > 0 && (
+              {!loading && upcomingAbsences.length > 0 && (
                 <div className="absence-section">
                   <h5 className="absence-section-title">
                     📅 À venir ({upcomingAbsences.length})
@@ -263,14 +305,14 @@ const AbsenceManager = ({
               )}
 
               {/* Empty state */}
-              {absences.length === 0 && !isAdding && (
+              {!loading && absences.length === 0 && !isAdding && (
                 <div className="absence-empty">
                   <p>Aucune absence enregistrée</p>
                 </div>
               )}
 
               {/* Formulaire d'ajout */}
-              {isAdding ? (
+              {!loading && isAdding ? (
                 <div className="absence-form">
                   <h5 className="absence-form-title">Nouvelle absence</h5>
 
@@ -366,7 +408,7 @@ const AbsenceManager = ({
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : !loading && (
                 <button
                   className="absence-add-btn"
                   onClick={() => setIsAdding(true)}
@@ -385,21 +427,5 @@ const AbsenceManager = ({
 
 export default AbsenceManager;
 
-// Export helper pour vérifier les absences
-export const isEmployeeAbsent = (employeeId, date) => {
-  const absences = safeStorage.getJSON(STORAGE_KEY, []);
-  return absences.some(absence => {
-    return (
-      absence.employeeId === employeeId &&
-      date >= absence.startDate &&
-      date <= absence.endDate
-    );
-  });
-};
-
-export const getAbsentEmployees = (date) => {
-  const absences = safeStorage.getJSON(STORAGE_KEY, []);
-  return absences
-    .filter(absence => date >= absence.startDate && date <= absence.endDate)
-    .map(absence => absence.employeeId);
-};
+// Re-export helpers from absenceService for backward compatibility
+export { isEmployeeAbsent, getAbsentEmployees } from '../../lib/absenceService';

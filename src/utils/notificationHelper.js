@@ -139,23 +139,28 @@ export const getAgendaNotifications = (interventions, employees, currentUserId, 
 };
 
 /**
- * Simple notification toast (can be replaced with a proper toast library)
+ * Show notification using toast system
+ * Note: This requires the toast object from useToast() hook
+ * @param {Object} notification - Notification object
+ * @param {Object} toast - Toast object from useToast hook
  */
-export const showNotificationToast = (notification) => {
-  // This is a simple implementation using alert
-  // In production, use a proper toast library like react-toastify
-  const emoji = {
-    critical: '🚨',
-    high: '⚠️',
-    warning: '⚡',
-    info: 'ℹ️'
+export const showNotificationToast = (notification, toast) => {
+  if (!toast) {
+    console.warn('Toast system not available, logging to console:', notification);
+    console.log(`${notification.title}: ${notification.message}`);
+    return;
+  }
+
+  const message = `${notification.title}: ${notification.message}`;
+
+  // Map priority to toast type
+  const typeMap = {
+    critical: 'error',
+    high: 'warning',
+    warning: 'warning',
+    info: 'info'
   };
 
-  const message = `${emoji[notification.priority]} ${notification.title}\n${notification.message}`;
-
-  // For now, just log to console
-  console.log(message);
-
-  // TODO: Replace with proper toast notification
-  // toast[notification.priority](message);
+  const toastType = typeMap[notification.priority] || 'info';
+  toast[toastType](message, 6000); // Show for 6 seconds for important notifications
 };
