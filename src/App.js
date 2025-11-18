@@ -22,6 +22,8 @@ import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import { debounce } from './utils/debounce';
 import { setToastFunction, overrideAlert } from './utils/alertOverride';
+import OfflineIndicator from './components/OfflineIndicator';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
@@ -824,6 +826,7 @@ function App() {
 
   return (
     <ToastProvider>
+      <OfflineIndicator />
       <style>{`
         .desktop-nav { display: none; }
         .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; border-top: 1px solid #e5e7eb; z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }

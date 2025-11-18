@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mode hors ligne - SRP</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    .icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 30px;
+      background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    .icon svg {
+      width: 60px;
+      height: 60px;
+      stroke: white;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: 16px;
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .button {
+      background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(205, 127, 50, 0.3);
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(205, 127, 50, 0.4);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .status {
+      margin-top: 30px;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status.offline {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .status.online {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .status.offline .pulse-dot {
+      background: #dc2626;
+    }
+
+    .status.online .pulse-dot {
+      background: #059669;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 40px 24px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      p {
+        font-size: 14px;
+      }
+
+      .icon {
+        width: 100px;
+        height: 100px;
+      }
+
+      .icon svg {
+        width: 50px;
+        height: 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M1 15.5v2c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-2M1 8.5v-2c0-1.1.9-2 2-2h18c1.1 0 2 .9 2 2v2M12 2.5v19"/>
+      </svg>
+    </div>
+
+    <h1>Vous êtes hors ligne</h1>
+    <p>
+      Il semblerait que vous n'ayez pas de connexion internet.
+      Certaines fonctionnalités sont limitées en mode hors ligne.
+    </p>
+
+    <button class="button" onclick="retryConnection()">
+      Réessayer
+    </button>
+
+    <div id="status" class="status offline">
+      <span class="pulse-dot"></span>
+      <span id="status-text">Hors ligne</span>
+    </div>
+  </div>
+
+  <script>
+    // Vérifier le statut de connexion
+    function updateStatus() {
+      const statusEl = document.getElementById('status');
+      const statusText = document.getElementById('status-text');
+
+      if (navigator.onLine) {
+        statusEl.className = 'status online';
+        statusText.textContent = 'En ligne - Reconnexion réussie !';
+
+        // Rediriger vers la page d'accueil après 1 seconde
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      } else {
+        statusEl.className = 'status offline';
+        statusText.textContent = 'Hors ligne';
+      }
+    }
+
+    // Écouter les changements de connexion
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+
+    // Bouton réessayer
+    function retryConnection() {
+      updateStatus();
+
+      if (navigator.onLine) {
+        window.location.href = '/';
+      } else {
+        // Animation de shake si toujours hors ligne
+        const container = document.querySelector('.container');
+        container.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+          container.style.animation = '';
+        }, 500);
+      }
+    }
+
+    // Vérifier au chargement
+    updateStatus();
+
+    // Vérifier périodiquement
+    setInterval(updateStatus, 3000);
+  </script>
+
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+  </style>
+</body>
+</html>

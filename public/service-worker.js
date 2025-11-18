@@ -114,10 +114,180 @@ self.addEventListener('notificationclose', (event) => {
   console.log('[Service Worker] Notification fermée:', event);
 });
 
-// ✅ IMPORTANT: Passer tous les fetch au réseau (ne pas intercepter)
-// Cela évite les erreurs "Request interrupted by user" lors des uploads/downloads
+// ========================================
+// MODE HORS LIGNE - CACHE INTELLIGENT
+// ========================================
+
+const RUNTIME_CACHE = 'srp-runtime-v1';
+const API_CACHE = 'srp-api-v1';
+
+// Intercepter les requêtes pour le mode hors ligne
 self.addEventListener('fetch', (event) => {
-  // Ne rien faire - laisser passer toutes les requêtes normalement
-  // Pas de event.respondWith() = requêtes passent directement au réseau
-  return;
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Ignorer les requêtes non-HTTP
+  if (!request.url.startsWith('http')) {
+    return;
+  }
+
+  // Ignorer les requêtes de mutation (POST, PUT, DELETE, PATCH)
+  // Laisser passer les uploads/downloads sans intercepter
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Ignorer les requêtes vers Supabase Storage (uploads/downloads)
+  if (url.pathname.includes('/storage/v1/')) {
+    return;
+  }
+
+  // Stratégie selon le type de requête
+  if (isApiRequest(url)) {
+    // API Supabase: Network-First avec cache fallback
+    event.respondWith(networkFirstStrategy(request, API_CACHE));
+  } else if (isStaticAsset(request, url)) {
+    // Assets statiques: Cache-First
+    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
+  } else if (request.destination === 'document') {
+    // Pages HTML: Network-First
+    event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE));
+  }
+});
+
+/**
+ * Vérifie si c'est une requête API Supabase
+ */
+function isApiRequest(url) {
+  return (url.hostname.includes('supabase.co') &&
+          (url.pathname.startsWith('/rest/v1/') ||
+           url.pathname.startsWith('/auth/v1/')));
+}
+
+/**
+ * Vérifie si c'est un asset statique
+ */
+function isStaticAsset(request, url) {
+  return request.destination === 'script' ||
+         request.destination === 'style' ||
+         request.destination === 'image' ||
+         request.destination === 'font' ||
+         url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|woff|woff2|ttf|ico)$/);
+}
+
+/**
+ * Stratégie Cache-First
+ * Vérifie le cache d'abord, sinon réseau
+ */
+async function cacheFirstStrategy(request, cacheName) {
+  try {
+    // 1. Chercher dans le cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // 2. Si pas en cache, aller sur le réseau
+    const networkResponse = await fetch(request);
+
+    // 3. Mettre en cache pour la prochaine fois
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // Fallback: essayer le cache même si expiré
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Fallback ultime: page offline pour les pages HTML
+    if (request.destination === 'document') {
+      const offlinePage = await caches.match('/offline.html');
+      if (offlinePage) return offlinePage;
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Stratégie Network-First
+ * Essaie le réseau d'abord, sinon cache
+ */
+async function networkFirstStrategy(request, cacheName) {
+  try {
+    // 1. Essayer le réseau avec timeout
+    const networkResponse = await fetchWithTimeout(request, 5000);
+
+    // 2. Mettre en cache si succès
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch (error) {
+    // 3. Fallback vers le cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // 4. Fallback ultime pour les pages HTML
+    if (request.destination === 'document') {
+      const offlinePage = await caches.match('/offline.html');
+      if (offlinePage) return offlinePage;
+    }
+
+    // 5. Réponse d'erreur JSON pour les APIs
+    return new Response(
+      JSON.stringify({
+        error: 'Offline',
+        message: 'Vous êtes hors ligne et cette ressource n\'est pas en cache'
+      }),
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new Headers({
+          'Content-Type': 'application/json'
+        })
+      }
+    );
+  }
+}
+
+/**
+ * Fetch avec timeout
+ */
+function fetchWithTimeout(request, timeout = 5000) {
+  return Promise.race([
+    fetch(request),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Network timeout')), timeout)
+    )
+  ]);
+}
+
+/**
+ * Message du client vers le Service Worker
+ */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.filter(name => name.startsWith('srp-'))
+                    .map(cacheName => caches.delete(cacheName))
+        );
+      })
+    );
+  }
 });
