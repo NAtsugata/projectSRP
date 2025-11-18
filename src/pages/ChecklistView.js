@@ -18,6 +18,7 @@ export default function ChecklistView({
   const [checklistState, setChecklistState] = useState({});
   const [photos, setPhotos] = useState({});
   const [notes, setNotes] = useState({});
+  const [uploadError, setUploadError] = useState('');
 
   // Filtrer mes checklists
   const myChecklists = useMemo(() => {
@@ -447,6 +448,8 @@ export default function ChecklistView({
                             onChange={(e) => handlePhotoCapture(e, item.id)}
                             accept="image/*"
                             multiple
+                            maxSize={50 * 1024 * 1024}
+                            onError={(errors) => setUploadError(errors.join(' • '))}
                             style={{ marginTop: '0.5rem' }}
                           >
                             <CameraIcon /> Photo

@@ -109,7 +109,17 @@ export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInp
 };
 
 // ✅ Input fichier optimisé mobile/desktop
-export const CustomFileInput = ({ onChange, accept, multiple, disabled, children, className = '' }) => {
+export const CustomFileInput = ({
+  onChange,
+  accept,
+  multiple,
+  disabled,
+  children,
+  className = '',
+  maxSize = 50 * 1024 * 1024, // 50MB par défaut
+  maxFiles = 10,
+  onError
+}) => {
   const inputId = useRef(`file-input-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -153,22 +163,71 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
     console.log('📁 files.length:', files?.length);
     console.log('📁 onChange callback:', typeof onChange);
 
-    if (files && files.length > 0) {
-      console.log('✅ Fichiers détectés:', Array.from(files).map(f => ({ name: f.name, size: f.size, type: f.type })));
+    if (!files || files.length === 0) {
+      console.warn('⚠️ Aucun fichier sélectionné (possiblement annulé par l\'utilisateur)');
+      event.target.value = '';
+      return;
+    }
+
+    // ✅ Validation des fichiers
+    const validFiles = [];
+    const errors = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Vérification taille
+      if (file.size > maxSize) {
+        errors.push(`${file.name}: Fichier trop volumineux (max: ${Math.round(maxSize / 1024 / 1024)}MB)`);
+        continue;
+      }
+
+      // Vérification nombre
+      if (multiple && validFiles.length >= maxFiles) {
+        errors.push(`Nombre maximum de fichiers atteint (${maxFiles})`);
+        break;
+      }
+
+      validFiles.push(file);
+
+      if (!multiple) break; // Un seul fichier en mode single
+    }
+
+    // Rapport d'erreurs
+    if (errors.length > 0 && onError) {
+      onError(errors);
+    }
+
+    if (validFiles.length > 0) {
+      console.log('✅ Fichiers validés:', validFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
 
       if (onChange) {
-        // Créer un clone des fichiers avant de reset l'input
-        const fileArray = Array.from(files);
+        // Créer un événement avec les fichiers validés
+        let filesToSend;
+
+        try {
+          if (typeof DataTransfer !== 'undefined' && DataTransfer.prototype.hasOwnProperty('items')) {
+            const dt = new DataTransfer();
+            validFiles.forEach(file => dt.items.add(file));
+            filesToSend = dt.files;
+          } else {
+            filesToSend = validFiles;
+          }
+        } catch (err) {
+          console.warn('DataTransfer non supporté, utilisation du fallback:', err);
+          filesToSend = validFiles;
+        }
+
         const newEvent = {
           target: {
-            files: files,
+            files: filesToSend,
             value: event.target.value
           },
           preventDefault: () => {},
           stopPropagation: () => {}
         };
 
-        console.log('📤 Appel onChange avec', fileArray.length, 'fichier(s)');
+        console.log('📤 Appel onChange avec', validFiles.length, 'fichier(s)');
         onChange(newEvent);
 
         // Reset APRÈS un court délai pour laisser le temps au traitement
@@ -180,8 +239,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
         console.error('❌ onChange callback manquant');
       }
     } else {
-      console.warn('⚠️ Aucun fichier sélectionné (possiblement annulé par l\'utilisateur)');
-      // Toujours reset même si annulé
+      // Tous les fichiers ont été rejetés
       event.target.value = '';
     }
   };

@@ -770,6 +770,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
               accept="image/*"
               multiple={true}
               disabled={isSubmitting}
+              maxSize={50 * 1024 * 1024}
+              onError={(errors) => setError(errors.join(' • '))}
             >
               <CameraIcon /> Ajouter des photos
             </CustomFileInput>

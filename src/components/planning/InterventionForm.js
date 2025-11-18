@@ -431,6 +431,8 @@ const InterventionForm = ({
           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
           multiple={true}
           disabled={isSubmitting}
+          maxSize={50 * 1024 * 1024}
+          onError={(errors) => setUploadError(errors.join(' • '))}
         >
           📎 Choisir ou glisser des fichiers...
         </CustomFileInput>

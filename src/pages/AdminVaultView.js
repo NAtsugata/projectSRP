@@ -337,7 +337,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
                 accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
                 multiple={false}
                 disabled={isUploading}
-                maxSize={20 * 1024 * 1024}
+                maxSize={50 * 1024 * 1024}
                 onError={handleUploadError}
               >
                 {file ? `📄 ${file.name}` : '📎 Sélectionner ou glisser un document'}
