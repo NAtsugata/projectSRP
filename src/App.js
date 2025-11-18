@@ -637,6 +637,23 @@ function App() {
     });
   };
 
+  // ✅ Marquer une note de frais comme payée (admin)
+  const handleMarkAsPaid = async (expense) => {
+    try {
+      console.log('💰 handleMarkAsPaid appelé pour:', expense.id);
+
+      const { error } = await expenseService.markAsPaid(expense.id, profile.id);
+
+      if (error) throw error;
+
+      showToast('Note de frais marquée comme payée !', 'success');
+      await refreshData(profile);
+    } catch (error) {
+      console.error('❌ Erreur lors du marquage comme payé:', error);
+      showToast(`Erreur: ${error.message}`, 'error');
+    }
+  };
+
   // ✅ Créer un template de checklist (admin)
   const handleCreateTemplate = async (templateData) => {
     const { error } = await checklistService.createTemplate(templateData);
@@ -916,7 +933,7 @@ function App() {
                 } />
                 <Route path="expenses" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} onDeleteExpense={handleDeleteExpenseAdmin} />
+                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} onDeleteExpense={handleDeleteExpenseAdmin} onMarkAsPaid={handleMarkAsPaid} />
                   </Suspense>
                 } />
                 <Route path="ir-docs" element={

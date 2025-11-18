@@ -235,13 +235,55 @@ const expenseService = {
   },
 
   /**
+   * Marquer une note de frais comme payée (admin)
+   */
+  async markAsPaid(expenseId, adminId) {
+    try {
+      // Vérifier que la note est approuvée avant de la marquer comme payée
+      const { data: expense, error: fetchError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expenseId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!expense) throw new Error('Note de frais introuvable');
+      if (expense.status !== 'approved') {
+        throw new Error('Seules les notes approuvées peuvent être marquées comme payées');
+      }
+
+      const updateData = {
+        is_paid: true,
+        paid_by: adminId,
+        paid_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .update(updateData)
+        .eq('id', expenseId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Note de frais marquée comme payée:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('❌ Erreur markAsPaid:', error);
+      return { data: null, error };
+    }
+  },
+
+  /**
    * Récupérer les statistiques des notes de frais
    */
   async getExpenseStats(userId = null) {
     try {
       let query = supabase
         .from('expenses')
-        .select('status, amount');
+        .select('status, amount, is_paid');
 
       if (userId) {
         query = query.eq('user_id', userId);
@@ -255,8 +297,10 @@ const expenseService = {
         totalAmount: data.reduce((sum, e) => sum + (e.amount || 0), 0),
         pending: data.filter(e => e.status === 'pending').length,
         pendingAmount: data.filter(e => e.status === 'pending').reduce((sum, e) => sum + (e.amount || 0), 0),
-        approved: data.filter(e => e.status === 'approved').length,
-        approvedAmount: data.filter(e => e.status === 'approved').reduce((sum, e) => sum + (e.amount || 0), 0),
+        approved: data.filter(e => e.status === 'approved' && !e.is_paid).length,
+        approvedAmount: data.filter(e => e.status === 'approved' && !e.is_paid).reduce((sum, e) => sum + (e.amount || 0), 0),
+        paid: data.filter(e => e.is_paid).length,
+        paidAmount: data.filter(e => e.is_paid).reduce((sum, e) => sum + (e.amount || 0), 0),
         rejected: data.filter(e => e.status === 'rejected').length,
         rejectedAmount: data.filter(e => e.status === 'rejected').reduce((sum, e) => sum + (e.amount || 0), 0)
       };

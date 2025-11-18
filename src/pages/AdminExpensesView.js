@@ -103,7 +103,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
 };
 
 // Accordion pour chaque employé
-const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, onDelete, categories, formatDate, formatAmount }) => {
+const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, onDelete, onMarkAsPaid, categories, formatDate, formatAmount }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [showReceipts, setShowReceipts] = useState(null);
   const [commentInput, setCommentInput] = useState({});
@@ -112,12 +112,14 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
 
   const userStats = useMemo(() => {
     const pending = expenses.filter(e => e.status === 'pending');
-    const approved = expenses.filter(e => e.status === 'approved');
+    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+    const paid = expenses.filter(e => e.is_paid);
     const rejected = expenses.filter(e => e.status === 'rejected');
 
     return {
       pending: pending.reduce((sum, e) => sum + (e.amount || 0), 0),
       approved: approved.reduce((sum, e) => sum + (e.amount || 0), 0),
+      paid: paid.reduce((sum, e) => sum + (e.amount || 0), 0),
       rejected: rejected.reduce((sum, e) => sum + (e.amount || 0), 0),
       total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
     };
@@ -323,6 +325,10 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
               <div style={{ fontSize: '1rem', fontWeight: 600, color: '#10b981' }}>{formatAmount(userStats.approved)}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Payé</div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#6366f1' }}>{formatAmount(userStats.paid)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Rejeté</div>
               <div style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444' }}>{formatAmount(userStats.rejected)}</div>
             </div>
@@ -381,7 +387,8 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                     </div>
                     <div>
                       {expense.status === 'pending' && <span style={{ color: '#f59e0b' }}>⏳ En attente</span>}
-                      {expense.status === 'approved' && <span style={{ color: '#10b981' }}>✅ Approuvé</span>}
+                      {expense.status === 'approved' && !expense.is_paid && <span style={{ color: '#10b981' }}>✅ Approuvé</span>}
+                      {expense.is_paid && <span style={{ color: '#6366f1' }}>💰 Payé</span>}
                       {expense.status === 'rejected' && <span style={{ color: '#ef4444' }}>❌ Rejeté</span>}
                     </div>
                   </div>
@@ -449,6 +456,36 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                     </div>
                   )}
 
+                  {/* Actions pour notes approuvées (non payées) */}
+                  {expense.status === 'approved' && !expense.is_paid && onMarkAsPaid && (
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => onMarkAsPaid(expense)}
+                        className="btn btn-primary"
+                        style={{ width: '100%' }}
+                      >
+                        💰 Marquer comme payé
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Info pour notes payées */}
+                  {expense.is_paid && expense.paid_date && (
+                    <div
+                      style={{
+                        background: '#eff6ff',
+                        borderLeft: '3px solid #6366f1',
+                        padding: '0.5rem 0.75rem',
+                        marginBottom: '0.75rem',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      <strong>💰 Payé le:</strong> {formatDate(expense.paid_date)}
+                    </div>
+                  )}
+
                   {/* Actions disponibles pour toutes les notes */}
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
@@ -484,7 +521,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
   );
 };
 
-export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense }) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid }) {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // Catégories de frais (même que ExpensesView)
@@ -502,7 +539,8 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
   // Statistiques globales
   const globalStats = useMemo(() => {
     const pending = expenses.filter(e => e.status === 'pending');
-    const approved = expenses.filter(e => e.status === 'approved');
+    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+    const paid = expenses.filter(e => e.is_paid);
     const rejected = expenses.filter(e => e.status === 'rejected');
 
     return {
@@ -513,6 +551,10 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
       approved: {
         count: approved.length,
         total: approved.reduce((sum, e) => sum + (e.amount || 0), 0)
+      },
+      paid: {
+        count: paid.length,
+        total: paid.reduce((sum, e) => sum + (e.amount || 0), 0)
       },
       rejected: {
         count: rejected.length,
@@ -526,7 +568,13 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
   const expensesByUser = useMemo(() => {
     let filtered = expenses;
     if (filterStatus !== 'all') {
-      filtered = expenses.filter(e => e.status === filterStatus);
+      if (filterStatus === 'paid') {
+        filtered = expenses.filter(e => e.is_paid);
+      } else if (filterStatus === 'approved') {
+        filtered = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+      } else {
+        filtered = expenses.filter(e => e.status === filterStatus);
+      }
     }
 
     return filtered.reduce((acc, expense) => {
@@ -694,6 +742,11 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           <div className="stat-value">{globalStats.approved.count}</div>
           <div className="stat-subvalue">{formatAmount(globalStats.approved.total)}</div>
         </div>
+        <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
+          <div className="stat-label">💰 PAYÉ</div>
+          <div className="stat-value">{globalStats.paid.count}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.paid.total)}</div>
+        </div>
         <div className="stat-card danger">
           <div className="stat-label">REJETÉ</div>
           <div className="stat-value">{globalStats.rejected.count}</div>
@@ -731,6 +784,13 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
         </button>
         <button
           type="button"
+          className={`filter-tab ${filterStatus === 'paid' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('paid')}
+        >
+          💰 Payées ({globalStats.paid.count})
+        </button>
+        <button
+          type="button"
           className={`filter-tab ${filterStatus === 'rejected' ? 'active' : ''}`}
           onClick={() => setFilterStatus('rejected')}
         >
@@ -765,6 +825,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
                   onApprove={onApproveExpense}
                   onReject={onRejectExpense}
                   onDelete={onDeleteExpense}
+                  onMarkAsPaid={onMarkAsPaid}
                   categories={categories}
                   formatDate={formatDate}
                   formatAmount={formatAmount}

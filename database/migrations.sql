@@ -161,6 +161,28 @@ CREATE POLICY "Admins can delete all templates"
   );
 
 -- ========================================
+-- 3. MIGRATION: Système de paiement notes de frais
+-- ========================================
+-- Ajoute le tracking des paiements pour les notes de frais
+
+-- Ajouter les colonnes de paiement à la table expenses
+ALTER TABLE expenses
+ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS paid_date TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS paid_by UUID REFERENCES profiles(id);
+
+-- Créer un index sur is_paid pour améliorer les performances des requêtes
+CREATE INDEX IF NOT EXISTS idx_expenses_is_paid ON expenses(is_paid);
+
+-- Créer un index composite pour filtrer les notes approuvées non payées
+CREATE INDEX IF NOT EXISTS idx_expenses_status_paid ON expenses(status, is_paid);
+
+-- Ajouter un commentaire sur les colonnes pour documentation
+COMMENT ON COLUMN expenses.is_paid IS 'Indique si la note de frais a été payée/remboursée';
+COMMENT ON COLUMN expenses.paid_date IS 'Date à laquelle la note de frais a été marquée comme payée';
+COMMENT ON COLUMN expenses.paid_by IS 'ID de l''admin qui a marqué la note comme payée';
+
+-- ========================================
 -- MIGRATION DES DONNÉES (OPTIONNEL)
 -- ========================================
 -- Une fois les tables créées, vous pouvez migrer les données
@@ -181,5 +203,6 @@ CREATE POLICY "Admins can delete all templates"
 --
 -- SELECT * FROM employee_absences;
 -- SELECT * FROM intervention_templates;
+-- SELECT * FROM expenses WHERE is_paid = true;
 --
 -- ========================================
