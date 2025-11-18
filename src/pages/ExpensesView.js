@@ -15,6 +15,7 @@ import {
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { detectDocument } from '../utils/documentDetector';
 import { safeStorage } from '../utils/safeStorage';
+import * as expenseStatsService from '../services/expenseStatsService';
 
 // Modal de visualisation des justificatifs
 const ReceiptsModal = ({ receipts, onClose }) => {
@@ -222,33 +223,58 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
 
-  // Statistiques et filtrage
-  const { stats, filteredExpenses } = useMemo(() => {
-    const pending = expenses.filter(e => e.status === 'pending');
-    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
-    const paid = expenses.filter(e => e.is_paid);
-    const rejected = expenses.filter(e => e.status === 'rejected');
+  // États pour les statistiques (chargées via vues matérialisées ou fallback)
+  const [stats, setStats] = useState({
+    pending: { count: 0, total: 0 },
+    approved: { count: 0, total: 0 },
+    paid: { count: 0, total: 0 },
+    rejected: { count: 0, total: 0 }
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-    const statistics = {
-      pending: {
-        count: pending.length,
-        total: pending.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      approved: {
-        count: approved.length,
-        total: approved.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      paid: {
-        count: paid.length,
-        total: paid.reduce((sum, e) => sum + (e.amount || 0), 0)
-      },
-      rejected: {
-        count: rejected.length,
-        total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0)
+  // Charger les statistiques (avec vues matérialisées si disponibles)
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!profile || !profile.id) return;
+
+      setStatsLoading(true);
+      try {
+        const { data, error } = await expenseStatsService.getUserStats(profile.id);
+
+        if (error) {
+          console.error('Erreur chargement stats utilisateur:', error);
+          // Fallback client-side
+          const pending = expenses.filter(e => e.status === 'pending');
+          const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+          const paid = expenses.filter(e => e.is_paid);
+          const rejected = expenses.filter(e => e.status === 'rejected');
+
+          setStats({
+            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) }
+          });
+        } else if (data) {
+          setStats({
+            pending: data.pending || { count: 0, total: 0 },
+            approved: data.approved || { count: 0, total: 0 },
+            paid: data.paid || { count: 0, total: 0 },
+            rejected: data.rejected || { count: 0, total: 0 }
+          });
+        }
+      } catch (err) {
+        console.error('Erreur inattendue:', err);
+      } finally {
+        setStatsLoading(false);
       }
     };
 
-    // Filtrage
+    loadStats();
+  }, [expenses, profile]);
+
+  // Filtrage des expenses
+  const filteredExpenses = useMemo(() => {
     let filtered = expenses;
     if (filterStatus !== 'all') {
       if (filterStatus === 'paid') {
@@ -259,8 +285,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         filtered = expenses.filter(e => e.status === filterStatus);
       }
     }
-
-    return { stats: statistics, filteredExpenses: filtered };
+    return filtered;
   }, [expenses, filterStatus]);
 
   // Traiter la prochaine photo dans la file d'attente

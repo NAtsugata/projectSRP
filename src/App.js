@@ -9,6 +9,7 @@ import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import expenseService from './services/expenseService';
+import * as expenseStatsService from './services/expenseStatsService';
 import checklistService from './services/checklistService';
 import scannedDocumentsService from './services/scannedDocumentsService';
 import { buildSanitizedReport } from './utils/reportHelpers';
@@ -580,6 +581,9 @@ function App() {
 
       showToast('Note de frais approuvée !', 'success');
       await refreshData(profile);
+
+      // Rafraîchir les vues matérialisées des statistiques
+      await expenseStatsService.refreshRealtimeStats();
     } catch (error) {
       console.error('❌ Erreur lors de l\'approbation:', error);
       showToast(`Erreur: ${error.message}`, 'error');
@@ -597,6 +601,9 @@ function App() {
 
       showToast('Note de frais rejetée.', 'info');
       await refreshData(profile);
+
+      // Rafraîchir les vues matérialisées des statistiques
+      await expenseStatsService.refreshRealtimeStats();
     } catch (error) {
       console.error('❌ Erreur lors du rejet:', error);
       showToast(`Erreur: ${error.message}`, 'error');
@@ -648,6 +655,9 @@ function App() {
 
       showToast('Note de frais marquée comme payée !', 'success');
       await refreshData(profile);
+
+      // Rafraîchir les vues matérialisées des statistiques
+      await expenseStatsService.refreshRealtimeStats();
     } catch (error) {
       console.error('❌ Erreur lors du marquage comme payé:', error);
       showToast(`Erreur: ${error.message}`, 'error');
