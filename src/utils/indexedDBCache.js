@@ -412,6 +412,34 @@ export const cleanOldUploads = async (maxAgeDays = 7) => {
   }
 };
 
+/**
+ * Alias pour getCacheStats (compatibilité)
+ */
+export const getUploadStats = getCacheStats;
+
+/**
+ * Initialise le nettoyage automatique du cache au démarrage
+ * @returns {Promise<void>}
+ */
+export const initCacheCleanup = async () => {
+  try {
+    console.log('🧹 Nettoyage automatique du cache...');
+
+    // Nettoyer les uploads complétés de plus de 24h
+    const completedCleaned = await clearCompletedUploads();
+
+    // Nettoyer les uploads de plus de 7 jours
+    const oldCleaned = await cleanOldUploads(7);
+
+    const stats = await getCacheStats();
+
+    console.log(`✅ Cache nettoyé: ${completedCleaned} complétés, ${oldCleaned} anciens supprimés`);
+    console.log(`📊 Cache actuel: ${stats.count} fichiers (${stats.totalSizeMB} MB)`);
+  } catch (error) {
+    console.error('❌ Erreur nettoyage cache:', error);
+  }
+};
+
 export default {
   storeFileForUpload,
   getPendingUploads,
@@ -420,7 +448,9 @@ export default {
   deleteUpload,
   clearCompletedUploads,
   getCacheStats,
+  getUploadStats,
   clearAllUploads,
   arrayBufferToFile,
-  cleanOldUploads
+  cleanOldUploads,
+  initCacheCleanup
 };

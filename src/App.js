@@ -32,7 +32,7 @@ const AdminPlanningView = lazy(() => import('./pages/AdminPlanningView'));
 const AdminLeaveView = lazy(() => import('./pages/AdminLeaveView'));
 const AdminUserView = lazy(() => import('./pages/AdminUserView'));
 const AdminVaultView = lazy(() => import('./pages/AdminVaultView'));
-const AdminArchiveView = lazy(() => import('./pages/AdminArchiveView'));
+const AdminArchiveViewContainer = lazy(() => import('./pages/AdminArchiveViewContainer'));
 const EmployeePlanningView = lazy(() => import('./pages/EmployeePlanningView'));
 const EmployeeLeaveView = lazy(() => import('./pages/EmployeeLeaveView'));
 const CoffreNumeriqueView = lazy(() => import('./pages/CoffreNumeriqueView'));
@@ -51,28 +51,28 @@ const AppLayout = ({ profile, handleLogout }) => {
   const location = useLocation();
   const navItems = profile.is_admin
     ? [
-        { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> },
-        { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
-        { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
-        { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> },
-        { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
-        { id: 'users', label: 'Employés', icon: <UsersIcon /> },
-        { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
-        { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
-        { id: 'checklist-templates', label: 'Checklists', icon: <CheckCircleIcon /> },
-        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
-        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
-      ]
+      { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> },
+      { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
+      { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
+      { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> },
+      { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
+      { id: 'users', label: 'Employés', icon: <UsersIcon /> },
+      { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
+      { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
+      { id: 'checklist-templates', label: 'Checklists', icon: <CheckCircleIcon /> },
+      { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
+      { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
+    ]
     : [
-        { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
-        { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
-        { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
-        { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
-        { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
-        { id: 'checklists', label: 'Checklists', icon: <CheckCircleIcon /> },
-        { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
-        { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
-      ];
+      { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
+      { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
+      { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
+      { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
+      { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
+      { id: 'checklists', label: 'Checklists', icon: <CheckCircleIcon /> },
+      { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
+      { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
+    ];
 
   return (
     <div className="app-container">
@@ -898,7 +898,7 @@ function App() {
                 } />
                 <Route path="archives" element={
                   <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminArchiveView showToast={showToast} showConfirmationModal={showConfirmationModal} />
+                    <AdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                   </Suspense>
                 } />
                 <Route

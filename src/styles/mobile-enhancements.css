@@ -1,0 +1,600 @@
+/* ===== MOBILE ENHANCEMENTS ===== */
+/* Optimisations spécifiques pour mobile */
+
+@media (max-width: 640px) {
+
+    /* ========== TYPOGRAPHIE MOBILE ========== */
+    body {
+        font-size: 16px;
+        /* Évite le zoom automatique iOS */
+        line-height: 1.5;
+    }
+
+    .view-title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        line-height: 1.3;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+
+    h3 {
+        font-size: 1.125rem;
+    }
+
+    /* ========== CARDS COMPACTES ========== */
+    .card-white {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    /* Cards d'intervention plus compactes */
+    .intervention-card,
+    .intervention-list-item-clickable {
+        padding: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .intervention-card-header {
+        font-size: 1rem;
+        line-height: 1.3;
+        margin-bottom: 0.5rem;
+    }
+
+    .intervention-card-meta {
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        gap: 0.5rem;
+    }
+
+    .intervention-card-footer {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+    }
+
+    /* ========== BOUTONS OPTIMISÉS ========== */
+    .btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+        /* 15px */
+    }
+
+    .btn-sm {
+        min-height: 40px;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+    }
+
+    /* Boutons pleine largeur sur mobile */
+    .btn-mobile-full {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .button-group.horizontal {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    /* ========== GRILLES RESPONSIVE ========== */
+    .grid-2-cols {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .grid-3-cols {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    /* ========== FILTRES SCROLLABLES ========== */
+    .filter-tabs,
+    .tab-group {
+        display: flex;
+        overflow-x: auto;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar,
+    .tab-group::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-tab,
+    .tab-button {
+        flex-shrink: 0;
+        padding: 0.625rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+        white-space: nowrap;
+        min-height: 40px;
+        border: 2px solid #e5e7eb;
+        background: white;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .filter-tab.active,
+    .tab-button.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+
+    .filter-tab:hover,
+    .tab-button:hover {
+        background: #f1f5f9;
+    }
+
+    .filter-tab.active:hover,
+    .tab-button.active:hover {
+        background: #2563eb;
+    }
+
+    /* ========== MODALS PLEIN ÉCRAN ========== */
+    .modal-overlay {
+        padding: 0;
+    }
+
+    .modal-content {
+        max-height: 100vh;
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-body {
+        padding: 1rem;
+        overflow-y: auto;
+        max-height: calc(100vh - 140px);
+    }
+
+    .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1rem;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* ========== IMAGES OPTIMISÉES ========== */
+    .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .image-grid img {
+        height: 90px;
+        border-radius: 0.5rem;
+    }
+
+    /* ========== FORMULAIRES MOBILE ========== */
+    .form-control {
+        font-size: 16px;
+        /* Évite le zoom iOS */
+        padding: 0.875rem;
+        border-width: 2px;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        font-size: 0.9375rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ========== UPLOAD ZONE ========== */
+    .upload-zone,
+    .file-upload-area {
+        min-height: 120px;
+        padding: 1.5rem 1rem;
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    .upload-zone.drag-over {
+        border-color: #3b82f6;
+        background: #f0f9ff;
+    }
+
+    .upload-icon {
+        width: 48px;
+        height: 48px;
+        color: #94a3b8;
+    }
+
+    .upload-text {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    /* ========== LISTES OPTIMISÉES ========== */
+    .list-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .list-item:last-child {
+        border-bottom: none;
+    }
+
+    .list-item-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .list-item-meta {
+        font-size: 0.8125rem;
+        color: #64748b;
+    }
+
+    /* ========== ACCORDÉONS ========== */
+    .accordion-header {
+        padding: 1rem;
+        min-height: 56px;
+        font-size: 1rem;
+    }
+
+    .accordion-content {
+        padding: 1rem;
+    }
+
+    /* ========== TABLEAUX RESPONSIVE ========== */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        font-size: 0.875rem;
+    }
+
+    th,
+    td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    /* ========== BADGES ET TAGS ========== */
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        border-radius: 1rem;
+    }
+
+    /* ========== NAVIGATION MOBILE ========== */
+    .mobile-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mobile-nav-icons {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .mobile-nav-button {
+        min-width: 56px;
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* ========== ESPACEMENT GÉNÉRAL ========== */
+    .main-content {
+        padding: 1rem;
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
+
+    .section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.125rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* ========== INDICATEURS DE PROGRESSION ========== */
+    .progress-bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+        width: 100%;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        transition: width 0.3s ease;
+        border-radius: 3px;
+    }
+
+    .progress-text {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    /* ========== TOASTS ET NOTIFICATIONS ========== */
+    .toast {
+        max-width: calc(100vw - 2rem);
+        margin: 1rem;
+    }
+
+    .download-progress-toast,
+    .upload-progress-toast {
+        position: fixed;
+        bottom: calc(5rem + env(safe-area-inset-bottom));
+        left: 1rem;
+        right: 1rem;
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        z-index: 45;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .download-info,
+    .upload-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .download-info svg,
+    .upload-info svg {
+        width: 20px;
+        height: 20px;
+        color: #3b82f6;
+        flex-shrink: 0;
+    }
+
+    .download-info span,
+    .upload-info span {
+        font-size: 0.875rem;
+        font-weight: 500;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ========== QUEUE D'UPLOAD ========== */
+    .upload-queue-indicator {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: white;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        z-index: 40;
+    }
+
+    .upload-icon-badge {
+        position: relative;
+    }
+
+    .upload-icon-badge svg {
+        width: 20px;
+        height: 20px;
+        color: #3b82f6;
+    }
+
+    .upload-icon-badge .badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 0.125rem 0.375rem;
+        border-radius: 1rem;
+        min-width: 18px;
+        text-align: center;
+    }
+
+    .upload-queue-indicator .upload-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+
+    .upload-queue-indicator .upload-info span {
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .upload-size {
+        color: #64748b;
+        font-size: 0.6875rem !important;
+    }
+
+    /* ========== INDICATEUR DE CACHE ========== */
+    .cache-indicator {
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .cache-bar {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .cache-fill {
+        height: 100%;
+        background: #10b981;
+        transition: width 0.3s ease, background-color 0.3s ease;
+        border-radius: 4px;
+    }
+
+    .cache-text {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: block;
+        text-align: center;
+    }
+
+    /* ========== ANIMATIONS ========== */
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    .slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .pulse {
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ========== OPTIMISATIONS TACTILES ========== */
+    * {
+        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        touch-action: manipulation;
+    }
+
+    /* Désactiver le zoom sur les inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* ========== SAFE AREA (iPhone avec encoche) ========== */
+    .app-container {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mobile-nav {
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    }
+}
+
+/* ========== OPTIMISATIONS POUR TRÈS PETITS ÉCRANS ========== */
+@media (max-width: 375px) {
+    .view-title {
+        font-size: 1.375rem;
+    }
+
+    .btn {
+        font-size: 0.875rem;
+        padding: 0.625rem 0.875rem;
+    }
+
+    .filter-tab,
+    .tab-button {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+
+    .mobile-nav-button {
+        min-width: 48px;
+        font-size: 0.625rem;
+    }
+
+    .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+    }
+
+    .image-grid img {
+        height: 75px;
+    }
+}
+
+/* ========== MODE PAYSAGE ========== */
+@media (max-width: 896px) and (orientation: landscape) {
+    .modal-content {
+        max-height: 100vh;
+    }
+
+    .main-content {
+        padding-bottom: 1rem;
+    }
+
+    .mobile-nav {
+        display: none;
+    }
+}

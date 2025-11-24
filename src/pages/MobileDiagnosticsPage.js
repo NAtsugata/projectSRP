@@ -1,54 +1,22 @@
 // src/pages/MobileDiagnosticsPage.js
 // Page de diagnostic pour identifier les problèmes d'upload sur mobile
-import React, { useState, useEffect } from 'react';
-import { runMobileDiagnostics, generateDiagnosticReport, testFileUpload } from '../utils/mobileDiagnostics';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { ChevronLeftIcon } from '../components/SharedUI';
-import {
-  isNotificationSupported,
-  isNotificationEnabled,
-  requestNotificationPermission,
-  testNotification
-} from '../services/pushNotificationService';
 
-export default function MobileDiagnosticsPage() {
-  const navigate = useNavigate();
-  const [diagnostics, setDiagnostics] = useState(null);
-  const [report, setReport] = useState('');
-  const [testResults, setTestResults] = useState(null);
-  const [testing, setTesting] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState({
-    supported: false,
-    permission: 'default',
-    enabled: false
-  });
+export default function MobileDiagnosticsPage({
+  diagnostics,
+  report,
+  testResults,
+  testing,
+  notificationStatus,
+  onFileTest,
+  onRequestNotificationPermission,
+  onTestNotification,
+  onGoBack
+}) {
 
-  useEffect(() => {
-    const diag = runMobileDiagnostics();
-    setDiagnostics(diag);
-    setReport(generateDiagnosticReport(diag));
-
-    // Vérifier le statut des notifications
-    setNotificationStatus({
-      supported: isNotificationSupported(),
-      permission: isNotificationSupported() ? Notification.permission : 'default',
-      enabled: isNotificationEnabled()
-    });
-  }, []);
-
-  const handleFileTest = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setTesting(true);
-    try {
-      const results = await testFileUpload(file);
-      setTestResults(results);
-    } catch (error) {
-      setTestResults({ error: error.message });
-    } finally {
-      setTesting(false);
-    }
+  const handleFileChange = (event) => {
+    onFileTest(event.target.files[0]);
   };
 
   const copyReport = () => {
@@ -68,14 +36,9 @@ export default function MobileDiagnosticsPage() {
     }
   };
 
-  const handleRequestNotificationPermission = async () => {
+  const requestPermission = async () => {
     try {
-      const granted = await requestNotificationPermission();
-      setNotificationStatus({
-        supported: isNotificationSupported(),
-        permission: Notification.permission,
-        enabled: granted
-      });
+      const granted = await onRequestNotificationPermission();
       if (granted) {
         alert('✅ Permission accordée ! Vous pouvez maintenant tester les notifications.');
       } else {
@@ -86,9 +49,9 @@ export default function MobileDiagnosticsPage() {
     }
   };
 
-  const handleTestNotification = async () => {
+  const testNotify = async () => {
     try {
-      await testNotification();
+      await onTestNotification();
       alert('✅ Notification de test envoyée !');
     } catch (error) {
       alert('❌ Erreur: ' + error.message);
@@ -105,7 +68,7 @@ export default function MobileDiagnosticsPage() {
   return (
     <div className="mobile-upload-page">
       <header className="mobile-upload-header">
-        <button onClick={() => navigate(-1)} className="back-button">
+        <button onClick={onGoBack} className="back-button">
           <ChevronLeftIcon />
         </button>
         <h2>Diagnostic Mobile</h2>
@@ -129,8 +92,8 @@ export default function MobileDiagnosticsPage() {
             {hasErrors
               ? 'Des problèmes empêchent l\'upload de fonctionner correctement.'
               : hasWarnings
-              ? 'Votre appareil fonctionne mais avec des limitations.'
-              : 'Votre appareil est compatible avec toutes les fonctionnalités.'}
+                ? 'Votre appareil fonctionne mais avec des limitations.'
+                : 'Votre appareil est compatible avec toutes les fonctionnalités.'}
           </p>
         </div>
 
@@ -186,10 +149,10 @@ export default function MobileDiagnosticsPage() {
               {diagnostics.deviceInfo.isSafari
                 ? 'Safari'
                 : diagnostics.deviceInfo.isChrome
-                ? 'Chrome'
-                : diagnostics.deviceInfo.isFirefox
-                ? 'Firefox'
-                : 'Autre'}
+                  ? 'Chrome'
+                  : diagnostics.deviceInfo.isFirefox
+                    ? 'Firefox'
+                    : 'Autre'}
             </div>
             <div>
               <strong>Connexion:</strong> {diagnostics.connection.online ? '✅ En ligne' : '❌ Hors ligne'} (
@@ -222,8 +185,8 @@ export default function MobileDiagnosticsPage() {
               {notificationStatus.permission === 'granted'
                 ? '✅ Accordée'
                 : notificationStatus.permission === 'denied'
-                ? '❌ Refusée'
-                : '⚠️ Pas encore demandée'}
+                  ? '❌ Refusée'
+                  : '⚠️ Pas encore demandée'}
             </div>
             <div>
               <strong>Statut:</strong> {notificationStatus.enabled ? '✅ Activées' : '❌ Désactivées'}
@@ -233,7 +196,7 @@ export default function MobileDiagnosticsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {!notificationStatus.enabled && (
                 <button
-                  onClick={handleRequestNotificationPermission}
+                  onClick={requestPermission}
                   className="btn btn-primary"
                   style={{
                     padding: '0.75rem',
@@ -247,7 +210,7 @@ export default function MobileDiagnosticsPage() {
               )}
               {notificationStatus.enabled && (
                 <button
-                  onClick={handleTestNotification}
+                  onClick={testNotify}
                   className="btn btn-secondary"
                   style={{
                     padding: '0.75rem',
@@ -292,7 +255,7 @@ export default function MobileDiagnosticsPage() {
             <input
               type="file"
               accept="image/*"
-              onChange={handleFileTest}
+              onChange={handleFileChange}
               disabled={testing}
               style={{ display: 'none' }}
             />

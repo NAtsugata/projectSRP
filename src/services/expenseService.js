@@ -24,13 +24,23 @@ const expenseService = {
   /**
    * Récupérer toutes les notes de frais d'un utilisateur
    */
-  async getUserExpenses(userId) {
+  async getUserExpenses(userId, page = 1, limit = 50, statusFilter = 'all') {
     try {
-      const { data, error } = await supabase
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
         .from('expenses')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('user_id', userId)
+        .range(from, to)
         .order('date', { ascending: false });
+
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -40,22 +50,45 @@ const expenseService = {
         receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
       })) || [];
 
-      return { data: parsedData, error: null };
+      return { data: parsedData, error: null, count };
     } catch (error) {
       console.error('❌ Erreur getUserExpenses:', error);
-      return { data: null, error };
+      return { data: null, error, count: 0 };
     }
   },
 
   /**
    * Récupérer toutes les notes de frais (admin)
    */
-  async getAllExpenses() {
+  async getAllExpenses(page = 1, limit = 50, filters = {}) {
     try {
-      const { data, error } = await supabase
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
         .from('expenses')
-        .select('*')
+        .select('*', { count: 'exact' })
+        .range(from, to)
         .order('date', { ascending: false });
+
+      // Filtres
+      if (filters.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters.userId) {
+        query = query.eq('user_id', filters.userId);
+      }
+
+      if (filters.startDate) {
+        query = query.gte('date', filters.startDate);
+      }
+
+      if (filters.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -65,10 +98,10 @@ const expenseService = {
         receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
       })) || [];
 
-      return { data: parsedData, error: null };
+      return { data: parsedData, error: null, count };
     } catch (error) {
       console.error('❌ Erreur getAllExpenses:', error);
-      return { data: null, error };
+      return { data: null, error, count: 0 };
     }
   },
 
