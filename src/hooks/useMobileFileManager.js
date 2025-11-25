@@ -227,7 +227,7 @@ export const useMobileFileManager = (interventionId) => {
       setUploadState((prev) => ({ ...prev, isUploading: false, completed: successful, errors: failed, globalProgress: 100 }));
 
       if (onComplete) {
-        const fileInfos = successful.map((r) => ({ name: r.originalFile.name, url: r.result.publicURL, type: r.originalFile.type }));
+        const fileInfos = successful.map((r) => ({ name: r.originalFile.name, url: r.result.publicURL, path: r.result.filePath, type: r.originalFile.type }));
         onComplete(fileInfos, invalidFiles);
       }
     } catch (error) {

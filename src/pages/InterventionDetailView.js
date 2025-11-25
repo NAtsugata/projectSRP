@@ -30,6 +30,7 @@ import {
   CallButtons,
   ScheduledDatesEditor
 } from '../components/intervention';
+import useMobileFileManager, { UploadQueue } from '../hooks/useMobileFileManager';
 import './InterventionDetailView_Modern.css';
 
 const MIN_REQUIRED_PHOTOS = 2;
@@ -153,23 +154,21 @@ const useBodyScrollLock = () => {
   return { lock, unlock, isLocked: () => lockedRef.current };
 };
 
-// -------- Uploader inline (photos/docs) --------
+// -------- Uploader inline (photos/docs) avec Hook Optimisé --------
 const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', onBeginCritical, onEndCritical, onQueueChange }) => {
-  const [state, setState] = useState({ uploading: false, queue: [], error: null });
+  const { handleFileUpload, uploadState, reset } = useMobileFileManager(interventionId);
   const inputRef = useRef(null);
   const cancelUnlockTimerRef = useRef(null);
 
   // Notifier le parent quand la queue change
   useEffect(() => {
-    const activeQueue = state.queue.filter(item => item.status === 'uploading' || item.status === 'pending');
-    console.log('🔔 Notification queue change:', activeQueue.length, 'items', activeQueue);
+    const activeQueue = uploadState.queue.filter(item => item.status === 'uploading' || item.status === 'pending' || item.status === 'compressing');
     onQueueChange?.(activeQueue);
-  }, [state.queue, onQueueChange]);
+  }, [uploadState.queue, onQueueChange]);
 
   const startCriticalWithFallback = useCallback(() => {
     onBeginCritical?.();
-    // iOS : si l'utilisateur annule le picker, aucun "change" n'arrive.
-    // Fallback pour débloquer au bout de 12s.
+    // Fallback pour débloquer au bout de 12s si l'utilisateur annule
     cancelUnlockTimerRef.current && clearTimeout(cancelUnlockTimerRef.current);
     cancelUnlockTimerRef.current = setTimeout(() => {
       onEndCritical?.();
@@ -181,104 +180,50 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', o
     cancelUnlockTimerRef.current = null;
   }, []);
 
-  const compressImage = useCallback(async (file) => {
-    if (!file.type.startsWith('image/')) return file;
-    return new Promise(res => {
-      const c = document.createElement('canvas'); const ctx = c.getContext('2d'); const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
-        let { width, height } = img;
-        // 🚀 COMPRESSION AGGRESSIVE POUR MOBILE
-        const MW = 800, MH = 600; // Réduit de 1280x720 à 800x600
-        if (width > height) { if (width > MW) { height *= MW / width; width = MW; } }
-        else { if (height > MH) { width *= MH / height; height = MH; } }
-        c.width = width; c.height = height;
-        // Fond blanc pour éviter transparence
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-        // Qualité 0.65 (au lieu de 0.8) = 40% plus léger !
-        c.toBlob(b => {
-          if (b) {
-            const compressed = new File([b], file.name, { type: 'image/jpeg', lastModified: Date.now() });
-            console.log(`📸 Compression: ${(file.size / 1024).toFixed(0)}KB → ${(b.size / 1024).toFixed(0)}KB (${((1 - b.size / file.size) * 100).toFixed(0)}% économisé)`);
-            res(compressed);
-          } else {
-            res(file);
-          }
-        }, 'image/jpeg', 0.65);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
-        res(file);
-      };
-      img.src = objectUrl;
-    });
-  }, []);
-
   const onChange = useCallback(async (e) => {
     clearCriticalFallback(); // le picker a rendu la main
-    const files = Array.from(e.target.files || []);
+    const files = e.target.files;
+
     // Débloquer tout de suite si rien n'a été choisi (annulation)
-    if (!files.length) { onEndCritical?.(); if (inputRef.current) inputRef.current.value = ''; return; }
+    if (!files || files.length === 0) {
+      onEndCritical?.();
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
 
-    console.log('📸 Fichiers sélectionnés:', files.length);
-    if (inputRef.current) inputRef.current.value = '';
-    // Créer des previews pour les images
-    const queue = files.map((f, i) => {
-      const item = { id: `${f.name}-${Date.now()}-${i}`, name: f.name, status: 'pending', progress: 0, error: null, type: f.type };
-      // Ajouter preview pour les images
-      if (f.type.startsWith('image/')) {
-        item.preview = URL.createObjectURL(f);
-        console.log('🖼️ Preview créée pour:', f.name, '→', item.preview);
+    console.log('📸 Fichiers sélectionnés (Hook):', files.length);
+
+    // Lancer l'upload via le hook
+    await handleFileUpload(files, async (uploadedFiles, invalidFiles) => {
+      if (inputRef.current) inputRef.current.value = '';
+
+      if (uploadedFiles.length > 0) {
+        // Apply cache busting here
+        const processedFiles = uploadedFiles.map(f => ({
+          ...f,
+          url: withCacheBust(f.url)
+        }));
+
+        try {
+          await onUploadComplete(processedFiles);
+        } catch (err) {
+          console.error("Erreur sauvegarde post-upload:", err);
+        }
       }
-      return item;
+
+      if (invalidFiles.length > 0) {
+        alert(`${invalidFiles.length} fichier(s) ignoré(s) (trop volumineux ou format incorrect)`);
+      }
+
+      // Fin de la phase critique après un court délai pour laisser l'UI se mettre à jour
+      setTimeout(() => {
+        onEndCritical?.();
+        // Optionnel : reset du hook après succès si on veut nettoyer la liste
+        // reset(); 
+      }, 500);
     });
-    console.log('📦 Queue initiale:', queue);
-    setState({ uploading: true, queue, error: null });
-    const uploaded = [];
-    for (let i = 0; i < files.length; i++) {
-      try {
-        const fu = await compressImage(files[i]);
-        const result = await storageService.uploadInterventionFile(fu, interventionId, folder, (p) => {
-          setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'uploading', progress: p } : it) }));
-        });
-        if (result.error) throw result.error;
-        const publicUrlRaw = result.publicURL?.publicUrl || result.publicURL;
-        if (typeof publicUrlRaw !== 'string') throw new Error('URL de fichier invalide');
-        const publicUrl = withCacheBust(publicUrlRaw);
-        uploaded.push({ name: files[i].name, url: publicUrl, path: result.filePath, type: files[i].type });
-        setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'completed', progress: 100 } : it) }));
-      } catch (err) {
-        setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'error', error: String(err.message || err) } : it) }));
-      }
-    }
-    // ✅ Sauvegarder les fichiers uploadés
-    if (uploaded.length) {
-      try {
-        await onUploadComplete(uploaded);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (err) {
-        setState(s => ({ ...s, error: "La sauvegarde des fichiers a échoué." }));
-      }
-    }
 
-    // ✅ Nettoyage simplifié : tous les uploads sont déjà terminés (boucle for séquentielle)
-    setTimeout(() => {
-      setState(s => {
-        // Révoquer toutes les previews
-        s.queue.forEach(item => {
-          if (item.preview) {
-            URL.revokeObjectURL(item.preview);
-          }
-        });
-        // Reset de la queue
-        return { uploading: false, queue: [], error: s.error };
-      });
-      onEndCritical?.(); // fin de la phase critique
-    }, 200);
-  }, [compressImage, interventionId, folder, onUploadComplete, onEndCritical, clearCriticalFallback]);
+  }, [handleFileUpload, onUploadComplete, onEndCritical, clearCriticalFallback]);
 
   return (
     <div className="mobile-uploader-panel">
@@ -286,41 +231,25 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', o
         ref={inputRef}
         type="file"
         multiple
-        // ✅ NE PAS utiliser capture avec multiple - incompatible sur iOS/Android
-        // capture="environment" force la caméra et bloque la sélection multiple
         accept="image/*,application/pdf,audio/webm"
         onChange={onChange}
-        disabled={state.uploading}
+        disabled={uploadState.isUploading}
         style={{ display: 'none' }}
       />
+
       <button
         onClick={() => {
           startCriticalWithFallback();
           inputRef.current?.click();
         }}
-        className={`btn btn-secondary w-full flex-center ${state.uploading ? 'disabled' : ''}`}
-        disabled={state.uploading}
+        className={`btn btn-secondary w-full flex-center ${uploadState.isUploading ? 'disabled' : ''}`}
+        disabled={uploadState.isUploading}
       >
-        {state.uploading ? 'Envoi en cours…' : 'Choisir des fichiers'}
+        {uploadState.isUploading ? 'Traitement en cours…' : 'Choisir des fichiers'}
       </button>
-      {state.queue.length > 0 && (
-        <div className="upload-queue-container">
-          {state.queue.map(item => (
-            <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-              <div style={{ width: 24, flexShrink: 0 }}>
-                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
-                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
-                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
-              </div>
-              <div style={{ flexGrow: 1, minWidth: 0 }}>
-                <div className="file-name">{item.name}</div>
-                {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{ width: `${item.progress}%` }} /></div>}
-                {item.error && <div className="error-message">{item.error}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+
+      {/* Utilisation du composant d'affichage de queue du hook */}
+      <UploadQueue uploadState={uploadState} />
     </div>
   );
 };
