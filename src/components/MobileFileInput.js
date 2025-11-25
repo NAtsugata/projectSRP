@@ -20,10 +20,8 @@ const MobileFileInput = ({
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Détection du device avec garde pour environnements sans navigator
-      const userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-      const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-      const isAndroid = /Android/.test(userAgent);
+  const userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+  const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
 
   // Gestion du changement de fichier
   const handleFileChange = (event) => {
@@ -59,38 +57,21 @@ const MobileFileInput = ({
       onError(errors);
     }
 
-         // Si on a des fichiers valides, on appelle onChange
-         if (validFiles.length > 0 && onChange) {
-           let filesToSend;
+    // Si on a des fichiers valides, on appelle onChange
+    if (validFiles.length > 0 && onChange) {
+      // On passe simplement le tableau de fichiers.
+      // La plupart des composants React (dont MobileUploadPage) gèrent très bien
+      // un tableau de fichiers dans event.target.files
+      const newEvent = {
+        target: {
+          files: validFiles
+        },
+        preventDefault: () => { },
+        stopPropagation: () => { }
+      };
 
-           // ✅ CORRECTION iOS/Android : Support amélioré pour DataTransfer
-           // DataTransfer n'est pas toujours disponible sur iOS Safari ancien
-           try {
-             if (typeof DataTransfer !== 'undefined' && DataTransfer.prototype.hasOwnProperty('items')) {
-               const dt = new DataTransfer();
-               validFiles.forEach(file => dt.items.add(file));
-               filesToSend = dt.files;
-             } else {
-               // Fallback pour iOS Safari ancien : créer un objet FileList-like
-               filesToSend = validFiles;
-             }
-           } catch (err) {
-             // Si DataTransfer échoue (certains navigateurs), utiliser le tableau directement
-             console.warn('DataTransfer non supporté, utilisation du fallback:', err);
-             filesToSend = validFiles;
-           }
-
-           // On crée un événement simulé
-           const newEvent = {
-             target: {
-               files: filesToSend
-             },
-             preventDefault: () => {},
-             stopPropagation: () => {}
-           };
-
-           onChange(newEvent);
-         }
+      onChange(newEvent);
+    }
 
     // Reset de l'input pour permettre re-sélection du même fichier
     if (inputRef.current) {
@@ -164,7 +145,7 @@ const MobileFileInput = ({
         touchAction: 'manipulation'
       }}
     >
-          {/*
+      {/*
             ⚠️ IMPORTANT: L'attribut 'capture' ne doit être utilisé que pour l'upload UNIQUE
             car il force l'ouverture de la caméra et est INCOMPATIBLE avec 'multiple'
             sur iOS et certains Android. Pour l'upload multiple, on laisse le navigateur
@@ -172,27 +153,27 @@ const MobileFileInput = ({
 
             iOS moderne (13+) préfère 'environment' au lieu de 'true' (obsolète)
           */}
-          <input
-             ref={inputRef}
-             type="file"
-             accept={accept}
-             multiple={multiple}
-             onChange={handleFileChange}
-             disabled={disabled}
-             {...(isMobile && accept && accept.includes('image') && !multiple
-               ? { capture: 'environment' }
-               : {})}
-             style={{
-               position: 'absolute',
-               opacity: 0,
-               width: '100%',
-               height: '100%',
-               cursor: disabled ? 'not-allowed' : 'pointer',
-               fontSize: '16px', // Évite le zoom iOS
-               left: 0,
-               top: 0
-             }}
-           />
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        onChange={handleFileChange}
+        disabled={disabled}
+        {...(isMobile && accept && accept.includes('image') && !multiple
+          ? { capture: 'environment' }
+          : {})}
+        style={{
+          position: 'absolute',
+          opacity: 0,
+          width: '100%',
+          height: '100%',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontSize: '16px', // Évite le zoom iOS
+          left: 0,
+          top: 0
+        }}
+      />
 
       {/* Contenu du bouton */}
       <span style={{ pointerEvents: 'none' }}>

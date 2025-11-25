@@ -131,84 +131,82 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
         });
 
         const successfulUploads = [];
-        const concurrentUploads = 3; // Augmenté pour éviter les timeouts
 
-        for (let i = 0; i < files.length; i += concurrentUploads) {
-            const batch = files.slice(i, i + concurrentUploads);
-            const batchPromises = batch.map(async (file, idx) => {
-                const queueItem = queueItems[i + idx];
-                logUpload(`🔄 Traitement fichier ${i + idx + 1}/${files.length}`, {
-                    fileName: file.name,
-                    fileSize: file.size,
-                    fileType: file.type
-                });
+        // ⚠️ CORRECTION MOBILE : Traitement SÉQUENTIEL strict avec délai
+        // Pour éviter les crashs mémoire et les timeouts sur les appareils mobiles
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const queueItem = queueItems[i];
 
-                try {
-                    logUpload(`📦 Compression de ${file.name}...`);
-                    let fileToUpload = await compressImage(file);
-                    logUpload(`✅ Compression terminée`, {
-                        originalSize: file.size,
-                        compressedSize: fileToUpload.size,
-                        ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
-                    });
-
-                    logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
-                    const result = await storageService.uploadInterventionFile(
-                        fileToUpload,
-                        interventionId,
-                        'report',
-                        (progress) => {
-                            logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
-                            setUploadState(prev => ({
-                                ...prev,
-                                queue: prev.queue.map(item =>
-                                    item.id === queueItem.id ? { ...item, status: 'uploading', progress } : item
-                                )
-                            }));
-                        }
-                    );
-
-                    if (result.error) {
-                        logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
-                        throw result.error;
-                    }
-
-                    logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
-                    successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id ? { ...item, status: 'completed', progress: 100 } : item
-                        )
-                    }));
-
-                } catch (error) {
-                    logUpload(`❌ ERREUR lors du traitement`, {
-                        fileName: file.name,
-                        errorMessage: error.message,
-                        errorStack: error.stack,
-                        errorType: error.constructor.name
-                    });
-
-                    // ✅ Notification d'erreur
-                    notifications.error(`Échec: ${file.name}`, {
-                        duration: 5000
-                    });
-
-                    setUploadState(prev => ({
-                        ...prev,
-                        queue: prev.queue.map(item =>
-                            item.id === queueItem.id ? { ...item, status: 'error', error: error.message } : item
-                        )
-                    }));
-                }
+            logUpload(`🔄 Traitement fichier ${i + 1}/${files.length}`, {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
             });
 
-            await Promise.all(batchPromises);
+            try {
+                // Petit délai avant de commencer pour laisser l'UI se mettre à jour
+                if (i > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
 
-            // Petit délai entre les batches pour laisser respirer le thread principal
-            if (i + concurrentUploads < files.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                logUpload(`📦 Compression de ${file.name}...`);
+                let fileToUpload = await compressImage(file);
+                logUpload(`✅ Compression terminée`, {
+                    originalSize: file.size,
+                    compressedSize: fileToUpload.size,
+                    ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
+                });
+
+                logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
+                const result = await storageService.uploadInterventionFile(
+                    fileToUpload,
+                    interventionId,
+                    'report',
+                    (progress) => {
+                        logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
+                        setUploadState(prev => ({
+                            ...prev,
+                            queue: prev.queue.map(item =>
+                                item.id === queueItem.id ? { ...item, status: 'uploading', progress } : item
+                            )
+                        }));
+                    }
+                );
+
+                if (result.error) {
+                    logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
+                    throw result.error;
+                }
+
+                logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
+                successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id ? { ...item, status: 'completed', progress: 100 } : item
+                    )
+                }));
+
+            } catch (error) {
+                logUpload(`❌ ERREUR lors du traitement`, {
+                    fileName: file.name,
+                    errorMessage: error.message,
+                    errorStack: error.stack,
+                    errorType: error.constructor.name
+                });
+
+                // ✅ Notification d'erreur
+                notifications.error(`Échec: ${file.name}`, {
+                    duration: 5000
+                });
+
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id ? { ...item, status: 'error', error: error.message } : item
+                    )
+                }));
             }
         }
 
