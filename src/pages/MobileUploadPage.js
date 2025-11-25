@@ -39,23 +39,66 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
     const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
 
+        // Tentative d'utilisation de createImageBitmap (plus performant et async)
+        if (window.createImageBitmap) {
+            try {
+                const maxWidth = 1024; // Réduit pour éviter OOM sur vieux Android
+                const maxHeight = 1024;
+
+                // On charge l'image pour avoir ses dimensions d'abord
+                const bitmap = await createImageBitmap(file);
+
+                let { width, height } = bitmap;
+                let newWidth = width;
+                let newHeight = height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        newHeight = Math.round(height * (maxWidth / width));
+                        newWidth = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        newWidth = Math.round(width * (maxHeight / height));
+                        newHeight = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                const ctx = canvas.getContext('2d');
+
+                // Dessin redimensionné
+                ctx.drawImage(bitmap, 0, 0, newWidth, newHeight);
+                bitmap.close(); // Libération mémoire immédiate
+
+                return new Promise((resolve) => {
+                    canvas.toBlob((blob) => {
+                        resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
+                    }, 'image/jpeg', 0.7); // Qualité un peu réduite pour vitesse
+                });
+            } catch (e) {
+                console.warn('Erreur createImageBitmap, fallback legacy:', e);
+            }
+        }
+
+        // Fallback Legacy (img tag)
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             const img = new Image();
             let objectUrl = null;
 
-            // ✅ CORRECTION iOS/Android : Timeout pour éviter blocages sur Android ancien
             const timeoutId = setTimeout(() => {
                 if (objectUrl) URL.revokeObjectURL(objectUrl);
-                console.warn('Timeout compression image, utilisation du fichier original');
                 resolve(file);
-            }, 30000); // 30 secondes max
+            }, 10000); // 10s max
 
             img.onload = () => {
                 try {
-                    const maxWidth = 1280;
-                    const maxHeight = 720;
+                    const maxWidth = 1024;
+                    const maxHeight = 1024;
                     let { width, height } = img;
                     if (width > height) {
                         if (width > maxWidth) {
@@ -74,14 +117,12 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
 
                     canvas.toBlob((blob) => {
                         clearTimeout(timeoutId);
-                        // ✅ CORRECTION : Nettoyage URL.createObjectURL pour éviter fuite mémoire
                         if (objectUrl) URL.revokeObjectURL(objectUrl);
                         resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
-                    }, 'image/jpeg', 0.8);
+                    }, 'image/jpeg', 0.7);
                 } catch (error) {
                     clearTimeout(timeoutId);
                     if (objectUrl) URL.revokeObjectURL(objectUrl);
-                    console.error('Erreur compression:', error);
                     resolve(file);
                 }
             };
@@ -130,33 +171,35 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
             duration: 2000
         });
 
+        // 🛑 PAUSE CRITIQUE : On force le rendu de l'UI avant de commencer quoi que ce soit
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         const successfulUploads = [];
 
         // ⚠️ CORRECTION MOBILE : Traitement SÉQUENTIEL strict avec délai
-        // Pour éviter les crashs mémoire et les timeouts sur les appareils mobiles
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             const queueItem = queueItems[i];
 
-            logUpload(`🔄 Traitement fichier ${i + 1}/${files.length}`, {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type
-            });
+            // Pause entre chaque fichier pour laisser l'UI respirer
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
 
             try {
-                // Petit délai avant de commencer pour laisser l'UI se mettre à jour
-                if (i > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
+                // On met à jour le statut "Compression..."
+                setUploadState(prev => ({
+                    ...prev,
+                    queue: prev.queue.map(item =>
+                        item.id === queueItem.id ? { ...item, status: 'uploading', progress: 10 } : item
+                    )
+                }));
+
+                // Petit délai pour que le statut s'affiche
+                await new Promise(resolve => setTimeout(resolve, 50));
 
                 logUpload(`📦 Compression de ${file.name}...`);
                 let fileToUpload = await compressImage(file);
-                logUpload(`✅ Compression terminée`, {
-                    originalSize: file.size,
-                    compressedSize: fileToUpload.size,
-                    ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
-                });
 
                 logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
                 const result = await storageService.uploadInterventionFile(
@@ -164,11 +207,12 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     interventionId,
                     'report',
                     (progress) => {
-                        logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
+                        // On map la progression 0-100 vers 20-100 pour garder 0-20 pour la compression
+                        const visualProgress = 20 + Math.round(progress * 0.8);
                         setUploadState(prev => ({
                             ...prev,
                             queue: prev.queue.map(item =>
-                                item.id === queueItem.id ? { ...item, status: 'uploading', progress } : item
+                                item.id === queueItem.id ? { ...item, status: 'uploading', progress: visualProgress } : item
                             )
                         }));
                     }
