@@ -828,138 +828,139 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             )}
           </div>
 
-          {/* Photos & docs */}
-          <div className="modern-section" id="photos-section">
-            <div className="section-header">
-              <h3 className="section-title">
-                <span className="section-title-icon">📷</span>
-                Photos et Documents <span style={{ fontSize: '0.7em', color: '#aaa' }}>(v3.0)</span>
-                {report.files && report.files.length > 0 && (
-                  <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
-                    ({report.files.length})
-                  </span>
-                )}
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {report.files && report.files.length > 1 && (
-                  <button
-                    onClick={handleDownloadAllAsZip}
-                    disabled={isDownloadingZip}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                    title="Télécharger tous les fichiers en ZIP"
-                  >
-                    <DownloadIcon />
-                    {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
-                  </button>
-                )}
-                <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
-              </div>
-            </div>
-
-            {/* Galerie d'images optimisée avec pagination et lazy loading */}
-            <ImageGalleryOptimized
-              images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-                url: f.url,
-                name: f.name,
-                type: f.type
-              }))}
-              uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
-              emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-              onDeleteImage={handleDeleteImage}
-            />
-
-            {/* Documents non-image (PDF, audio, etc.) */}
-            {report.files?.some(f => !f.type?.startsWith('image/')) && (
-              <div style={{ marginTop: '1rem' }}>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>📎 Autres fichiers</h4>
-                <ul className="document-list-optimized">
-                  {report.files.filter(f => !f.type?.startsWith('image/')).map((file, idx) => (
-                    <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
-                      {file.type?.startsWith('audio/') ? <div style={{ width: 40 }}><audio controls src={file.url} style={{ height: 32 }} /></div>
-                        : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
-                      <span className="file-name">{file.name}</span>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <InlineUploader
-              interventionId={interventionId}
-              onUploadComplete={async (uploaded) => {
-                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-
-                // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
-                setReport(updated);
-
-                await persistReport(updated);
-                // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
-                saveScroll();
-                pendingRestoreRef.current = true;
-                if (!document.body.dataset.__scrollLocked) lock();
-                try {
-                  await refreshData?.();
-                } finally {
-                  unlock();
-                  restoreScroll();
-                }
-              }}
-              onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
-              onEndCritical={unlock}
-              onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
-            />
-          </div>
-
-          {/* Signature */}
-          <div className="modern-section" id="signature-section">
-            <div className="section-header">
-              <h3 className="section-title">
-                <span className="section-title-icon">✍️</span>
-                Signature du client
-              </h3>
-            </div>
-            {report.signature ? (
-              <div>
-                <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
-                <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
-              </div>
-            ) : (
-              <div>
-                <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
-                <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
-              </div>
-            )}
-          </div>
-
-          {/* Kilométrage de fin */}
-          <div className="modern-section">
-            <h3 className="section-title">
-              <span className="section-title-icon">🚗</span>
-              Kilométrage de fin
-            </h3>
-            <div className="form-group">
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={report.km_end || ''}
-                onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
-                placeholder="Ex: 45430"
-                className="form-control"
-                style={{ maxWidth: '200px' }}
-                readOnly={!!isAdmin}
-              />
-              {intervention.km_start && report.km_end && (
-                <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
-                  Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
-                </small>
-              )}
-            </div>
-          </div>
-
-          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>{isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
         </div>
+
+        {/* Photos & docs */}
+        <div className="modern-section" id="photos-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">📷</span>
+              Photos et Documents <span style={{ fontSize: '0.7em', color: '#ff0000' }}>(v3.1 NO CACHE)</span>
+              {report.files && report.files.length > 0 && (
+                <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
+                  ({report.files.length})
+                </span>
+              )}
+            </h3>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {report.files && report.files.length > 1 && (
+                <button
+                  onClick={handleDownloadAllAsZip}
+                  disabled={isDownloadingZip}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  title="Télécharger tous les fichiers en ZIP"
+                >
+                  <DownloadIcon />
+                  {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
+                </button>
+              )}
+              <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
+            </div>
+          </div>
+
+          {/* Galerie d'images optimisée avec pagination et lazy loading */}
+          <ImageGalleryOptimized
+            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
+              url: f.url,
+              name: f.name,
+              type: f.type
+            }))}
+            uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
+            emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
+            onDeleteImage={handleDeleteImage}
+          />
+
+          {/* Documents non-image (PDF, audio, etc.) */}
+          {report.files?.some(f => !f.type?.startsWith('image/')) && (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>📎 Autres fichiers</h4>
+              <ul className="document-list-optimized">
+                {report.files.filter(f => !f.type?.startsWith('image/')).map((file, idx) => (
+                  <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
+                    {file.type?.startsWith('audio/') ? <div style={{ width: 40 }}><audio controls src={file.url} style={{ height: 32 }} /></div>
+                      : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
+                    <span className="file-name">{file.name}</span>
+                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <InlineUploader
+            interventionId={interventionId}
+            onUploadComplete={async (uploaded) => {
+              const updated = { ...report, files: [...(report.files || []), ...uploaded] };
+
+              // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
+              setReport(updated);
+
+              await persistReport(updated);
+              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
+              saveScroll();
+              pendingRestoreRef.current = true;
+              if (!document.body.dataset.__scrollLocked) lock();
+              try {
+                await refreshData?.();
+              } finally {
+                unlock();
+                restoreScroll();
+              }
+            }}
+            onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
+            onEndCritical={unlock}
+            onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
+          />
+        </div>
+
+        {/* Signature */}
+        <div className="modern-section" id="signature-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">✍️</span>
+              Signature du client
+            </h3>
+          </div>
+          {report.signature ? (
+            <div>
+              <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
+              <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
+            </div>
+          ) : (
+            <div>
+              <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
+              <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
+            </div>
+          )}
+        </div>
+
+        {/* Kilométrage de fin */}
+        <div className="modern-section">
+          <h3 className="section-title">
+            <span className="section-title-icon">🚗</span>
+            Kilométrage de fin
+          </h3>
+          <div className="form-group">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={report.km_end || ''}
+              onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
+              placeholder="Ex: 45430"
+              className="form-control"
+              style={{ maxWidth: '200px' }}
+              readOnly={!!isAdmin}
+            />
+            {intervention.km_start && report.km_end && (
+              <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
+                Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
+              </small>
+            )}
+          </div>
+        </div>
+
+        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>{isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
       </div>
 
       {/* Modale signature */}
