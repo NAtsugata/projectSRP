@@ -179,118 +179,57 @@ export const useMobileFileManager = (interventionId) => {
         id: `${file.name}-${file.lastModified}-${index}`,
         name: file.name,
         size: file.size,
-        type: file.type,
-        status: 'pending',
-        progress: 0,
-        error: null
-      }));
-
-      setUploadState((prev) => ({ ...prev, queue: queueItems }));
-
-      const concurrentUploads = 3; // Augmenté pour éviter les timeouts sur les longues files
-      const results = [];
-
-      const updateProgress = (fileId, status, progress, error = null) => {
-        setUploadState((prev) => {
-          const updatedQueue = prev.queue.map((item) => (item.id === fileId ? { ...item, status, progress, error } : item));
-          const globalProgress = Math.round(updatedQueue.reduce((sum, item) => sum + item.progress, 0) / updatedQueue.length);
-          return { ...prev, queue: updatedQueue, globalProgress };
-        });
-      };
-
-      for (let i = 0; i < validFiles.length; i += concurrentUploads) {
-        const batch = validFiles.slice(i, i + concurrentUploads);
-        const batchPromises = batch.map(async (file, idx) => {
-          const fileId = queueItems[i + idx].id;
-          try {
-            updateProgress(fileId, 'compressing', 5);
-            const compressedFile = await compressFile(file);
-            updateProgress(fileId, 'uploading', 20);
-            const result = await uploadSingleFile(compressedFile, fileId, updateProgress);
-            return { fileId, success: true, result, originalFile: file };
-          } catch (error) {
-            return { fileId, success: false, error: error.message, originalFile: file };
-          }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
-
-        if (i + concurrentUploads < validFiles.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
-
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
-
-      setUploadState((prev) => ({ ...prev, isUploading: false, completed: successful, errors: failed, globalProgress: 100 }));
-
-      if (onComplete) {
-        const fileInfos = successful.map((r) => ({ name: r.originalFile.name, url: r.result.publicURL, path: r.result.filePath, type: r.originalFile.type }));
-        onComplete(fileInfos, invalidFiles);
-      }
-    } catch (error) {
-      console.error('❌ Erreur upload global:', error);
-      setUploadState((prev) => ({ ...prev, isUploading: false, errors: [{ error: error.message }], globalProgress: 0 }));
-    }
-  }, [compressFile, uploadSingleFile, deviceInfo]);
-
-  // Utilitaire pour précharger une image depuis une URL
-  const preloadImage = useCallback((url) => {
-    return new Promise((resolve) => {
-      if (imageCache.current.has(url)) {
         resolve(imageCache.current.get(url));
-        return;
-      }
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        imageCache.current.set(url, img);
-        setDisplayState((prev) => ({ ...prev, loadedImages: new Set([...prev.loadedImages, url]) }));
-        resolve(img);
-      };
-      img.onerror = () => {
-        setDisplayState((prev) => ({ ...prev, imageLoadErrors: new Set([...prev.imageLoadErrors, url]) }));
-        resolve(null);
-      };
-      img.src = url;
-    });
-  }, []);
-
-  // Permet de réinitialiser le hook et d'annuler les uploads en cours
-  const reset = useCallback(() => {
-    if (abortController.current) {
-      abortController.current.abort();
+      return;
     }
-    setUploadState({ isUploading: false, queue: [], completed: [], errors: [], globalProgress: 0 });
-    setDisplayState({ loadedImages: new Set(), imageLoadErrors: new Set(), isRefreshing: false });
-    imageCache.current.clear();
-  }, []);
-
-  // Nettoyage à la désactivation du composant
-  useEffect(() => {
-    const cache = imageCache.current;
-    const controller = abortController.current;
-    return () => {
-      if (controller) {
-        controller.abort();
-      }
-      if (cache) {
-        cache.clear();
-      }
+      const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imageCache.current.set(url, img);
+      setDisplayState((prev) => ({ ...prev, loadedImages: new Set([...prev.loadedImages, url]) }));
+      resolve(img);
     };
-  }, []);
+    img.onerror = () => {
+      setDisplayState((prev) => ({ ...prev, imageLoadErrors: new Set([...prev.imageLoadErrors, url]) }));
+      resolve(null);
+    };
+    img.src = url;
+  });
+}, []);
 
-  return {
-    uploadState,
-    handleFileUpload,
-    displayState,
-    preloadImage,
-    deviceInfo,
-    reset,
-    imageCache: imageCache.current
+// Permet de réinitialiser le hook et d'annuler les uploads en cours
+const reset = useCallback(() => {
+  if (abortController.current) {
+    abortController.current.abort();
+  }
+  setUploadState({ isUploading: false, queue: [], completed: [], errors: [], globalProgress: 0 });
+  setDisplayState({ loadedImages: new Set(), imageLoadErrors: new Set(), isRefreshing: false });
+  imageCache.current.clear();
+}, []);
+
+// Nettoyage à la désactivation du composant
+useEffect(() => {
+  const cache = imageCache.current;
+  const controller = abortController.current;
+  return () => {
+    if (controller) {
+      controller.abort();
+    }
+    if (cache) {
+      cache.clear();
+    }
   };
+}, []);
+
+return {
+  uploadState,
+  handleFileUpload,
+  displayState,
+  preloadImage,
+  deviceInfo,
+  reset,
+  imageCache: imageCache.current
+};
 };
 
 /**
