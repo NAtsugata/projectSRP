@@ -1,5 +1,5 @@
 // src/pages/MobileUploadPage.js
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import MobileFileInput from '../components/MobileFileInput';
@@ -18,36 +18,33 @@ const logUpload = (message, data = {}) => {
     });
 };
 
-// =================================================================================
-// COMPOSANT PRINCIPAL DE LA PAGE D'UPLOAD
-// =================================================================================
 export default function MobileUploadPage({ interventions, onFilesUploaded }) {
     const { interventionId } = useParams();
     const navigate = useNavigate();
+    const notifications = useMobileNotifications();
+
+    // État principal
     const [uploadState, setUploadState] = useState({
         isUploading: false,
-        queue: [],
+        queue: [], // { id, file, name, status: 'pending'|'compressing'|'uploading'|'completed'|'error', progress, error, url }
         error: null
     });
-    const [uploadComplete, setUploadComplete] = useState(false); // Pour afficher le message de succès
+    const [uploadComplete, setUploadComplete] = useState(false);
 
-    // ✅ Hook de notifications mobiles
-    const notifications = useMobileNotifications();
+    // Ref pour éviter les doubles exécutions si le useEffect se déclenche trop vite
+    const processingRef = useRef(null);
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // 1. Fonction de compression optimisée (inchangée)
     const compressImage = useCallback(async (file) => {
         if (!file.type.startsWith('image/')) return file;
 
-        // Tentative d'utilisation de createImageBitmap (plus performant et async)
         if (window.createImageBitmap) {
             try {
-                const maxWidth = 1024; // Réduit pour éviter OOM sur vieux Android
+                const maxWidth = 1024;
                 const maxHeight = 1024;
-
-                // On charge l'image pour avoir ses dimensions d'abord
                 const bitmap = await createImageBitmap(file);
-
                 let { width, height } = bitmap;
                 let newWidth = width;
                 let newHeight = height;
@@ -68,32 +65,28 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                 canvas.width = newWidth;
                 canvas.height = newHeight;
                 const ctx = canvas.getContext('2d');
-
-                // Dessin redimensionné
                 ctx.drawImage(bitmap, 0, 0, newWidth, newHeight);
-                bitmap.close(); // Libération mémoire immédiate
+                bitmap.close();
 
                 return new Promise((resolve) => {
                     canvas.toBlob((blob) => {
                         resolve(blob ? new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }) : file);
-                    }, 'image/jpeg', 0.7); // Qualité un peu réduite pour vitesse
+                    }, 'image/jpeg', 0.7);
                 });
             } catch (e) {
                 console.warn('Erreur createImageBitmap, fallback legacy:', e);
             }
         }
 
-        // Fallback Legacy (img tag)
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             const img = new Image();
             let objectUrl = null;
-
             const timeoutId = setTimeout(() => {
                 if (objectUrl) URL.revokeObjectURL(objectUrl);
                 resolve(file);
-            }, 10000); // 10s max
+            }, 10000);
 
             img.onload = () => {
                 try {
@@ -114,7 +107,6 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     canvas.width = width;
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-
                     canvas.toBlob((blob) => {
                         clearTimeout(timeoutId);
                         if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -126,182 +118,151 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     resolve(file);
                 }
             };
-
             img.onerror = () => {
                 clearTimeout(timeoutId);
                 if (objectUrl) URL.revokeObjectURL(objectUrl);
                 resolve(file);
             };
-
             objectUrl = URL.createObjectURL(file);
             img.src = objectUrl;
         });
     }, []);
 
-    const handleFileSelect = useCallback(async (event) => {
-        logUpload('📤 handleFileSelect appelé');
+    // 2. Traitement d'un item individuel
+    const processItem = useCallback(async (item) => {
+        if (processingRef.current === item.id) return; // Déjà en cours
+        processingRef.current = item.id;
 
-        const files = Array.from(event.target.files);
-        logUpload(`📁 ${files.length} fichier(s) sélectionné(s)`, {
-            fileNames: files.map(f => f.name),
-            fileSizes: files.map(f => f.size),
-            fileTypes: files.map(f => f.type)
-        });
+        logUpload(`🔄 Début traitement item ${item.name}`);
 
-        if (files.length === 0) {
-            logUpload('⚠️ Aucun fichier sélectionné');
-            return;
+        try {
+            // Étape 1: Compression
+            setUploadState(prev => ({
+                ...prev,
+                queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'compressing', progress: 10 } : i)
+            }));
+
+            // Petit délai UI
+            await new Promise(r => setTimeout(r, 100));
+
+            const fileToUpload = await compressImage(item.file);
+
+            // Étape 2: Upload
+            setUploadState(prev => ({
+                ...prev,
+                queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'uploading', progress: 30 } : i)
+            }));
+
+            const result = await storageService.uploadInterventionFile(
+                fileToUpload,
+                interventionId,
+                'report',
+                (progress) => {
+                    const visualProgress = 30 + Math.round(progress * 0.7);
+                    setUploadState(prev => ({
+                        ...prev,
+                        queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'uploading', progress: visualProgress } : i)
+                    }));
+                }
+            );
+
+            if (result.error) throw result.error;
+
+            // Étape 3: Succès
+            setUploadState(prev => ({
+                ...prev,
+                queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'completed', progress: 100, url: result.publicURL, type: item.file.type } : i)
+            }));
+            logUpload(`✅ Item terminé ${item.name}`);
+
+        } catch (error) {
+            console.error(error);
+            setUploadState(prev => ({
+                ...prev,
+                queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'error', error: error.message } : i)
+            }));
+            notifications.error(`Erreur: ${item.name}`);
+        } finally {
+            processingRef.current = null;
+        }
+    }, [interventionId, compressImage, notifications]);
+
+    // 3. Boucle réactive (Queue Processor)
+    useEffect(() => {
+        if (!uploadState.isUploading) return;
+
+        // Vérifie si un item est déjà en cours de traitement
+        const activeItem = uploadState.queue.find(i => ['compressing', 'uploading'].includes(i.status));
+        if (activeItem) return;
+
+        // Trouve le prochain item en attente
+        const nextItem = uploadState.queue.find(i => i.status === 'pending');
+
+        if (nextItem) {
+            // Lance le traitement du prochain item
+            processItem(nextItem);
+        } else {
+            // Plus rien en attente, on termine
+            finishUploadSession();
+        }
+    }, [uploadState.queue, uploadState.isUploading, processItem]);
+
+    // 4. Finalisation
+    const finishUploadSession = async () => {
+        setUploadState(prev => ({ ...prev, isUploading: false }));
+        setUploadComplete(true);
+
+        const completedItems = uploadState.queue.filter(i => i.status === 'completed');
+        const failedItems = uploadState.queue.filter(i => i.status === 'error');
+
+        if (completedItems.length > 0 && onFilesUploaded) {
+            try {
+                const filesData = completedItems.map(i => ({
+                    name: i.name,
+                    url: i.url,
+                    type: i.type
+                }));
+                await onFilesUploaded(interventionId, filesData);
+                notifications.success(`${completedItems.length} fichiers envoyés avec succès !`);
+            } catch (err) {
+                notifications.error("Erreur lors de l'enregistrement final");
+            }
         }
 
-        const queueItems = files.map((file, index) => ({
+        if (failedItems.length > 0) {
+            notifications.warning(`${failedItems.length} fichiers n'ont pas pu être envoyés.`);
+        }
+    };
+
+    // 5. Sélection des fichiers (Juste ajout à la queue)
+    const handleFileSelect = useCallback((event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        logUpload(`📁 Sélection de ${files.length} fichiers`);
+
+        const newQueueItems = files.map((file, index) => ({
             id: `${file.name}-${Date.now()}-${index}`,
+            file: file, // On garde la référence du fichier
             name: file.name,
             status: 'pending',
             progress: 0,
             error: null
         }));
 
-        setUploadState({ isUploading: true, queue: queueItems, error: null });
+        setUploadState(prev => ({
+            isUploading: true, // Déclenche le useEffect
+            queue: [...prev.queue, ...newQueueItems],
+            error: null
+        }));
+
         setUploadComplete(false);
+        notifications.info(`${files.length} fichiers ajoutés à la file d'attente`);
 
-        logUpload('✅ État d\'upload initialisé');
-
-        // ✅ Notification de début
-        notifications.info(`Envoi de ${files.length} fichier${files.length > 1 ? 's' : ''}...`, {
-            duration: 2000
-        });
-
-        // 🛑 PAUSE CRITIQUE : On force le rendu de l'UI avant de commencer quoi que ce soit
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const successfulUploads = [];
-
-        // ⚠️ CORRECTION MOBILE : Traitement SÉQUENTIEL strict avec délai
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const queueItem = queueItems[i];
-
-            // Pause entre chaque fichier pour laisser l'UI respirer
-            if (i > 0) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-
-            try {
-                // On met à jour le statut "Compression..."
-                setUploadState(prev => ({
-                    ...prev,
-                    queue: prev.queue.map(item =>
-                        item.id === queueItem.id ? { ...item, status: 'uploading', progress: 10 } : item
-                    )
-                }));
-
-                // Petit délai pour que le statut s'affiche
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                logUpload(`📦 Compression de ${file.name}...`);
-                let fileToUpload = await compressImage(file);
-
-                logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
-                const result = await storageService.uploadInterventionFile(
-                    fileToUpload,
-                    interventionId,
-                    'report',
-                    (progress) => {
-                        // On map la progression 0-100 vers 20-100 pour garder 0-20 pour la compression
-                        const visualProgress = 20 + Math.round(progress * 0.8);
-                        setUploadState(prev => ({
-                            ...prev,
-                            queue: prev.queue.map(item =>
-                                item.id === queueItem.id ? { ...item, status: 'uploading', progress: visualProgress } : item
-                            )
-                        }));
-                    }
-                );
-
-                if (result.error) {
-                    logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
-                    throw result.error;
-                }
-
-                logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
-                successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
-                setUploadState(prev => ({
-                    ...prev,
-                    queue: prev.queue.map(item =>
-                        item.id === queueItem.id ? { ...item, status: 'completed', progress: 100 } : item
-                    )
-                }));
-
-            } catch (error) {
-                logUpload(`❌ ERREUR lors du traitement`, {
-                    fileName: file.name,
-                    errorMessage: error.message,
-                    errorStack: error.stack,
-                    errorType: error.constructor.name
-                });
-
-                // ✅ Notification d'erreur
-                notifications.error(`Échec: ${file.name}`, {
-                    duration: 5000
-                });
-
-                setUploadState(prev => ({
-                    ...prev,
-                    queue: prev.queue.map(item =>
-                        item.id === queueItem.id ? { ...item, status: 'error', error: error.message } : item
-                    )
-                }));
-            }
-        }
-
-        // ✅ CORRECTION : Vérification que onFilesUploaded existe avant appel
-        if (successfulUploads.length > 0 && onFilesUploaded) {
-            try {
-                await onFilesUploaded(interventionId, successfulUploads);
-            } catch (error) {
-                console.error('Erreur lors de la sauvegarde des fichiers:', error);
-                notifications.error('Fichiers uploadés mais pas enregistrés dans la base', {
-                    duration: 7000
-                });
-                setUploadState(prev => ({
-                    ...prev,
-                    error: 'Les fichiers ont été uploadés mais pas enregistrés dans la base de données'
-                }));
-            }
-        }
-
-        setUploadState(prev => ({ ...prev, isUploading: false }));
-        setUploadComplete(true); // Affiche le message de succès
-
-        // ✅ Notification finale
-        const failedCount = files.length - successfulUploads.length;
-        if (failedCount === 0) {
-            notifications.success(`${successfulUploads.length} fichier${successfulUploads.length > 1 ? 's' : ''} envoyé${successfulUploads.length > 1 ? 's' : ''} !`, {
-                duration: 4000
-            });
-        } else if (successfulUploads.length > 0) {
-            notifications.warning(`${successfulUploads.length} réussi${successfulUploads.length > 1 ? 's' : ''}, ${failedCount} échoué${failedCount > 1 ? 's' : ''}`, {
-                duration: 5000
-            });
-        } else {
-            notifications.error('Tous les fichiers ont échoué', {
-                duration: 5000,
-                action: {
-                    label: 'Diagnostic',
-                    onClick: () => navigate('/mobile-diagnostics')
-                }
-            });
-        }
-
-    }, [interventionId, compressImage, onFilesUploaded, notifications, navigate]);
+    }, [notifications]);
 
     const handleUploadError = useCallback((errors) => {
-        setUploadState(prev => ({ ...prev, error: errors.join(' • ') }));
-
-        // ✅ Notification d'erreur de validation
-        notifications.error(errors[0], {
-            duration: 5000
-        });
+        notifications.error(errors[0]);
     }, [notifications]);
 
     const intervention = interventions.find(i => i.id.toString() === interventionId);
@@ -313,19 +274,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     <ChevronLeftIcon />
                 </button>
                 <h2>Ajouter des fichiers</h2>
-                <button
-                    onClick={() => navigate('/mobile-diagnostics')}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '0.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: '#6b7280'
-                    }}
-                    title="Diagnostic"
-                >
+                <button onClick={() => navigate('/mobile-diagnostics')} className="diagnostic-btn">
                     <AlertCircleIcon />
                 </button>
             </header>
@@ -338,7 +287,6 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     </div>
                 )}
 
-                {/* ✅ CORRECTION : Cache le bouton d'upload une fois terminé */}
                 {!uploadComplete && (
                     <div className="upload-dropzone">
                         <MobileFileInput
@@ -347,7 +295,6 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                             multiple
                             accept="image/*,application/pdf"
                             maxFiles={10}
-                            maxSize={isMobile ? 5 * 1024 * 1024 : 10 * 1024 * 1024}
                             onError={handleUploadError}
                         >
                             {uploadState.isUploading ? 'Envoi en cours...' : 'Appuyez pour choisir'}
@@ -359,43 +306,44 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     <div className="upload-queue-container">
                         {uploadState.queue.map(item => (
                             <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                                <div style={{ width: '24px', flexShrink: 0 }}>
-                                    {item.status === 'pending' && <LoaderIcon className="animate-spin" />}
-                                    {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
+                                <div className="status-icon">
+                                    {item.status === 'pending' && <span className="icon-pending">⏳</span>}
+                                    {(item.status === 'compressing' || item.status === 'uploading') && <LoaderIcon className="animate-spin" />}
                                     {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
                                     {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
                                 </div>
-                                <div style={{ flexGrow: 1, minWidth: 0 }}>
+                                <div className="file-info">
                                     <div className="file-name">{item.name}</div>
-                                    {item.status === 'uploading' && (
+                                    <div className="file-status-text">
+                                        {item.status === 'pending' && 'En attente...'}
+                                        {item.status === 'compressing' && 'Compression...'}
+                                        {item.status === 'uploading' && `Envoi ${item.progress}%`}
+                                        {item.status === 'completed' && 'Terminé'}
+                                        {item.status === 'error' && item.error}
+                                    </div>
+                                    {(item.status === 'uploading' || item.status === 'compressing') && (
                                         <div className="upload-progress-bar">
                                             <div className="upload-progress-fill" style={{ width: `${item.progress}%` }} />
                                         </div>
                                     )}
-                                    {item.error && <div className="error-message">{item.error}</div>}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* ✅ CORRECTION : Affiche un message de succès et un bouton de retour */}
                 {uploadComplete && (
                     <div className="upload-complete-message">
                         <CheckCircleIcon style={{ color: '#16a34a', width: 48, height: 48 }} />
                         <h3>Terminé !</h3>
-                        <p>Les fichiers ont été ajoutés à votre rapport.</p>
-                        <button
-                            onClick={() => navigate(`/planning/${interventionId}`)}
-                            className="btn btn-primary w-full"
-                        >
+                        <p>Les fichiers ont été ajoutés.</p>
+                        <button onClick={() => navigate(`/planning/${interventionId}`)} className="btn btn-primary w-full">
                             Retourner à l'intervention
                         </button>
                     </div>
                 )}
             </main>
 
-            {/* ✅ Container de notifications mobiles */}
             <MobileNotificationContainer
                 notifications={notifications.notifications}
                 onDismiss={notifications.removeNotification}
