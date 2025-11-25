@@ -208,16 +208,76 @@ export const storageService = {
     const filePath = `vault/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('vault')
+      .from('vault-files')
       .upload(filePath, file);
 
     if (uploadError) return { error: uploadError };
 
     const { data: { publicUrl } } = supabase.storage
-      .from('vault')
+      .from('vault-files')
       .getPublicUrl(filePath);
 
     return { publicURL: publicUrl, filePath, error: null };
+  },
+
+  async uploadInterventionFile(file, interventionId, folder = 'general', onProgress) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${interventionId}/${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = fileName; // Le bucket est la racine
+
+    // Note: Supabase JS SDK ne supporte pas onProgress nativement dans upload() simple
+    // On utilise upload() standard
+    const { data, error: uploadError } = await supabase.storage
+      .from('intervention-files')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) return { error: uploadError };
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('intervention-files')
+      .getPublicUrl(filePath);
+
+    // Simuler progression 100%
+    if (onProgress) onProgress(100);
+
+    return { publicURL: publicUrl, filePath, error: null };
+  },
+
+  async deleteInterventionFile(urlOrPath) {
+    // Extraire le path de l'URL si nécessaire
+    let path = urlOrPath;
+    if (urlOrPath.includes('supabase')) {
+      const parts = urlOrPath.split('/public/intervention-files/');
+      if (parts.length > 1) path = parts[1];
+    }
+
+    return await supabase.storage
+      .from('intervention-files')
+      .remove([path]);
+  },
+
+  // Generic methods for other services (like scannedDocumentsService)
+  async uploadFile(file, path, bucket = 'vault-files') {
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(path, file);
+
+    if (uploadError) return { error: uploadError };
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
+
+    return { publicURL: publicUrl, filePath: path, error: null };
+  },
+
+  async deleteFile(path, bucket = 'vault-files') {
+    return await supabase.storage
+      .from(bucket)
+      .remove([path]);
   }
 };
 

@@ -15,6 +15,7 @@ import {
   CalendarIcon,
   UserIcon
 } from '../components/SharedUI';
+import { useDownload } from '../hooks/useDownload';
 
 const CATEGORIES = [
   { value: 'facture', label: '💰 Facture', color: '#10b981' },
@@ -44,6 +45,10 @@ export default function MyDocumentsView({
   // Filtrer les documents
   const filteredDocuments = useMemo(() => {
     let docs = scannedDocuments;
+    if (!Array.isArray(docs)) {
+      console.error('scannedDocuments is not an array:', docs);
+      return [];
+    }
 
     // Filtre par utilisateur (admin seulement)
     if (isAdmin && selectedUser !== 'all') {
@@ -126,10 +131,15 @@ export default function MyDocumentsView({
     }
   }, [onDeleteDocument]);
 
+  const { downloadFile } = useDownload();
+
   // Télécharger un document
-  const handleDownload = useCallback((doc) => {
-    window.open(doc.file_url, '_blank');
-  }, []);
+  const handleDownload = useCallback(async (doc) => {
+    await downloadFile(doc.file_url, doc.title || doc.file_name || 'document', {
+      storagePath: doc.path,
+      bucketName: 'vault-files'
+    });
+  }, [downloadFile]);
 
   // Obtenir le nom de l'utilisateur
   const getUserName = useCallback((userId) => {

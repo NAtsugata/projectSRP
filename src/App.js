@@ -5,25 +5,26 @@
 // - handleUpdateInterventionReport(report) idem + statut
 // - INTÉGRATION de la page IRShowerFormsView (import + nav + routes admin & employé)
 // =============================
-import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, profileService, interventionService, leaveService, vaultService, storageService, supabase } from './lib/supabase';
 import expenseService from './services/expenseService';
 import * as expenseStatsService from './services/expenseStatsService';
 import checklistService from './services/checklistService';
-import scannedDocumentsService from './services/scannedDocumentsService';
+
 import { buildSanitizedReport } from './utils/reportHelpers';
 import { validateIntervention, validateUser, validateLeaveRequest, validateFileSize } from './utils/validators';
 import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
 import { ToastProvider } from './contexts/ToastContext';
+import { DownloadProvider } from './contexts/DownloadContext';
 import LoginScreen from './pages/LoginScreen';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import { debounce } from './utils/debounce';
 import { setToastFunction, overrideAlert } from './utils/alertOverride';
 import OfflineIndicator from './components/OfflineIndicator';
-import { useOnlineStatus } from './hooks/useOnlineStatus';
+import MobileIndicators from './components/mobile/MobileIndicators';
 import './App.css';
 
 // Lazy loading pour les autres pages (améliore les performances)
@@ -43,7 +44,7 @@ const ExpensesView = lazy(() => import('./pages/ExpensesView'));
 const AdminExpensesView = lazy(() => import('./pages/AdminExpensesView'));
 const ChecklistView = lazy(() => import('./pages/ChecklistView'));
 const AdminChecklistTemplatesView = lazy(() => import('./pages/AdminChecklistTemplatesView'));
-const MyDocumentsView = lazy(() => import('./pages/MyDocumentsView'));
+const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPage = lazy(() => import('./pages/MobileDiagnosticsPage'));
 
 // --- Composant de Layout (structure de la page) ---
@@ -138,7 +139,7 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [checklistTemplates, setChecklistTemplates] = useState([]);
   const [checklists, setChecklists] = useState([]);
-  const [scannedDocuments, setScannedDocuments] = useState([]);
+
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -164,15 +165,14 @@ function App() {
       try {
         const isAdmin = userProfile.is_admin;
         const userId = userProfile.id;
-        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes, templatesRes, checklistsRes, scannedDocsRes] = await Promise.all([
+        const [profilesRes, interventionsRes, leavesRes, vaultRes, expensesRes, templatesRes, checklistsRes] = await Promise.all([
           profileService.getAllProfiles(),
           interventionService.getInterventions(isAdmin ? null : userId, false),
           leaveService.getLeaveRequests(isAdmin ? null : userId),
           vaultService.getVaultDocuments(),
           isAdmin ? expenseService.getAllExpenses() : expenseService.getUserExpenses(userId),
           checklistService.getAllTemplates(),
-          isAdmin ? checklistService.getAllChecklists() : checklistService.getUserChecklists(userId),
-          isAdmin ? scannedDocumentsService.getAllDocuments() : scannedDocumentsService.getUserDocuments(userId)
+          isAdmin ? checklistService.getAllChecklists() : checklistService.getUserChecklists(userId)
         ]);
 
         if (profilesRes.error) throw profilesRes.error;
@@ -196,8 +196,7 @@ function App() {
         if (checklistsRes.error) throw checklistsRes.error;
         setChecklists(checklistsRes.data || []);
 
-        if (scannedDocsRes.error) throw scannedDocsRes.error;
-        setScannedDocuments(scannedDocsRes.data || []);
+
 
         setDataVersion(Date.now());
       } catch (error) {
@@ -738,72 +737,6 @@ function App() {
     }
   };
 
-  // ===== HANDLERS DOCUMENTS SCANNÉS =====
-
-  // Sauvegarder des documents scannés
-  const handleSaveDocuments = async (scannedDocs, metadata) => {
-    try {
-      if (!scannedDocs || scannedDocs.length === 0) {
-        throw new Error('Aucun document à sauvegarder');
-      }
-
-      // Convertir les blobs en Files pour l'upload
-      const files = scannedDocs.map(doc => doc.blob);
-
-      const { data, error } = await scannedDocumentsService.createMultipleDocuments({
-        userId: metadata.user_id,
-        title: metadata.title,
-        category: metadata.category,
-        tags: metadata.tags || [],
-        files,
-        description: metadata.description || ''
-      });
-
-      if (error) throw error;
-
-      showToast(`${files.length} document(s) sauvegardé(s) !`, 'success');
-      await refreshData(profile);
-      return { data, error: null };
-    } catch (error) {
-      console.error('❌ Erreur handleSaveDocuments:', error);
-      showToast(`Erreur: ${error.message}`, 'error');
-      throw error;
-    }
-  };
-
-  // Supprimer un document scanné
-  const handleDeleteDocument = async (documentId) => {
-    try {
-      const doc = scannedDocuments.find(d => d.id === documentId);
-      if (!doc) throw new Error('Document introuvable');
-
-      const { error } = await scannedDocumentsService.deleteDocument(documentId, doc.file_url);
-      if (error) throw error;
-
-      showToast('Document supprimé', 'success');
-      await refreshData(profile);
-    } catch (error) {
-      console.error('❌ Erreur handleDeleteDocument:', error);
-      showToast(`Erreur: ${error.message}`, 'error');
-      throw error;
-    }
-  };
-
-  // Mettre à jour un document scanné
-  const handleUpdateDocument = async (documentId, updates) => {
-    try {
-      const { error } = await scannedDocumentsService.updateDocument(documentId, updates);
-      if (error) throw error;
-
-      showToast('Document mis à jour', 'success');
-      await refreshData(profile);
-    } catch (error) {
-      console.error('❌ Erreur handleUpdateDocument:', error);
-      showToast(`Erreur: ${error.message}`, 'error');
-      throw error;
-    }
-  };
-
   if (loading) {
     return (
       <div className="loading-container">
@@ -825,231 +758,220 @@ function App() {
   };
 
   return (
-    <ToastProvider>
-      <OfflineIndicator />
-      <style>{`
-        .desktop-nav { display: none; }
-        .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; border-top: 1px solid #e5e7eb; z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .mobile-nav-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; font-weight: 500; }
-        .btn-icon-logout { background: none; border: none; cursor: pointer; color: #4b5563; }
-        .mobile-nav-icons { display: flex; justify-content: space-around; align-items: center; }
-        .mobile-nav-button { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; padding: 0.5rem 0.25rem; color: #6b7280; text-decoration: none; transition: color 0.2s ease; }
-        .mobile-nav-button.active { color: #3b82f6; }
-        .mobile-nav-button svg { width: 24px; height: 24px; }
-        .mobile-nav-label { font-size: 0.7rem; margin-top: 2px; }
-        .main-content { padding-bottom: 100px; }
-        @media (min-width: 768px) { .desktop-nav { display: flex; } .mobile-nav { display: none; } .main-content { padding-bottom: 0; } }
-      `}</style>
+    <DownloadProvider>
+      <ToastProvider>
+        <OfflineIndicator />
+        <style>{`
+          .desktop-nav { display: none; }
+          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; border-top: 1px solid #e5e7eb; z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+          .mobile-nav-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; font-weight: 500; }
+          .btn-icon-logout { background: none; border: none; cursor: pointer; color: #4b5563; }
+          .mobile-nav-icons { display: flex; justify-content: space-around; align-items: center; }
+          .mobile-nav-button { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; padding: 0.5rem 0.25rem; color: #6b7280; text-decoration: none; transition: color 0.2s ease; }
+          .mobile-nav-button.active { color: #3b82f6; }
+          .mobile-nav-button svg { width: 24px; height: 24px; }
+          .mobile-nav-label { font-size: 0.7rem; margin-top: 2px; }
+          .main-content { padding-bottom: 100px; }
+          @media (min-width: 768px) { .desktop-nav { display: flex; } .mobile-nav { display: none; } .main-content { padding-bottom: 0; } }
+        `}</style>
 
-      {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
-      {modal && (
-        <ConfirmationModal
-          {...modal}
-          onConfirm={(inputValue) => {
-            modal.onConfirm(inputValue);
-            setModal(null);
-          }}
-          onCancel={() => setModal(null)}
-        />
-      )}
-      <Routes>
-        {!session || !profile ? (
-          <Route path="*" element={<LoginScreen />} />
-        ) : (
-          <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} />}>
-            {profile.is_admin ? (
-              <>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />
-                  </Suspense>
-                } />
-                <Route path="agenda" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AgendaView
-                      interventions={interventions}
-                      employees={users}
-                      loading={loading}
-                      onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
-                    />
-                  </Suspense>
-                } />
-                <Route
-                  path="planning"
-                  element={
+        {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+        {modal && (
+          <ConfirmationModal
+            {...modal}
+            onConfirm={(inputValue) => {
+              modal.onConfirm(inputValue);
+              setModal(null);
+            }}
+            onCancel={() => setModal(null)}
+          />
+        )}
+        <Routes>
+          {!session || !profile ? (
+            <Route path="*" element={<LoginScreen />} />
+          ) : (
+            <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} />}>
+              {profile.is_admin ? (
+                <>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminPlanningView
+                      <AdminDashboard interventions={interventions} leaveRequests={leaveRequests} />
+                    </Suspense>
+                  } />
+                  <Route path="agenda" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AgendaView
                         interventions={interventions}
-                        users={users}
-                        onAddIntervention={handleAddIntervention}
-                        onArchive={handleArchiveIntervention}
-                        onDelete={handleDeleteIntervention}
-                        checklistTemplates={checklistTemplates}
-                        onAssignChecklist={handleAssignChecklist}
+                        employees={users}
+                        loading={loading}
+                        onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
                       />
                     </Suspense>
-                  }
-                />
-                <Route path="planning/:interventionId" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <InterventionDetailView {...interventionDetailProps} />
-                  </Suspense>
-                } />
-                <Route path="archives" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
-                  </Suspense>
-                } />
-                <Route
-                  path="leaves"
-                  element={
+                  } />
+                  <Route
+                    path="planning"
+                    element={
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminPlanningView
+                          interventions={interventions}
+                          users={users}
+                          onAddIntervention={handleAddIntervention}
+                          onArchive={handleArchiveIntervention}
+                          onDelete={handleDeleteIntervention}
+                          checklistTemplates={checklistTemplates}
+                          onAssignChecklist={handleAssignChecklist}
+                        />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="planning/:interventionId" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminLeaveView leaveRequests={leaveRequests} onUpdateStatus={handleUpdateLeaveStatus} onDelete={handleDeleteLeaveRequest} />
+                      <InterventionDetailView {...interventionDetailProps} />
                     </Suspense>
-                  }
-                />
-                <Route path="users" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminUserView users={users} onUpdateUser={handleUpdateUser} />
-                  </Suspense>
-                } />
-                <Route
-                  path="vault"
-                  element={
+                  } />
+                  <Route path="archives" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminVaultView users={users} vaultDocuments={vaultDocuments} onSendDocument={handleSendVaultDocument} onDeleteDocument={handleDeleteVaultDocument} />
+                      <AdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                     </Suspense>
-                  }
-                />
-                <Route path="documents" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <MyDocumentsView
-                      scannedDocuments={scannedDocuments}
-                      profile={profile}
-                      users={users}
-                      onSaveDocuments={handleSaveDocuments}
-                      onDeleteDocument={handleDeleteDocument}
-                      onUpdateDocument={handleUpdateDocument}
-                    />
-                  </Suspense>
-                } />
-                <Route path="checklist-templates" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminChecklistTemplatesView
-                      templates={checklistTemplates}
-                      onCreateTemplate={handleCreateTemplate}
-                      onUpdateTemplate={handleUpdateTemplate}
-                      onDeleteTemplate={handleDeleteTemplate}
-                    />
-                  </Suspense>
-                } />
-                <Route path="expenses" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} onDeleteExpense={handleDeleteExpenseAdmin} onMarkAsPaid={handleMarkAsPaid} />
-                  </Suspense>
-                } />
-                <Route path="ir-docs" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <IRShowerFormsView profile={profile} />
-                  </Suspense>
-                } />
-                <Route path="mobile-diagnostics" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <MobileDiagnosticsPage />
-                  </Suspense>
-                } />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </>
-            ) : (
-              <>
-                <Route index element={<Navigate to="/planning" replace />} />
-                <Route path="planning" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <EmployeePlanningView interventions={interventions} />
-                  </Suspense>
-                } />
-                <Route path="planning/:interventionId" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <InterventionDetailView {...interventionDetailProps} />
-                  </Suspense>
-                } />
-                <Route path="agenda" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <AgendaView
-                      interventions={interventions}
-                      employees={users}
-                      loading={loading}
-                      onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
-                    />
-                  </Suspense>
-                } />
-                <Route
-                  path="leaves"
-                  element={
+                  } />
+                  <Route
+                    path="leaves"
+                    element={
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminLeaveView leaveRequests={leaveRequests} onUpdateStatus={handleUpdateLeaveStatus} onDelete={handleDeleteLeaveRequest} />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="users" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile.full_name} userId={profile.id} showToast={showToast} />
+                      <AdminUserView users={users} onUpdateUser={handleUpdateUser} />
                     </Suspense>
-                  }
-                />
-                <Route path="vault" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
-                  </Suspense>
-                } />
-                <Route path="documents" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <MyDocumentsView
-                      scannedDocuments={scannedDocuments}
-                      profile={profile}
-                      users={users}
-                      onSaveDocuments={handleSaveDocuments}
-                      onDeleteDocument={handleDeleteDocument}
-                      onUpdateDocument={handleUpdateDocument}
-                    />
-                  </Suspense>
-                } />
-                <Route path="checklists" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <ChecklistView
-                      checklists={checklists}
-                      templates={checklistTemplates}
-                      interventions={interventions}
-                      onUpdateChecklist={handleUpdateChecklist}
-                      profile={profile}
-                    />
-                  </Suspense>
-                } />
-                <Route path="expenses" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <ExpensesView expenses={expenses} onSubmitExpense={handleSubmitExpense} onDeleteExpense={handleDeleteExpense} profile={profile} />
-                  </Suspense>
-                } />
-                <Route path="ir-docs" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <IRShowerFormsView profile={profile} />
-                  </Suspense>
-                } />
-                <Route path="mobile-diagnostics" element={
-                  <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                    <MobileDiagnosticsPage />
-                  </Suspense>
-                } />
-                <Route path="*" element={<Navigate to="/planning" replace />} />
-              </>
-            )}
-          </Route>
-        )}
-      </Routes>
+                  } />
+                  <Route
+                    path="vault"
+                    element={
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminVaultView users={users} vaultDocuments={vaultDocuments} onSendDocument={handleSendVaultDocument} onDeleteDocument={handleDeleteVaultDocument} />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="documents" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MyDocumentsViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="checklist-templates" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminChecklistTemplatesView
+                        templates={checklistTemplates}
+                        onCreateTemplate={handleCreateTemplate}
+                        onUpdateTemplate={handleUpdateTemplate}
+                        onDeleteTemplate={handleDeleteTemplate}
+                      />
+                    </Suspense>
+                  } />
+                  <Route path="expenses" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminExpensesView users={users} expenses={expenses} onApproveExpense={handleApproveExpense} onRejectExpense={handleRejectExpense} onDeleteExpense={handleDeleteExpenseAdmin} onMarkAsPaid={handleMarkAsPaid} />
+                    </Suspense>
+                  } />
+                  <Route path="ir-docs" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <IRShowerFormsView profile={profile} />
+                    </Suspense>
+                  } />
+                  <Route path="mobile-diagnostics" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MobileDiagnosticsPage />
+                    </Suspense>
+                  } />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route index element={<Navigate to="/planning" replace />} />
+                  <Route path="planning" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <EmployeePlanningView interventions={interventions} />
+                    </Suspense>
+                  } />
+                  <Route path="planning/:interventionId" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <InterventionDetailView {...interventionDetailProps} />
+                    </Suspense>
+                  } />
+                  <Route path="agenda" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AgendaView
+                        interventions={interventions}
+                        employees={users}
+                        loading={loading}
+                        onSelect={(intervention) => navigate(`/planning/intervention/${intervention.id}`)}
+                      />
+                    </Suspense>
+                  } />
+                  <Route
+                    path="leaves"
+                    element={
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <EmployeeLeaveView leaveRequests={leaveRequests} onSubmitRequest={handleSubmitLeaveRequest} userName={profile.full_name} userId={profile.id} showToast={showToast} />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="vault" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CoffreNumeriqueView vaultDocuments={vaultDocuments.filter((doc) => doc.user_id === profile.id)} />
+                    </Suspense>
+                  } />
+                  <Route path="documents" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MyDocumentsViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="checklists" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ChecklistView
+                        checklists={checklists}
+                        templates={checklistTemplates}
+                        interventions={interventions}
+                        onUpdateChecklist={handleUpdateChecklist}
+                        profile={profile}
+                      />
+                    </Suspense>
+                  } />
+                  <Route path="expenses" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ExpensesView expenses={expenses} onSubmitExpense={handleSubmitExpense} onDeleteExpense={handleDeleteExpense} profile={profile} />
+                    </Suspense>
+                  } />
+                  <Route path="ir-docs" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <IRShowerFormsView profile={profile} />
+                    </Suspense>
+                  } />
+                  <Route path="mobile-diagnostics" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MobileDiagnosticsPage />
+                    </Suspense>
+                  } />
+                  <Route path="*" element={<Navigate to="/planning" replace />} />
+                </>
+              )}
+            </Route>
+          )}
+        </Routes>
 
-      {/* ✅ Gestionnaire de notifications push pour tous les utilisateurs */}
-      {profile && (
-        <NotificationPermissionManager
-          userId={profile.id}
-          pushNotifications={pushNotifications}
-        />
-      )}
-    </ToastProvider>
+        {/* ✅ Gestionnaire de notifications push pour tous les utilisateurs */}
+        {profile && (
+          <NotificationPermissionManager
+            userId={profile.id}
+            pushNotifications={pushNotifications}
+          />
+        )}
+        <MobileIndicators />
+      </ToastProvider>
+    </DownloadProvider>
   );
 }
 

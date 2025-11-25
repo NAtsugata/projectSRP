@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LoaderIcon } from '../SharedUI';
+import { useDownload } from '../../hooks/useDownload';
 import './ImageGallery.css';
 
 /**
@@ -262,11 +263,10 @@ const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
     setCurrentIndex((p) => (p === images.length - 1 ? 0 : p + 1));
   };
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = currentImage.url;
-    link.download = currentImage.name || 'image';
-    link.click();
+  const { downloadFile } = useDownload();
+
+  const handleDownload = async () => {
+    await downloadFile(currentImage.url, currentImage.name || 'image.jpg');
   };
 
   const handleDelete = async () => {

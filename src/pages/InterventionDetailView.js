@@ -55,7 +55,7 @@ const fmtTime = (iso) => {
   try {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleString(undefined, { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' });
+    return d.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
   } catch { return '—'; }
 };
 
@@ -69,25 +69,25 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     canvas.width = Math.min(window.innerWidth * 0.9, 600);
     canvas.height = isMobile ? window.innerHeight * 0.5 : 300;
     const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#000'; ctx.lineWidth = isMobile ? 3 : 2; ctx.lineCap='round'; ctx.lineJoin='round';
-    if (existingSignature) { const img = new Image(); img.onload = () => { ctx.drawImage(img,0,0,canvas.width,canvas.height); setHasDrawn(true); }; img.src = existingSignature; }
-    let drawing=false,last=null;
-    const getPos = (e) => { const r=canvas.getBoundingClientRect(); const ex=e.touches?e.touches[0].clientX:e.clientX; const ey=e.touches?e.touches[0].clientY:e.clientY; return { x:(ex-r.left)*(canvas.width/r.width), y:(ey-r.top)*(canvas.height/r.height) }; };
-    const start = (e)=>{ e.preventDefault(); drawing=true; setHasDrawn(true); last=getPos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); };
-    const stop  = (e)=>{ e.preventDefault(); drawing=false; last=null; };
-    const draw  = (e)=>{ if(!drawing) return; e.preventDefault(); const p=getPos(e); if(last){ ctx.lineTo(p.x,p.y); ctx.stroke(); } last=p; };
-    canvas.addEventListener('mousedown',start); canvas.addEventListener('mouseup',stop); canvas.addEventListener('mousemove',draw); canvas.addEventListener('mouseleave',stop);
-    canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchend',stop,{passive:false}); canvas.addEventListener('touchmove',draw,{passive:false});
-    return ()=>{ canvas.removeEventListener('mousedown',start); canvas.removeEventListener('mouseup',stop); canvas.removeEventListener('mousemove',draw); canvas.removeEventListener('mouseleave',stop); canvas.removeEventListener('touchstart',start); canvas.removeEventListener('touchend',stop); canvas.removeEventListener('touchmove',draw); };
+    ctx.strokeStyle = '#000'; ctx.lineWidth = isMobile ? 3 : 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (existingSignature) { const img = new Image(); img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); setHasDrawn(true); }; img.src = existingSignature; }
+    let drawing = false, last = null;
+    const getPos = (e) => { const r = canvas.getBoundingClientRect(); const ex = e.touches ? e.touches[0].clientX : e.clientX; const ey = e.touches ? e.touches[0].clientY : e.clientY; return { x: (ex - r.left) * (canvas.width / r.width), y: (ey - r.top) * (canvas.height / r.height) }; };
+    const start = (e) => { e.preventDefault(); drawing = true; setHasDrawn(true); last = getPos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); };
+    const stop = (e) => { e.preventDefault(); drawing = false; last = null; };
+    const draw = (e) => { if (!drawing) return; e.preventDefault(); const p = getPos(e); if (last) { ctx.lineTo(p.x, p.y); ctx.stroke(); } last = p; };
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mouseup', stop); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseleave', stop);
+    canvas.addEventListener('touchstart', start, { passive: false }); canvas.addEventListener('touchend', stop, { passive: false }); canvas.addEventListener('touchmove', draw, { passive: false });
+    return () => { canvas.removeEventListener('mousedown', start); canvas.removeEventListener('mouseup', stop); canvas.removeEventListener('mousemove', draw); canvas.removeEventListener('mouseleave', stop); canvas.removeEventListener('touchstart', start); canvas.removeEventListener('touchend', stop); canvas.removeEventListener('touchmove', draw); };
   }, [existingSignature]);
   return (
     <div className="modal-overlay"><div className="modal-content signature-modal-content">
       <h3>✍️ Signature du client</h3>
-      <canvas ref={canvasRef} className="signature-canvas-fullscreen"/>
-      <div className="modal-footer" style={{marginTop:'1rem'}}>
-        <button type="button" onClick={()=>{const c=canvasRef.current;if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);}}} className="btn btn-secondary">Effacer</button>
+      <canvas ref={canvasRef} className="signature-canvas-fullscreen" />
+      <div className="modal-footer" style={{ marginTop: '1rem' }}>
+        <button type="button" onClick={() => { const c = canvasRef.current; if (c) { c.getContext('2d').clearRect(0, 0, c.width, c.height); } }} className="btn btn-secondary">Effacer</button>
         <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
-        <button type="button" onClick={()=>onSave(canvasRef.current.toDataURL('image/png'))} className="btn btn-primary" disabled={!hasDrawn}>Valider</button>
+        <button type="button" onClick={() => onSave(canvasRef.current.toDataURL('image/png'))} className="btn btn-primary" disabled={!hasDrawn}>Valider</button>
       </div>
     </div></div>
   );
@@ -154,8 +154,8 @@ const useBodyScrollLock = () => {
 };
 
 // -------- Uploader inline (photos/docs) --------
-const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onBeginCritical, onEndCritical, onQueueChange }) => {
-  const [state, setState] = useState({ uploading:false, queue:[], error:null });
+const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', onBeginCritical, onEndCritical, onQueueChange }) => {
+  const [state, setState] = useState({ uploading: false, queue: [], error: null });
   const inputRef = useRef(null);
   const cancelUnlockTimerRef = useRef(null);
 
@@ -181,53 +181,53 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
     cancelUnlockTimerRef.current = null;
   }, []);
 
-  const compressImage = useCallback(async(file)=>{
-    if(!file.type.startsWith('image/')) return file;
-    return new Promise(res=>{
-      const c=document.createElement('canvas');const ctx=c.getContext('2d');const img=new Image();
+  const compressImage = useCallback(async (file) => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise(res => {
+      const c = document.createElement('canvas'); const ctx = c.getContext('2d'); const img = new Image();
       const objectUrl = URL.createObjectURL(file);
-      img.onload=()=>{
+      img.onload = () => {
         URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
-        let {width,height}=img;
+        let { width, height } = img;
         // 🚀 COMPRESSION AGGRESSIVE POUR MOBILE
-        const MW=800,MH=600; // Réduit de 1280x720 à 800x600
-        if(width>height){if(width>MW){height*=MW/width;width=MW;}}
-        else{if(height>MH){width*=MH/height;height=MH;}}
-        c.width=width;c.height=height;
+        const MW = 800, MH = 600; // Réduit de 1280x720 à 800x600
+        if (width > height) { if (width > MW) { height *= MW / width; width = MW; } }
+        else { if (height > MH) { width *= MH / height; height = MH; } }
+        c.width = width; c.height = height;
         // Fond blanc pour éviter transparence
-        ctx.fillStyle='#FFFFFF';
-        ctx.fillRect(0,0,width,height);
-        ctx.drawImage(img,0,0,width,height);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
         // Qualité 0.65 (au lieu de 0.8) = 40% plus léger !
-        c.toBlob(b=>{
-          if(b){
-            const compressed = new File([b],file.name,{type:'image/jpeg',lastModified:Date.now()});
-            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+        c.toBlob(b => {
+          if (b) {
+            const compressed = new File([b], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+            console.log(`📸 Compression: ${(file.size / 1024).toFixed(0)}KB → ${(b.size / 1024).toFixed(0)}KB (${((1 - b.size / file.size) * 100).toFixed(0)}% économisé)`);
             res(compressed);
-          }else{
+          } else {
             res(file);
           }
-        },'image/jpeg',0.65);
+        }, 'image/jpeg', 0.65);
       };
-      img.onerror=()=>{
+      img.onerror = () => {
         URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
         res(file);
       };
-      img.src=objectUrl;
+      img.src = objectUrl;
     });
-  },[]);
+  }, []);
 
-  const onChange = useCallback(async(e)=>{
+  const onChange = useCallback(async (e) => {
     clearCriticalFallback(); // le picker a rendu la main
-    const files = Array.from(e.target.files||[]);
+    const files = Array.from(e.target.files || []);
     // Débloquer tout de suite si rien n'a été choisi (annulation)
-    if (!files.length) { onEndCritical?.(); if(inputRef.current) inputRef.current.value=''; return; }
+    if (!files.length) { onEndCritical?.(); if (inputRef.current) inputRef.current.value = ''; return; }
 
     console.log('📸 Fichiers sélectionnés:', files.length);
-    if(inputRef.current) inputRef.current.value='';
+    if (inputRef.current) inputRef.current.value = '';
     // Créer des previews pour les images
-    const queue = files.map((f,i)=>{
-      const item = {id:`${f.name}-${Date.now()}-${i}`,name:f.name,status:'pending',progress:0,error:null,type:f.type};
+    const queue = files.map((f, i) => {
+      const item = { id: `${f.name}-${Date.now()}-${i}`, name: f.name, status: 'pending', progress: 0, error: null, type: f.type };
       // Ajouter preview pour les images
       if (f.type.startsWith('image/')) {
         item.preview = URL.createObjectURL(f);
@@ -236,31 +236,31 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
       return item;
     });
     console.log('📦 Queue initiale:', queue);
-    setState({uploading:true,queue,error:null});
-    const uploaded=[];
-    for (let i=0;i<files.length;i++) {
-      try{
+    setState({ uploading: true, queue, error: null });
+    const uploaded = [];
+    for (let i = 0; i < files.length; i++) {
+      try {
         const fu = await compressImage(files[i]);
-        const result = await storageService.uploadInterventionFile(fu, interventionId, folder, (p)=>{
-          setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'uploading',progress:p}:it)}));
+        const result = await storageService.uploadInterventionFile(fu, interventionId, folder, (p) => {
+          setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'uploading', progress: p } : it) }));
         });
-        if(result.error) throw result.error;
+        if (result.error) throw result.error;
         const publicUrlRaw = result.publicURL?.publicUrl || result.publicURL;
-        if(typeof publicUrlRaw !== 'string') throw new Error('URL de fichier invalide');
+        if (typeof publicUrlRaw !== 'string') throw new Error('URL de fichier invalide');
         const publicUrl = withCacheBust(publicUrlRaw);
-        uploaded.push({ name: files[i].name, url: publicUrl, type: files[i].type });
-        setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'completed',progress:100}:it)}));
-      }catch(err){
-        setState(s=>({...s,queue:s.queue.map((it,idx)=>idx===i?{...it,status:'error',error:String(err.message||err)}:it)}));
+        uploaded.push({ name: files[i].name, url: publicUrl, path: result.filePath, type: files[i].type });
+        setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'completed', progress: 100 } : it) }));
+      } catch (err) {
+        setState(s => ({ ...s, queue: s.queue.map((it, idx) => idx === i ? { ...it, status: 'error', error: String(err.message || err) } : it) }));
       }
     }
     // ✅ Sauvegarder les fichiers uploadés
-    if(uploaded.length){
-      try{
+    if (uploaded.length) {
+      try {
         await onUploadComplete(uploaded);
         await new Promise(resolve => setTimeout(resolve, 500));
-      }catch(err){
-        setState(s=>({...s,error:"La sauvegarde des fichiers a échoué."}));
+      } catch (err) {
+        setState(s => ({ ...s, error: "La sauvegarde des fichiers a échoué." }));
       }
     }
 
@@ -278,7 +278,7 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
       });
       onEndCritical?.(); // fin de la phase critique
     }, 200);
-  },[compressImage,interventionId,folder,onUploadComplete,onEndCritical,clearCriticalFallback]);
+  }, [compressImage, interventionId, folder, onUploadComplete, onEndCritical, clearCriticalFallback]);
 
   return (
     <div className="mobile-uploader-panel">
@@ -291,30 +291,30 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder='report', onB
         accept="image/*,application/pdf,audio/webm"
         onChange={onChange}
         disabled={state.uploading}
-        style={{display:'none'}}
+        style={{ display: 'none' }}
       />
       <button
-        onClick={()=>{
+        onClick={() => {
           startCriticalWithFallback();
           inputRef.current?.click();
         }}
-        className={`btn btn-secondary w-full flex-center ${state.uploading?'disabled':''}`}
+        className={`btn btn-secondary w-full flex-center ${state.uploading ? 'disabled' : ''}`}
         disabled={state.uploading}
       >
-        {state.uploading?'Envoi en cours…':'Choisir des fichiers'}
+        {state.uploading ? 'Envoi en cours…' : 'Choisir des fichiers'}
       </button>
-      {state.queue.length>0 && (
+      {state.queue.length > 0 && (
         <div className="upload-queue-container">
-          {state.queue.map(item=> (
+          {state.queue.map(item => (
             <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-              <div style={{width:24,flexShrink:0}}>
-                {item.status==='uploading' && <LoaderIcon className="animate-spin"/>}
-                {item.status==='completed' && <CheckCircleIcon style={{color:'#16a34a'}}/>}
-                {item.status==='error' && <AlertTriangleIcon style={{color:'#dc2626'}}/>}
+              <div style={{ width: 24, flexShrink: 0 }}>
+                {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
+                {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
+                {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
               </div>
-              <div style={{flexGrow:1,minWidth:0}}>
+              <div style={{ flexGrow: 1, minWidth: 0 }}>
                 <div className="file-name">{item.name}</div>
-                {item.status==='uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{width:`${item.progress}%`}}/></div>}
+                {item.status === 'uploading' && <div className="upload-progress-bar"><div className="upload-progress-fill" style={{ width: `${item.progress}%` }} /></div>}
                 {item.error && <div className="error-message">{item.error}</div>}
               </div>
             </div>
@@ -341,10 +341,10 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndC
           onBeginCritical?.();
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
           const file = new File([blob], `note-${Date.now()}.webm`, { type: 'audio/webm' });
-          const res = await storageService.uploadInterventionFile(file, interventionId, 'voice', ()=>{});
+          const res = await storageService.uploadInterventionFile(file, interventionId, 'voice', () => { });
           const publicUrlRaw = res.publicURL?.publicUrl || res.publicURL;
           const publicUrl = withCacheBust(publicUrlRaw);
-          await onUploaded([{ name: file.name, url: publicUrl, type: file.type }]);
+          await onUploaded([{ name: file.name, url: publicUrl, path: res.filePath, type: file.type }]);
         } finally {
           onEndCritical?.();
         }
@@ -352,11 +352,11 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndC
       mediaRec.start(); setRec(mediaRec); setRecording(true);
     } catch (e) { alert("Micro non disponible: " + e.message); }
   };
-  const stop = () => { try { rec?.stop(); setRecording(false); } catch(e){} };
+  const stop = () => { try { rec?.stop(); setRecording(false); } catch (e) { } };
   return (
-    <div className="flex items-center gap-2" style={{marginTop:'0.5rem'}}>
-      {!recording ? <button className="btn btn-secondary" onClick={start}><MicIcon/> Enregistrer une note</button>
-                   : <button className="btn btn-danger" onClick={stop}><StopCircleIcon/> Stop</button>}
+    <div className="flex items-center gap-2" style={{ marginTop: '0.5rem' }}>
+      {!recording ? <button className="btn btn-secondary" onClick={start}><MicIcon /> Enregistrer une note</button>
+        : <button className="btn btn-danger" onClick={stop}><StopCircleIcon /> Stop</button>}
     </div>
   );
 };
@@ -430,15 +430,15 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     if (pendingRestoreRef.current) {
       // Restaurer sur plusieurs frames pour contrer les relayouts iOS
       restoreScroll();
-      requestAnimationFrame(()=>restoreScroll());
-      setTimeout(()=>restoreScroll(), 0);
-      setTimeout(()=>restoreScroll(), 50);
+      requestAnimationFrame(() => restoreScroll());
+      setTimeout(() => restoreScroll(), 0);
+      setTimeout(() => restoreScroll(), 50);
       pendingRestoreRef.current = false;
     }
   });
 
   // Harmonise le schéma du report
-  const ensureReportSchema = useCallback((base)=>{
+  const ensureReportSchema = useCallback((base) => {
     const r = base || {};
     return {
       notes: r.notes || '',
@@ -446,10 +446,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       arrivalTime: r.arrivalTime || null,
       departureTime: r.departureTime || null,
       signature: r.signature || null,
-      needs: Array.isArray(r.needs) ? r.needs.map(n=>({
+      needs: Array.isArray(r.needs) ? r.needs.map(n => ({
         id: n.id || `need-${Math.random().toString(36).slice(2)}`,
         label: n.label || '',
-        qty: Number(n.qty)||1,
+        qty: Number(n.qty) || 1,
         urgent: !!n.urgent,
         note: n.note || '',
         category: n.category || 'materiel',
@@ -457,20 +457,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         request_id: n.request_id || null,
       })) : [],
       supply_requests: Array.isArray(r.supply_requests) ? r.supply_requests : [],
-      quick_checkpoints: Array.isArray(r.quick_checkpoints) ? r.quick_checkpoints.every?.(c=>typeof c==='object') ? r.quick_checkpoints : [
-        { label:'Zone sécurisée', done:false, at:null },
-        { label:'Essais OK', done:false, at:null },
-        { label:'Brief client fait', done:false, at:null },
+      quick_checkpoints: Array.isArray(r.quick_checkpoints) ? r.quick_checkpoints.every?.(c => typeof c === 'object') ? r.quick_checkpoints : [
+        { label: 'Zone sécurisée', done: false, at: null },
+        { label: 'Essais OK', done: false, at: null },
+        { label: 'Brief client fait', done: false, at: null },
       ] : [
-        { label:'Zone sécurisée', done:false, at:null },
-        { label:'Essais OK', done:false, at:null },
-        { label:'Brief client fait', done:false, at:null },
+        { label: 'Zone sécurisée', done: false, at: null },
+        { label: 'Essais OK', done: false, at: null },
+        { label: 'Brief client fait', done: false, at: null },
       ],
       blocks: r.blocks || {
-        access:{ blocked:false, note:'', photos:[] },
-        power:{ blocked:false, note:'', photos:[] },
-        parts:{ blocked:false, note:'', photos:[] },
-        authorization:{ blocked:false, note:'', photos:[] },
+        access: { blocked: false, note: '', photos: [] },
+        power: { blocked: false, note: '', photos: [] },
+        parts: { blocked: false, note: '', photos: [] },
+        authorization: { blocked: false, note: '', photos: [] },
       },
       arrivalGeo: r.arrivalGeo || null,
       departureGeo: r.departureGeo || null,
@@ -483,7 +483,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       pauseHistory: Array.isArray(r.pauseHistory) ? r.pauseHistory : [],
       km_end: r.km_end ? Number(r.km_end) : null,
     };
-  },[]);
+  }, []);
 
   useEffect(() => {
     const found = interventions.find(i => String(i.id) === String(interventionId));
@@ -499,7 +499,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
       });
       setLoading(false);
-    } else if (interventions.length>0) {
+    } else if (interventions.length > 0) {
       navigate('/planning');
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
@@ -517,7 +517,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
   }, [intervention, onSaveSilent]);
 
-  const handleReportChange = (field, value) => setReport(prev=>({...prev,[field]:value}));
+  const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
   // -------- Suppression d'image --------
   const handleDeleteImage = useCallback(async (image) => {
@@ -629,19 +629,19 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [report?.files, intervention]);
 
   // -------- Besoins --------
-  const [needDraft, setNeedDraft] = useState({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
+  const [needDraft, setNeedDraft] = useState({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   const [needsOpen, setNeedsOpen] = useState(true);
-  const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum,n)=> sum + (Number(n.estimated_price)||0), 0) : 0;
+  const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum, n) => sum + (Number(n.estimated_price) || 0), 0) : 0;
 
   const addNeed = async () => {
     if (!needDraft.label.trim()) return;
-    const item = { ...needDraft, id:`need-${Date.now()}`, qty: Math.max(1, Number(needDraft.qty)||1), estimated_price: numberOrNull(needDraft.estimated_price), request_id:null };
-    const updated = { ...report, needs: [...(report.needs||[]), item] };
+    const item = { ...needDraft, id: `need-${Date.now()}`, qty: Math.max(1, Number(needDraft.qty) || 1), estimated_price: numberOrNull(needDraft.estimated_price), request_id: null };
+    const updated = { ...report, needs: [...(report.needs || []), item] };
     await persistReport(updated);
-    setNeedDraft({ label:'', qty:1, urgent:false, note:'', category:'materiel', estimated_price:'' });
+    setNeedDraft({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   };
   const removeNeed = async (id) => {
-    const updated = { ...report, needs: (report.needs||[]).filter(n=>n.id!==id) };
+    const updated = { ...report, needs: (report.needs || []).filter(n => n.id !== id) };
     await persistReport(updated);
   };
 
@@ -656,7 +656,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         const arr = new Date(report.arrivalTime).getTime();
         const dep = new Date(nowIso).getTime();
         if (dep < arr) { alert("L'heure de départ ne peut pas précéder l'arrivée."); return; }
-      } catch {}
+      } catch { }
     }
 
     // Lock le body pendant la phase géoloc + persistance (mobile peut sauter)
@@ -706,25 +706,25 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
     const imgCount = Array.isArray(report.files) ? report.files.filter(isImageUrl).length : 0;
-    const checkpointsOK = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.every(c=>!!c.done) : true;
-    if (!report.signature) return { ok:false, msg:'Signature client manquante.' };
-    if (imgCount < MIN_REQUIRED_PHOTOS) return { ok:false, msg:`Minimum ${MIN_REQUIRED_PHOTOS} photo(s) requise(s).` };
-    if (!checkpointsOK) return { ok:false, msg:'Tous les checkpoints rapides doivent être validés.' };
-    return { ok:true };
+    const checkpointsOK = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.every(c => !!c.done) : true;
+    if (!report.signature) return { ok: false, msg: 'Signature client manquante.' };
+    if (imgCount < MIN_REQUIRED_PHOTOS) return { ok: false, msg: `Minimum ${MIN_REQUIRED_PHOTOS} photo(s) requise(s).` };
+    if (!checkpointsOK) return { ok: false, msg: 'Tous les checkpoints rapides doivent être validés.' };
+    return { ok: true };
   };
 
   const handleSave = async () => {
     if (!intervention) return;
-    const v = validateCanClose(); if(!v.ok) { alert(v.msg); return; }
+    const v = validateCanClose(); if (!v.ok) { alert(v.msg); return; }
     setIsSaving(true);
     try { await onSave(intervention.id, { ...report }); }
     finally { setIsSaving(false); }
   };
 
-  if (loading || !intervention || !report) return <div className="loading-container"><LoaderIcon className="animate-spin"/><p>Chargement…</p></div>;
+  if (loading || !intervention || !report) return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement…</p></div>;
 
   const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
-  const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n=>n.urgent).length : 0;
+  const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
   return (
     <div className="intervention-detail-modern">
@@ -772,262 +772,262 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         )}
 
-      {/* ANCIEN CONTENU (conservé) */}
-      <div className="card-white">
-        <h2>{intervention.client}</h2>
-        <p className="text-muted">{intervention.address}</p>
+        {/* ANCIEN CONTENU (conservé) */}
+        <div className="card-white">
+          <h2>{intervention.client}</h2>
+          <p className="text-muted">{intervention.address}</p>
 
-        {/* Statut + badges */}
-        <div className="section">
-          <h3>⚑ Statut de l'intervention</h3>
-          <div className="flex items-center gap-2" style={{flexWrap:'wrap'}}>
-            <span className="badge">Statut actuel : {currentStatus}</span>
-            {urgentCount>0 && <span className="badge" style={{background:'#f59e0b',color:'#111827'}}>URG {urgentCount}</span>}
-          </div>
-        </div>
-
-        {/* Arrivé / Départ */}
-        <div className="section">
-          <h3>⏱️ Temps sur site</h3>
-          <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:'0.75rem'}}>
-            <div className="card-slim">
-              <div className="text-muted" style={{marginBottom:4}}>Arrivé sur site</div>
-              <div className="flex items-center justify-between" style={{gap:8}}>
-                <div><b>{fmtTime(report.arrivalTime)}</b></div>
-                <button className="btn btn-secondary" disabled={!!report.arrivalTime} onClick={()=>markWithGeo('arrival')}>
-                  {report.arrivalTime? 'Déjà enregistré' : 'Marquer l\'arrivée'}
-                </button>
-              </div>
-              {report.arrivalGeo && (
-                <div className="text-muted" style={{fontSize:'0.85rem',marginTop:4}}>lat {report.arrivalGeo.lat?.toFixed?.(5)} · lng {report.arrivalGeo.lng?.toFixed?.(5)} (±{Math.round(report.arrivalGeo.acc||0)} m)</div>
-              )}
-            </div>
-            <div className="card-slim">
-              <div className="text-muted" style={{marginBottom:4}}>Départ du site</div>
-              <div className="flex items-center justify-between" style={{gap:8}}>
-                <div><b>{fmtTime(report.departureTime)}</b></div>
-                <button className="btn btn-secondary" disabled={!!report.departureTime || !report.arrivalTime} onClick={()=>markWithGeo('departure')}>
-                  {report.departureTime? 'Déjà enregistré' : (!report.arrivalTime? 'Attente arrivée' : 'Marquer le départ')}
-                </button>
-              </div>
-              {report.departureGeo && (
-                <div className="text-muted" style={{fontSize:'0.85rem',marginTop:4}}>lat {report.departureGeo.lat?.toFixed?.(5)} · lng {report.departureGeo.lng?.toFixed?.(5)} (±{Math.round(report.departureGeo.acc||0)} m)</div>
-              )}
+          {/* Statut + badges */}
+          <div className="section">
+            <h3>⚑ Statut de l'intervention</h3>
+            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+              <span className="badge">Statut actuel : {currentStatus}</span>
+              {urgentCount > 0 && <span className="badge" style={{ background: '#f59e0b', color: '#111827' }}>URG {urgentCount}</span>}
             </div>
           </div>
-        </div>
 
-        {/* Rapport */}
-        <div className="section">
-          <h3>📝 Rapport de chantier</h3>
-          <textarea value={report.notes||''} onChange={e=>handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin}/>
-          <VoiceNoteRecorder
-            interventionId={interventionId}
-            onUploaded={async(uploaded)=>{
-              const updated={...report, files:[...(report.files||[]), ...uploaded]};
-              await persistReport(updated);
-              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
-              saveScroll();
-              pendingRestoreRef.current = true;
-              if (!document.body.dataset.__scrollLocked) lock();
-              try {
-                await refreshData?.();
-              } finally {
-                unlock();
-                restoreScroll();
-              }
-            }}
-            onBeginCritical={lock}
-            onEndCritical={unlock}
-          />
-        </div>
-
-        {/* Besoins */}
-        <div className="section">
-          <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o=>!o)} style={{cursor:'pointer', userSelect:'none'}}>
-            <h3 className="flex items-center gap-2" style={{margin:0}}>
-              <span style={{display:'inline-block', width:18, textAlign:'center'}}>{needsOpen ? '▼' : '▶'}</span>
-              🧰 Besoins chantier {Array.isArray(report.needs) ? `(${report.needs.length})` : ''}
-            </h3>
-            <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
+          {/* Arrivé / Départ */}
+          <div className="section">
+            <h3>⏱️ Temps sur site</h3>
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="card-slim">
+                <div className="text-muted" style={{ marginBottom: 4 }}>Arrivé sur site</div>
+                <div className="flex items-center justify-between" style={{ gap: 8 }}>
+                  <div><b>{fmtTime(report.arrivalTime)}</b></div>
+                  <button className="btn btn-secondary" disabled={!!report.arrivalTime} onClick={() => markWithGeo('arrival')}>
+                    {report.arrivalTime ? 'Déjà enregistré' : 'Marquer l\'arrivée'}
+                  </button>
+                </div>
+                {report.arrivalGeo && (
+                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.arrivalGeo.lat?.toFixed?.(5)} · lng {report.arrivalGeo.lng?.toFixed?.(5)} (±{Math.round(report.arrivalGeo.acc || 0)} m)</div>
+                )}
+              </div>
+              <div className="card-slim">
+                <div className="text-muted" style={{ marginBottom: 4 }}>Départ du site</div>
+                <div className="flex items-center justify-between" style={{ gap: 8 }}>
+                  <div><b>{fmtTime(report.departureTime)}</b></div>
+                  <button className="btn btn-secondary" disabled={!!report.departureTime || !report.arrivalTime} onClick={() => markWithGeo('departure')}>
+                    {report.departureTime ? 'Déjà enregistré' : (!report.arrivalTime ? 'Attente arrivée' : 'Marquer le départ')}
+                  </button>
+                </div>
+                {report.departureGeo && (
+                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.departureGeo.lat?.toFixed?.(5)} · lng {report.departureGeo.lng?.toFixed?.(5)} (±{Math.round(report.departureGeo.acc || 0)} m)</div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {needsOpen && (
-            <div>
-              {(!report.needs || report.needs.length===0) && <p className="text-muted" style={{marginTop:'0.5rem'}}>Aucun besoin pour le moment.</p>}
+          {/* Rapport */}
+          <div className="section">
+            <h3>📝 Rapport de chantier</h3>
+            <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin} />
+            <VoiceNoteRecorder
+              interventionId={interventionId}
+              onUploaded={async (uploaded) => {
+                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
+                await persistReport(updated);
+                // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
+                saveScroll();
+                pendingRestoreRef.current = true;
+                if (!document.body.dataset.__scrollLocked) lock();
+                try {
+                  await refreshData?.();
+                } finally {
+                  unlock();
+                  restoreScroll();
+                }
+              }}
+              onBeginCritical={lock}
+              onEndCritical={unlock}
+            />
+          </div>
 
-              {Array.isArray(report.needs) && report.needs.length>0 && (
-                <ul className="document-list" style={{marginTop:'0.5rem'}}>
-                  {report.needs.map(n=> (
-                    <li key={n.id}>
-                      <div style={{flexGrow:1}}>
-                        <p className="font-semibold">[{n.category||'—'}] {n.label}{n.qty?` × ${n.qty}`:''} {n.urgent?<span className="badge" style={{marginLeft:8}}>Urgent</span>:null}</p>
-                        <p className="text-muted" style={{fontSize:'0.875rem'}}>
-                          {n.note || '—'} {typeof n.estimated_price==='number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
-                        </p>
-                      </div>
-                      <button className="btn-icon-danger" onClick={()=>removeNeed(n.id)} title="Supprimer">✖</button>
+          {/* Besoins */}
+          <div className="section">
+            <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o => !o)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+              <h3 className="flex items-center gap-2" style={{ margin: 0 }}>
+                <span style={{ display: 'inline-block', width: 18, textAlign: 'center' }}>{needsOpen ? '▼' : '▶'}</span>
+                🧰 Besoins chantier {Array.isArray(report.needs) ? `(${report.needs.length})` : ''}
+              </h3>
+              <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
+            </div>
+
+            {needsOpen && (
+              <div>
+                {(!report.needs || report.needs.length === 0) && <p className="text-muted" style={{ marginTop: '0.5rem' }}>Aucun besoin pour le moment.</p>}
+
+                {Array.isArray(report.needs) && report.needs.length > 0 && (
+                  <ul className="document-list" style={{ marginTop: '0.5rem' }}>
+                    {report.needs.map(n => (
+                      <li key={n.id}>
+                        <div style={{ flexGrow: 1 }}>
+                          <p className="font-semibold">[{n.category || '—'}] {n.label}{n.qty ? ` × ${n.qty}` : ''} {n.urgent ? <span className="badge" style={{ marginLeft: 8 }}>Urgent</span> : null}</p>
+                          <p className="text-muted" style={{ fontSize: '0.875rem' }}>
+                            {n.note || '—'} {typeof n.estimated_price === 'number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
+                          </p>
+                        </div>
+                        <button className="btn-icon-danger" onClick={() => removeNeed(n.id)} title="Supprimer">✖</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="grid" style={{ gridTemplateColumns: '160px 80px 120px 1fr 140px auto', gap: '0.5rem', alignItems: 'end', marginTop: '0.75rem' }}>
+                  <div><label>Catégorie</label>
+                    <select className="form-control" value={needDraft.category} onChange={e => setNeedDraft(v => ({ ...v, category: e.target.value }))}>
+                      <option value="materiel">Matériel</option>
+                      <option value="consommables">Consommables</option>
+                      <option value="location">Location</option>
+                      <option value="commande">Commande</option>
+                    </select>
+                  </div>
+                  <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e => setNeedDraft(v => ({ ...v, qty: Math.max(1, Number(e.target.value) || 1) }))} /></div>
+                  <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent ? '1' : '0'} onChange={e => setNeedDraft(v => ({ ...v, urgent: e.target.value === '1' }))}><option value="0">Non</option><option value="1">Oui</option></select></div>
+                  <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e => setNeedDraft(v => ({ ...v, label: e.target.value }))} placeholder="Ex: Tuyau 16mm" /></div>
+                  <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e => setNeedDraft(v => ({ ...v, estimated_price: e.target.value }))} placeholder="ex: 25.90" /></div>
+                  <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e => setNeedDraft(v => ({ ...v, note: e.target.value }))} placeholder="Détail, lien, réf…" /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Photos & docs */}
+          <div className="modern-section" id="photos-section">
+            <div className="section-header">
+              <h3 className="section-title">
+                <span className="section-title-icon">📷</span>
+                Photos et Documents
+                {report.files && report.files.length > 0 && (
+                  <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
+                    ({report.files.length})
+                  </span>
+                )}
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {report.files && report.files.length > 1 && (
+                  <button
+                    onClick={handleDownloadAllAsZip}
+                    disabled={isDownloadingZip}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                    title="Télécharger tous les fichiers en ZIP"
+                  >
+                    <DownloadIcon />
+                    {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
+                  </button>
+                )}
+                <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
+              </div>
+            </div>
+
+            {/* Galerie d'images optimisée avec pagination et lazy loading */}
+            <ImageGalleryOptimized
+              images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
+                url: f.url,
+                name: f.name,
+                type: f.type
+              }))}
+              uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
+              emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
+              onDeleteImage={handleDeleteImage}
+            />
+
+            {/* Documents non-image (PDF, audio, etc.) */}
+            {report.files?.some(f => !f.type?.startsWith('image/')) && (
+              <div style={{ marginTop: '1rem' }}>
+                <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>📎 Autres fichiers</h4>
+                <ul className="document-list-optimized">
+                  {report.files.filter(f => !f.type?.startsWith('image/')).map((file, idx) => (
+                    <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
+                      {file.type?.startsWith('audio/') ? <div style={{ width: 40 }}><audio controls src={file.url} style={{ height: 32 }} /></div>
+                        : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
+                      <span className="file-name">{file.name}</span>
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
                     </li>
                   ))}
                 </ul>
-              )}
-
-              <div className="grid" style={{gridTemplateColumns:'160px 80px 120px 1fr 140px auto', gap:'0.5rem', alignItems:'end', marginTop:'0.75rem'}}>
-                <div><label>Catégorie</label>
-                  <select className="form-control" value={needDraft.category} onChange={e=>setNeedDraft(v=>({...v,category:e.target.value}))}>
-                    <option value="materiel">Matériel</option>
-                    <option value="consommables">Consommables</option>
-                    <option value="location">Location</option>
-                    <option value="commande">Commande</option>
-                  </select>
-                </div>
-                <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e=>setNeedDraft(v=>({...v,qty:Math.max(1,Number(e.target.value)||1)}))}/></div>
-                <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent?'1':'0'} onChange={e=>setNeedDraft(v=>({...v,urgent:e.target.value==='1'}))}><option value="0">Non</option><option value="1">Oui</option></select></div>
-                <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e=>setNeedDraft(v=>({...v,label:e.target.value}))} placeholder="Ex: Tuyau 16mm"/></div>
-                <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e=>setNeedDraft(v=>({...v,estimated_price:e.target.value}))} placeholder="ex: 25.90"/></div>
-                <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e=>setNeedDraft(v=>({...v,note:e.target.value}))} placeholder="Détail, lien, réf…"/></div>
-                <div style={{gridColumn:'1 / -1'}}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+            <InlineUploader
+              interventionId={interventionId}
+              onUploadComplete={async (uploaded) => {
+                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
 
-        {/* Photos & docs */}
-        <div className="modern-section" id="photos-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">📷</span>
-              Photos et Documents
-              {report.files && report.files.length > 0 && (
-                <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
-                  ({report.files.length})
-                </span>
-              )}
-            </h3>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {report.files && report.files.length > 1 && (
-                <button
-                  onClick={handleDownloadAllAsZip}
-                  disabled={isDownloadingZip}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                  title="Télécharger tous les fichiers en ZIP"
-                >
-                  <DownloadIcon />
-                  {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
-                </button>
-              )}
-              <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon/></button>
-            </div>
-          </div>
+                // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
+                setReport(updated);
 
-          {/* Galerie d'images optimisée avec pagination et lazy loading */}
-          <ImageGalleryOptimized
-            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-              url: f.url,
-              name: f.name,
-              type: f.type
-            }))}
-            uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
-            emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-            onDeleteImage={handleDeleteImage}
-          />
-
-          {/* Documents non-image (PDF, audio, etc.) */}
-          {report.files?.some(f => !f.type?.startsWith('image/')) && (
-            <div style={{marginTop:'1rem'}}>
-              <h4 style={{fontSize:'0.9375rem',fontWeight:600,marginBottom:'0.5rem'}}>📎 Autres fichiers</h4>
-              <ul className="document-list-optimized">
-                {report.files.filter(f => !f.type?.startsWith('image/')).map((file,idx)=> (
-                  <li key={`${file.url||idx}-${idx}`} className="document-item-optimized">
-                    {file.type?.startsWith('audio/') ? <div style={{width:40}}><audio controls src={file.url} style={{height:32}}/></div>
-                     : <div style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',background:'#e9ecef',borderRadius:'0.25rem'}}><FileTextIcon/></div>}
-                    <span className="file-name">{file.name}</span>
-                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon/></a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <InlineUploader
-            interventionId={interventionId}
-            onUploadComplete={async(uploaded)=>{
-              const updated={...report, files:[...(report.files||[]),...uploaded]};
-
-              // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
-              setReport(updated);
-
-              await persistReport(updated);
-              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
-              saveScroll();
-              pendingRestoreRef.current = true;
-              if (!document.body.dataset.__scrollLocked) lock();
-              try {
-                await refreshData?.();
-              } finally {
-                unlock();
-                restoreScroll();
-              }
-            }}
-            onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
-            onEndCritical={unlock}
-            onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
-          />
-        </div>
-
-        {/* Signature */}
-        <div className="modern-section" id="signature-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">✍️</span>
-              Signature du client
-            </h3>
-          </div>
-          {report.signature ? (
-            <div>
-              <img src={report.signature} alt="Signature" style={{width:'100%',maxWidth:300,border:'2px solid #e5e7eb',borderRadius:'0.5rem',background:'#f8f9fa'}}/>
-              <button onClick={()=>handleReportChange('signature',null)} className="btn btn-sm btn-secondary" style={{marginTop:8}}>Effacer</button>
-            </div>
-          ) : (
-            <div>
-              <canvas width="300" height="150" style={{border:'2px dashed #cbd5e1',borderRadius:'0.5rem',width:'100%',maxWidth:300,background:'#f8fafc'}}/>
-              <div style={{marginTop:8}}><button onClick={()=>setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon/> Agrandir</button></div>
-            </div>
-          )}
-        </div>
-
-        {/* Kilométrage de fin */}
-        <div className="modern-section">
-          <h3 className="section-title">
-            <span className="section-title-icon">🚗</span>
-            Kilométrage de fin
-          </h3>
-          <div className="form-group">
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={report.km_end || ''}
-              onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="Ex: 45430"
-              className="form-control"
-              style={{maxWidth: '200px'}}
-              readOnly={!!isAdmin}
+                await persistReport(updated);
+                // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
+                saveScroll();
+                pendingRestoreRef.current = true;
+                if (!document.body.dataset.__scrollLocked) lock();
+                try {
+                  await refreshData?.();
+                } finally {
+                  unlock();
+                  restoreScroll();
+                }
+              }}
+              onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
+              onEndCritical={unlock}
+              onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
             />
-            {intervention.km_start && report.km_end && (
-              <small className="form-hint" style={{display:'block', marginTop:'0.5rem'}}>
-                Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
-              </small>
+          </div>
+
+          {/* Signature */}
+          <div className="modern-section" id="signature-section">
+            <div className="section-header">
+              <h3 className="section-title">
+                <span className="section-title-icon">✍️</span>
+                Signature du client
+              </h3>
+            </div>
+            {report.signature ? (
+              <div>
+                <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
+                <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
+              </div>
+            ) : (
+              <div>
+                <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
+                <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
+              </div>
             )}
           </div>
-        </div>
 
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{fontSize:'1rem',padding:'1rem',fontWeight:600}}>{isSaving ? (<><LoaderIcon className="animate-spin"/> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
-      </div>
+          {/* Kilométrage de fin */}
+          <div className="modern-section">
+            <h3 className="section-title">
+              <span className="section-title-icon">🚗</span>
+              Kilométrage de fin
+            </h3>
+            <div className="form-group">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={report.km_end || ''}
+                onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
+                placeholder="Ex: 45430"
+                className="form-control"
+                style={{ maxWidth: '200px' }}
+                readOnly={!!isAdmin}
+              />
+              {intervention.km_start && report.km_end && (
+                <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
+                  Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
+                </small>
+              )}
+            </div>
+          </div>
+
+          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>{isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
+        </div>
       </div>
 
       {/* Modale signature */}
-      {showSignatureModal && <SignatureModal onSave={(sig)=>{handleReportChange('signature',sig); setShowSignatureModal(false);}} onCancel={()=>setShowSignatureModal(false)} existingSignature={report.signature}/>}
+      {showSignatureModal && <SignatureModal onSave={(sig) => { handleReportChange('signature', sig); setShowSignatureModal(false); }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { clearAllUploads } from '../../utils/indexedDBCache';
  * À ajouter une seule fois dans App.js
  */
 export const MobileIndicators = () => {
-    const { downloads, downloadFile, cancelDownload } = useDownload();
+    const { downloads, cancelDownload } = useDownload();
 
     return (
         <>

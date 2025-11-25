@@ -18,12 +18,13 @@ export function useDocuments(userId) {
     } = useQuery({
         queryKey: ['scannedDocuments', userId],
         queryFn: async () => {
-            if (userId) {
-                return await scannedDocumentsService.getUserDocuments(userId);
-            }
-            return await scannedDocumentsService.getAllDocuments();
+            const result = userId
+                ? await scannedDocumentsService.getUserDocuments(userId)
+                : await scannedDocumentsService.getAllDocuments();
+
+            if (result.error) throw result.error;
+            return result.data;
         },
-        enabled: !!userId,
     });
 
     // Mutation pour sauvegarder des documents

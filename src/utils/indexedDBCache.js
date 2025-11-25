@@ -440,7 +440,7 @@ export const initCacheCleanup = async () => {
   }
 };
 
-export default {
+const indexedDBCache = {
   storeFileForUpload,
   getPendingUploads,
   getUploadById,
@@ -454,3 +454,5 @@ export default {
   cleanOldUploads,
   initCacheCleanup
 };
+
+export default indexedDBCache;
