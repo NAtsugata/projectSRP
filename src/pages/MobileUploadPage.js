@@ -131,73 +131,84 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
         });
 
         const successfulUploads = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const queueItem = queueItems[i];
-            logUpload(`🔄 Traitement fichier ${i + 1}/${files.length}`, {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type
+        const concurrentUploads = 3; // Augmenté pour éviter les timeouts
+
+        for (let i = 0; i < files.length; i += concurrentUploads) {
+            const batch = files.slice(i, i + concurrentUploads);
+            const batchPromises = batch.map(async (file, idx) => {
+                const queueItem = queueItems[i + idx];
+                logUpload(`🔄 Traitement fichier ${i + idx + 1}/${files.length}`, {
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
+
+                try {
+                    logUpload(`📦 Compression de ${file.name}...`);
+                    let fileToUpload = await compressImage(file);
+                    logUpload(`✅ Compression terminée`, {
+                        originalSize: file.size,
+                        compressedSize: fileToUpload.size,
+                        ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
+                    });
+
+                    logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
+                    const result = await storageService.uploadInterventionFile(
+                        fileToUpload,
+                        interventionId,
+                        'report',
+                        (progress) => {
+                            logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
+                            setUploadState(prev => ({
+                                ...prev,
+                                queue: prev.queue.map(item =>
+                                    item.id === queueItem.id ? { ...item, status: 'uploading', progress } : item
+                                )
+                            }));
+                        }
+                    );
+
+                    if (result.error) {
+                        logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
+                        throw result.error;
+                    }
+
+                    logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
+                    successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
+                    setUploadState(prev => ({
+                        ...prev,
+                        queue: prev.queue.map(item =>
+                            item.id === queueItem.id ? { ...item, status: 'completed', progress: 100 } : item
+                        )
+                    }));
+
+                } catch (error) {
+                    logUpload(`❌ ERREUR lors du traitement`, {
+                        fileName: file.name,
+                        errorMessage: error.message,
+                        errorStack: error.stack,
+                        errorType: error.constructor.name
+                    });
+
+                    // ✅ Notification d'erreur
+                    notifications.error(`Échec: ${file.name}`, {
+                        duration: 5000
+                    });
+
+                    setUploadState(prev => ({
+                        ...prev,
+                        queue: prev.queue.map(item =>
+                            item.id === queueItem.id ? { ...item, status: 'error', error: error.message } : item
+                        )
+                    }));
+                }
             });
 
-            try {
-                logUpload(`📦 Compression de ${file.name}...`);
-                let fileToUpload = await compressImage(file);
-                logUpload(`✅ Compression terminée`, {
-                    originalSize: file.size,
-                    compressedSize: fileToUpload.size,
-                    ratio: ((1 - fileToUpload.size / file.size) * 100).toFixed(2) + '%'
-                });
+            await Promise.all(batchPromises);
 
-                logUpload(`☁️ Upload vers Supabase de ${file.name}...`);
-                const result = await storageService.uploadInterventionFile(
-                    fileToUpload,
-                    interventionId,
-                    'report',
-                    (progress) => {
-                        logUpload(`📊 Progression: ${progress}%`, { fileName: file.name });
-                        setUploadState(prev => ({
-                            ...prev,
-                            queue: prev.queue.map(item =>
-                                item.id === queueItem.id ? { ...item, status: 'uploading', progress } : item
-                            )
-                        }));
-                    }
-                );
-
-                if (result.error) {
-                    logUpload(`❌ Erreur upload Supabase`, { fileName: file.name, error: result.error });
-                    throw result.error;
-                }
-
-                logUpload(`✅ Upload réussi`, { fileName: file.name, url: result.publicURL });
-                successfulUploads.push({ name: file.name, url: result.publicURL, type: file.type });
-                setUploadState(prev => ({
-                    ...prev,
-                    queue: prev.queue.map(item =>
-                        item.id === queueItem.id ? { ...item, status: 'completed', progress: 100 } : item
-                    )
-                }));
-
-            } catch (error) {
-                logUpload(`❌ ERREUR lors du traitement`, {
-                    fileName: file.name,
-                    errorMessage: error.message,
-                    errorStack: error.stack,
-                    errorType: error.constructor.name
-                });
-
-                // ✅ Notification d'erreur
-                notifications.error(`Échec: ${file.name}`, {
-                    duration: 5000
-                });
-
-                setUploadState(prev => ({
-                    ...prev,
-                    queue: prev.queue.map(item =>
-                        item.id === queueItem.id ? { ...item, status: 'error', error: error.message } : item
-                    )
-                }));
+            // Petit délai entre les batches pour laisser respirer le thread principal
+            if (i + concurrentUploads < files.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
 
@@ -217,7 +228,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
             }
         }
 
-        setUploadState(prev => ({...prev, isUploading: false}));
+        setUploadState(prev => ({ ...prev, isUploading: false }));
         setUploadComplete(true); // Affiche le message de succès
 
         // ✅ Notification finale
@@ -306,17 +317,17 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     <div className="upload-queue-container">
                         {uploadState.queue.map(item => (
                             <div key={item.id} className={`upload-queue-item status-${item.status}`}>
-                                <div style={{width: '24px', flexShrink: 0}}>
+                                <div style={{ width: '24px', flexShrink: 0 }}>
                                     {item.status === 'pending' && <LoaderIcon className="animate-spin" />}
                                     {item.status === 'uploading' && <LoaderIcon className="animate-spin" />}
                                     {item.status === 'completed' && <CheckCircleIcon style={{ color: '#16a34a' }} />}
                                     {item.status === 'error' && <AlertTriangleIcon style={{ color: '#dc2626' }} />}
                                 </div>
-                                <div style={{flexGrow: 1, minWidth: 0}}>
+                                <div style={{ flexGrow: 1, minWidth: 0 }}>
                                     <div className="file-name">{item.name}</div>
                                     {item.status === 'uploading' && (
                                         <div className="upload-progress-bar">
-                                            <div className="upload-progress-fill" style={{width: `${item.progress}%`}} />
+                                            <div className="upload-progress-fill" style={{ width: `${item.progress}%` }} />
                                         </div>
                                     )}
                                     {item.error && <div className="error-message">{item.error}</div>}

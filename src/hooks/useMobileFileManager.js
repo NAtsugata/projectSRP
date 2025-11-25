@@ -174,10 +174,22 @@ export const useMobileFileManager = (interventionId) => {
           invalidFiles.push({ file, reason: file.size > maxSize ? 'Fichier trop volumineux' : 'Type non supporté' });
         }
       }
-      const queueItems = validFiles.map((file, index) => ({ id: `${file.name}-${file.lastModified}-${index}`, name: file.name, size: file.size, type: file.type, status: 'pending', progress: 0, error: null }));
+
+      const queueItems = validFiles.map((file, index) => ({
+        id: `${file.name}-${file.lastModified}-${index}`,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        status: 'pending',
+        progress: 0,
+        error: null
+      }));
+
       setUploadState((prev) => ({ ...prev, queue: queueItems }));
-      const concurrentUploads = deviceInfo.isMobile ? 1 : 2;
+
+      const concurrentUploads = 3; // Augmenté pour éviter les timeouts sur les longues files
       const results = [];
+
       const updateProgress = (fileId, status, progress, error = null) => {
         setUploadState((prev) => {
           const updatedQueue = prev.queue.map((item) => (item.id === fileId ? { ...item, status, progress, error } : item));
@@ -185,6 +197,7 @@ export const useMobileFileManager = (interventionId) => {
           return { ...prev, queue: updatedQueue, globalProgress };
         });
       };
+
       for (let i = 0; i < validFiles.length; i += concurrentUploads) {
         const batch = validFiles.slice(i, i + concurrentUploads);
         const batchPromises = batch.map(async (file, idx) => {
@@ -199,15 +212,20 @@ export const useMobileFileManager = (interventionId) => {
             return { fileId, success: false, error: error.message, originalFile: file };
           }
         });
+
         const batchResults = await Promise.all(batchPromises);
         results.push(...batchResults);
+
         if (i + concurrentUploads < validFiles.length) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
+
       const successful = results.filter((r) => r.success);
       const failed = results.filter((r) => !r.success);
+
       setUploadState((prev) => ({ ...prev, isUploading: false, completed: successful, errors: failed, globalProgress: 100 }));
+
       if (onComplete) {
         const fileInfos = successful.map((r) => ({ name: r.originalFile.name, url: r.result.publicURL, type: r.originalFile.type }));
         onComplete(fileInfos, invalidFiles);
