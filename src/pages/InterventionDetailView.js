@@ -192,6 +192,8 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', o
     }
 
     console.log('📸 Fichiers sélectionnés (Hook):', files.length);
+    // DEBUG: Alert pour confirmer la sélection sur mobile
+    // alert(`Sélection reçue : ${files.length} fichiers`);
 
     // Lancer l'upload via le hook
     await handleFileUpload(files, async (uploadedFiles, invalidFiles) => {
@@ -250,6 +252,11 @@ const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', o
 
       {/* Utilisation du composant d'affichage de queue du hook */}
       <UploadQueue uploadState={uploadState} />
+
+      {/* DEBUG: Indicateur de queue pour mobile */}
+      <div style={{ fontSize: '10px', color: '#ccc', textAlign: 'center', marginTop: '4px' }}>
+        System: {uploadState.queue.length} item(s) in queue
+      </div>
     </div>
   );
 };
@@ -826,7 +833,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <div className="section-header">
               <h3 className="section-title">
                 <span className="section-title-icon">📷</span>
-                Photos et Documents
+                Photos et Documents <span style={{ fontSize: '0.7em', color: '#aaa' }}>(v3.0)</span>
                 {report.files && report.files.length > 0 && (
                   <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
                     ({report.files.length})
