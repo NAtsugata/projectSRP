@@ -8,6 +8,7 @@ import { authService, profileService, supabase } from './lib/supabase';
 import { Toast, ConfirmationModal } from './components/SharedUI';
 import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
 import { ToastProvider } from './contexts/ToastContext';
+import { useAuthStore } from './store/authStore';
 import { DownloadProvider } from './contexts/DownloadContext';
 import LoginScreen from './pages/LoginScreen';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
@@ -150,6 +151,23 @@ function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Sync with Zustand store
+  const { setUser, setProfile: setStoreProfile, setLoading: setStoreLoading } = useAuthStore();
+
+  useEffect(() => {
+    setStoreLoading(loading);
+    if (session?.user) {
+      setUser(session.user);
+    } else {
+      setUser(null);
+    }
+    if (profile) {
+      setStoreProfile(profile);
+    } else {
+      setStoreProfile(null);
+    }
+  }, [loading, session, profile, setUser, setStoreProfile, setStoreLoading]);
 
   useEffect(() => {
     if (session?.user) {

@@ -6,18 +6,18 @@ import { useAuthStore } from '../store/authStore';
 import MyDocumentsView from './MyDocumentsView';
 
 const MyDocumentsViewContainer = () => {
-    const { profile } = useAuthStore();
+    const { profile, loading: authLoading } = useAuthStore();
     const { users } = useUsers();
 
     const {
         scannedDocuments,
-        isLoading,
+        isLoading: docsLoading,
         saveDocuments,
         deleteDocument,
         updateDocument,
     } = useDocuments(profile?.is_admin ? null : profile?.id);
 
-    if (isLoading) {
+    if (authLoading || docsLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
                 <div>Chargement des documents...</div>
