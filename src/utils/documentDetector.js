@@ -323,7 +323,16 @@ export const detectDocument = async (input, options = {}) => {
 
       // Find document contour
       const imageArea = src.rows * src.cols;
+      console.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * minArea} (${minArea * 100}%)`);
+      console.log(`[Scanner Debug] Total contours found: ${contours.size()}`);
+
       const documentContour = findDocumentContour(contours, imageArea, minArea);
+
+      if (documentContour) {
+        console.log(`[Scanner Debug] Best contour found with ${documentContour.rows} points`);
+      } else {
+        console.log('[Scanner Debug] No valid document contour found');
+      }
 
       if (documentContour && documentContour.rows === 4) {
         result.detected = true;

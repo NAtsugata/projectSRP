@@ -133,9 +133,24 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Détection en temps réel sur le flux vidéo avec lissage
   useEffect(() => {
-    console.log('[LIVE DETECTION] useEffect triggered', { mode, hasStream: !!stream, hasVideo: !!videoRef.current, hasOverlay: !!overlayCanvasRef.current });
+    console.log('[LIVE DETECTION] useEffect triggered', {
+      mode,
+      hasStream: !!stream,
+      hasVideo: !!videoRef.current,
+      hasOverlay: !!overlayCanvasRef.current,
+      openCvReady: !!(window.cv && window.cv.Mat)
+    });
+
+    console.log('[LIVE DETECTION] Checking conditions:', {
+      mode,
+      hasStream: !!stream,
+      hasVideo: !!videoRef.current,
+      videoReady: videoRef.current?.readyState,
+      hasOverlay: !!overlayCanvasRef.current
+    });
 
     if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current) {
+      console.log('[LIVE DETECTION] Conditions not met, skipping loop.');
       // Nettoyer l'interval si on n'est plus en mode capture
       if (detectionIntervalRef.current) {
         console.log('[LIVE DETECTION] Clearing interval');
