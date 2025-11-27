@@ -12,7 +12,8 @@ import {
 import {
   enhanceBlackAndWhite,
   enhanceColor,
-  enhanceGrayscale
+  enhanceGrayscale,
+  isOpenCvReady
 } from '../utils/documentScanner';
 import documentDetectorUtils from '../utils/documentDetector';
 import { getYOLODetector } from '../utils/yoloDetector';
@@ -333,7 +334,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stream]);
 
-  // Capturer une photo avec animation de scan et détection OpenCV
+  // Capturer une photo avec animation de scan et détection
   const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -361,7 +362,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
             clearInterval(interval);
             resolve();
           }
-        }, 30); // Animation de ~600ms
+        }, 20); // Animation plus rapide
       });
     };
 
@@ -369,60 +370,79 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setIsProcessing(true);
 
     try {
-      // Créer un fichier temporaire pour OpenCV
-      const blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.92);
-      });
+      // Attendre que OpenCV soit prêt si nécessaire
+      if (!isOpenCvReady()) {
+        console.log('Waiting for OpenCV...');
+        await new Promise(r => setTimeout(r, 500));
+      }
 
-      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
-      const imgUrl = URL.createObjectURL(blob);
-
-      // Charger l'image pour avoir ses dimensions réelles
-      const img = new Image();
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.src = imgUrl;
-      });
-
+      // 1. Créer l'image pour le traitement
+      const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
       setOriginalImage(imgUrl);
 
-      // Lancer la détection avec le détecteur sélectionné
-      const result = await detectDocumentWithCurrentDetector(file);
+      // 2. Détection des bords (OpenCV via documentScanner.js ou YOLO)
+      // On utilise directement l'image du canvas pour éviter les conversions inutiles
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      if (result.detected && result.contour) {
-        // Convertir les coins en pourcentages pour être responsive
-        const cornersData = result.contour.map(point => ({
-          x: (point.x / img.width) * 100,
-          y: (point.y / img.height) * 100
-        }));
+      // Essayer d'abord avec le détecteur configuré (YOLO ou OpenCV)
+      // Si OpenCV est le détecteur, on utilise notre nouvelle fonction optimisée
+
+      let cornersData = null;
+
+      if (detectorType === 'yolo' && yoloModelLoaded) {
+        // ... (YOLO logic existing)
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg'));
+        const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+        const result = await detectDocumentWithCurrentDetector(file);
+        if (result.detected && result.contour) {
+          cornersData = result.contour.map(point => ({
+            x: (point.x / canvas.width) * 100,
+            y: (point.y / canvas.height) * 100
+          }));
+        }
+      }
+
+      // Fallback ou OpenCV direct
+      if (!cornersData) {
+        // Utiliser notre nouvelle fonction OpenCV optimisée
+        const { detectDocumentEdges } = require('../utils/documentScanner');
+        const corners = detectDocumentEdges(imageData);
+
+        if (corners) {
+          cornersData = corners.map(point => ({
+            x: (point.x / canvas.width) * 100,
+            y: (point.y / canvas.height) * 100
+          }));
+        }
+      }
+
+      if (cornersData) {
         setCorners(cornersData);
-        setMode('adjust');
       } else {
-        // Pas de document détecté, utiliser les coins par défaut
-        const defaultCorners = [
+        // Coins par défaut
+        setCorners([
           { x: 10, y: 10 },
           { x: 90, y: 10 },
           { x: 90, y: 90 },
           { x: 10, y: 90 }
-        ];
-        setCorners(defaultCorners);
-        setMode('adjust');
+        ]);
       }
+
+      setMode('adjust');
+
     } catch (error) {
-      console.error('Erreur détection OpenCV:', error);
-      // En cas d'erreur, utiliser les coins par défaut
-      const defaultCorners = [
+      console.error('Erreur capture/détection:', error);
+      setCorners([
         { x: 10, y: 10 },
         { x: 90, y: 10 },
         { x: 90, y: 90 },
         { x: 10, y: 90 }
-      ];
-      setCorners(defaultCorners);
+      ]);
       setMode('adjust');
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocumentWithCurrentDetector]);
+  }, [stopCamera, detectDocumentWithCurrentDetector, detectorType, yoloModelLoaded]);
 
   // Appliquer un mode d'amélioration
   const applyEnhanceMode = useCallback((targetMode) => {
@@ -545,48 +565,48 @@ export default function DocumentScannerView({ onSave, onClose }) {
         img.src = originalImage;
       });
 
+      // Créer un canvas temporaire pour la transformation
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
       // Convertir les coins en pixels absolus
       const absoluteCorners = corners.map(corner => ({
         x: (corner.x / 100) * img.width,
         y: (corner.y / 100) * img.height
       }));
 
-      // Créer un fichier depuis l'image originale
-      const response = await fetch(originalImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'adjusted.jpg', { type: 'image/jpeg' });
+      // Utiliser la nouvelle fonction OpenCV pour la perspective
+      const { applyPerspectiveTransform } = require('../utils/documentScanner');
+      const outputCanvas = applyPerspectiveTransform(tempCanvas, absoluteCorners);
 
-      // Appliquer la transformation perspective avec les coins ajustés
-      const result = await detectDocumentWithCurrentDetector(file, {
-        manualCorners: absoluteCorners,
-        autoTransform: true
+      // Obtenir le blob du résultat
+      const transformedBlob = await new Promise(resolve => outputCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+      const url = URL.createObjectURL(transformedBlob);
+
+      setCurrentDoc({
+        id: Date.now(),
+        url,
+        originalUrl: url,
+        blob: transformedBlob,
+        timestamp: new Date().toISOString(),
+        enhanceMode: 'original',
+        rotation: 0,
+        wasDetected: true
       });
+      setMode('preview');
+      setCorners(null);
+      setOriginalImage(null);
 
-      if (result.transformed) {
-        // Utiliser l'image transformée
-        const transformedBlob = await fetch(result.transformed).then(r => r.blob());
-        const url = URL.createObjectURL(transformedBlob);
-        setCurrentDoc({
-          id: Date.now(),
-          url,
-          originalUrl: url,
-          blob: transformedBlob,
-          timestamp: new Date().toISOString(),
-          enhanceMode: 'original',
-          rotation: 0,
-          wasDetected: true
-        });
-        setMode('preview');
-        setCorners(null);
-        setOriginalImage(null);
-      }
     } catch (error) {
       console.error('Erreur transformation:', error);
       alert('Erreur lors de la transformation du document');
     } finally {
       setIsProcessing(false);
     }
-  }, [corners, originalImage, detectDocumentWithCurrentDetector]);
+  }, [corners, originalImage]);
 
   // Annuler l'ajustement
   const cancelAdjustment = useCallback(() => {

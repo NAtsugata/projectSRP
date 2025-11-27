@@ -19,9 +19,11 @@ export function useExpenses(userId = null) {
         queryKey: ['expenses', userId],
         queryFn: async () => {
             if (userId) {
-                return await expenseService.getExpensesByUser(userId);
+                const { data } = await expenseService.getExpensesByUser(userId);
+                return data || [];
             }
-            return await expenseService.getAllExpenses();
+            const { data } = await expenseService.getAllExpenses();
+            return data || [];
         },
         enabled: true,
     });

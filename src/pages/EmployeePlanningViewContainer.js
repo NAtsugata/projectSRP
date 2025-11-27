@@ -18,6 +18,7 @@ const EmployeePlanningViewContainer = () => {
         <EmployeePlanningView
             interventions={interventions}
             loading={isLoading}
+            userName={profile?.full_name || profile?.email?.split('@')[0] || 'Collaborateur'}
         />
     );
 };

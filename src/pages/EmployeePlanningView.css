@@ -1,120 +1,62 @@
 /* ============================================
-   EmployeePlanningView - Modern Employee Dashboard
+   EmployeePlanningView - Mobile Comfort Design
    ============================================ */
 
+:root {
+  --comfort-bg: #f8fafc;
+  --comfort-card-bg: #ffffff;
+  --comfort-text-primary: #334155;
+  --comfort-text-secondary: #64748b;
+  --comfort-accent: #0f766e;
+  /* Teal-700 */
+  --comfort-accent-light: #ccfbf1;
+  /* Teal-100 */
+  --comfort-radius: 24px;
+  --comfort-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
 .employee-planning-view {
-  padding: var(--spacing-6);
-  max-width: 1200px;
+  padding: var(--spacing-4);
+  max-width: 800px;
+  /* Mobile-first optimization */
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-5);
+  gap: var(--spacing-6);
   min-height: 100vh;
-  animation: fadeIn 0.4s ease-out;
+  background-color: var(--comfort-bg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ==================== TITLE ==================== */
+/* ==================== HEADER SECTION ==================== */
+.planning-header-section {
+  padding: var(--spacing-4) var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
 .planning-title {
-  font-size: var(--text-3xl);
-  font-weight: var(--font-extrabold);
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-secondary-600));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--comfort-text-primary);
+  margin: 0 0 var(--spacing-2) 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.planning-subtitle {
+  font-size: 1rem;
+  color: var(--comfort-text-secondary);
   margin: 0;
-  padding: var(--spacing-4);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  animation: fadeInDown 0.5s ease-out;
+  font-weight: 400;
 }
 
-.planning-title::before {
-  content: '👤';
-  font-size: var(--text-4xl);
-  -webkit-text-fill-color: initial;
-  animation: wave 2s ease-in-out infinite;
-}
-
-@keyframes wave {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-10deg);
-  }
-  75% {
-    transform: rotate(10deg);
-  }
-}
-
-/* ==================== DESCRIPTION CARD ==================== */
-.planning-description {
-  position: relative;
-  padding: var(--spacing-5);
-  background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.05),
-    rgba(236, 72, 153, 0.05)
-  );
-  border-left: 4px solid;
-  border-image: linear-gradient(180deg,
-    var(--color-primary-500),
-    var(--color-secondary-500)
-  ) 1;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  animation: fadeInUp 0.5s ease-out 0.1s backwards;
-  overflow: hidden;
-}
-
-.planning-description::before {
-  content: 'ℹ️';
-  position: absolute;
-  top: var(--spacing-5);
-  right: var(--spacing-5);
-  font-size: 2rem;
-  opacity: 0.2;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.planning-description p {
-  margin: 0;
-  font-size: var(--text-base);
-  color: var(--color-primary-700);
-  line-height: var(--leading-relaxed);
-  font-weight: var(--font-medium);
-  position: relative;
-}
-
-/* ==================== INTERVENTIONS SECTION ==================== */
+/* ==================== INTERVENTION LIST OVERRIDES ==================== */
+/* We target the list component styles to inject our comfort design */
 .employee-planning-view .intervention-list {
-  animation: fadeInUp 0.5s ease-out 0.2s backwards;
-}
-
-/* ==================== LOADING STATE ==================== */
-.employee-planning-view .loading-spinner-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
   gap: var(--spacing-4);
-  animation: fadeIn 0.3s ease-out;
-}
-
-.employee-planning-view .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--color-gray-200);
-  border-top-color: var(--color-primary-500);
-  border-radius: var(--radius-full);
-  animation: spin 1s linear infinite;
-}
-
-.employee-planning-view .loading-text {
-  font-size: var(--text-lg);
-  color: var(--text-secondary);
-  font-weight: var(--font-medium);
 }
 
 /* ==================== EMPTY STATE ==================== */
@@ -123,271 +65,87 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-12);
-  gap: var(--spacing-4);
-  background: linear-gradient(135deg,
-    var(--color-gray-50),
-    var(--color-primary-50),
-    var(--color-secondary-50)
-  );
-  border-radius: var(--radius-2xl);
-  border: 2px dashed var(--border-primary);
-  min-height: 400px;
-  animation: fadeIn 0.5s ease-out;
+  padding: var(--spacing-12) var(--spacing-6);
+  background: var(--comfort-card-bg);
+  border-radius: var(--comfort-radius);
+  box-shadow: var(--comfort-shadow);
+  text-align: center;
+  min-height: 300px;
+  margin-top: var(--spacing-4);
+  animation: slideUp 0.5s ease-out;
 }
 
 .employee-planning-empty-icon {
-  font-size: 5rem;
-  animation: float 3s ease-in-out infinite;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-15px);
-  }
+  font-size: 4rem;
+  margin-bottom: var(--spacing-4);
+  animation: float 4s ease-in-out infinite;
 }
 
 .employee-planning-empty-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--comfort-text-primary);
+  margin-bottom: var(--spacing-2);
 }
 
 .employee-planning-empty-description {
-  font-size: var(--text-base);
-  color: var(--text-secondary);
-  text-align: center;
-  max-width: 500px;
-  margin: 0;
-  line-height: var(--leading-relaxed);
+  font-size: 0.95rem;
+  color: var(--comfort-text-secondary);
+  line-height: 1.5;
+  max-width: 280px;
 }
 
-.employee-planning-empty-emoji {
-  font-size: 1.5rem;
-  margin: var(--spacing-2) 0;
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-/* ==================== STATS SUMMARY (Optional) ==================== */
-.planning-stats-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-4);
-  animation: fadeInUp 0.5s ease-out 0.15s backwards;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.stat-item {
-  padding: var(--spacing-4);
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-primary);
-  transition: all var(--transition-base);
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
-.stat-item:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+/* ==================== LOADING ==================== */
+.loading-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12);
 }
 
-.stat-item-label {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-2);
-  font-weight: var(--font-medium);
-}
-
-.stat-item-value {
-  font-size: var(--text-3xl);
-  font-weight: var(--font-extrabold);
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-secondary-600));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* ==================== RESPONSIVE DESIGN ==================== */
-
-/* Tablet */
-@media (max-width: 1024px) {
+/* ==================== RESPONSIVE ==================== */
+@media (min-width: 768px) {
   .employee-planning-view {
-    padding: var(--spacing-5);
-    gap: var(--spacing-4);
-  }
-
-  .planning-title {
-    font-size: var(--text-2xl);
-  }
-
-  .planning-description {
-    padding: var(--spacing-4);
-  }
-
-  .planning-stats-summary {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-3);
-  }
-}
-
-/* Mobile */
-@media (max-width: 640px) {
-  .employee-planning-view {
-    padding: var(--spacing-4);
-    gap: var(--spacing-3);
-  }
-
-  .planning-title {
-    font-size: var(--text-xl);
-    padding: var(--spacing-3);
-    justify-content: center;
-  }
-
-  .planning-title::before {
-    font-size: var(--text-3xl);
-  }
-
-  .planning-description {
-    padding: var(--spacing-3);
-  }
-
-  .planning-description::before {
-    font-size: 1.5rem;
-    top: var(--spacing-3);
-    right: var(--spacing-3);
-  }
-
-  .planning-description p {
-    font-size: var(--text-sm);
-  }
-
-  .employee-planning-empty {
     padding: var(--spacing-8);
-    min-height: 300px;
-  }
-
-  .employee-planning-empty-icon {
-    font-size: 4rem;
-  }
-
-  .employee-planning-empty-title {
-    font-size: var(--text-xl);
-  }
-
-  .employee-planning-empty-description {
-    font-size: var(--text-sm);
-  }
-
-  .planning-stats-summary {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-2);
-  }
-
-  .stat-item {
-    padding: var(--spacing-3);
-  }
-
-  .stat-item-value {
-    font-size: var(--text-2xl);
-  }
-}
-
-/* Small mobile */
-@media (max-width: 480px) {
-  .employee-planning-view {
-    padding: var(--spacing-3);
   }
 
   .planning-title {
-    font-size: var(--text-lg);
-  }
-
-  .planning-description {
-    border-radius: var(--radius-md);
-  }
-}
-
-/* ==================== ACCESSIBILITY ==================== */
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .planning-description {
-    border: 2px solid var(--color-primary-500);
-    background: var(--bg-primary);
-  }
-
-  .employee-planning-empty {
-    border: 2px solid var(--text-primary);
-  }
-
-  .stat-item {
-    border: 2px solid var(--border-primary);
-  }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .employee-planning-view,
-  .planning-title,
-  .planning-title::before,
-  .planning-description,
-  .planning-description::before,
-  .employee-planning-view .intervention-list,
-  .employee-planning-view .loading-spinner,
-  .employee-planning-empty,
-  .employee-planning-empty-icon,
-  .planning-stats-summary,
-  .stat-item {
-    animation: none;
-  }
-
-  .stat-item:hover {
-    transform: none;
-  }
-}
-
-/* Print styles */
-@media print {
-  .employee-planning-view {
-    padding: 0;
-  }
-
-  .planning-title {
-    color: #000;
-    -webkit-text-fill-color: initial;
-  }
-
-  .planning-title::before {
-    display: none;
-  }
-
-  .planning-description {
-    background: none;
-    border: 1px solid #000;
-  }
-
-  .planning-description::before {
-    display: none;
-  }
-
-  .employee-planning-empty {
-    display: none;
-  }
-}
-
-/* ==================== DARK MODE (Future) ==================== */
-@media (prefers-color-scheme: dark) {
-  .planning-description {
-    background: linear-gradient(135deg,
-      rgba(99, 102, 241, 0.1),
-      rgba(236, 72, 153, 0.1)
-    );
-  }
-
-  .planning-description p {
-    color: var(--color-primary-300);
+    font-size: 2.25rem;
   }
 }

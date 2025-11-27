@@ -3,8 +3,7 @@
 // Les admins peuvent voir tous les documents de tous les utilisateurs
 
 import React, { useState, useMemo, useCallback } from 'react';
-// TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application
-// import DocumentScannerView from './DocumentScannerView';
+import DocumentScannerView from './DocumentScannerView';
 import {
   CameraIcon,
   SearchIcon,
@@ -34,8 +33,7 @@ export default function MyDocumentsView({
   onDeleteDocument,
   onUpdateDocument
 }) {
-  // TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application
-  // const [showScanner, setShowScanner] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
@@ -89,8 +87,6 @@ export default function MyDocumentsView({
     };
   }, [scannedDocuments, profile, isAdmin]);
 
-  // TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application
-  /*
   const handleSaveScannedDocs = useCallback(async (docs) => {
     if (!docs || docs.length === 0) return;
 
@@ -116,7 +112,6 @@ export default function MyDocumentsView({
       alert('❌ Erreur lors de la sauvegarde');
     }
   }, [onSaveDocuments, profile]);
-  */
 
   // Supprimer un document
   const handleDelete = useCallback(async (doc) => {
@@ -163,9 +158,7 @@ export default function MyDocumentsView({
     return CATEGORIES.find(c => c.value === category)?.color || '#6b7280';
   };
 
-  // TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application
-  /*
-  if (showScanner) {
+  if (showScanner && isAdmin) {
     return (
       <DocumentScannerView
         onSave={handleSaveScannedDocs}
@@ -173,7 +166,6 @@ export default function MyDocumentsView({
       />
     );
   }
-  */
 
   return (
     <div>
@@ -515,11 +507,11 @@ export default function MyDocumentsView({
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
             {searchTerm || selectedCategory !== 'all'
               ? 'Aucun document ne correspond à vos critères'
-              : 'Le scanner de documents est temporairement désactivé'}
+              : isAdmin
+                ? 'Commencez par scanner un document en cliquant sur le bouton ci-dessous'
+                : 'Vous n\'avez aucun document pour le moment'}
           </p>
-          {/* TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application */}
-          {/*
-          {!searchTerm && selectedCategory === 'all' && (
+          {isAdmin && !searchTerm && selectedCategory === 'all' && (
             <button
               className="btn btn-primary"
               onClick={() => setShowScanner(true)}
@@ -528,7 +520,6 @@ export default function MyDocumentsView({
               <CameraIcon /> Scanner maintenant
             </button>
           )}
-          */}
         </div>
       ) : (
         <div className="docs-grid">
@@ -617,16 +608,16 @@ export default function MyDocumentsView({
         </div>
       )}
 
-      {/* TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application */}
-      {/*
-      <button
-        className="scan-button"
-        onClick={() => setShowScanner(true)}
-        title="Scanner un document"
-      >
-        <CameraIcon style={{ width: '32px', height: '32px' }} />
-      </button>
-      */}
+      {/* Scanner de documents - Admin seulement */}
+      {isAdmin && (
+        <button
+          className="scan-button"
+          onClick={() => setShowScanner(true)}
+          title="Scanner un document"
+        >
+          <CameraIcon style={{ width: '32px', height: '32px' }} />
+        </button>
+      )}
     </div>
   );
 }

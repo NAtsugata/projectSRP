@@ -18,7 +18,9 @@ export function useLeaveRequests(userId = null) {
     } = useQuery({
         queryKey: ['leaveRequests', userId],
         queryFn: async () => {
-            return await leaveService.getLeaveRequests(userId);
+            const { data, error } = await leaveService.getLeaveRequests(userId);
+            if (error) throw error;
+            return data || [];
         },
         enabled: true,
     });

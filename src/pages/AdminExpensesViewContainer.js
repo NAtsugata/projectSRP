@@ -5,7 +5,7 @@ import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import AdminExpensesView from './AdminExpensesView';
 
-const AdminExpensesViewContainer = () => {
+const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
     const toast = useToast();
     const { expenses, isLoading, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses();
     const { users } = useUsers();
@@ -30,13 +30,31 @@ const AdminExpensesViewContainer = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        try {
-            await deleteExpense(id);
-            toast?.success('Note de frais supprimée');
-        } catch (error) {
-            toast?.error('Erreur lors de la suppression');
-            throw error;
+    const handleDelete = async (expense) => {
+        // Si showConfirmationModal est fourni, on l'utilise
+        if (showConfirmationModal) {
+            showConfirmationModal({
+                title: 'Supprimer la note de frais ?',
+                message: `Êtes-vous sûr de vouloir supprimer cette note de frais de ${expense.amount}€ ? Cette action est irréversible.`,
+                onConfirm: async () => {
+                    try {
+                        await deleteExpense(expense.id);
+                        toast?.success('Note de frais supprimée');
+                    } catch (error) {
+                        toast?.error('Erreur lors de la suppression');
+                    }
+                }
+            });
+        } else {
+            // Fallback si pas de modal (ne devrait pas arriver si bien câblé)
+            if (window.confirm('Supprimer cette note de frais ?')) {
+                try {
+                    await deleteExpense(expense.id);
+                    toast?.success('Note de frais supprimée');
+                } catch (error) {
+                    toast?.error('Erreur lors de la suppression');
+                }
+            }
         }
     };
 

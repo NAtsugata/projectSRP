@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInterventions } from '../hooks/useInterventions';
 import { useUsers } from '../hooks/useUsers';
+import { useChecklists } from '../hooks/useChecklists';
 import { useToast } from '../contexts/ToastContext';
 import AdminPlanningView from './AdminPlanningView';
 
@@ -11,11 +12,13 @@ const AdminPlanningViewContainer = () => {
     const toast = useToast();
     const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention } = useInterventions();
     const { users } = useUsers();
+    const { templates, assignChecklist } = useChecklists();
 
     const handleCreateIntervention = async (data) => {
         try {
             await createIntervention(data);
             toast?.success('Intervention créée avec succès');
+            return true; // Retourner true pour fermer le formulaire
         } catch (error) {
             toast?.error('Erreur lors de la création');
             throw error;
@@ -42,6 +45,25 @@ const AdminPlanningViewContainer = () => {
         }
     };
 
+    const handleAssignChecklist = async (interventionId, templateId) => {
+        const intervention = interventions.find(i => i.id === interventionId);
+        const assignedUserIds = intervention?.intervention_assignments
+            ?.map(assignment => assignment.user_id)
+            .filter(Boolean) || [];
+
+        if (!intervention || assignedUserIds.length === 0) {
+            toast?.error('Aucun employé assigné à cette intervention');
+            return;
+        }
+
+        try {
+            await assignChecklist({ interventionId, templateId, assignedUserIds });
+            toast?.success('Checklist assignée !');
+        } catch (error) {
+            toast?.error(`Erreur: ${error.message}`);
+        }
+    };
+
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
@@ -54,10 +76,13 @@ const AdminPlanningViewContainer = () => {
         <AdminPlanningView
             interventions={interventions}
             users={users}
-            onCreateIntervention={handleCreateIntervention}
+            checklistTemplates={templates}
+            onAddIntervention={handleCreateIntervention}
             onUpdateIntervention={handleUpdateIntervention}
-            onDeleteIntervention={handleDeleteIntervention}
-            onViewIntervention={(itv) => navigate(`/planning/${itv.id}`)}
+            onDelete={handleDeleteIntervention}
+            onArchive={(id) => handleUpdateIntervention(id, { is_archived: true })}
+            onAssignChecklist={handleAssignChecklist}
+            onView={(itv) => navigate(`/planning/${itv.id}`)}
         />
     );
 };

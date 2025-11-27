@@ -1,186 +1,348 @@
 // src/utils/documentScanner.js
-// Utilitaires pour scanner et traiter des documents
-// Inspiré de ClearScanner et autres scanners de documents
+// Utilitaires pour scanner et traiter des documents avec OpenCV.js
+// Implémente la détection de contours, la correction de perspective et les filtres "Magic"
 
 /**
- * Détecte les bords d'un document dans une image
- * Retourne les 4 coins du document détecté
+ * Vérifie si OpenCV est chargé
+ */
+export const isOpenCvReady = () => {
+  return !!(window.cv && window.cv.Mat);
+};
+
+/**
+ * Détecte les bords d'un document dans une image avec OpenCV
+ * Retourne les 4 coins du document détecté ou null
  */
 export function detectDocumentEdges(imageData) {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  ctx.putImageData(imageData, 0, 0);
-
-  // Convertir en niveaux de gris et appliquer un flou
-  const grayData = toGrayscale(imageData);
-  const blurred = gaussianBlur(grayData, 5);
-
-  // Détecter les contours (Canny edge detection simplifié)
-  const edges = detectEdges(blurred);
-
-  // Trouver les contours
-  const contours = findContours(edges);
-
-  // Trouver le plus grand contour quadrilatéral
-  const docContour = findLargestQuadrilateral(contours, imageData.width, imageData.height);
-
-  return docContour || getDefaultCorners(imageData.width, imageData.height);
-}
-
-/**
- * Convertit une image en niveaux de gris
- */
-function toGrayscale(imageData) {
-  const data = new Uint8ClampedArray(imageData.data);
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    data[i] = data[i + 1] = data[i + 2] = gray;
+  if (!isOpenCvReady()) {
+    console.warn('OpenCV not ready, fallback to default corners');
+    return getDefaultCorners(imageData.width, imageData.height);
   }
 
-  return new ImageData(data, imageData.width, imageData.height);
-}
+  const cv = window.cv;
+  let src = null;
+  let gray = null;
+  let blurred = null;
+  let edges = null;
+  let contours = null;
+  let hierarchy = null;
 
-/**
- * Applique un flou gaussien
- */
-function gaussianBlur(imageData, radius) {
-  // Version simplifiée - moyennage local
-  const data = imageData.data;
-  const w = imageData.width;
-  const h = imageData.height;
-  const output = new Uint8ClampedArray(data);
+  try {
+    // 1. Conversion ImageData -> cv.Mat
+    src = cv.matFromImageData(imageData);
 
-  for (let y = radius; y < h - radius; y++) {
-    for (let x = radius; x < w - radius; x++) {
-      let sum = 0;
-      let count = 0;
+    // 2. Prétraitement
+    gray = new cv.Mat();
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const idx = ((y + dy) * w + (x + dx)) * 4;
-          sum += data[idx];
-          count++;
+    blurred = new cv.Mat();
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+
+    // 3. Détection de bords (Canny)
+    edges = new cv.Mat();
+    cv.Canny(blurred, edges, 75, 200);
+
+    // 4. Trouver les contours
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+    // 5. Trouver le plus grand quadrilatère
+    let maxArea = 0;
+    let bestContour = null;
+    const minArea = (src.cols * src.rows) * 0.1; // Au moins 10% de l'image
+
+    for (let i = 0; i < contours.size(); ++i) {
+      const cnt = contours.get(i);
+      const area = cv.contourArea(cnt);
+
+      if (area > minArea) {
+        const peri = cv.arcLength(cnt, true);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+        if (approx.rows === 4 && area > maxArea) {
+          maxArea = area;
+          // Copier le contour car approx sera supprimé
+          if (bestContour) bestContour.delete();
+          bestContour = approx.clone();
         }
-      }
-
-      const idx = (y * w + x) * 4;
-      const avg = sum / count;
-      output[idx] = output[idx + 1] = output[idx + 2] = avg;
-    }
-  }
-
-  return new ImageData(output, w, h);
-}
-
-/**
- * Détection de contours (Sobel operator simplifié)
- */
-function detectEdges(imageData) {
-  const data = imageData.data;
-  const w = imageData.width;
-  const h = imageData.height;
-  const output = new Uint8ClampedArray(data.length);
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = (y * w + x) * 4;
-
-      // Gradient horizontal
-      const gx =
-        -data[((y-1)*w + (x-1))*4] + data[((y-1)*w + (x+1))*4] +
-        -2*data[(y*w + (x-1))*4] + 2*data[(y*w + (x+1))*4] +
-        -data[((y+1)*w + (x-1))*4] + data[((y+1)*w + (x+1))*4];
-
-      // Gradient vertical
-      const gy =
-        -data[((y-1)*w + (x-1))*4] - 2*data[((y-1)*w + x)*4] - data[((y-1)*w + (x+1))*4] +
-        data[((y+1)*w + (x-1))*4] + 2*data[((y+1)*w + x)*4] + data[((y+1)*w + (x+1))*4];
-
-      const magnitude = Math.sqrt(gx * gx + gy * gy);
-      const value = magnitude > 50 ? 255 : 0;
-
-      output[idx] = output[idx + 1] = output[idx + 2] = value;
-      output[idx + 3] = 255;
-    }
-  }
-
-  return new ImageData(output, w, h);
-}
-
-/**
- * Trouve les contours dans une image binaire
- */
-function findContours(imageData) {
-  // Implémentation simplifiée - retourne les points de contour
-  const data = imageData.data;
-  const w = imageData.width;
-  const h = imageData.height;
-  const points = [];
-
-  for (let y = 0; y < h; y += 4) {
-    for (let x = 0; x < w; x += 4) {
-      const idx = (y * w + x) * 4;
-      if (data[idx] > 128) {
-        points.push({ x, y });
+        approx.delete();
       }
     }
-  }
 
-  return points;
+    if (bestContour) {
+      // Convertir en format {x, y} standard
+      const points = [];
+      for (let i = 0; i < 4; i++) {
+        points.push({
+          x: bestContour.data32S[i * 2],
+          y: bestContour.data32S[i * 2 + 1]
+        });
+      }
+      bestContour.delete();
+      return sortCorners(points);
+    }
+
+    return getDefaultCorners(imageData.width, imageData.height);
+
+  } catch (err) {
+    console.error('OpenCV detection error:', err);
+    return getDefaultCorners(imageData.width, imageData.height);
+  } finally {
+    // Nettoyage mémoire CRITIQUE avec OpenCV.js
+    if (src) src.delete();
+    if (gray) gray.delete();
+    if (blurred) blurred.delete();
+    if (edges) edges.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
+  }
 }
 
 /**
- * Trouve le plus grand quadrilatère dans les contours
+ * Trie les coins dans l'ordre: TL, TR, BR, BL
  */
-function findLargestQuadrilateral(points, width, height) {
-  if (points.length < 4) return null;
+function sortCorners(points) {
+  // Trier par Y pour séparer haut/bas
+  points.sort((a, b) => a.y - b.y);
 
-  // Trouver les 4 coins extrêmes
-  const topLeft = points.reduce((min, p) =>
-    (p.x + p.y < min.x + min.y) ? p : min, points[0]);
-  const topRight = points.reduce((max, p) =>
-    (p.x - p.y > max.x - max.y) ? p : max, points[0]);
-  const bottomLeft = points.reduce((min, p) =>
-    (p.y - p.x > min.y - min.x) ? p : min, points[0]);
-  const bottomRight = points.reduce((max, p) =>
-    (p.x + p.y > max.x + max.y) ? p : max, points[0]);
+  const top = points.slice(0, 2).sort((a, b) => a.x - b.x);
+  const bottom = points.slice(2, 4).sort((a, b) => b.x - a.x); // Note: BR puis BL pour l'ordre horaire
 
-  // Vérifier si le quadrilatère est assez grand (> 30% de l'image)
-  const area = calculateQuadArea([topLeft, topRight, bottomRight, bottomLeft]);
-  const imageArea = width * height;
-
-  if (area > imageArea * 0.3) {
-    return [topLeft, topRight, bottomRight, bottomLeft];
-  }
-
-  return null;
+  return [
+    top[0],     // Top-Left
+    top[1],     // Top-Right
+    bottom[0],  // Bottom-Right
+    bottom[1]   // Bottom-Left
+  ];
 }
 
 /**
- * Calcule l'aire d'un quadrilatère
+ * Applique une transformation de perspective pour redresser le document
  */
-function calculateQuadArea(corners) {
-  if (corners.length !== 4) return 0;
+export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = null, outputHeight = null) {
+  if (!isOpenCvReady()) return canvas;
 
-  // Formule du lacet (Shoelace formula)
-  let area = 0;
-  for (let i = 0; i < 4; i++) {
-    const j = (i + 1) % 4;
-    area += corners[i].x * corners[j].y;
-    area -= corners[j].x * corners[i].y;
+  const cv = window.cv;
+  let src = null;
+  let dst = null;
+  let M = null;
+  let dsize = null;
+
+  try {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    src = cv.matFromImageData(imageData);
+
+    // Définir les dimensions de sortie si non fournies (basées sur la largeur max et hauteur max)
+    if (!outputWidth || !outputHeight) {
+      const widthTop = Math.hypot(sourceCorners[1].x - sourceCorners[0].x, sourceCorners[1].y - sourceCorners[0].y);
+      const widthBottom = Math.hypot(sourceCorners[2].x - sourceCorners[3].x, sourceCorners[2].y - sourceCorners[3].y);
+      const heightLeft = Math.hypot(sourceCorners[3].x - sourceCorners[0].x, sourceCorners[3].y - sourceCorners[0].y);
+      const heightRight = Math.hypot(sourceCorners[2].x - sourceCorners[1].x, sourceCorners[2].y - sourceCorners[1].y);
+
+      outputWidth = Math.max(widthTop, widthBottom);
+      outputHeight = Math.max(heightLeft, heightRight);
+    }
+
+    // Points source (format OpenCV)
+    const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+      sourceCorners[0].x, sourceCorners[0].y,
+      sourceCorners[1].x, sourceCorners[1].y,
+      sourceCorners[2].x, sourceCorners[2].y,
+      sourceCorners[3].x, sourceCorners[3].y
+    ]);
+
+    // Points destination (Rectangle parfait)
+    const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+      0, 0,
+      outputWidth, 0,
+      outputWidth, outputHeight,
+      0, outputHeight
+    ]);
+
+    // Calculer la matrice de transformation
+    M = cv.getPerspectiveTransform(srcTri, dstTri);
+
+    // Appliquer la transformation
+    dst = new cv.Mat();
+    dsize = new cv.Size(outputWidth, outputHeight);
+    cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+    // Créer le canvas de sortie
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = outputWidth;
+    outputCanvas.height = outputHeight;
+
+    // Afficher le résultat sur le canvas
+    cv.imshow(outputCanvas, dst);
+
+    // Nettoyage intermédiaire
+    srcTri.delete();
+    dstTri.delete();
+
+    return outputCanvas;
+
+  } catch (err) {
+    console.error('Perspective transform error:', err);
+    return canvas;
+  } finally {
+    if (src) src.delete();
+    if (dst) dst.delete();
+    if (M) M.delete();
   }
-  return Math.abs(area / 2);
 }
 
 /**
- * Retourne les coins par défaut (toute l'image)
+ * Améliore l'image - Mode "Magic" (Adaptive Threshold)
+ * Idéal pour les documents texte (supprime les ombres, rend le fond blanc)
+ */
+export function enhanceBlackAndWhite(imageData) {
+  if (!isOpenCvReady()) return imageData;
+
+  const cv = window.cv;
+  let src = null;
+  let dst = null;
+
+  try {
+    src = cv.matFromImageData(imageData);
+    dst = new cv.Mat();
+
+    // 1. Convertir en gris
+    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+
+    // 2. Adaptive Threshold (C'est la "Magie" de ClearScanner)
+    // ADAPTIVE_THRESH_GAUSSIAN_C est souvent meilleur que MEAN_C
+    // Block size 11 ou 15, C = 2 à 10
+    cv.adaptiveThreshold(src, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 10);
+
+    // 3. Convertir en RGBA pour l'affichage
+    // (Bien que l'image soit N&B, le canvas attend du RGBA)
+    const rgbaDst = new cv.Mat();
+    cv.cvtColor(dst, rgbaDst, cv.COLOR_GRAY2RGBA, 0);
+
+    // Créer un nouveau ImageData
+    const imgData = new ImageData(
+      new Uint8ClampedArray(rgbaDst.data),
+      rgbaDst.cols,
+      rgbaDst.rows
+    );
+
+    rgbaDst.delete();
+    return imgData;
+
+  } catch (err) {
+    console.error('Enhance BW error:', err);
+    return imageData;
+  } finally {
+    if (src) src.delete();
+    if (dst) dst.delete();
+  }
+}
+
+/**
+ * Améliore l'image - Mode Gris (Contraste amélioré)
+ */
+export function enhanceGrayscale(imageData) {
+  if (!isOpenCvReady()) return imageData;
+
+  const cv = window.cv;
+  let src = null;
+  let dst = null;
+
+  try {
+    src = cv.matFromImageData(imageData);
+    dst = new cv.Mat();
+
+    // Convertir en gris
+    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
+
+    // Normaliser / Égaliser l'histogramme pour le contraste
+    // CLAHE (Contrast Limited Adaptive Histogram Equalization) est mieux que equalizeHist global
+    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+    clahe.apply(dst, dst);
+    clahe.delete();
+
+    // Retour en RGBA
+    const rgbaDst = new cv.Mat();
+    cv.cvtColor(dst, rgbaDst, cv.COLOR_GRAY2RGBA, 0);
+
+    const imgData = new ImageData(
+      new Uint8ClampedArray(rgbaDst.data),
+      rgbaDst.cols,
+      rgbaDst.rows
+    );
+
+    rgbaDst.delete();
+    return imgData;
+
+  } catch (err) {
+    console.error('Enhance Gray error:', err);
+    return imageData;
+  } finally {
+    if (src) src.delete();
+    if (dst) dst.delete();
+  }
+}
+
+/**
+ * Améliore l'image - Mode Couleur (Denoise + Sharpen)
+ */
+export function enhanceColor(imageData) {
+  if (!isOpenCvReady()) return imageData;
+
+  const cv = window.cv;
+  let src = null;
+  let dst = null;
+
+  try {
+    src = cv.matFromImageData(imageData);
+    dst = new cv.Mat();
+
+    // Convertir en RGB
+    cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+
+    // Denoising (peut être lent en JS, on utilise un flou bilatéral léger à la place)
+    // cv.bilateralFilter(src, dst, 9, 75, 75); // Trop lent en WASM souvent
+
+    // Simple Sharpening kernel
+    const kernel = cv.matFromArray(3, 3, cv.CV_32F, [
+      0, -1, 0,
+      -1, 5, -1,
+      0, -1, 0
+    ]);
+
+    cv.filter2D(src, dst, -1, kernel);
+    kernel.delete();
+
+    // Retour en RGBA
+    const rgbaDst = new cv.Mat();
+    cv.cvtColor(dst, rgbaDst, cv.COLOR_RGB2RGBA, 0);
+
+    const imgData = new ImageData(
+      new Uint8ClampedArray(rgbaDst.data),
+      rgbaDst.cols,
+      rgbaDst.rows
+    );
+
+    rgbaDst.delete();
+    return imgData;
+
+  } catch (err) {
+    console.error('Enhance Color error:', err);
+    return imageData;
+  } finally {
+    if (src) src.delete();
+    if (dst) dst.delete();
+  }
+}
+
+/**
+ * Retourne les coins par défaut (toute l'image avec marge)
  */
 function getDefaultCorners(width, height) {
-  const margin = 20;
+  const margin = Math.min(width, height) * 0.1;
   return [
     { x: margin, y: margin },
     { x: width - margin, y: margin },
@@ -190,166 +352,11 @@ function getDefaultCorners(width, height) {
 }
 
 /**
- * Applique une transformation de perspective pour redresser le document
- */
-export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = 1000, outputHeight = 1414) {
-  const ctx = canvas.getContext('2d');
-  const sourceImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  // Coins de destination (rectangle A4)
-  const destCorners = [
-    { x: 0, y: 0 },
-    { x: outputWidth, y: 0 },
-    { x: outputWidth, y: outputHeight },
-    { x: 0, y: outputHeight }
-  ];
-
-  // Calculer la matrice de transformation
-  const matrix = getPerspectiveTransform(sourceCorners, destCorners);
-
-  // Créer le canvas de sortie
-  const outputCanvas = document.createElement('canvas');
-  outputCanvas.width = outputWidth;
-  outputCanvas.height = outputHeight;
-  const outputCtx = outputCanvas.getContext('2d');
-  const outputData = outputCtx.createImageData(outputWidth, outputHeight);
-
-  // Appliquer la transformation
-  for (let y = 0; y < outputHeight; y++) {
-    for (let x = 0; x < outputWidth; x++) {
-      const sourcePoint = applyMatrix(matrix, { x, y });
-
-      if (sourcePoint.x >= 0 && sourcePoint.x < canvas.width &&
-          sourcePoint.y >= 0 && sourcePoint.y < canvas.height) {
-        const sx = Math.floor(sourcePoint.x);
-        const sy = Math.floor(sourcePoint.y);
-        const sourceIdx = (sy * canvas.width + sx) * 4;
-        const destIdx = (y * outputWidth + x) * 4;
-
-        outputData.data[destIdx] = sourceImage.data[sourceIdx];
-        outputData.data[destIdx + 1] = sourceImage.data[sourceIdx + 1];
-        outputData.data[destIdx + 2] = sourceImage.data[sourceIdx + 2];
-        outputData.data[destIdx + 3] = 255;
-      }
-    }
-  }
-
-  outputCtx.putImageData(outputData, 0, 0);
-  return outputCanvas;
-}
-
-/**
- * Calcule la matrice de transformation perspective
- */
-function getPerspectiveTransform(src, dst) {
-  // Implémentation simplifiée de la transformation perspective inverse
-  // Pour mapper dst -> src
-
-  const A = [];
-  const b = [];
-
-  for (let i = 0; i < 4; i++) {
-    A.push([
-      src[i].x, src[i].y, 1, 0, 0, 0, -dst[i].x * src[i].x, -dst[i].x * src[i].y
-    ]);
-    A.push([
-      0, 0, 0, src[i].x, src[i].y, 1, -dst[i].y * src[i].x, -dst[i].y * src[i].y
-    ]);
-    b.push(dst[i].x);
-    b.push(dst[i].y);
-  }
-
-  // Résoudre le système (version simplifiée)
-  // Retourne une matrice d'identité pour l'instant
-  return {
-    a: 1, b: 0, c: 0,
-    d: 0, e: 1, f: 0,
-    g: 0, h: 0
-  };
-}
-
-/**
- * Applique une matrice de transformation à un point
- */
-function applyMatrix(matrix, point) {
-  const w = matrix.g * point.x + matrix.h * point.y + 1;
-  return {
-    x: (matrix.a * point.x + matrix.b * point.y + matrix.c) / w,
-    y: (matrix.d * point.x + matrix.e * point.y + matrix.f) / w
-  };
-}
-
-/**
- * Améliore l'image - Mode Noir & Blanc (high contrast)
- */
-export function enhanceBlackAndWhite(imageData, threshold = 128) {
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    const value = gray > threshold ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = value;
-  }
-
-  return imageData;
-}
-
-/**
- * Améliore l'image - Mode Couleur (contraste augmenté)
- */
-export function enhanceColor(imageData, contrast = 1.5, brightness = 10) {
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));
-    data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness));
-    data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness));
-  }
-
-  return imageData;
-}
-
-/**
- * Améliore l'image - Mode Gris (document texte)
- */
-export function enhanceGrayscale(imageData) {
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    // Augmenter le contraste
-    const enhanced = Math.min(255, Math.max(0, (gray - 128) * 1.3 + 128));
-    data[i] = data[i + 1] = data[i + 2] = enhanced;
-  }
-
-  return imageData;
-}
-
-/**
- * Détecte automatiquement le meilleur mode pour le document
+ * Détecte automatiquement le meilleur mode
  */
 export function detectBestMode(imageData) {
-  const data = imageData.data;
-  let colorVariance = 0;
-  let totalPixels = data.length / 4;
-
-  // Calculer la variance de couleur
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const variance = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
-    colorVariance += variance;
-  }
-
-  const avgVariance = colorVariance / totalPixels;
-
-  // Si variance faible = document noir & blanc ou texte
-  if (avgVariance < 20) {
-    return 'bw';
-  } else if (avgVariance < 50) {
-    return 'gray';
-  } else {
-    return 'color';
-  }
+  // Logique simple basée sur la saturation
+  // Si saturation moyenne faible -> BW ou Gray
+  // Sinon -> Color
+  return 'bw'; // Par défaut pour les documents administratifs
 }
