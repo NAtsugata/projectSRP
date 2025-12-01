@@ -2,7 +2,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { interventionService } from '../lib/supabase';
+import { interventionService, supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { buildSanitizedReport } from '../utils/reportHelpers';
@@ -19,7 +19,7 @@ const InterventionDetailViewContainer = () => {
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
             console.log('🔍 Fetching intervention:', interventionId);
-            const { data, error } = await interventionService.supabase
+            const { data, error } = await supabase
                 .from('interventions')
                 .select('*')
                 .eq('id', interventionId)
