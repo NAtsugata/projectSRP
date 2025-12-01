@@ -123,7 +123,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } else {
       // Détecter avec OpenCV
       return await documentDetectorUtils.detectDocument(file, {
-        minArea: 0.08,
+        minArea: 0.05,
         autoTransform: false,
         drawContours: false,
         ...options
@@ -175,11 +175,16 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       try {
         // Capturer une frame du flux vidéo
+        // OPTIMISATION: Réduire la résolution pour la détection (plus rapide + moins de bruit)
+        const detectionWidth = 640;
+        const scaleFactor = video.videoWidth / detectionWidth;
+        const detectionHeight = video.videoHeight / scaleFactor;
+
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
+        tempCanvas.width = detectionWidth;
+        tempCanvas.height = detectionHeight;
         const ctx = tempCanvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
+        ctx.drawImage(video, 0, 0, detectionWidth, detectionHeight);
 
         // Convertir en blob
         const blob = await new Promise(resolve => {
@@ -230,9 +235,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
               sumX += detection.contour[i].x;
               sumY += detection.contour[i].y;
             });
+            // Les coordonnées sont déjà en pixels de l'image de détection (640px de large)
+            // Il faut les convertir en pourcentage pour l'affichage overlay
             smoothedCorners.push({
-              x: sumX / successfulDetections.length,
-              y: sumY / successfulDetections.length
+              x: (sumX / successfulDetections.length) / detectionWidth * 100,
+              y: (sumY / successfulDetections.length) / detectionHeight * 100
             });
           }
 
@@ -396,39 +403,29 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setOriginalImage(imgUrl);
 
       // 2. Détection des bords (OpenCV via documentScanner.js ou YOLO)
-      // On utilise directement l'image du canvas pour éviter les conversions inutiles
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      // On utilise une version réduite pour la détection (comme en live) pour la performance
+      const detectionWidth = 800; // Un peu plus grand que le live pour la précision finale
+      const scaleFactor = canvas.width / detectionWidth;
+      const detectionHeight = canvas.height / scaleFactor;
 
-      // Essayer d'abord avec le détecteur configuré (YOLO ou OpenCV)
-      // Si OpenCV est le détecteur, on utilise notre nouvelle fonction optimisée
+      const detectionCanvas = document.createElement('canvas');
+      detectionCanvas.width = detectionWidth;
+      detectionCanvas.height = detectionHeight;
+      detectionCanvas.getContext('2d').drawImage(canvas, 0, 0, detectionWidth, detectionHeight);
+
+      const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/jpeg', 0.8));
+      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+
+      const result = await detectDocumentWithCurrentDetector(file);
 
       let cornersData = null;
 
-      if (detectorType === 'yolo' && yoloModelLoaded) {
-        // ... (YOLO logic existing)
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg'));
-        const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
-        const result = await detectDocumentWithCurrentDetector(file);
-        if (result.detected && result.contour) {
-          cornersData = result.contour.map(point => ({
-            x: (point.x / canvas.width) * 100,
-            y: (point.y / canvas.height) * 100
-          }));
-        }
-      }
-
-      // Fallback ou OpenCV direct
-      if (!cornersData) {
-        // Utiliser notre nouvelle fonction OpenCV optimisée
-        const { detectDocumentEdges } = require('../utils/documentScanner');
-        const corners = detectDocumentEdges(imageData);
-
-        if (corners) {
-          cornersData = corners.map(point => ({
-            x: (point.x / canvas.width) * 100,
-            y: (point.y / canvas.height) * 100
-          }));
-        }
+      if (result.detected && result.contour) {
+        // Convertir les coordonnées de détection (pixels réduits) en pourcentages
+        cornersData = result.contour.map(point => ({
+          x: (point.x / detectionWidth) * 100,
+          y: (point.y / detectionHeight) * 100
+        }));
       }
 
       if (cornersData) {

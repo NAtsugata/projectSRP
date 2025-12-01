@@ -103,14 +103,14 @@ const findDocumentContour = (contours, imageArea, minArea = 0.1) => {
     }
 
     // Approximate the contour to a polygon
-    // Utiliser une tolérance plus élevée (0.03 au lieu de 0.02) pour être plus flexible
+    // Utiliser une tolérance plus élevée (0.05 au lieu de 0.03) pour être plus flexible
     const perimeter = getContourPerimeter(contour);
     const approx = new window.cv.Mat();
-    window.cv.approxPolyDP(contour, approx, 0.03 * perimeter, true);
+    window.cv.approxPolyDP(contour, approx, 0.05 * perimeter, true);
 
     // Check if the approximated contour has 4 points (quadrilateral)
     // Accepter aussi 5 ou 6 points si l'aire est grande (souvent causé par des coins légèrement arrondis)
-    const isQuadrilateral = approx.rows === 4 || (approx.rows >= 5 && approx.rows <= 6 && area > maxArea);
+    const isQuadrilateral = approx.rows === 4 || (approx.rows >= 5 && approx.rows <= 8 && area > maxArea);
 
     if (isQuadrilateral && area > maxArea) {
       // Si on a plus de 4 points, les réduire à 4 en prenant les coins extrêmes
@@ -300,13 +300,14 @@ export const detectDocument = async (input, options = {}) => {
       const ksize = new window.cv.Size(5, 5);
       window.cv.GaussianBlur(gray, blurred, ksize, 0);
 
-      // Detect edges using Canny avec des seuils plus bas pour plus de sensibilité
-      window.cv.Canny(blurred, edges, 30, 100);
+      // Detect edges using Canny avec des seuils TRES bas pour capter le moindre bord
+      // 30/100 était trop strict. 10/50 permet de voir des bords faibles.
+      window.cv.Canny(blurred, edges, 10, 50);
 
-      // Dilater les bords pour mieux connecter les contours
+      // Dilater les bords pour mieux connecter les contours (plus agressif)
       const kernel = window.cv.getStructuringElement(
         window.cv.MORPH_RECT,
-        new window.cv.Size(3, 3)
+        new window.cv.Size(5, 5) // 3x3 -> 5x5 pour mieux fermer les trous
       );
       window.cv.dilate(edges, dilated, kernel);
 
@@ -323,10 +324,12 @@ export const detectDocument = async (input, options = {}) => {
 
       // Find document contour
       const imageArea = src.rows * src.cols;
-      console.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * minArea} (${minArea * 100}%)`);
+      // Réduire minArea à 5% (0.05) au lieu de 10%
+      const effectiveMinArea = minArea < 0.1 ? minArea : 0.05;
+      console.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * effectiveMinArea} (${effectiveMinArea * 100}%)`);
       console.log(`[Scanner Debug] Total contours found: ${contours.size()}`);
 
-      const documentContour = findDocumentContour(contours, imageArea, minArea);
+      const documentContour = findDocumentContour(contours, imageArea, effectiveMinArea);
 
       if (documentContour) {
         console.log(`[Scanner Debug] Best contour found with ${documentContour.rows} points`);
