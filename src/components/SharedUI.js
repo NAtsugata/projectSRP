@@ -44,28 +44,28 @@ export const FileTextIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width=
 // --- Icônes supplémentaires manquantes ---
 export const PaperPlaneIcon = ({ width = 20, height = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 2L11 13"/>
-    <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+    <path d="M22 2L11 13" />
+    <path d="M22 2l-7 20-4-9-9-4 20-7z" />
   </svg>
 );
 export const CheckCircle2Icon = ({ width = 20, height = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M9 12l2 2 4-4"/>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9 12l2 2 4-4" />
   </svg>
 );
 export const MicIcon = ({ width = 20, height = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-    <path d="M19 10a7 7 0 0 1-14 0"/>
-    <line x1="12" y1="19" x2="12" y2="23"/>
-    <line x1="8" y1="23" x2="16" y2="23"/>
+    <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <path d="M19 10a7 7 0 0 1-14 0" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
   </svg>
 );
 export const StopCircleIcon = ({ width = 20, height = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <rect x="9" y="9" width="6" height="6" rx="1" ry="1"/>
+    <circle cx="12" cy="12" r="10" />
+    <rect x="9" y="9" width="6" height="6" rx="1" ry="1" />
   </svg>
 );
 
@@ -164,8 +164,8 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
             files: files,
             value: event.target.value
           },
-          preventDefault: () => {},
-          stopPropagation: () => {}
+          preventDefault: () => { },
+          stopPropagation: () => { }
         };
 
         console.log('📤 Appel onChange avec', fileArray.length, 'fichier(s)');
@@ -188,7 +188,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
 
   const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); if (!isMobile && !disabled) setIsDragOver(true); };
   const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); };
-  const handleDragOver  = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
   const handleDrop = (e) => {
     e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
     if (disabled || isMobile) return; const files = e.dataTransfer.files;
@@ -243,7 +243,7 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
         }}
       >
         <input {...inputAttributes} />
-        {!disabled && (<>{multiple ? <FileIcon/> : <CameraIcon/>}</>)}
+        {!disabled && (<>{multiple ? <FileIcon /> : <CameraIcon />}</>)}
         <span style={{ flexGrow: 1, minWidth: 0, wordWrap: 'break-word' }}>{children}</span>
       </label>
     </div>
@@ -344,5 +344,13 @@ export const TagIcon = ({ size = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
     <line x1="7" y1="7" x2="7.01" y2="7"></line>
+  </svg>
+);
+
+export const MenuIcon = ({ size = 24, className = '' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
   </svg>
 );
