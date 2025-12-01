@@ -223,65 +223,34 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
 
-  // États pour les statistiques (chargées via vues matérialisées ou fallback)
-  const [stats, setStats] = useState({
-    pending: { count: 0, total: 0 },
-    approved: { count: 0, total: 0 },
-    paid: { count: 0, total: 0 },
-    rejected: { count: 0, total: 0 }
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // Charger les statistiques (avec vues matérialisées si disponibles)
-  useEffect(() => {
-    const loadStats = async () => {
-      if (!profile || !profile.id) return;
-
-      setStatsLoading(true);
-      try {
-        const { data, error } = await expenseStatsService.getUserStats(profile.id);
-
-        if (error) {
-          console.error('Erreur chargement stats utilisateur:', error);
-          // Fallback client-side
-          console.log('⚠️ Utilisation du fallback client pour les stats');
-          console.log('📋 Liste des dépenses pour stats:', expenses.map(e => ({ id: e.id, status: e.status, is_paid: e.is_paid, amount: e.amount })));
-
-          const pending = expenses.filter(e => e.status === 'pending');
-          const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
-          const paid = expenses.filter(e => e.is_paid);
-          const rejected = expenses.filter(e => e.status === 'rejected');
-
-          const totalAmount = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-
-          setStats({
-            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
-            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
-            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
-            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
-            total: totalAmount
-          });
-        } else if (data) {
-          // Calculer le total global
-          const totalAmount = (data.pending?.total || 0) + (data.approved?.total || 0) + (data.paid?.total || 0) + (data.rejected?.total || 0);
-
-          setStats({
-            pending: data.pending || { count: 0, total: 0 },
-            approved: data.approved || { count: 0, total: 0 },
-            paid: data.paid || { count: 0, total: 0 },
-            rejected: data.rejected || { count: 0, total: 0 },
-            total: totalAmount
-          });
-        }
-      } catch (err) {
-        console.error('Erreur inattendue:', err);
-      } finally {
-        setStatsLoading(false);
-      }
+  // Calcul des statistiques directement depuis les données chargées
+  // Cela garantit la cohérence avec la liste affichée
+  const stats = useMemo(() => {
+    const initialStats = {
+      pending: { count: 0, total: 0 },
+      approved: { count: 0, total: 0 },
+      paid: { count: 0, total: 0 },
+      rejected: { count: 0, total: 0 },
+      total: 0
     };
 
-    loadStats();
-  }, [expenses, profile]);
+    return expenses.reduce((acc, expense) => {
+      const amount = Number(expense.amount) || 0;
+      acc.total += amount;
+
+      if (expense.is_paid) {
+        acc.paid.count++;
+        acc.paid.total += amount;
+      } else {
+        const status = expense.status || 'pending';
+        if (acc[status]) {
+          acc[status].count++;
+          acc[status].total += amount;
+        }
+      }
+      return acc;
+    }, initialStats);
+  }, [expenses]);
 
   // Filtrage des expenses
   const filteredExpenses = useMemo(() => {
