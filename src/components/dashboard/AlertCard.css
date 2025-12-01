@@ -1,113 +1,136 @@
-/* src/components/dashboard/AlertCard.css */
+/* src/components/dashboard/AlertCard.css - Dark Mode */
 
 .alert-card {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid;
-  position: relative;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border-left: 4px solid;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
 }
 
-.alert-card-icon {
-  flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-top: 0.125rem;
-}
-
-.alert-card-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.alert-card-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.alert-card-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.alert-card-message {
-  font-size: 0.875rem;
-  margin: 0;
-  line-height: 1.5;
-  opacity: 0.9;
-}
-
-.alert-card-action {
-  margin-top: 0.5rem;
-}
-
-.alert-card-dismiss {
-  flex-shrink: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s ease;
-  margin-top: 0.125rem;
-}
-
-.alert-card-dismiss:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.alert-card-dismiss:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+.alert-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateX(4px);
+  background: rgba(30, 41, 59, 0.7);
 }
 
 /* Variants */
-.alert-card-info {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
-}
-
 .alert-card-warning {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  border-left-color: #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
 }
 
 .alert-card-danger {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  border-left-color: #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+.alert-card-info {
+  border-left-color: #3b82f6;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
 }
 
 .alert-card-success {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  border-left-color: #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+/* Icon */
+.alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+}
+
+.alert-icon-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.alert-icon-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.alert-icon-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.alert-icon-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.alert-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Content */
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 0.25rem 0;
+}
+
+.alert-message {
+  font-size: 0.875rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Action Link/Button */
+.alert-action-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.alert-action-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Responsive */
 @media (max-width: 640px) {
   .alert-card {
-    padding: 0.875rem;
+    padding: 1rem;
   }
 
-  .alert-card-title {
-    font-size: 0.875rem;
+  .alert-icon {
+    width: 2rem;
+    height: 2rem;
   }
 
-  .alert-card-message {
-    font-size: 0.8125rem;
+  .alert-icon svg {
+    width: 1rem;
+    height: 1rem;
   }
 }
