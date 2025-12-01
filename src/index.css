@@ -1,65 +1,105 @@
-  }
+/* ============================================
+   PORTAIL SRP - Main Stylesheet
+   Ordre d'import important pour la cascade CSS
+   ============================================ */
 
-  body {
-    margin: 0;
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    line-height: var(--leading-normal);
-    color: var(--text-primary);
-    background-color: var(--bg-app);
-    overflow-x: hidden;
-    min-height: 100vh;
-  }
+/* 1. Design System - Variables et fondations */
+@import './styles/design-system.css';
 
-  /* ==================== FOCUS MANAGEMENT ==================== */
-  :focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-  }
+/* 1b. Dark Theme - Global Overrides */
+@import './styles/dark-theme.css';
 
-  :focus:not(:focus-visible) {
-    outline: none;
-  }
+/* 2. Animations - Keyframes et transitions */
+@import './styles/animations.css';
 
-  /* ==================== SMOOTH SCROLLING ==================== */
-  @media (prefers-reduced-motion: no-preference) {
-    html {
-      scroll-behavior: smooth;
-    }
-  }
+/* 3. Components - Composants UI réutilisables */
+@import './styles/components.css';
 
-  /* ==================== SELECTION STYLING ==================== */
-  ::selection {
-    background: var(--color-primary-200);
-    color: var(--color-primary-900);
-  }
+/* 4. Mobile Optimizations - Touch-friendly & Performance */
+@import './styles/mobile-optimizations.css';
 
-  ::-moz-selection {
-    background: var(--color-primary-200);
-    color: var(--color-primary-900);
-  }
+/* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
+/* @import './styles/mobile-fixes.css'; */
 
-  /* ==================== SCROLLBAR STYLING ==================== */
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
+/* 6. Mobile Copper - Design cuivré/laiton élégant (DOIT être en dernier pour override) */
+/* @import './styles/mobile-copper.css'; */
 
-  ::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-  }
+/* ==================== RESET & BASE ==================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-gray-300);
-    border-radius: var(--radius-full);
-  }
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gray-400);
-  }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--bg-app);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
 
-  /* Firefox scrollbar */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-gray-300) var(--bg-secondary);
+/* ==================== FOCUS MANAGEMENT ==================== */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ==================== SMOOTH SCROLLING ==================== */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
+}
+
+/* ==================== SELECTION STYLING ==================== */
+::selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+::-moz-selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+/* ==================== SCROLLBAR STYLING ==================== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) var(--bg-secondary);
+}
