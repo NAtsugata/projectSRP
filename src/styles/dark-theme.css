@@ -1,147 +1,227 @@
+/* ============================================
+   GLOBAL DARK THEME SYSTEM
+   Overrides standard variables for full app dark mode
+   ============================================ */
+
+:root {
+    /* ==================== PREMIUM COLOR OVERRIDES ==================== */
+
+    /* Backgrounds - Midnight Blue Theme */
+    --bg-app: #0f172a;
+    /* Slate 900 - Deep, rich background */
+    --bg-primary: #1e293b;
+    /* Slate 800 - Lighter for cards */
+    --bg-secondary: #334155;
+    /* Slate 700 - Inputs, secondary elements */
+    --bg-tertiary: #475569;
+    /* Slate 600 - Hover states */
+
+    /* Text Colors - High Contrast */
+    --text-primary: #f8fafc;
+    /* Slate 50 - Almost white */
+    --text-secondary: #cbd5e1;
+    /* Slate 300 - Clear secondary text */
+    --text-tertiary: #94a3b8;
+    /* Slate 400 - Muted text */
+    --text-muted: #64748b;
+    /* Slate 500 - Disabled/Very muted */
+    --text-inverse: #0f172a;
+    /* Dark text for light backgrounds */
+
+    /* Borders - Subtle & Refined */
+    --border-color: rgba(148, 163, 184, 0.15);
+    --border-color-light: rgba(148, 163, 184, 0.1);
+    --border-color-dark: rgba(148, 163, 184, 0.25);
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+    --border-radius-xl: 24px;
+
+    /* Brand Colors - Vibrant & Glowing */
+    --color-primary-50: rgba(99, 102, 241, 0.1);
+    --color-primary-100: rgba(99, 102, 241, 0.2);
+    --color-primary-500: #6366f1;
+    /* Indigo 500 */
+    --color-primary-600: #818cf8;
+    /* Indigo 400 - Lighter for dark mode */
+    --color-primary-glow: rgba(99, 102, 241, 0.5);
+
+    --color-secondary-50: rgba(236, 72, 153, 0.1);
+    --color-secondary-100: rgba(236, 72, 153, 0.2);
+    --color-secondary-500: #ec4899;
+    /* Pink 500 */
+    --color-secondary-glow: rgba(236, 72, 153, 0.5);
+
+    /* Status Colors - Pastel/Neon for Dark Mode */
+    --color-success: #4ade80;
+    /* Green 400 */
+    --color-warning: #fbbf24;
+    /* Amber 400 */
+    --color-danger: #f87171;
+    /* Red 400 */
+    --color-info: #38bdf8;
+    /* Sky 400 */
+
+    /* Shadows - Soft & Deep */
+    --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.3);
+}
+
+/* ==================== GLOBAL COMPONENT OVERRIDES ==================== */
+
+/* Apply to main background */
+body {
     background-color: var(--bg-app);
     color: var(--text-primary);
-    }
+}
 
-    /* Common Card Styles for Dark Mode */
-    .card,
-    .card-white,
-    .bg-white,
-    .admin-planning-view .planning-form-section {
-        background: rgba(30, 41, 59, 0.7) !important;
-        backdrop-filter: blur(12px) !important;
-        border: 1px solid var(--border-color) !important;
-        box-shadow: var(--shadow-md) !important;
-        color: var(--text-primary) !important;
-    }
+/* Common Card Styles for Dark Mode */
+.card,
+.card-white,
+.bg-white,
+.admin-planning-view .planning-form-section {
+    background: rgba(30, 41, 59, 0.7) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-md) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--border-radius-lg) !important;
+}
 
-    /* Input Fields */
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="date"],
-    input[type="number"],
-    input[type="search"],
-    select,
-    textarea,
-    .form-input,
-    .form-select,
-    .form-textarea {
-        background-color: rgba(15, 23, 42, 0.6) !important;
-        border: 1px solid var(--border-color) !important;
-        color: var(--text-primary) !important;
-    }
+/* Input Fields */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+input[type="search"],
+select,
+textarea,
+.form-input,
+.form-select,
+.form-textarea {
+    background-color: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--border-radius-sm) !important;
+}
 
-    input::placeholder,
-    textarea::placeholder {
-        color: var(--text-tertiary) !important;
-    }
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-tertiary) !important;
+}
 
-    input:focus,
-    select:focus,
-    textarea:focus {
-        border-color: var(--color-primary-500) !important;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
-        outline: none;
-    }
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--color-primary-500) !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+    outline: none;
+}
 
-    /* Headings */
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        color: var(--text-primary) !important;
-    }
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--text-primary) !important;
+}
 
-    /* Subtext */
-    p,
-    span,
-    label {
-        color: var(--text-secondary);
-    }
+/* Subtext */
+p,
+span,
+label {
+    color: var(--text-secondary);
+}
 
-    .text-gray-500,
-    .text-gray-600,
-    .text-gray-700 {
-        color: var(--text-secondary) !important;
-    }
+.text-gray-500,
+.text-gray-600,
+.text-gray-700 {
+    color: var(--text-secondary) !important;
+}
 
-    .text-gray-900,
-    .text-gray-800 {
-        color: var(--text-primary) !important;
-    }
+.text-gray-900,
+.text-gray-800 {
+    color: var(--text-primary) !important;
+}
 
-    /* Buttons */
-    .btn-primary {
-        background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700)) !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
-    }
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700)) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+    border-radius: var(--border-radius-sm) !important;
+}
 
-    .btn-secondary,
-    .btn-white {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-color) !important;
-    }
+.btn-secondary,
+.btn-white {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--border-radius-sm) !important;
+}
 
-    .btn-secondary:hover,
-    .btn-white:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-    }
+.btn-secondary:hover,
+.btn-white:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
 
-    /* Tables */
-    table {
-        border-color: var(--border-color) !important;
-    }
+/* Tables */
+table {
+    border-color: var(--border-color) !important;
+}
 
-    th {
-        background-color: rgba(15, 23, 42, 0.8) !important;
-        color: var(--text-secondary) !important;
-        border-bottom: 1px solid var(--border-color) !important;
-    }
+th {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
 
-    td {
-        border-bottom: 1px solid var(--border-color) !important;
-        color: var(--text-primary) !important;
-    }
+td {
+    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
 
-    tr:hover td {
-        background-color: rgba(99, 102, 241, 0.05) !important;
-    }
+tr:hover td {
+    background-color: rgba(99, 102, 241, 0.05) !important;
+}
 
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
 
-    ::-webkit-scrollbar-track {
-        background: var(--bg-app);
-    }
+::-webkit-scrollbar-track {
+    background: var(--bg-app);
+}
 
-    ::-webkit-scrollbar-thumb {
-        background: var(--bg-tertiary);
-        border-radius: 4px;
-    }
+::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
 
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--text-tertiary);
-    }
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
 
-    /* Specific Page Overrides */
-    .admin-planning-view {
-        background-color: var(--bg-app);
-    }
+/* Specific Page Overrides */
+.admin-planning-view {
+    background-color: var(--bg-app);
+}
 
-    .planning-header {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)) !important;
-        border: 1px solid var(--border-color) !important;
-    }
+.planning-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--border-radius-lg) !important;
+}
 
-    .section-title {
-        color: var(--text-primary) !important;
-        border-bottom-color: var(--border-color) !important;
-    }
+.section-title {
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
