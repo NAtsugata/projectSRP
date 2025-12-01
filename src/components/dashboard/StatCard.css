@@ -1,27 +1,28 @@
-/* src/components/dashboard/StatCard.css - Dark Mode Fixed */
+/* src/components/dashboard/StatCard.css - Dark Mode Fixed & High Visibility */
 
 .stat-card {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
-  background: rgba(15, 23, 42, 0.6) !important;
-  /* Force dark background */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.85) !important;
+  /* Darker background for contrast */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  min-height: 100px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  min-height: 90px;
 }
 
 /* Glow effect on hover */
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  background: rgba(30, 41, 59, 0.95) !important;
 }
 
 /* Icon Container */
@@ -40,6 +41,7 @@
   width: 1.75rem;
   height: 1.75rem;
   color: #ffffff;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 /* Content */
@@ -48,109 +50,117 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  justify-content: center;
 }
 
 .stat-card-value {
-  font-size: 1.875rem;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
   color: #ffffff !important;
+  /* Pure white */
   margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .stat-card-label {
-  font-size: 0.875rem;
-  color: #94a3b8 !important;
+  font-size: 0.9rem;
+  color: #e2e8f0 !important;
+  /* Very light gray/white for readability */
   margin: 0;
   font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  /* Shadow to pop against any background */
 }
 
-/* Variants - Matching the Reference Image */
+/* Variants - Matching the Reference Image EXACTLY */
 
 /* Primary (Blue) - Interventions Planifiées */
 .stat-card-primary {
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15), inset 0 0 20px rgba(59, 130, 246, 0.05) !important;
 }
 
 .stat-card-primary .stat-card-icon {
-  background: rgba(59, 130, 246, 0.2);
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(59, 130, 246, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
 
 .stat-card-primary:hover {
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(59, 130, 246, 0.1) !important;
 }
 
 /* Danger (Red) - Urgentes / Aujourd'hui */
 .stat-card-danger {
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.15), inset 0 0 20px rgba(239, 68, 68, 0.05) !important;
 }
 
 .stat-card-danger .stat-card-icon {
-  background: rgba(239, 68, 68, 0.2);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.1));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
 }
 
 .stat-card-danger:hover {
-  border-color: rgba(239, 68, 68, 0.6);
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.3), inset 0 0 10px rgba(239, 68, 68, 0.1) !important;
 }
 
 /* Success (Green) - Terminées / Approuvés */
 .stat-card-success {
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15), inset 0 0 20px rgba(16, 185, 129, 0.05) !important;
 }
 
 .stat-card-success .stat-card-icon {
-  background: rgba(16, 185, 129, 0.2);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
 }
 
 .stat-card-success:hover {
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  border-color: #10b981 !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1) !important;
 }
 
 /* Secondary (Gray) - Demandes de congés */
 .stat-card-secondary {
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  box-shadow: 0 0 15px rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.5) !important;
+  box-shadow: 0 0 15px rgba(148, 163, 184, 0.15), inset 0 0 20px rgba(148, 163, 184, 0.05) !important;
 }
 
 .stat-card-secondary .stat-card-icon {
-  background: rgba(148, 163, 184, 0.2);
-  box-shadow: 0 0 10px rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0.1));
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 0 15px rgba(148, 163, 184, 0.3);
 }
 
 .stat-card-secondary:hover {
-  border-color: rgba(148, 163, 184, 0.6);
-  box-shadow: 0 0 20px rgba(148, 163, 184, 0.2);
+  border-color: #94a3b8 !important;
+  box-shadow: 0 0 25px rgba(148, 163, 184, 0.3), inset 0 0 10px rgba(148, 163, 184, 0.1) !important;
 }
 
-/* Warning (Orange) - Fallback */
+/* Fallbacks */
 .stat-card-warning {
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
 }
 
 .stat-card-warning .stat-card-icon {
   background: rgba(245, 158, 11, 0.2);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
 }
 
-/* Info (Cyan) - Fallback */
 .stat-card-info {
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.5) !important;
 }
 
 .stat-card-info .stat-card-icon {
   background: rgba(6, 182, 212, 0.2);
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+  color: #06b6d4;
 }
 
 /* Responsive */
@@ -158,6 +168,7 @@
   .stat-card {
     padding: 1rem;
     min-height: auto;
+    margin-bottom: 0.75rem;
   }
 
   .stat-card-icon {
@@ -165,7 +176,16 @@
     height: 3rem;
   }
 
+  .stat-card-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
   .stat-card-value {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+  }
+
+  .stat-card-label {
+    font-size: 0.85rem;
   }
 }
