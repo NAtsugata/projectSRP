@@ -85,11 +85,13 @@ export const getUserStats = async (userId = null) => {
     }
 
     // Transformer en format attendu
+    // Transformer en format attendu
     const stats = {
       pending: { count: 0, total: 0 },
       approved: { count: 0, total: 0 },
       paid: { count: 0, total: 0 },
       rejected: { count: 0, total: 0 },
+      total: 0,
       lastExpenseDate: null
     };
 
@@ -105,6 +107,9 @@ export const getUserStats = async (userId = null) => {
             stats[status].total += Number(row.total_amount);
           }
         }
+
+        // Ajouter au total global
+        stats.total += Number(row.total_amount);
 
         // Garder la date la plus récente
         if (row.last_expense_date) {
@@ -252,12 +257,14 @@ const getGlobalStatsFallback = async () => {
       pending: { count: 0, total: 0 },
       approved: { count: 0, total: 0 },
       paid: { count: 0, total: 0 },
-      rejected: { count: 0, total: 0 }
+      rejected: { count: 0, total: 0 },
+      total: 0
     };
 
     if (expenses && Array.isArray(expenses)) {
       expenses.forEach(expense => {
         const amount = Number(expense.amount) || 0;
+        stats.total += amount;
 
         if (expense.is_paid) {
           stats.paid.count++;
@@ -302,12 +309,14 @@ const getUserStatsFallback = async (userId) => {
       approved: { count: 0, total: 0 },
       paid: { count: 0, total: 0 },
       rejected: { count: 0, total: 0 },
+      total: 0,
       lastExpenseDate: null
     };
 
     if (expenses && Array.isArray(expenses)) {
       expenses.forEach(expense => {
         const amount = Number(expense.amount) || 0;
+        stats.total += amount;
 
         if (expense.is_paid) {
           stats.paid.count++;

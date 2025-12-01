@@ -244,23 +244,33 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         if (error) {
           console.error('Erreur chargement stats utilisateur:', error);
           // Fallback client-side
+          console.log('⚠️ Utilisation du fallback client pour les stats');
+          console.log('📋 Liste des dépenses pour stats:', expenses.map(e => ({ id: e.id, status: e.status, is_paid: e.is_paid, amount: e.amount })));
+
           const pending = expenses.filter(e => e.status === 'pending');
           const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
           const paid = expenses.filter(e => e.is_paid);
           const rejected = expenses.filter(e => e.status === 'rejected');
 
+          const totalAmount = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
           setStats({
-            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) }
+            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
+            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
+            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
+            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) },
+            total: totalAmount
           });
         } else if (data) {
+          // Calculer le total global
+          const totalAmount = (data.pending?.total || 0) + (data.approved?.total || 0) + (data.paid?.total || 0) + (data.rejected?.total || 0);
+
           setStats({
             pending: data.pending || { count: 0, total: 0 },
             approved: data.approved || { count: 0, total: 0 },
             paid: data.paid || { count: 0, total: 0 },
-            rejected: data.rejected || { count: 0, total: 0 }
+            rejected: data.rejected || { count: 0, total: 0 },
+            total: totalAmount
           });
         }
       } catch (err) {
