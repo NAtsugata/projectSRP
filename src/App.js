@@ -18,6 +18,7 @@ import { setToastFunction, overrideAlert } from './utils/alertOverride';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
 import './App.css';
+import AppLayout from './components/layout/AppLayout';
 
 // Lazy loading des Containers
 // Lazy loading des Containers
@@ -41,8 +42,7 @@ const ChecklistViewContainer = lazy(() => import('./pages/ChecklistViewContainer
 const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
 
-// Import AppLayout
-import AppLayout from './components/layout/AppLayout';
+
 
 // --- Application principale ---
 function App() {
