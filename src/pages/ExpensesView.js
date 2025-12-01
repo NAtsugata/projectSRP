@@ -15,7 +15,6 @@ import {
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { detectDocument } from '../utils/documentDetector';
 import { safeStorage } from '../utils/safeStorage';
-import * as expenseStatsService from '../services/expenseStatsService';
 
 // Modal de visualisation des justificatifs
 const ReceiptsModal = ({ receipts, onClose }) => {
