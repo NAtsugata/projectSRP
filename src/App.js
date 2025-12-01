@@ -20,6 +20,7 @@ import MobileIndicators from './components/mobile/MobileIndicators';
 import './App.css';
 
 // Lazy loading des Containers
+// Lazy loading des Containers
 const AdminDashboardContainer = lazy(() => import('./pages/AdminDashboardContainer'));
 const AdminPlanningViewContainer = lazy(() => import('./pages/AdminPlanningViewContainer'));
 const AdminLeaveViewContainer = lazy(() => import('./pages/AdminLeaveViewContainer'));
@@ -40,85 +41,8 @@ const ChecklistViewContainer = lazy(() => import('./pages/ChecklistViewContainer
 const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
 
-// --- Composant de Layout (structure de la page) ---
-const AppLayout = ({ profile, handleLogout }) => {
-  const location = useLocation();
-  const navItems = profile.is_admin
-    ? [
-      { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboardIcon /> },
-      { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
-      { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
-      { id: 'archives', label: 'Archives', icon: <ArchiveIcon /> },
-      { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
-      { id: 'users', label: 'Employés', icon: <UsersIcon /> },
-      { id: 'vault', label: 'Coffre-fort', icon: <FolderIcon /> },
-      { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
-      { id: 'checklist-templates', label: 'Checklists', icon: <CheckCircleIcon /> },
-      { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
-      { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
-    ]
-    : [
-      { id: 'planning', label: 'Planning', icon: <BriefcaseIcon /> },
-      { id: 'agenda', label: 'Agenda', icon: <CalendarIcon /> },
-      { id: 'leaves', label: 'Congés', icon: <SunIcon /> },
-      { id: 'vault', label: 'Coffre-fort', icon: <LockIcon /> },
-      { id: 'documents', label: 'Mes Documents', icon: <FileTextIcon /> },
-      { id: 'checklists', label: 'Checklists', icon: <CheckCircleIcon /> },
-      { id: 'expenses', label: 'Notes de Frais', icon: <DollarSignIcon /> },
-      { id: 'ir-docs', label: 'IR Douche', icon: <FolderIcon /> },
-    ];
-
-  return (
-    <div className="app-container">
-      {/* --- Barre de navigation pour Desktop --- */}
-      <header className="app-header desktop-nav">
-        <div className="header-content">
-          <div className="flex-center" style={{ gap: '0.75rem' }}>
-            <UserIcon />
-            <span style={{ fontWeight: 600 }}>{profile.full_name || 'Utilisateur'}</span>
-          </div>
-          <nav className="main-nav">
-            {navItems.map((item) => (
-              <Link key={item.id} to={`/${item.id}`} className={`nav-button ${location.pathname.startsWith('/' + item.id) ? 'active' : ''}`}>
-                {item.icon} <span className="nav-label">{item.label}</span>
-              </Link>
-            ))}
-            <button onClick={handleLogout} className="nav-button">
-              <LogOutIcon />
-              <span className="nav-label">Déconnexion</span>
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      {/* --- Contenu principal de la page --- */}
-      <main className="main-content">
-        <Outlet />
-      </main>
-
-      {/* --- Barre d'onglets pour Mobile --- */}
-      <footer className="mobile-nav">
-        <div className="mobile-nav-header">
-          <div className="flex-center" style={{ gap: '0.5rem' }}>
-            <UserIcon />
-            <span>{profile.full_name || 'Utilisateur'}</span>
-          </div>
-          <button onClick={handleLogout} className="btn-icon-logout">
-            <LogOutIcon />
-          </button>
-        </div>
-        <div className="mobile-nav-icons">
-          {navItems.map((item) => (
-            <Link key={item.id} to={`/${item.id}`} className={`mobile-nav-button ${location.pathname.startsWith('/' + item.id) ? 'active' : ''}`}>
-              {item.icon}
-              <span className="mobile-nav-label">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      </footer>
-    </div>
-  );
-};
+// Import AppLayout
+import AppLayout from './components/layout/AppLayout';
 
 // --- Application principale ---
 function App() {
@@ -254,19 +178,7 @@ function App() {
     <DownloadProvider>
       <ToastProvider>
         <OfflineIndicator />
-        <style>{`
-          .desktop-nav { display: none; }
-          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: #ffffff; border-top: 1px solid #e5e7eb; z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-          .mobile-nav-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; font-weight: 500; }
-          .btn-icon-logout { background: none; border: none; cursor: pointer; color: #4b5563; }
-          .mobile-nav-icons { display: flex; justify-content: space-around; align-items: center; }
-          .mobile-nav-button { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; padding: 0.5rem 0.25rem; color: #6b7280; text-decoration: none; transition: color 0.2s ease; }
-          .mobile-nav-button.active { color: #3b82f6; }
-          .mobile-nav-button svg { width: 24px; height: 24px; }
-          .mobile-nav-label { font-size: 0.7rem; margin-top: 2px; }
-          .main-content { padding-bottom: 100px; }
-          @media (min-width: 768px) { .desktop-nav { display: flex; } .mobile-nav { display: none; } .main-content { padding-bottom: 0; } }
-        `}</style>
+
 
         {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
         {modal && (
