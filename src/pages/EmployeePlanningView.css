@@ -1,151 +1,133 @@
-/* ============================================
-   EmployeePlanningView - Mobile Comfort Design
-   ============================================ */
-
-:root {
-  --comfort-bg: #f8fafc;
-  --comfort-card-bg: #ffffff;
-  --comfort-text-primary: #334155;
-  --comfort-text-secondary: #64748b;
-  --comfort-accent: #0f766e;
-  /* Teal-700 */
-  --comfort-accent-light: #ccfbf1;
-  /* Teal-100 */
-  --comfort-radius: 24px;
-  --comfort-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-}
-
-.employee-planning-view {
-  padding: var(--spacing-4);
-  max-width: 800px;
-  /* Mobile-first optimization */
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6);
   min-height: 100vh;
   background-color: var(--comfort-bg);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter',
+  system-ui,
+  -apple-system,
+  sans-serif;
   animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-/* ==================== HEADER SECTION ==================== */
-.planning-header-section {
-  padding: var(--spacing-4) var(--spacing-2);
-  margin-bottom: var(--spacing-2);
-}
-
-.planning-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--comfort-text-primary);
-  margin: 0 0 var(--spacing-2) 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.planning-subtitle {
-  font-size: 1rem;
-  color: var(--comfort-text-secondary);
-  margin: 0;
-  font-weight: 400;
-}
-
-/* ==================== INTERVENTION LIST OVERRIDES ==================== */
-/* We target the list component styles to inject our comfort design */
-.employee-planning-view .intervention-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-/* ==================== EMPTY STATE ==================== */
-.employee-planning-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12) var(--spacing-6);
-  background: var(--comfort-card-bg);
-  border-radius: var(--comfort-radius);
-  box-shadow: var(--comfort-shadow);
-  text-align: center;
-  min-height: 300px;
-  margin-top: var(--spacing-4);
-  animation: slideUp 0.5s ease-out;
-}
-
-.employee-planning-empty-icon {
-  font-size: 4rem;
-  margin-bottom: var(--spacing-4);
-  animation: float 4s ease-in-out infinite;
-}
-
-.employee-planning-empty-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--comfort-text-primary);
-  margin-bottom: var(--spacing-2);
-}
-
-.employee-planning-empty-description {
-  font-size: 0.95rem;
-  color: var(--comfort-text-secondary);
-  line-height: 1.5;
-  max-width: 280px;
-}
-
-/* ==================== ANIMATIONS ==================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
   }
 
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* ==================== LOADING ==================== */
-.loading-spinner-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12);
-}
-
-/* ==================== RESPONSIVE ==================== */
-@media (min-width: 768px) {
-  .employee-planning-view {
-    padding: var(--spacing-8);
+  /* ==================== HEADER SECTION ==================== */
+  .planning-header-section {
+    padding: var(--spacing-4) var(--spacing-2);
+    margin-bottom: var(--spacing-2);
   }
 
   .planning-title {
-    font-size: 2.25rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--comfort-text-primary);
+    margin: 0 0 var(--spacing-2) 0;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
-}
+
+  .planning-subtitle {
+    font-size: 1rem;
+    color: var(--comfort-text-secondary);
+    margin: 0;
+    font-weight: 400;
+  }
+
+  /* ==================== INTERVENTION LIST OVERRIDES ==================== */
+  /* We target the list component styles to inject our comfort design */
+  .employee-planning-view .intervention-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  /* ==================== EMPTY STATE ==================== */
+  .employee-planning-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-12) var(--spacing-6);
+    background: var(--comfort-card-bg);
+    border-radius: var(--comfort-radius);
+    box-shadow: var(--comfort-shadow);
+    text-align: center;
+    min-height: 300px;
+    margin-top: var(--spacing-4);
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .employee-planning-empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-4);
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .employee-planning-empty-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--comfort-text-primary);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .employee-planning-empty-description {
+    font-size: 0.95rem;
+    color: var(--comfort-text-secondary);
+    line-height: 1.5;
+    max-width: 280px;
+  }
+
+  /* ==================== ANIMATIONS ==================== */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* ==================== LOADING ==================== */
+  .loading-spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-12);
+  }
+
+  /* ==================== RESPONSIVE ==================== */
+  @media (min-width: 768px) {
+    .employee-planning-view {
+      padding: var(--spacing-8);
+    }
+
+    .planning-title {
+      font-size: 2.25rem;
+    }
+  }

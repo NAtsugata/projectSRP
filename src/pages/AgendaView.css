@@ -41,20 +41,49 @@
 }
 
 /* Staggered animation for each day */
-.agenda-days-list > * {
+.agenda-days-list>* {
   animation: fadeInUp 0.5s ease-out backwards;
 }
 
-.agenda-days-list > *:nth-child(1) { animation-delay: 0.05s; }
-.agenda-days-list > *:nth-child(2) { animation-delay: 0.1s; }
-.agenda-days-list > *:nth-child(3) { animation-delay: 0.15s; }
-.agenda-days-list > *:nth-child(4) { animation-delay: 0.2s; }
-.agenda-days-list > *:nth-child(5) { animation-delay: 0.25s; }
-.agenda-days-list > *:nth-child(6) { animation-delay: 0.3s; }
-.agenda-days-list > *:nth-child(7) { animation-delay: 0.35s; }
-.agenda-days-list > *:nth-child(8) { animation-delay: 0.4s; }
-.agenda-days-list > *:nth-child(9) { animation-delay: 0.45s; }
-.agenda-days-list > *:nth-child(10) { animation-delay: 0.5s; }
+.agenda-days-list>*:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.agenda-days-list>*:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.agenda-days-list>*:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.agenda-days-list>*:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.agenda-days-list>*:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.agenda-days-list>*:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.agenda-days-list>*:nth-child(7) {
+  animation-delay: 0.35s;
+}
+
+.agenda-days-list>*:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+.agenda-days-list>*:nth-child(9) {
+  animation-delay: 0.45s;
+}
+
+.agenda-days-list>*:nth-child(10) {
+  animation-delay: 0.5s;
+}
 
 /* ==================== LOADING STATE ==================== */
 .agenda-view .loading-spinner-container {
@@ -91,10 +120,9 @@
   padding: var(--spacing-12);
   gap: var(--spacing-4);
   background: linear-gradient(135deg,
-    var(--color-gray-50),
-    var(--color-primary-50),
-    var(--color-secondary-50)
-  );
+      var(--color-gray-50),
+      var(--color-primary-50),
+      var(--color-secondary-50));
   border-radius: var(--radius-2xl);
   border: 2px dashed var(--border-primary);
   margin-top: var(--spacing-6);
@@ -109,9 +137,12 @@
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-15px);
   }
@@ -161,9 +192,8 @@
   right: 0;
   height: 3px;
   background: linear-gradient(90deg,
-    var(--color-primary-500),
-    var(--color-secondary-500)
-  );
+      var(--color-primary-500),
+      var(--color-secondary-500));
 }
 
 .agenda-stat-card:hover {
@@ -196,9 +226,8 @@
   padding: var(--spacing-12);
   gap: var(--spacing-4);
   background: linear-gradient(135deg,
-    var(--color-danger-50),
-    var(--color-danger-100)
-  );
+      var(--color-danger-50),
+      var(--color-danger-100));
   border-radius: var(--radius-2xl);
   border: 2px solid var(--color-danger-300);
   margin-top: var(--spacing-6);
@@ -213,9 +242,19 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-10px);
+  }
+
+  75% {
+    transform: translateX(10px);
+  }
 }
 
 .agenda-error-title {
@@ -344,6 +383,7 @@
 
 /* High contrast mode */
 @media (prefers-contrast: high) {
+
   .agenda-view .empty-state,
   .agenda-error {
     border-width: 3px;
@@ -356,10 +396,11 @@
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   .agenda-view,
   .view-title,
   .view-title::before,
-  .agenda-days-list > *,
+  .agenda-days-list>*,
   .agenda-view .loading-spinner,
   .agenda-view .empty-state,
   .agenda-view .empty-state-icon,
@@ -407,26 +448,25 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
+/* ==================== DARK MODE SUPPORT ==================== */
 @media (prefers-color-scheme: dark) {
   .agenda-view .empty-state {
     background: linear-gradient(135deg,
-      rgba(99, 102, 241, 0.1),
-      rgba(236, 72, 153, 0.1)
-    );
-    border-color: #444;
+        var(--color-primary-50),
+        var(--color-secondary-50));
+    border-color: var(--border-color);
   }
 
   .agenda-stat-card {
-    background: #1f1f1f;
-    border-color: #444;
+    background: var(--bg-primary);
+    border-color: var(--border-color);
   }
 
   .agenda-error {
     background: linear-gradient(135deg,
-      rgba(239, 68, 68, 0.15),
-      rgba(220, 38, 38, 0.15)
-    );
-    border-color: #7f1d1d;
+        rgba(239, 68, 68, 0.15),
+        rgba(220, 38, 38, 0.15));
+    border-color: var(--color-danger-dark);
   }
 }
 
