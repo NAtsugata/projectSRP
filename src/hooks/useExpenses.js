@@ -57,7 +57,16 @@ export function useExpenses(userId = null) {
     // Mutation pour approuver une note de frais
     const approveMutation = useMutation({
         mutationFn: ({ id, comment }) => expenseService.approveExpense(id, user?.id, comment),
-        onSuccess: () => {
+        onSuccess: (response) => {
+            if (response.data) {
+                // Mettre à jour le cache local immédiatement
+                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
+                    if (!oldExpenses) return [];
+                    return oldExpenses.map(exp =>
+                        exp.id === response.data.id ? response.data : exp
+                    );
+                });
+            }
             queryClient.invalidateQueries(['expenses']);
         },
     });
@@ -65,7 +74,15 @@ export function useExpenses(userId = null) {
     // Mutation pour rejeter une note de frais
     const rejectMutation = useMutation({
         mutationFn: ({ id, comment }) => expenseService.rejectExpense(id, user?.id, comment),
-        onSuccess: () => {
+        onSuccess: (response) => {
+            if (response.data) {
+                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
+                    if (!oldExpenses) return [];
+                    return oldExpenses.map(exp =>
+                        exp.id === response.data.id ? response.data : exp
+                    );
+                });
+            }
             queryClient.invalidateQueries(['expenses']);
         },
     });
@@ -73,7 +90,15 @@ export function useExpenses(userId = null) {
     // Mutation pour marquer comme payée
     const markAsPaidMutation = useMutation({
         mutationFn: (id) => expenseService.markAsPaid(id, user?.id),
-        onSuccess: () => {
+        onSuccess: (response) => {
+            if (response.data) {
+                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
+                    if (!oldExpenses) return [];
+                    return oldExpenses.map(exp =>
+                        exp.id === response.data.id ? response.data : exp
+                    );
+                });
+            }
             queryClient.invalidateQueries(['expenses']);
         },
     });
