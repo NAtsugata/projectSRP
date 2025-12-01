@@ -435,8 +435,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         };
       });
       setLoading(false);
-    } else if (interventions.length > 0) {
-      navigate('/planning');
+    } else {
+      // Si on a reçu les données (tableau vide ou pas le bon ID) et qu'on a fini de charger côté parent
+      // On arrête le loading local pour afficher l'état vide/erreur
+      if (interventions !== undefined) {
+        setLoading(false);
+      }
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
@@ -657,7 +661,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     finally { setIsSaving(false); }
   };
 
-  if (loading || !intervention || !report) return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement…</p></div>;
+  if (loading) return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement…</p></div>;
+
+  if (!intervention || !report) return (
+    <div className="loading-container">
+      <AlertTriangleIcon className="text-danger" style={{ width: 48, height: 48, marginBottom: 16 }} />
+      <h3>Intervention introuvable</h3>
+      <p className="text-muted">Impossible de charger les détails de cette intervention.</p>
+      <button className="btn btn-primary" onClick={() => navigate('/planning')} style={{ marginTop: 16 }}>
+        Retour au planning
+      </button>
+    </div>
+  );
 
   const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;

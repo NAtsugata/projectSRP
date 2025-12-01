@@ -15,19 +15,37 @@ const InterventionDetailViewContainer = () => {
     const toast = useToast();
     const queryClient = useQueryClient();
 
-    const { data: intervention, isLoading, refetch } = useQuery({
+    const { data: intervention, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
+            console.log('🔍 Fetching intervention:', interventionId);
             const { data, error } = await interventionService.supabase
                 .from('interventions')
                 .select('*')
                 .eq('id', interventionId)
                 .single();
-            if (error) throw error;
+
+            if (error) {
+                console.error('❌ Error fetching intervention:', error);
+                throw error;
+            }
             return data;
         },
         enabled: !!interventionId,
+        retry: 1
     });
+
+    if (isError) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h3>Erreur lors du chargement de l'intervention</h3>
+                <p className="text-danger">{error?.message || 'Intervention introuvable ou accès refusé.'}</p>
+                <button className="btn btn-primary" onClick={() => navigate('/planning')}>
+                    Retour au planning
+                </button>
+            </div>
+        );
+    }
 
     // ⚙️ Persistance silencieuse — attend le *report* directement
     const handleUpdateInterventionReportSilent = async (id, report) => {
