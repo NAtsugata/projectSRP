@@ -12,13 +12,17 @@ import {
 } from '../components/SharedUI';
 import * as expenseStatsService from '../services/expenseStatsService';
 
+import { createPortal } from 'react-dom';
+
+// ... imports ...
+
 // Modal de visualisation des justificatifs
 const ReceiptsModal = ({ receipts, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!receipts || receipts.length === 0) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -27,7 +31,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.9)',
-        zIndex: 9999,
+        zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -50,7 +54,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
           height: '40px',
           fontSize: '24px',
           cursor: 'pointer',
-          zIndex: 10000
+          zIndex: 100000
         }}
       >
         ×
@@ -66,7 +70,25 @@ const ReceiptsModal = ({ receipts, onClose }) => {
           borderRadius: '8px'
         }}
         onClick={(e) => e.stopPropagation()}
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = 'https://via.placeholder.com/400x300?text=Image+introuvable';
+          alert('Impossible de charger l\'image. Le lien est peut-être expiré ou inaccessible.');
+        }}
       />
+
+      <div style={{ color: 'white', marginTop: '1rem', textAlign: 'center' }}>
+        <p>{receipts[currentIndex].name}</p>
+        <a
+          href={receipts[currentIndex].url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#6366f1', textDecoration: 'underline', fontSize: '0.9rem' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          Ouvrir l'original dans un nouvel onglet
+        </a>
+      </div>
 
       {receipts.length > 1 && (
         <div
@@ -99,427 +121,401 @@ const ReceiptsModal = ({ receipts, onClose }) => {
           </button>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 
-// Accordion pour chaque employé
-const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject, onDelete, onMarkAsPaid, categories, formatDate, formatAmount }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [showReceipts, setShowReceipts] = useState(null);
-  const [commentInput, setCommentInput] = useState({});
+// ... UserExpensesAccordion component ...
 
-  const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
+const handleDownload = async (expense) => {
+  try {
+    const categoryInfo = getCategoryInfo(expense.category);
 
-  const userStats = useMemo(() => {
-    const pending = expenses.filter(e => e.status === 'pending');
-    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
-    const paid = expenses.filter(e => e.is_paid);
-    const rejected = expenses.filter(e => e.status === 'rejected');
+    // Créer un nouveau document PDF
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin;
 
-    return {
-      pending: pending.reduce((sum, e) => sum + (e.amount || 0), 0),
-      approved: approved.reduce((sum, e) => sum + (e.amount || 0), 0),
-      paid: paid.reduce((sum, e) => sum + (e.amount || 0), 0),
-      rejected: rejected.reduce((sum, e) => sum + (e.amount || 0), 0),
-      total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-    };
-  }, [expenses]);
+    // En-tête
+    pdf.setFontSize(20);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('NOTE DE FRAIS', margin, yPos);
+    yPos += 15;
 
-  const handleApprove = async (expense) => {
-    const comment = commentInput[expense.id] || '';
-    await onApprove(expense.id, comment);
-    setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
-  };
+    // Ligne de séparation
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
 
-  const handleReject = async (expense) => {
-    const comment = commentInput[expense.id] || '';
-    if (!comment.trim()) {
-      alert('Veuillez indiquer une raison pour le rejet.');
-      return;
-    }
-    await onReject(expense.id, comment);
-    setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
-  };
+    // Informations principales
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Employé:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(userName, margin + 40, yPos);
+    yPos += 8;
 
-  const handleDownload = async (expense) => {
-    try {
-      const categoryInfo = getCategoryInfo(expense.category);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Date:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(formatDate(expense.date), margin + 40, yPos);
+    yPos += 8;
 
-      // Créer un nouveau document PDF
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPos = margin;
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Catégorie:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(categoryInfo.label, margin + 40, yPos);
+    yPos += 8;
 
-      // En-tête
-      pdf.setFontSize(20);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Montant:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(14);
+    pdf.text(formatAmount(expense.amount), margin + 40, yPos);
+    yPos += 8;
+
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Statut:', margin, yPos);
+    pdf.setFont(undefined, 'normal');
+    const statusText = expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté';
+    pdf.text(statusText, margin + 40, yPos);
+    yPos += 12;
+
+    // Description
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Description:', margin, yPos);
+    yPos += 8;
+    pdf.setFont(undefined, 'normal');
+    const descLines = pdf.splitTextToSize(expense.description, pageWidth - 2 * margin);
+    pdf.text(descLines, margin, yPos);
+    yPos += (descLines.length * 6) + 8;
+
+    // Commentaire admin
+    if (expense.admin_comment) {
       pdf.setFont(undefined, 'bold');
-      pdf.text('NOTE DE FRAIS', margin, yPos);
-      yPos += 15;
+      pdf.text('Commentaire administrateur:', margin, yPos);
+      yPos += 8;
+      pdf.setFont(undefined, 'normal');
+      const commentLines = pdf.splitTextToSize(expense.admin_comment, pageWidth - 2 * margin);
+      pdf.text(commentLines, margin, yPos);
+      yPos += (commentLines.length * 6) + 8;
+    }
 
-      // Ligne de séparation
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, yPos, pageWidth - margin, yPos);
+    // Justificatifs
+    if (expense.receipts && expense.receipts.length > 0) {
+      yPos += 5;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
       yPos += 10;
 
-      // Informations principales
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Employé:', margin, yPos);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(userName, margin + 40, yPos);
-      yPos += 8;
+      // Charger et ajouter chaque image
+      for (let i = 0; i < expense.receipts.length; i++) {
+        const receipt = expense.receipts[i];
 
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Date:', margin, yPos);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(formatDate(expense.date), margin + 40, yPos);
-      yPos += 8;
-
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Catégorie:', margin, yPos);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(categoryInfo.label, margin + 40, yPos);
-      yPos += 8;
-
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Montant:', margin, yPos);
-      pdf.setFont(undefined, 'normal');
-      pdf.setFontSize(14);
-      pdf.text(formatAmount(expense.amount), margin + 40, yPos);
-      yPos += 8;
-
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Statut:', margin, yPos);
-      pdf.setFont(undefined, 'normal');
-      const statusText = expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté';
-      pdf.text(statusText, margin + 40, yPos);
-      yPos += 12;
-
-      // Description
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Description:', margin, yPos);
-      yPos += 8;
-      pdf.setFont(undefined, 'normal');
-      const descLines = pdf.splitTextToSize(expense.description, pageWidth - 2 * margin);
-      pdf.text(descLines, margin, yPos);
-      yPos += (descLines.length * 6) + 8;
-
-      // Commentaire admin
-      if (expense.admin_comment) {
-        pdf.setFont(undefined, 'bold');
-        pdf.text('Commentaire administrateur:', margin, yPos);
-        yPos += 8;
-        pdf.setFont(undefined, 'normal');
-        const commentLines = pdf.splitTextToSize(expense.admin_comment, pageWidth - 2 * margin);
-        pdf.text(commentLines, margin, yPos);
-        yPos += (commentLines.length * 6) + 8;
-      }
-
-      // Justificatifs
-      if (expense.receipts && expense.receipts.length > 0) {
-        yPos += 5;
-        pdf.setFont(undefined, 'bold');
-        pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
-        yPos += 10;
-
-        // Charger et ajouter chaque image
-        for (let i = 0; i < expense.receipts.length; i++) {
-          const receipt = expense.receipts[i];
-
-          try {
-            // Vérifier si on a besoin d'une nouvelle page
-            if (yPos + 100 > pageHeight - margin) {
-              pdf.addPage();
-              yPos = margin;
-            }
-
-            pdf.setFont(undefined, 'normal');
-            pdf.setFontSize(10);
-            pdf.text(`${i + 1}. ${receipt.name}`, margin, yPos);
-            yPos += 8;
-
-            // Charger l'image
-            const response = await fetch(receipt.url);
-            const blob = await response.blob();
-
-            // Convertir en base64
-            const base64 = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            });
-
-            // Calculer les dimensions pour l'image
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = base64;
-            });
-
-            const imgWidth = pageWidth - 2 * margin;
-            const imgHeight = (img.height * imgWidth) / img.width;
-            const maxImgHeight = 120;
-            const finalHeight = Math.min(imgHeight, maxImgHeight);
-            const finalWidth = (img.width * finalHeight) / img.height;
-
-            // Vérifier à nouveau si on a besoin d'une nouvelle page après calcul de la hauteur
-            if (yPos + finalHeight > pageHeight - margin) {
-              pdf.addPage();
-              yPos = margin;
-            }
-
-            // Ajouter l'image au PDF
-            pdf.addImage(base64, 'JPEG', margin, yPos, finalWidth, finalHeight);
-            yPos += finalHeight + 10;
-
-          } catch (error) {
-            console.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
-            pdf.setFontSize(9);
-            pdf.setTextColor(200, 0, 0);
-            pdf.text(`Erreur de chargement: ${receipt.url}`, margin + 5, yPos);
-            pdf.setTextColor(0, 0, 0);
-            yPos += 6;
+        try {
+          // Vérifier si on a besoin d'une nouvelle page
+          if (yPos + 100 > pageHeight - margin) {
+            pdf.addPage();
+            yPos = margin;
           }
+
+          pdf.setFont(undefined, 'normal');
+          pdf.setFontSize(10);
+          pdf.text(`${i + 1}. ${receipt.name}`, margin, yPos);
+          yPos += 8;
+
+          // Charger l'image avec un timeout et gestion d'erreur
+          const response = await fetch(receipt.url, { cache: 'no-cache' });
+          if (!response.ok) throw new Error('Network response was not ok');
+          const blob = await response.blob();
+
+          // Convertir en base64
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          // Calculer les dimensions pour l'image
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = base64;
+          });
+
+          const imgWidth = pageWidth - 2 * margin;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          const maxImgHeight = 120;
+          const finalHeight = Math.min(imgHeight, maxImgHeight);
+          const finalWidth = (img.width * finalHeight) / img.height;
+
+          // Vérifier à nouveau si on a besoin d'une nouvelle page après calcul de la hauteur
+          if (yPos + finalHeight > pageHeight - margin) {
+            pdf.addPage();
+            yPos = margin;
+          }
+
+          // Ajouter l'image au PDF
+          pdf.addImage(base64, 'JPEG', margin, yPos, finalWidth, finalHeight);
+          yPos += finalHeight + 10;
+
+        } catch (error) {
+          console.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
+
+          // Fallback: Ajouter un lien vers l'image si le chargement échoue (CORS, etc.)
+          pdf.setFontSize(9);
+          pdf.setTextColor(0, 0, 255);
+          pdf.textWithLink(`[Lien vers l'image: ${receipt.name}]`, margin, yPos, { url: receipt.url });
+          pdf.setTextColor(0, 0, 0);
+          yPos += 8;
+
+          pdf.setFontSize(8);
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(`(Image non intégrée: ${error.message})`, margin, yPos);
+          pdf.setTextColor(0, 0, 0);
+          yPos += 10;
         }
       }
-
-      // Télécharger le PDF
-      pdf.save(`note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.pdf`);
-
-    } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
-      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
     }
-  };
 
-  return (
-    <div className="user-accordion">
-      <button type="button" className="accordion-header" onClick={() => setIsOpen(!isOpen)}>
-        <div className="accordion-title">
-          <UserIcon />
-          <span>{userName}</span>
-          <span className="document-count">{expenses.length} note{expenses.length > 1 ? 's' : ''}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--copper-dark, #A0522D)' }}>
-            {formatAmount(userStats.total)}
-          </span>
-          <ChevronDownIcon className={`accordion-chevron ${isOpen ? 'open' : ''}`} />
-        </div>
-      </button>
+    // Télécharger le PDF
+    pdf.save(`note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.pdf`);
 
-      {isOpen && (
-        <div className="accordion-content">
-          {/* Stats par utilisateur */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem', marginBottom: '1rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '0.5rem' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>En attente</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f59e0b' }}>{formatAmount(userStats.pending)}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Approuvé</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#10b981' }}>{formatAmount(userStats.approved)}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Payé</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#6366f1' }}>{formatAmount(userStats.paid)}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Rejeté</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444' }}>{formatAmount(userStats.rejected)}</div>
-            </div>
+  } catch (error) {
+    console.error('Erreur lors de la génération du PDF:', error);
+    alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+  }
+};
+
+return (
+  <div className="user-accordion">
+    <button type="button" className="accordion-header" onClick={() => setIsOpen(!isOpen)}>
+      <div className="accordion-title">
+        <UserIcon />
+        <span>{userName}</span>
+        <span className="document-count">{expenses.length} note{expenses.length > 1 ? 's' : ''}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--copper-dark, #A0522D)' }}>
+          {formatAmount(userStats.total)}
+        </span>
+        <ChevronDownIcon className={`accordion-chevron ${isOpen ? 'open' : ''}`} />
+      </div>
+    </button>
+
+    {isOpen && (
+      <div className="accordion-content">
+        {/* Stats par utilisateur */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem', marginBottom: '1rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '0.5rem' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>En attente</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f59e0b' }}>{formatAmount(userStats.pending)}</div>
           </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Approuvé</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, color: '#10b981' }}>{formatAmount(userStats.approved)}</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Payé</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, color: '#6366f1' }}>{formatAmount(userStats.paid)}</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>Rejeté</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444' }}>{formatAmount(userStats.rejected)}</div>
+          </div>
+        </div>
 
-          {/* Liste des notes de frais */}
-          {expenses
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map(expense => {
-              const categoryInfo = getCategoryInfo(expense.category);
-              const isPending = expense.status === 'pending';
+        {/* Liste des notes de frais */}
+        {expenses
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .map(expense => {
+            const categoryInfo = getCategoryInfo(expense.category);
+            const isPending = expense.status === 'pending';
 
-              return (
-                <div
-                  key={expense.id}
-                  style={{
-                    background: 'white',
-                    border: `2px solid ${isPending ? '#f59e0b' : '#e5e7eb'}`,
-                    borderRadius: '0.5rem',
-                    padding: '1rem',
-                    marginBottom: '0.75rem'
-                  }}
-                >
-                  {/* En-tête */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <div>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          backgroundColor: `${categoryInfo.color}20`,
-                          color: categoryInfo.color,
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '1rem',
-                          fontSize: '0.875rem',
-                          fontWeight: 600
-                        }}
-                      >
-                        {categoryInfo.label}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--copper-dark, #A0522D)' }}>
-                      {formatAmount(expense.amount)}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div style={{ color: '#4b5563', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-                    {expense.description}
-                  </div>
-
-                  {/* Date et statut */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-                    <div>
-                      <CalendarIcon style={{ display: 'inline', width: '12px', height: '12px', marginRight: '4px' }} />
-                      {formatDate(expense.date)}
-                    </div>
-                    <div>
-                      {expense.status === 'pending' && <span style={{ color: '#f59e0b' }}>⏳ En attente</span>}
-                      {expense.status === 'approved' && !expense.is_paid && <span style={{ color: '#10b981' }}>✅ Approuvé</span>}
-                      {expense.is_paid && <span style={{ color: '#6366f1' }}>💰 Payé</span>}
-                      {expense.status === 'rejected' && <span style={{ color: '#ef4444' }}>❌ Rejeté</span>}
-                    </div>
-                  </div>
-
-                  {/* Justificatifs */}
-                  {expense.receipts && expense.receipts.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowReceipts(expense.receipts)}
-                      className="btn btn-sm btn-secondary"
-                      style={{ width: '100%', marginBottom: '0.75rem' }}
-                    >
-                      <FileTextIcon /> Voir les {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
-                    </button>
-                  )}
-
-                  {/* Commentaire existant */}
-                  {expense.admin_comment && (
-                    <div
+            return (
+              <div
+                key={expense.id}
+                style={{
+                  background: 'white',
+                  border: `2px solid ${isPending ? '#f59e0b' : '#e5e7eb'}`,
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginBottom: '0.75rem'
+                }}
+              >
+                {/* En-tête */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div>
+                    <span
                       style={{
-                        background: '#fef3c7',
-                        borderLeft: '3px solid #f59e0b',
-                        padding: '0.5rem 0.75rem',
-                        marginBottom: '0.75rem',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.875rem'
+                        display: 'inline-block',
+                        backgroundColor: `${categoryInfo.color}20`,
+                        color: categoryInfo.color,
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '1rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 600
                       }}
                     >
-                      <strong>💬 Commentaire:</strong> {expense.admin_comment}
-                    </div>
-                  )}
-
-                  {/* Actions admin (seulement si en attente) */}
-                  {isPending && (
-                    <div>
-                      <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                        <textarea
-                          value={commentInput[expense.id] || ''}
-                          onChange={(e) => setCommentInput(prev => ({ ...prev, [expense.id]: e.target.value }))}
-                          placeholder="Commentaire (optionnel pour approbation, obligatoire pour rejet)"
-                          className="form-control"
-                          rows="2"
-                          style={{ fontSize: '0.875rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleApprove(expense)}
-                          className="btn btn-success"
-                          style={{ flex: 1 }}
-                        >
-                          <CheckCircleIcon /> Approuver
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleReject(expense)}
-                          className="btn btn-danger"
-                          style={{ flex: 1 }}
-                        >
-                          <XCircleIcon /> Rejeter
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions pour notes approuvées (non payées) */}
-                  {expense.status === 'approved' && !expense.is_paid && onMarkAsPaid && (
-                    <div style={{ marginBottom: '0.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => onMarkAsPaid(expense.id)}
-                        className="btn btn-primary"
-                        style={{ width: '100%' }}
-                      >
-                        💰 Marquer comme payé
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Info pour notes payées */}
-                  {expense.is_paid && expense.paid_date && (
-                    <div
-                      style={{
-                        background: '#eff6ff',
-                        borderLeft: '3px solid #6366f1',
-                        padding: '0.5rem 0.75rem',
-                        marginBottom: '0.75rem',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      <strong>💰 Payé le:</strong> {formatDate(expense.paid_date)}
-                    </div>
-                  )}
-
-                  {/* Actions disponibles pour toutes les notes */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(expense)}
-                      className="btn btn-secondary"
-                      style={{ flex: 1, fontSize: '0.875rem' }}
-                    >
-                      <DownloadIcon /> Télécharger
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(expense)}
-                      className="btn btn-danger"
-                      style={{ flex: 1, fontSize: '0.875rem' }}
-                    >
-                      🗑️ Supprimer
-                    </button>
+                      {categoryInfo.label}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--copper-dark, #A0522D)' }}>
+                    {formatAmount(expense.amount)}
                   </div>
                 </div>
-              );
-            })}
-        </div>
-      )}
 
-      {showReceipts && (
-        <ReceiptsModal
-          receipts={showReceipts}
-          onClose={() => setShowReceipts(null)}
-        />
-      )}
-    </div>
-  );
+                {/* Description */}
+                <div style={{ color: '#4b5563', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+                  {expense.description}
+                </div>
+
+                {/* Date et statut */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.75rem' }}>
+                  <div>
+                    <CalendarIcon style={{ display: 'inline', width: '12px', height: '12px', marginRight: '4px' }} />
+                    {formatDate(expense.date)}
+                  </div>
+                  <div>
+                    {expense.status === 'pending' && <span style={{ color: '#f59e0b' }}>⏳ En attente</span>}
+                    {expense.status === 'approved' && !expense.is_paid && <span style={{ color: '#10b981' }}>✅ Approuvé</span>}
+                    {expense.is_paid && <span style={{ color: '#6366f1' }}>💰 Payé</span>}
+                    {expense.status === 'rejected' && <span style={{ color: '#ef4444' }}>❌ Rejeté</span>}
+                  </div>
+                </div>
+
+                {/* Justificatifs */}
+                {expense.receipts && expense.receipts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReceipts(expense.receipts)}
+                    className="btn btn-sm btn-secondary"
+                    style={{ width: '100%', marginBottom: '0.75rem' }}
+                  >
+                    <FileTextIcon /> Voir les {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                  </button>
+                )}
+
+                {/* Commentaire existant */}
+                {expense.admin_comment && (
+                  <div
+                    style={{
+                      background: '#fef3c7',
+                      borderLeft: '3px solid #f59e0b',
+                      padding: '0.5rem 0.75rem',
+                      marginBottom: '0.75rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <strong>💬 Commentaire:</strong> {expense.admin_comment}
+                  </div>
+                )}
+
+                {/* Actions admin (seulement si en attente) */}
+                {isPending && (
+                  <div>
+                    <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                      <textarea
+                        value={commentInput[expense.id] || ''}
+                        onChange={(e) => setCommentInput(prev => ({ ...prev, [expense.id]: e.target.value }))}
+                        placeholder="Commentaire (optionnel pour approbation, obligatoire pour rejet)"
+                        className="form-control"
+                        rows="2"
+                        style={{ fontSize: '0.875rem' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(expense)}
+                        className="btn btn-success"
+                        style={{ flex: 1 }}
+                      >
+                        <CheckCircleIcon /> Approuver
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReject(expense)}
+                        className="btn btn-danger"
+                        style={{ flex: 1 }}
+                      >
+                        <XCircleIcon /> Rejeter
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions pour notes approuvées (non payées) */}
+                {expense.status === 'approved' && !expense.is_paid && onMarkAsPaid && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => onMarkAsPaid(expense.id)}
+                      className="btn btn-primary"
+                      style={{ width: '100%' }}
+                    >
+                      💰 Marquer comme payé
+                    </button>
+                  </div>
+                )}
+
+                {/* Info pour notes payées */}
+                {expense.is_paid && expense.paid_date && (
+                  <div
+                    style={{
+                      background: '#eff6ff',
+                      borderLeft: '3px solid #6366f1',
+                      padding: '0.5rem 0.75rem',
+                      marginBottom: '0.75rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <strong>💰 Payé le:</strong> {formatDate(expense.paid_date)}
+                  </div>
+                )}
+
+                {/* Actions disponibles pour toutes les notes */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(expense)}
+                    className="btn btn-secondary"
+                    style={{ flex: 1, fontSize: '0.875rem' }}
+                  >
+                    <DownloadIcon /> Télécharger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(expense)}
+                    className="btn btn-danger"
+                    style={{ flex: 1, fontSize: '0.875rem' }}
+                  >
+                    🗑️ Supprimer
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    )}
+
+    {showReceipts && (
+      <ReceiptsModal
+        receipts={showReceipts}
+        onClose={() => setShowReceipts(null)}
+      />
+    )}
+  </div>
+);
 };
 
 export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid }) {
