@@ -2,7 +2,7 @@
 // Planning employé avec réutilisation des composants
 
 import React, { useCallback } from 'react';
-import { CoffeeIcon } from 'lucide-react';
+import { CoffeeIcon } from '../components/SharedUI';
 import { useNavigate } from 'react-router-dom';
 import { InterventionList } from '../components/planning';
 import { LoadingSpinner } from '../components/ui';
