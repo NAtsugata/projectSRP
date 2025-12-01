@@ -104,7 +104,13 @@ const ReceiptsModal = ({ receipts, onClose }) => {
             type="button"
             onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
             disabled={currentIndex === 0}
-            className="btn btn-secondary"
+            className="btn"
+            style={{
+              color: 'white',
+              borderColor: 'white',
+              background: 'rgba(255,255,255,0.1)',
+              opacity: currentIndex === 0 ? 0.5 : 1
+            }}
           >
             ← Précédent
           </button>
@@ -115,7 +121,13 @@ const ReceiptsModal = ({ receipts, onClose }) => {
             type="button"
             onClick={() => setCurrentIndex(prev => Math.min(receipts.length - 1, prev + 1))}
             disabled={currentIndex === receipts.length - 1}
-            className="btn btn-secondary"
+            className="btn"
+            style={{
+              color: 'white',
+              borderColor: 'white',
+              background: 'rgba(255,255,255,0.1)',
+              opacity: currentIndex === receipts.length - 1 ? 0.5 : 1
+            }}
           >
             Suivant →
           </button>
