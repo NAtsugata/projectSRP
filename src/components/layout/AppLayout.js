@@ -35,8 +35,10 @@ const AppLayout = ({ profile, handleLogout }) => {
             { name: 'Checklists', href: '/checklists', icon: FolderIcon },
         ];
 
+    const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
+
     return (
-        <div className="app-layout">
+        <div className={`app-layout ${isDashboard ? 'dark-mode-layout' : ''}`}>
             {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
