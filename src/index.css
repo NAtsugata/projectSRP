@@ -1,102 +1,74 @@
-/* ============================================
-   PORTAIL SRP - Main Stylesheet
-   Ordre d'import important pour la cascade CSS
-   ============================================ */
-
-/* 1. Design System - Variables et fondations */
-@import './styles/design-system.css';
-
-/* 2. Animations - Keyframes et transitions */
-@import './styles/animations.css';
-
-/* 3. Components - Composants UI réutilisables */
-@import './styles/components.css';
-
-/* 4. Mobile Optimizations - Touch-friendly & Performance */
-@import './styles/mobile-optimizations.css';
-
-/* 5. Mobile Fixes - Corrections visuelles mobile (IMPORTANT: après les autres) */
-@import './styles/mobile-fixes.css';
-
-/* 6. Mobile Copper - Design cuivré/laiton élégant (DOIT être en dernier pour override) */
-@import './styles/mobile-copper.css';
-
-/* ==================== RESET & BASE ==================== */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  color: var(--text-primary);
-  background-color: var(--bg-app);
-  overflow-x: hidden;
-  min-height: 100vh;
-}
-
-/* ==================== FOCUS MANAGEMENT ==================== */
-:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* ==================== SMOOTH SCROLLING ==================== */
-@media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
   }
-}
 
-/* ==================== SELECTION STYLING ==================== */
-::selection {
-  background: var(--color-primary-200);
-  color: var(--color-primary-900);
-}
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
-::-moz-selection {
-  background: var(--color-primary-200);
-  color: var(--color-primary-900);
-}
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--text-primary);
+    background-color: var(--bg-app);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
 
-/* ==================== SCROLLBAR STYLING ==================== */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
+  /* ==================== FOCUS MANAGEMENT ==================== */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-gray-300);
-  border-radius: var(--radius-full);
-}
+  /* ==================== SMOOTH SCROLLING ==================== */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
-}
+  /* ==================== SELECTION STYLING ==================== */
+  ::selection {
+    background: var(--color-primary-200);
+    color: var(--color-primary-900);
+  }
 
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-300) var(--bg-secondary);
-}
+  ::-moz-selection {
+    background: var(--color-primary-200);
+    color: var(--color-primary-900);
+  }
+
+  /* ==================== SCROLLBAR STYLING ==================== */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-gray-300);
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-400);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) var(--bg-secondary);
+  }
