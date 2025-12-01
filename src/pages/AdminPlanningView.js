@@ -5,7 +5,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { InterventionForm, InterventionList } from '../components/planning';
 import { Button, ConfirmDialog } from '../components/ui';
-import { PlusIcon } from '../components/SharedUI';
+import { PlusIcon, ClipboardListIcon } from '../components/SharedUI';
 import logger from '../utils/logger';
 import './AdminPlanningView.css';
 
@@ -98,7 +98,10 @@ export default function AdminPlanningView({
     <div className="admin-planning-view">
       {/* Header */}
       <div className="planning-header">
-        <h2 className="planning-title">Gestion du Planning</h2>
+        <h2 className="planning-title">
+          <ClipboardListIcon className="w-8 h-8 text-primary-500 mr-3" />
+          Gestion du Planning
+        </h2>
         <Button
           variant="primary"
           icon={<PlusIcon />}

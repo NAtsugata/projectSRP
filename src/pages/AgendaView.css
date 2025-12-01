@@ -19,23 +19,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0 0 var(--spacing-6) 0;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  animation: fadeInDown 0.5s ease-out;
-}
-
-.view-title::before {
-  content: '📅';
-  font-size: var(--text-5xl);
-  -webkit-text-fill-color: initial;
-  animation: bounce 2s ease-in-out infinite;
-}
-
-/* ==================== DAYS LIST ==================== */
-.agenda-days-list {
-  display: flex;
-  flex-direction: column;
   gap: var(--spacing-8);
   margin-top: var(--spacing-6);
 }

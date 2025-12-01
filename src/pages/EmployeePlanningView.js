@@ -2,6 +2,7 @@
 // Planning employé avec réutilisation des composants
 
 import React, { useCallback } from 'react';
+import { CoffeeIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InterventionList } from '../components/planning';
 import { LoadingSpinner } from '../components/ui';
@@ -40,7 +41,7 @@ export default function EmployeePlanningView({ interventions, loading = false, u
 
       {interventionCount === 0 ? (
         <div className="employee-planning-empty">
-          <div className="employee-planning-empty-icon">☕</div>
+          <CoffeeIcon className="employee-planning-empty-icon" />
           <h3 className="employee-planning-empty-title">Aucune intervention</h3>
           <p className="employee-planning-empty-description">
             Profitez de votre journée ! Votre planning est vide pour le moment.

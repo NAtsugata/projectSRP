@@ -69,22 +69,6 @@
   background: var(--comfort-card-bg);
   border-radius: var(--comfort-radius);
   box-shadow: var(--comfort-shadow);
-  text-align: center;
-  min-height: 300px;
-  margin-top: var(--spacing-4);
-  animation: slideUp 0.5s ease-out;
-}
-
-.employee-planning-empty-icon {
-  font-size: 4rem;
-  margin-bottom: var(--spacing-4);
-  animation: float 4s ease-in-out infinite;
-}
-
-.employee-planning-empty-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--comfort-text-primary);
   margin-bottom: var(--spacing-2);
 }
 

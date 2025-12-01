@@ -242,7 +242,10 @@ const AgendaView = ({
 
   return (
     <div className="agenda-view">
-      <h2 className="view-title">Agenda</h2>
+      <h2 className="view-title">
+        <CalendarIcon className="w-10 h-10 text-primary-500 mr-3" />
+        Agenda
+      </h2>
 
       {/* Dashboard de statistiques */}
       <AgendaDashboard
@@ -324,9 +327,9 @@ const AgendaView = ({
             title="Aucune intervention"
             message={
               filters.employees?.length > 0 ||
-              filters.showUrgentOnly ||
-              filters.showSAVOnly ||
-              filters.searchText
+                filters.showUrgentOnly ||
+                filters.showSAVOnly ||
+                filters.searchText
                 ? "Aucune intervention ne correspond aux filtres sélectionnés."
                 : "Aucune intervention prévue pour cette période."
             }
