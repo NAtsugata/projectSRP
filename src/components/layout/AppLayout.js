@@ -6,7 +6,14 @@ import {
     FolderIcon,
     UsersIcon,
     LogOutIcon,
-    MenuIcon
+    MenuIcon,
+    LayoutDashboardIcon,
+    ArchiveIcon,
+    SunIcon,
+    LockIcon,
+    FileTextIcon,
+    CheckCircleIcon,
+    DollarSignIcon
 } from '../SharedUI';
 import './AppLayout.css';
 
@@ -16,23 +23,27 @@ const AppLayout = ({ profile, handleLogout }) => {
 
     const navigation = isAdmin
         ? [
-            { name: 'Dashboard', href: '/dashboard', icon: BriefcaseIcon },
-            { name: 'Planning', href: '/planning', icon: CalendarIcon },
+            { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon },
+            { name: 'Planning', href: '/planning', icon: BriefcaseIcon },
             { name: 'Agenda', href: '/agenda', icon: CalendarIcon },
-            { name: 'Congés', href: '/leaves', icon: CalendarIcon },
-            { name: 'Dépenses', href: '/expenses', icon: FolderIcon },
+            { name: 'Congés', href: '/leaves', icon: SunIcon },
+            { name: 'Dépenses', href: '/expenses', icon: DollarSignIcon },
             { name: 'Utilisateurs', href: '/users', icon: UsersIcon },
             { name: 'Coffre-fort', href: '/vault', icon: FolderIcon },
-            { name: 'Mes Documents', href: '/documents', icon: FolderIcon },
+            { name: 'Mes Documents', href: '/documents', icon: FileTextIcon },
+            { name: 'Archives', href: '/archives', icon: ArchiveIcon },
+            { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon },
+            { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon },
         ]
         : [
-            { name: 'Planning', href: '/planning', icon: CalendarIcon },
+            { name: 'Planning', href: '/planning', icon: BriefcaseIcon },
             { name: 'Agenda', href: '/agenda', icon: CalendarIcon },
-            { name: 'Congés', href: '/leaves', icon: CalendarIcon },
-            { name: 'Dépenses', href: '/expenses', icon: FolderIcon },
-            { name: 'Coffre-fort', href: '/vault', icon: FolderIcon },
-            { name: 'Mes Documents', href: '/documents', icon: FolderIcon },
-            { name: 'Checklists', href: '/checklists', icon: FolderIcon },
+            { name: 'Congés', href: '/leaves', icon: SunIcon },
+            { name: 'Dépenses', href: '/expenses', icon: DollarSignIcon },
+            { name: 'Coffre-fort', href: '/vault', icon: LockIcon },
+            { name: 'Mes Documents', href: '/documents', icon: FileTextIcon },
+            { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon },
+            { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon },
         ];
 
     const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';

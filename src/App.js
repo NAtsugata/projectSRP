@@ -41,6 +41,7 @@ const ExpensesViewContainer = lazy(() => import('./pages/ExpensesViewContainer')
 const ChecklistViewContainer = lazy(() => import('./pages/ChecklistViewContainer'));
 const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
+const MobileMenu = lazy(() => import('./pages/MobileMenu'));
 
 
 
@@ -273,6 +274,11 @@ function App() {
                       <MobileDiagnosticsPageContainer />
                     </Suspense>
                   } />
+                  <Route path="menu" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MobileMenu />
+                    </Suspense>
+                  } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </>
               ) : (
@@ -329,6 +335,11 @@ function App() {
                   <Route path="mobile-diagnostics" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <MobileDiagnosticsPageContainer />
+                    </Suspense>
+                  } />
+                  <Route path="menu" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <MobileMenu />
                     </Suspense>
                   } />
                   <Route path="*" element={<Navigate to="/planning" replace />} />
