@@ -4,17 +4,40 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  transition: all 0.15s ease;
+  gap: 1.5rem;
+  /* Increased gap */
+  padding: 1.5rem;
+  /* Increased padding */
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  /* More rounded */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle gradient overlay on hover */
+.intervention-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
 .intervention-card:hover {
-  border-color: #d1d5db;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-color-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.intervention-card:hover::after {
+  opacity: 1;
 }
 
 .intervention-card.clickable {
@@ -22,18 +45,13 @@
 }
 
 .intervention-card.clickable:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
+  border-color: var(--color-primary-500);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  transform: translateY(-2px);
 }
 
 .intervention-card.clickable:active {
   transform: translateY(0);
-}
-
-.intervention-card.clickable:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
 }
 
 .intervention-card-content {
@@ -41,85 +59,98 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  /* Better spacing */
 }
 
 .intervention-card-header {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .intervention-card-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .intervention-card-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 1.125rem;
+  /* Larger title */
+  font-weight: 700;
+  color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .intervention-card-service {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
+/* Premium Badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.625rem;
+  padding: 0.35rem 0.85rem;
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 999px;
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .status-blue {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 .status-yellow {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 .status-green {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.2);
 }
 
 .status-default {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .intervention-card-info {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color-light);
 }
 
 .info-item {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #4b5563;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .info-icon {
   flex-shrink: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  opacity: 0.8;
 }
 
 .info-text {
@@ -129,29 +160,30 @@
 
 /* Multi-day scheduling display */
 .multi-day-info {
-  background-color: #f0f9ff;
-  border-left: 3px solid #0ea5e9;
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin-top: 0.25rem;
+  background-color: rgba(99, 102, 241, 0.1);
+  border-left: 3px solid var(--color-primary-500);
+  padding: 0.75rem;
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+  margin-top: 0.5rem;
 }
 
 .scheduled-date-chip {
   display: inline-block;
-  padding: 0.125rem 0.375rem;
-  margin: 0.125rem;
-  background-color: #e0f2fe;
-  border: 1px solid #bae6fd;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #0c4a6e;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem;
+  background-color: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary-100);
 }
 
 .intervention-card-actions {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  /* Stack actions on desktop for cleaner look */
   gap: 0.5rem;
 }
 
@@ -160,25 +192,22 @@
   .intervention-card {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .intervention-card-title-row {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 1.25rem;
   }
 
   .intervention-card-actions {
+    flex-direction: row;
     width: 100%;
     justify-content: flex-end;
-    padding-top: 0.75rem;
-    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
   }
 }
 
 @media (max-width: 480px) {
   .intervention-card-actions {
     flex-wrap: wrap;
-    justify-content: stretch;
   }
 
   .intervention-card-actions button {
