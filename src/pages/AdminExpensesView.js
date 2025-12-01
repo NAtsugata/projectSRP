@@ -128,7 +128,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
 
   const handleApprove = async (expense) => {
     const comment = commentInput[expense.id] || '';
-    await onApprove(expense, comment);
+    await onApprove(expense.id, comment);
     setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
   };
 
@@ -138,7 +138,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
       alert('Veuillez indiquer une raison pour le rejet.');
       return;
     }
-    await onReject(expense, comment);
+    await onReject(expense.id, comment);
     setCommentInput(prev => ({ ...prev, [expense.id]: '' }));
   };
 
@@ -462,7 +462,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
                     <div style={{ marginBottom: '0.5rem' }}>
                       <button
                         type="button"
-                        onClick={() => onMarkAsPaid(expense)}
+                        onClick={() => onMarkAsPaid(expense.id)}
                         className="btn btn-primary"
                         style={{ width: '100%' }}
                       >
