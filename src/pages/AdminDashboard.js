@@ -204,7 +204,7 @@ export default function AdminDashboard({ interventions = [], leaveRequests = [] 
           value={stats.todayInterventions}
           label="Interventions aujourd'hui"
           icon={<CalendarIcon />}
-          variant="info"
+          variant="danger"
           onClick={() => navigate('/planning')}
         />
 
@@ -220,7 +220,7 @@ export default function AdminDashboard({ interventions = [], leaveRequests = [] 
           value={stats.pendingLeaves}
           label="Demandes de congés"
           icon={<CalendarIcon />}
-          variant="warning"
+          variant="secondary"
           onClick={() => navigate('/leaves')}
         />
 
