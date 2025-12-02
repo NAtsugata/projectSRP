@@ -32,8 +32,8 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
                 file_url: publicURL, // Note: DB column is file_url
                 path: filePath,
                 file_size: fileSize || file.size, // Note: DB column is file_size
-                description,
-                tags
+                // description, // Colonne inexistante en BDD
+                // tags // Colonne inexistante en BDD
             });
             console.log('🚀 AdminVaultViewContainer: DB entry created');
 
