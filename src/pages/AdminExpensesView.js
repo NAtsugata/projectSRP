@@ -381,64 +381,325 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
           {/* Liste des notes de frais */}
           {expenses
             .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(expense => {
+              const categoryInfo = getCategoryInfo(expense.category);
+              const isPending = expense.status === 'pending';
+
+              return (
+                <div
+                  key={expense.id}
+                  style={{
+                    background: '#1e293b', // Dark card background
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0.75rem',
+                    padding: '1.25rem',
+                    marginBottom: '1rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Header: Category & Status */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <h3 style={{
+                      margin: 0,
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      color: 'white',
+                      textTransform: 'capitalize'
+                    }}>
+                      {categoryInfo.label.replace(/^[^\s]+\s/, '')}
+                    </h3>
+
+                    <span
+                      style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        backgroundColor:
+                          expense.status === 'approved' ? 'rgba(16, 185, 129, 0.2)' :
+                            expense.status === 'rejected' ? 'rgba(239, 68, 68, 0.2)' :
+                              expense.is_paid ? 'rgba(99, 102, 241, 0.2)' :
+                                'rgba(245, 158, 11, 0.2)',
+                        color:
+                          expense.status === 'approved' ? '#34d399' :
+                            expense.status === 'rejected' ? '#f87171' :
+                              expense.is_paid ? '#818cf8' :
+                                '#fbbf24',
+                        border: '1px solid currentColor'
+                      }}
+                    >
+                      {expense.is_paid ? 'Payé' :
+                        expense.status === 'approved' ? 'Approuvé' :
+                          expense.status === 'rejected' ? 'Rejeté' :
+                            'En attente'}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  <div style={{
+                    color: '#94a3b8',
+                    fontSize: '0.95rem',
+                    marginBottom: '1rem',
+                    lineHeight: '1.5'
+                  }}>
+                    {expense.description}
+                  </div>
+
+                  {/* Info Row: Date & Amount */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', color: '#cbd5e1', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <CalendarIcon style={{ width: '16px', height: '16px', opacity: 0.7 }} />
+                      <span>{formatDate(expense.date)}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        fontWeight: 700,
+                        color: 'white',
+                        fontSize: '1rem',
+                        background: 'rgba(255,255,255,0.1)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {formatAmount(expense.amount)}
+                      </span>
+                    </div>
+                    {/* Justificatifs Indicator */}
+                    {expense.receipts && expense.receipts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowReceipts(expense.receipts)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#60a5fa',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.85rem',
+                          padding: 0
+                        }}
+                      >
+                        <FileTextIcon style={{ width: '14px', height: '14px' }} />
+                        {expense.receipts.length} PJ
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Admin Comment if exists */}
+                  {expense.admin_comment && (
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '0.75rem',
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      borderLeft: '3px solid #f59e0b',
+                      borderRadius: '0 4px 4px 0',
+                      color: '#fbbf24',
+                      fontSize: '0.85rem'
+                    }}>
+                      <strong style={{ marginRight: '0.5rem' }}>Note Admin:</strong>
+                      {expense.admin_comment}
+                    </div>
+                  )}
+
+                  {/* Actions Row */}
+                  <div style={{
+                    marginTop: '1.5rem',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '0.75rem',
+                    alignItems: 'center'
+                  }}>
+
+                    {/* Pending Actions */}
+                    {isPending && (
+                      <>
+                        <div style={{ flex: 1, marginRight: 'auto' }}>
+                          <textarea
+                            value={commentInput[expense.id] || ''}
+                            onChange={(e) => setCommentInput(prev => ({ ...prev, [expense.id]: e.target.value }))}
+                            placeholder="Commentaire..."
+                            style={{
+                              width: '100%',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '0.375rem',
+                              color: 'white',
+                              padding: '0.5rem',
+                              fontSize: '0.85rem',
+                              minHeight: '38px',
+                              resize: 'none'
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleApprove(expense.id, commentInput[expense.id])}
+                          className="btn"
+                          style={{
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          <CheckCircleIcon style={{ width: '18px' }} /> Approuver
+                        </button>
+                        <button
+                          onClick={() => handleReject(expense.id, commentInput[expense.id])}
+                          className="btn"
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            color: '#f87171',
+                            border: '1px solid rgba(239, 68, 68, 0.5)',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Rejeter
+                        </button>
+                      </>
+                    )}
+
+                    {/* Approved Actions (Mark as Paid) */}
+                    {expense.status === 'approved' && !expense.is_paid && onMarkAsPaid && (
+                      <button
+                        onClick={() => onMarkAsPaid(expense.id)}
+                        className="btn"
+                        style={{
+                          background: '#6366f1', // Indigo/Purple
+                          color: 'white',
+                          border: 'none',
+                          padding: '0.6rem 1.25rem',
+                          borderRadius: '0.5rem',
+                          fontWeight: 600,
+                          boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)',
+                          transition: 'transform 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                      >
+                        Marquer comme payé
+                      </button>
+                    )}
+
+                    {/* Download Button (Icon only or small) */}
+                    <button
+                      onClick={() => handleDownload(expense)}
+                      title="Télécharger PDF"
+                      style={{
+                        background: 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        color: 'white',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    >
+                      <DownloadIcon style={{ width: '20px', height: '20px' }} />
+                    </button>
+
+                    {/* Delete Button (Red Square) */}
+                    <button
+                      onClick={() => onDelete(expense)}
+                      title="Supprimer"
+                      style={{
+                        background: '#ef4444',
+                        border: 'none',
+                        color: 'white',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🗑️</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {showReceipts && (
+        <ReceiptsModal
           receipts={showReceipts}
           onClose={() => setShowReceipts(null)}
         />
       )}
-        </div>
-      );
+    </div>
+  );
 };
 
-      export default function AdminExpensesView({users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid}) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid }) {
   const [filterStatus, setFilterStatus] = useState('all');
-      const [globalStats, setGlobalStats] = useState({
-        pending: {count: 0, total: 0 },
-      approved: {count: 0, total: 0 },
-      paid: {count: 0, total: 0 },
-      rejected: {count: 0, total: 0 },
-      total: 0
+  const [globalStats, setGlobalStats] = useState({
+    pending: { count: 0, total: 0 },
+    approved: { count: 0, total: 0 },
+    paid: { count: 0, total: 0 },
+    rejected: { count: 0, total: 0 },
+    total: 0
   });
-      const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-      // Catégories de frais (même que ExpensesView)
-      const categories = [
-      {value: 'transport', label: '🚗 Transport', color: '#3b82f6' },
-      {value: 'meals', label: '🍽️ Repas', color: '#10b981' },
-      {value: 'accommodation', label: '🏨 Hébergement', color: '#8b5cf6' },
-      {value: 'supplies', label: '📦 Fournitures', color: '#f59e0b' },
-      {value: 'phone', label: '📱 Téléphone', color: '#06b6d4' },
-      {value: 'parking', label: '🅿️ Parking', color: '#6366f1' },
-      {value: 'fuel', label: '⛽ Carburant', color: '#ef4444' },
-      {value: 'other', label: '📋 Autres', color: '#64748b' }
-      ];
+  // Catégories de frais (même que ExpensesView)
+  const categories = [
+    { value: 'transport', label: '🚗 Transport', color: '#3b82f6' },
+    { value: 'meals', label: '🍽️ Repas', color: '#10b981' },
+    { value: 'accommodation', label: '🏨 Hébergement', color: '#8b5cf6' },
+    { value: 'supplies', label: '📦 Fournitures', color: '#f59e0b' },
+    { value: 'phone', label: '📱 Téléphone', color: '#06b6d4' },
+    { value: 'parking', label: '🅿️ Parking', color: '#6366f1' },
+    { value: 'fuel', label: '⛽ Carburant', color: '#ef4444' },
+    { value: 'other', label: '📋 Autres', color: '#64748b' }
+  ];
 
   // Charger les statistiques globales (avec vues matérialisées ou fallback)
   useEffect(() => {
     const loadStats = async () => {
-        setStatsLoading(true);
+      setStatsLoading(true);
       try {
-        const {data, error} = await expenseStatsService.getGlobalStats();
+        const { data, error } = await expenseStatsService.getGlobalStats();
 
-      if (error) {
-        console.error('Erreur lors du chargement des stats:', error);
+        if (error) {
+          console.error('Erreur lors du chargement des stats:', error);
           // Fallback: calculer côté client si le service échoue
           const pending = expenses.filter(e => e.status === 'pending');
           const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
           const paid = expenses.filter(e => e.is_paid);
           const rejected = expenses.filter(e => e.status === 'rejected');
 
-      setGlobalStats({
-        pending: {count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      approved: {count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      paid: {count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      rejected: {count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) },
+          setGlobalStats({
+            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
+            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) },
             total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
           });
         } else if (data) {
-        setGlobalStats({
-          ...data,
-          total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-        });
+          setGlobalStats({
+            ...data,
+            total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+          });
         }
       } catch (err) {
         console.error('Erreur inattendue:', err);
@@ -447,13 +708,13 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
       }
     };
 
-      loadStats();
+    loadStats();
   }, [expenses]);
 
   // Regroupement par utilisateur
   const expensesByUser = useMemo(() => {
-        let filtered = expenses;
-      if (filterStatus !== 'all') {
+    let filtered = expenses;
+    if (filterStatus !== 'all') {
       if (filterStatus === 'paid') {
         filtered = expenses.filter(e => e.is_paid);
       } else if (filterStatus === 'approved') {
@@ -467,20 +728,20 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
       const userId = expense.user_id;
       if (!acc[userId]) {
         const user = users.find(u => u.id === userId);
-      acc[userId] = {
-        userName: user ? user.full_name : 'Utilisateur inconnu',
-      expenses: []
+        acc[userId] = {
+          userName: user ? user.full_name : 'Utilisateur inconnu',
+          expenses: []
         };
       }
       acc[userId].expenses.push(expense);
       return acc;
-    }, { });
+    }, {});
   }, [expenses, users, filterStatus]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-      return new Date(dateString).toLocaleDateString('fr-FR', {
-        year: 'numeric',
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
@@ -488,14 +749,14 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
 
   const formatAmount = (amount) => {
     return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
+      style: 'currency',
       currency: 'EUR'
     }).format(amount);
   };
 
-      return (
-      <div>
-        <style>{`
+  return (
+    <div>
+      <style>{`
         .expense-stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -614,112 +875,112 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
         }
       `}</style>
 
-        <h2 className="view-title">💰 Notes de Frais - Administration</h2>
+      <h2 className="view-title">💰 Notes de Frais - Administration</h2>
 
-        {/* Statistiques globales */}
-        <div className="expense-stats-grid">
-          <div className="stat-card warning">
-            <div className="stat-label">EN ATTENTE</div>
-            <div className="stat-value">{globalStats.pending.count}</div>
-            <div className="stat-subvalue">{formatAmount(globalStats.pending.total)}</div>
-          </div>
-          <div className="stat-card success">
-            <div className="stat-label">APPROUVÉ</div>
-            <div className="stat-value">{globalStats.approved.count}</div>
-            <div className="stat-subvalue">{formatAmount(globalStats.approved.total)}</div>
-          </div>
-          <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
-            <div className="stat-label">💰 PAYÉ</div>
-            <div className="stat-value">{globalStats.paid.count}</div>
-            <div className="stat-subvalue">{formatAmount(globalStats.paid.total)}</div>
-          </div>
-          <div className="stat-card danger">
-            <div className="stat-label">REJETÉ</div>
-            <div className="stat-value">{globalStats.rejected.count}</div>
-            <div className="stat-subvalue">{formatAmount(globalStats.rejected.total)}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">TOTAL</div>
-            <div className="stat-value">{expenses.length}</div>
-            <div className="stat-subvalue">{formatAmount(globalStats.total)}</div>
-          </div>
+      {/* Statistiques globales */}
+      <div className="expense-stats-grid">
+        <div className="stat-card warning">
+          <div className="stat-label">EN ATTENTE</div>
+          <div className="stat-value">{globalStats.pending.count}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.pending.total)}</div>
         </div>
-
-        {/* Filtres */}
-        <div className="filter-tabs">
-          <button
-            type="button"
-            className={`filter-tab ${filterStatus === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('all')}
-          >
-            📋 Toutes ({expenses.length})
-          </button>
-          <button
-            type="button"
-            className={`filter-tab ${filterStatus === 'pending' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('pending')}
-          >
-            ⏳ En attente ({globalStats.pending.count})
-          </button>
-          <button
-            type="button"
-            className={`filter-tab ${filterStatus === 'approved' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('approved')}
-          >
-            ✅ Approuvées ({globalStats.approved.count})
-          </button>
-          <button
-            type="button"
-            className={`filter-tab ${filterStatus === 'paid' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('paid')}
-          >
-            💰 Payées ({globalStats.paid.count})
-          </button>
-          <button
-            type="button"
-            className={`filter-tab ${filterStatus === 'rejected' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('rejected')}
-          >
-            ❌ Rejetées ({globalStats.rejected.count})
-          </button>
+        <div className="stat-card success">
+          <div className="stat-label">APPROUVÉ</div>
+          <div className="stat-value">{globalStats.approved.count}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.approved.total)}</div>
         </div>
-
-        {/* Liste par employé */}
-        <div className="card-white">
-          <h3 style={{ marginBottom: '1rem' }}>📁 Notes par employé</h3>
-
-          {Object.keys(expensesByUser).length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-state-title">Aucune note de frais</p>
-              <p className="empty-state-subtitle">
-                {filterStatus === 'all'
-                  ? 'Aucune note de frais n\'a encore été soumise'
-                  : `Aucune note de frais avec le statut "${filterStatus}"`
-                }
-              </p>
-            </div>
-          ) : (
-            <div>
-              {Object.entries(expensesByUser)
-                .sort(([_, a], [__, b]) => a.userName.localeCompare(b.userName))
-                .map(([userId, data]) => (
-                  <UserExpensesAccordion
-                    key={userId}
-                    userName={data.userName}
-                    userId={userId}
-                    expenses={data.expenses}
-                    onApprove={onApproveExpense}
-                    onReject={onRejectExpense}
-                    onDelete={onDeleteExpense}
-                    onMarkAsPaid={onMarkAsPaid}
-                    categories={categories}
-                    formatDate={formatDate}
-                    formatAmount={formatAmount}
-                  />
-                ))}
-            </div>
-          )}
+        <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
+          <div className="stat-label">💰 PAYÉ</div>
+          <div className="stat-value">{globalStats.paid.count}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.paid.total)}</div>
+        </div>
+        <div className="stat-card danger">
+          <div className="stat-label">REJETÉ</div>
+          <div className="stat-value">{globalStats.rejected.count}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.rejected.total)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">TOTAL</div>
+          <div className="stat-value">{expenses.length}</div>
+          <div className="stat-subvalue">{formatAmount(globalStats.total)}</div>
         </div>
       </div>
-      );
+
+      {/* Filtres */}
+      <div className="filter-tabs">
+        <button
+          type="button"
+          className={`filter-tab ${filterStatus === 'all' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('all')}
+        >
+          📋 Toutes ({expenses.length})
+        </button>
+        <button
+          type="button"
+          className={`filter-tab ${filterStatus === 'pending' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('pending')}
+        >
+          ⏳ En attente ({globalStats.pending.count})
+        </button>
+        <button
+          type="button"
+          className={`filter-tab ${filterStatus === 'approved' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('approved')}
+        >
+          ✅ Approuvées ({globalStats.approved.count})
+        </button>
+        <button
+          type="button"
+          className={`filter-tab ${filterStatus === 'paid' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('paid')}
+        >
+          💰 Payées ({globalStats.paid.count})
+        </button>
+        <button
+          type="button"
+          className={`filter-tab ${filterStatus === 'rejected' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('rejected')}
+        >
+          ❌ Rejetées ({globalStats.rejected.count})
+        </button>
+      </div>
+
+      {/* Liste par employé */}
+      <div className="card-white">
+        <h3 style={{ marginBottom: '1rem' }}>📁 Notes par employé</h3>
+
+        {Object.keys(expensesByUser).length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-state-title">Aucune note de frais</p>
+            <p className="empty-state-subtitle">
+              {filterStatus === 'all'
+                ? 'Aucune note de frais n\'a encore été soumise'
+                : `Aucune note de frais avec le statut "${filterStatus}"`
+              }
+            </p>
+          </div>
+        ) : (
+          <div>
+            {Object.entries(expensesByUser)
+              .sort(([_, a], [__, b]) => a.userName.localeCompare(b.userName))
+              .map(([userId, data]) => (
+                <UserExpensesAccordion
+                  key={userId}
+                  userName={data.userName}
+                  userId={userId}
+                  expenses={data.expenses}
+                  onApprove={onApproveExpense}
+                  onReject={onRejectExpense}
+                  onDelete={onDeleteExpense}
+                  onMarkAsPaid={onMarkAsPaid}
+                  categories={categories}
+                  formatDate={formatDate}
+                  formatAmount={formatAmount}
+                />
+              ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
