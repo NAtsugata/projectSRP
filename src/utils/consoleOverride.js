@@ -1,7 +1,7 @@
 // src/utils/consoleOverride.js
 // Override console methods en production pour éviter les logs inutiles
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = false; // process.env.NODE_ENV === 'production';
 
 if (isProduction) {
   // Sauvegarder les méthodes originales pour les erreurs
@@ -9,9 +9,9 @@ if (isProduction) {
   const originalWarn = console.warn;
 
   // Désactiver console.log, console.info, console.debug en production
-  console.log = () => {};
-  console.info = () => {};
-  console.debug = () => {};
+  console.log = () => { };
+  console.info = () => { };
+  console.debug = () => { };
 
   // Garder console.error et console.warn actifs (mais on pourrait les filtrer aussi)
   console.error = originalError;
