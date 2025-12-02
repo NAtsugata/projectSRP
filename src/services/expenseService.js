@@ -24,7 +24,7 @@ const expenseService = {
   /**
    * Récupérer toutes les notes de frais d'un utilisateur
    */
-  async getUserExpenses(userId, page = 1, limit = 50, statusFilter = 'all') {
+  async getUserExpenses(userId, page = 1, limit = 50, filters = {}) {
     try {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
@@ -36,8 +36,20 @@ const expenseService = {
         .range(from, to)
         .order('date', { ascending: false });
 
+      // Handle legacy string argument if passed (backward compatibility)
+      const statusFilter = typeof filters === 'string' ? filters : filters?.status;
+      const actualFilters = typeof filters === 'object' ? filters : {};
+
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
+      }
+
+      if (actualFilters.startDate) {
+        query = query.gte('date', actualFilters.startDate);
+      }
+
+      if (actualFilters.endDate) {
+        query = query.lte('date', actualFilters.endDate);
       }
 
       const { data, error, count } = await query;

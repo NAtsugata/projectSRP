@@ -1,6 +1,6 @@
 // src/pages/ExpensesViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à ExpensesView
-import React from 'react';
+import React, { useState } from 'react';
 import { useExpenses } from '../hooks/useExpenses';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
@@ -13,6 +13,13 @@ const ExpensesViewContainer = () => {
     const { profile } = useAuthStore();
     const toast = useToast();
 
+    // Default filter: last 3 months
+    const [filters, setFilters] = useState(() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 3);
+        return { startDate: d.toISOString() };
+    });
+
     // Récupérer les notes de frais avec le hook
     const {
         expenses,
@@ -22,7 +29,7 @@ const ExpensesViewContainer = () => {
         deleteExpense,
         isCreating,
         isDeleting
-    } = useExpenses(profile?.id);
+    } = useExpenses(profile?.id, filters);
 
     // Handler pour soumettre une note de frais
     const handleSubmitExpense = async (expenseData) => {
@@ -73,6 +80,8 @@ const ExpensesViewContainer = () => {
             onSubmitExpense={handleSubmitExpense}
             onDeleteExpense={handleDeleteExpense}
             profile={profile}
+            filters={filters}
+            onUpdateFilters={setFilters}
         />
     );
 };

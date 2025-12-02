@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore';
  * @param {string} userId - ID de l'utilisateur (optionnel)
  * @returns {object} - Notes de frais, loading, error, et fonctions de mutation
  */
-export function useExpenses(userId = null) {
+export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const queryClient = useQueryClient();
     const { user } = useAuthStore();
 
@@ -18,16 +18,17 @@ export function useExpenses(userId = null) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['expenses', userId],
+        queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
             if (userId) {
-                const { data } = await expenseService.getUserExpenses(userId, 1, 1000);
+                const { data } = await expenseService.getUserExpenses(userId, 1, limit, filters);
                 return data || [];
             }
-            const { data } = await expenseService.getAllExpenses(1, 1000);
+            const { data } = await expenseService.getAllExpenses(1, limit, filters);
             return data || [];
         },
         enabled: true,
+        keepPreviousData: true, // Keep data while fetching new filter
     });
 
     // Mutation pour créer une note de frais

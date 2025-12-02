@@ -650,7 +650,7 @@ const UserExpensesAccordion = ({ userName, userId, expenses, onApprove, onReject
   );
 };
 
-export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid }) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters, onUpdateFilters }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [globalStats, setGlobalStats] = useState({
     pending: { count: 0, total: 0 },
@@ -672,6 +672,22 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     { value: 'fuel', label: '⛽ Carburant', color: '#ef4444' },
     { value: 'other', label: '📋 Autres', color: '#64748b' }
   ];
+
+  const handlePeriodChange = (period) => {
+    if (!onUpdateFilters) return;
+
+    if (period === 'all') {
+      onUpdateFilters({});
+    } else if (period === '3m') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 3);
+      onUpdateFilters({ startDate: d.toISOString() });
+    } else if (period === '6m') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 6);
+      onUpdateFilters({ startDate: d.toISOString() });
+    }
+  };
 
   // Charger les statistiques globales (avec vues matérialisées ou fallback)
   useEffect(() => {
@@ -877,6 +893,20 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
 
       <h2 className="view-title">💰 Notes de Frais - Administration</h2>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', alignItems: 'center', gap: '1rem' }}>
+        <span className="text-muted" style={{ fontSize: '0.9rem' }}>Période :</span>
+        <select
+          className="form-control"
+          onChange={(e) => handlePeriodChange(e.target.value)}
+          defaultValue="3m"
+          style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid #ddd', minWidth: '150px' }}
+        >
+          <option value="3m">3 derniers mois</option>
+          <option value="6m">6 derniers mois</option>
+          <option value="all">Tout (peut être long)</option>
+        </select>
+      </div>
+
       {/* Statistiques globales */}
       <div className="expense-stats-grid">
         <div className="stat-card warning">
@@ -981,6 +1011,6 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

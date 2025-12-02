@@ -1,5 +1,5 @@
 // src/pages/AdminExpensesViewContainer.js
-import React from 'react';
+import React, { useState } from 'react';
 import { useExpenses } from '../hooks/useExpenses';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
@@ -7,7 +7,14 @@ import AdminExpensesView from './AdminExpensesView';
 
 const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
     const toast = useToast();
-    const { expenses, isLoading, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses();
+    // Default filter: last 3 months to avoid loading too much data
+    const [filters, setFilters] = useState(() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 3);
+        return { startDate: d.toISOString() };
+    });
+
+    const { expenses, isLoading, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses(null, filters);
     const { users } = useUsers();
 
     const handleApprove = async (id, comment) => {
@@ -84,6 +91,8 @@ const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
             onRejectExpense={handleReject}
             onDeleteExpense={handleDelete}
             onMarkAsPaid={handleMarkAsPaid}
+            filters={filters}
+            onUpdateFilters={setFilters}
         />
     );
 };

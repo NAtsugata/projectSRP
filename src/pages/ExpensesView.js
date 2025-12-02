@@ -107,7 +107,7 @@ const ReceiptsModal = ({ receipts, onClose }) => {
   );
 };
 
-export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile }) {
+export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile, filters, onUpdateFilters }) {
   // Restaurer le state depuis localStorage si disponible (pour mobile après retour de caméra)
   // Utiliser localStorage au lieu de sessionStorage car certains navigateurs mobiles
   // vident sessionStorage quand l'onglet est suspendu pour ouvrir la caméra
@@ -220,7 +220,24 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     { value: 'other', label: '📋 Autres', color: '#64748b' }
   ];
 
+  const handlePeriodChange = (period) => {
+    if (!onUpdateFilters) return;
+
+    if (period === 'all') {
+      onUpdateFilters({});
+    } else if (period === '3m') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 3);
+      onUpdateFilters({ startDate: d.toISOString() });
+    } else if (period === '6m') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 6);
+      onUpdateFilters({ startDate: d.toISOString() });
+    }
+  };
+
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
+
 
   // Calcul des statistiques directement depuis les données chargées
   // Cela garantit la cohérence avec la liste affichée
@@ -629,7 +646,19 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         }
       `}</style>
 
-      <h2 className="view-title">💰 Mes Notes de Frais</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 className="view-title" style={{ marginBottom: 0 }}>💰 Mes Notes de Frais</h2>
+        <select
+          className="form-control"
+          onChange={(e) => handlePeriodChange(e.target.value)}
+          defaultValue="3m"
+          style={{ padding: '0.5rem', borderRadius: '0.5rem', width: 'auto', minWidth: '120px' }}
+        >
+          <option value="3m">3 mois</option>
+          <option value="6m">6 mois</option>
+          <option value="all">Tout</option>
+        </select>
+      </div>
 
       {/* Statistiques */}
       <div className="expense-stats-grid">
