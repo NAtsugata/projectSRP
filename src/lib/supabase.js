@@ -123,14 +123,25 @@ export const interventionService = {
   },
 
   async createIntervention(interventionData, assignedUserIds = [], briefingFiles = []) {
+    // Nettoyer les données (retirer les champs UI-only qui ne sont pas dans la BDD)
+    const {
+      assignedUserIds: _1,
+      files: _2,
+      briefingFiles: _3,
+      ...cleanData
+    } = interventionData;
+
     // 1. Créer l'intervention
     const { data: intervention, error } = await supabase
       .from('interventions')
-      .insert([interventionData])
+      .insert([cleanData])
       .select()
       .single();
 
-    if (error) return { error };
+    if (error) {
+      console.error('❌ Erreur création intervention:', error);
+      return { error };
+    }
 
     // 2. Assigner les utilisateurs
     if (assignedUserIds && assignedUserIds.length > 0) {
