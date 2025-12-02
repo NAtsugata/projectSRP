@@ -214,13 +214,17 @@ export const vaultService = {
 
 export const storageService = {
   async uploadVaultFile(file, userId) {
+    console.log('📦 storageService: uploadVaultFile started', { userId, fileName: file.name });
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     const filePath = `vault/${fileName}`;
 
+    console.log('📦 storageService: uploading to', filePath);
     const { error: uploadError } = await supabase.storage
       .from('vault-files')
       .upload(filePath, file);
+
+    console.log('📦 storageService: upload result', { uploadError });
 
     if (uploadError) return { error: uploadError };
 

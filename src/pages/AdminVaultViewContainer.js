@@ -10,6 +10,7 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
     const { users } = useUsers();
 
     const handleSendDocument = async ({ file, userId, name, fileSize = null, description = '', tags = [] }) => {
+        console.log('🚀 AdminVaultViewContainer: handleSendDocument started', { userId, name });
         try {
             // Validation de la taille du fichier
             const sizeValidation = validateFileSize(file.size, 20); // 20MB max
@@ -18,9 +19,13 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
                 return;
             }
 
+            console.log('🚀 AdminVaultViewContainer: Calling uploadVaultFile...');
             const { publicURL, filePath, error: uploadError } = await storageService.uploadVaultFile(file, userId);
+            console.log('🚀 AdminVaultViewContainer: uploadVaultFile result:', { publicURL, filePath, uploadError });
+
             if (uploadError) throw uploadError;
 
+            console.log('🚀 AdminVaultViewContainer: Creating DB entry...');
             await createVaultDocument({
                 user_id: userId, // Note: DB column is user_id
                 file_name: name, // Note: DB column is file_name
@@ -30,6 +35,7 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
                 description,
                 tags
             });
+            console.log('🚀 AdminVaultViewContainer: DB entry created');
 
             showToast('Document envoyé avec succès !');
         } catch (error) {
