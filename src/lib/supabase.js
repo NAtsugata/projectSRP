@@ -131,6 +131,10 @@ export const interventionService = {
       ...cleanData
     } = interventionData;
 
+    // Sanitize integer fields (convert empty strings to null)
+    if (cleanData.km_start === '') cleanData.km_start = null;
+    if (cleanData.km_end === '') cleanData.km_end = null;
+
     // 1. Créer l'intervention
     const { data: intervention, error } = await supabase
       .from('interventions')
