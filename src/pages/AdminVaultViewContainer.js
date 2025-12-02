@@ -30,7 +30,7 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
                 user_id: userId, // Note: DB column is user_id
                 file_name: name, // Note: DB column is file_name
                 file_url: publicURL, // Note: DB column is file_url
-                path: filePath,
+                // path: filePath, // Colonne inexistante en BDD
                 // file_size: fileSize || file.size, // Colonne inexistante en BDD
                 // description, // Colonne inexistante en BDD
                 // tags // Colonne inexistante en BDD
