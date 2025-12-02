@@ -28,7 +28,17 @@ export function useInterventions(userId = null, isArchived = false) {
 
     // Mutation pour créer une intervention
     const createMutation = useMutation({
-        mutationFn: (newIntervention) => interventionService.createIntervention(newIntervention),
+        mutationFn: (params) => {
+            // Support both old style (just data) and new style (object with fields)
+            if (params.interventionData || params.assignedUserIds) {
+                return interventionService.createIntervention(
+                    params.interventionData || params,
+                    params.assignedUserIds,
+                    params.briefingFiles
+                );
+            }
+            return interventionService.createIntervention(params);
+        },
         onSuccess: () => {
             // Invalider le cache pour recharger les données
             queryClient.invalidateQueries(['interventions']);

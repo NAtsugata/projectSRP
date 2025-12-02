@@ -14,9 +14,19 @@ const AdminPlanningViewContainer = () => {
     const { users } = useUsers();
     const { templates, assignChecklist } = useChecklists();
 
-    const handleCreateIntervention = async (data) => {
+    const handleCreateIntervention = async (formData, assignedUsers, files) => {
         try {
-            await createIntervention(data);
+            // Gérer le cas où on reçoit plusieurs arguments (depuis AdminPlanningView)
+            // ou un seul objet (legacy)
+            if (assignedUsers || files) {
+                await createIntervention({
+                    interventionData: formData,
+                    assignedUserIds: assignedUsers,
+                    briefingFiles: files
+                });
+            } else {
+                await createIntervention(formData);
+            }
             toast?.success('Intervention créée avec succès');
             return true; // Retourner true pour fermer le formulaire
         } catch (error) {
