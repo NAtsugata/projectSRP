@@ -28,16 +28,21 @@ export function useInterventions(userId = null, isArchived = false) {
 
     // Mutation pour créer une intervention
     const createMutation = useMutation({
-        mutationFn: (params) => {
+        mutationFn: async (params) => {
+            let result;
             // Support both old style (just data) and new style (object with fields)
             if (params.interventionData || params.assignedUserIds) {
-                return interventionService.createIntervention(
+                result = await interventionService.createIntervention(
                     params.interventionData || params,
                     params.assignedUserIds,
                     params.briefingFiles
                 );
+            } else {
+                result = await interventionService.createIntervention(params);
             }
-            return interventionService.createIntervention(params);
+
+            if (result.error) throw result.error;
+            return result;
         },
         onSuccess: () => {
             // Invalider le cache pour recharger les données

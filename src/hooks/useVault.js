@@ -35,7 +35,11 @@ export function useVault(userId = null) {
     // Mutation pour envoyer un document
     // Mutation pour créer un document
     const createMutation = useMutation({
-        mutationFn: (data) => vaultService.createVaultDocument(data),
+        mutationFn: async (data) => {
+            const { data: result, error } = await vaultService.createVaultDocument(data);
+            if (error) throw error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['vault']);
         },
