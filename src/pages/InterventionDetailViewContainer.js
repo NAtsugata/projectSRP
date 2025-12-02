@@ -110,6 +110,24 @@ const InterventionDetailViewContainer = () => {
         }
     };
 
+    const handleUpdateAdminNote = async (id, note) => {
+        try {
+            const { error } = await interventionService.updateIntervention(id, {
+                admin_note: note
+            });
+
+            if (error) throw error;
+
+            // Silent update or toast? Toast is better for explicit save
+            // But if it's auto-save (onBlur), maybe silent?
+            // Let's assume explicit save or onBlur with toast
+            toast?.success('Note admin mise à jour.');
+            refetch();
+        } catch (error) {
+            toast?.error('Erreur maj note: ' + error.message);
+        }
+    };
+
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
@@ -127,6 +145,7 @@ const InterventionDetailViewContainer = () => {
             onSaveSilent={handleUpdateInterventionReportSilent}
             onAddBriefingDocuments={handleAddBriefingDocuments}
             onUpdateScheduledDates={handleUpdateScheduledDates}
+            onUpdateAdminNote={handleUpdateAdminNote}
             isAdmin={profile?.is_admin}
             refreshData={refetch}
             dataVersion={Date.now()} // Force update if needed

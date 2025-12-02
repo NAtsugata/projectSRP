@@ -155,8 +155,8 @@ const useBodyScrollLock = () => {
 };
 
 // -------- Uploader inline (photos/docs) avec Hook Optimisé --------
-const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', onBeginCritical, onEndCritical, onQueueChange }) => {
-  const { handleFileUpload, uploadState, reset } = useMobileFileManager(interventionId);
+const InlineUploader = ({ interventionId, onUploadComplete, folder = 'report', onBeginCritical, onEndCritical, onQueueChange, handleFileUpload, uploadState, reset }) => {
+  // const { handleFileUpload, uploadState, reset } = useMobileFileManager(interventionId); // Lifted up
   const inputRef = useRef(null);
   const cancelUnlockTimerRef = useRef(null);
 
@@ -297,7 +297,7 @@ const VoiceNoteRecorder = ({ onUploaded, interventionId, onBeginCritical, onEndC
   );
 };
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -306,6 +306,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
+
+  // Lifted upload state for Paste support
+  const { handleFileUpload, uploadState, reset } = useMobileFileManager(interventionId);
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
@@ -458,6 +461,46 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [intervention, onSaveSilent]);
 
   const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
+
+  // Reusable upload completion handler
+  const handleUploadComplete = useCallback(async (uploaded) => {
+    const updated = { ...report, files: [...(report.files || []), ...uploaded] };
+    setReport(updated);
+    await persistReport(updated);
+    saveScroll();
+    pendingRestoreRef.current = true;
+    if (!document.body.dataset.__scrollLocked) lock();
+    try {
+      await refreshData?.();
+    } finally {
+      unlock();
+      restoreScroll();
+    }
+  }, [report, persistReport, saveScroll, lock, refreshData, unlock, restoreScroll]);
+
+  // Paste handler
+  const handlePaste = useCallback(async (e) => {
+    const items = e.clipboardData.items;
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        files.push(items[i].getAsFile());
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      console.log('📋 Paste detected:', files.length, 'files');
+      await handleFileUpload(files, async (uploadedFiles, invalidFiles) => {
+        if (uploadedFiles.length > 0) {
+          const processedFiles = uploadedFiles.map(f => ({ ...f, url: withCacheBust(f.url) }));
+          await handleUploadComplete(processedFiles);
+        }
+        if (invalidFiles.length > 0) {
+          alert(`${invalidFiles.length} fichier(s) ignoré(s)`);
+        }
+      });
+    }
+  }, [handleFileUpload, handleUploadComplete]);
 
   // -------- Suppression d'image --------
   const handleDeleteImage = useCallback(async (image) => {
@@ -678,7 +721,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
   return (
-    <div className="intervention-detail-modern">
+    <div className="intervention-detail-modern" onPaste={handlePaste}>
       {/* NOUVEAU HEADER MODERNE */}
       <InterventionHeader
         intervention={intervention}
@@ -766,6 +809,31 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Admin Note Section */}
+          <div className="section">
+            <h3>📝 Note Admin</h3>
+            {isAdmin ? (
+              <textarea
+                className="form-control"
+                value={intervention.admin_note || ''}
+                onChange={(e) => {
+                  setIntervention(prev => ({ ...prev, admin_note: e.target.value }));
+                }}
+                onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
+                placeholder="Note pour l'employé..."
+                rows={3}
+              />
+            ) : (
+              <div className="admin-note-display p-3 bg-gray-50 rounded border">
+                {intervention.admin_note ? (
+                  <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{intervention.admin_note}</p>
+                ) : (
+                  <span className="text-muted">Aucune note.</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Rapport */}
@@ -904,27 +972,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           )}
           <InlineUploader
             interventionId={interventionId}
-            onUploadComplete={async (uploaded) => {
-              const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-
-              // Mettre à jour le state local IMMÉDIATEMENT pour affichage instantané
-              setReport(updated);
-
-              await persistReport(updated);
-              // 🔄 refresh doux après sauvegarde (affiche métadonnées/état à jour sans bouger le scroll)
-              saveScroll();
-              pendingRestoreRef.current = true;
-              if (!document.body.dataset.__scrollLocked) lock();
-              try {
-                await refreshData?.();
-              } finally {
-                unlock();
-                restoreScroll();
-              }
-            }}
+            onUploadComplete={handleUploadComplete}
             onBeginCritical={beginCriticalPicker}  // filet de sécurité focus + lock
             onEndCritical={unlock}
             onQueueChange={setUploadQueue}  // Mise à jour de la queue pour ImageGallery
+            handleFileUpload={handleFileUpload}
+            uploadState={uploadState}
+            reset={reset}
           />
         </div>
 
