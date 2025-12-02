@@ -17,7 +17,7 @@ const ExpensesViewContainer = () => {
     const [filters, setFilters] = useState(() => {
         const d = new Date();
         d.setMonth(d.getMonth() - 3);
-        return { startDate: d.toISOString() };
+        return { startDate: d.toISOString().split('T')[0] };
     });
 
     // Récupérer les notes de frais avec le hook

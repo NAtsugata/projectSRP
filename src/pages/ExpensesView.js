@@ -228,11 +228,11 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     } else if (period === '3m') {
       const d = new Date();
       d.setMonth(d.getMonth() - 3);
-      onUpdateFilters({ startDate: d.toISOString() });
+      onUpdateFilters({ startDate: d.toISOString().split('T')[0] });
     } else if (period === '6m') {
       const d = new Date();
       d.setMonth(d.getMonth() - 6);
-      onUpdateFilters({ startDate: d.toISOString() });
+      onUpdateFilters({ startDate: d.toISOString().split('T')[0] });
     }
   };
 

@@ -11,10 +11,10 @@ const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
     const [filters, setFilters] = useState(() => {
         const d = new Date();
         d.setMonth(d.getMonth() - 3);
-        return { startDate: d.toISOString() };
+        return { startDate: d.toISOString().split('T')[0] };
     });
 
-    const { expenses, isLoading, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses(null, filters);
+    const { expenses, isLoading, error, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses(null, filters);
     const { users } = useUsers();
 
     const handleApprove = async (id, comment) => {
@@ -79,6 +79,16 @@ const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
                 <div>Chargement des notes de frais...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: '2rem', color: 'red', textAlign: 'center' }}>
+                <h3>Erreur de chargement</h3>
+                <p>{error.message}</p>
+                <button onClick={() => window.location.reload()} className="btn btn-primary">Réessayer</button>
             </div>
         );
     }
