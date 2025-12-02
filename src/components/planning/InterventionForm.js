@@ -37,7 +37,8 @@ const InterventionForm = ({
     secondary_phone: '',
     client_email: '',
     ticket_number: '',
-    km_start: ''
+    km_start: '',
+    admin_note: ''
   },
   users = [],
   onSubmit,
@@ -146,10 +147,26 @@ const InterventionForm = ({
     onCancel();
   }, [reset, onCancel]);
 
+  const handlePaste = useCallback((e) => {
+    const items = e.clipboardData.items;
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        files.push(items[i].getAsFile());
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      // Reuse handleFileChange logic
+      const syntheticEvent = { target: { files: files } };
+      handleFileChange(syntheticEvent);
+    }
+  }, [handleFileChange]);
+
   const employees = users.filter(u => !u.is_admin);
 
   return (
-    <form onSubmit={handleSubmit} className="intervention-form">
+    <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>
       {/* Client */}
       <div className="form-group">
         <label htmlFor="client" className="form-label">
@@ -461,6 +478,23 @@ const InterventionForm = ({
         )}
 
         {uploadError && <span className="error-message">{uploadError}</span>}
+      </div>
+
+      {/* Admin Note */}
+      <div className="form-group">
+        <label htmlFor="admin_note" className="form-label">
+          📝 Note pour l'employé <span className="optional">(visible uniquement par l'employé)</span>
+        </label>
+        <textarea
+          id="admin_note"
+          name="admin_note"
+          value={values.admin_note || ''}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="form-control"
+          placeholder="Instructions particulières, code d'accès, etc."
+          rows={3}
+        />
       </div>
 
       {/* User assignment */}
