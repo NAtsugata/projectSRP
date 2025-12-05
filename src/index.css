@@ -22,7 +22,8 @@
 /* @import './styles/mobile-fixes.css'; */
 
 /* 6. Mobile Copper - Design cuivré/laiton élégant (DOIT être en dernier pour override) */
-/* @import './styles/mobile-copper.css'; */
+/* 6. Mobile Dashboard - Thème Dark/Glassmorphism (Overrides) */
+@import './styles/mobile-dashboard.css';
 
 /* ==================== RESET & BASE ==================== */
 *,
