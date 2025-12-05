@@ -208,3 +208,101 @@ select {
     border-color: rgba(148, 163, 184, 0.2) !important;
     color: white !important;
 }
+
+/* ==================== AGGRESSIVE VISIBILITY FIXES ==================== */
+
+/* Header & Client Info */
+.intervention-header,
+.header-main,
+.client-info,
+.header-address,
+.header-datetime {
+    color: #f8fafc !important;
+}
+
+.client-name {
+    color: #f8fafc !important;
+}
+
+.service-type {
+    color: #cbd5e1 !important;
+}
+
+/* Call Buttons Card */
+.call-button-card {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid rgba(148, 163, 184, 0.1) !important;
+    color: #f8fafc !important;
+}
+
+.call-button-label {
+    color: #94a3b8 !important;
+}
+
+.call-button-number {
+    color: #f8fafc !important;
+}
+
+/* Force all buttons to be visible */
+button,
+.btn,
+.action-btn {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Specific fix for Red/Danger buttons */
+.btn-danger,
+.btn-danger-modern,
+button.bg-red-500,
+button.text-red-600 {
+    background: rgba(220, 38, 38, 0.2) !important;
+    color: #fca5a5 !important;
+    border: 1px solid rgba(220, 38, 38, 0.5) !important;
+}
+
+/* Specific fix for Secondary/Gray buttons */
+.btn-secondary,
+.btn-secondary-modern,
+button.bg-gray-100 {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+/* Fix Icons */
+svg {
+    color: currentColor !important;
+}
+
+/* Force all text inside cards to be light */
+.card-white *,
+.modern-section *,
+.intervention-detail-modern * {
+    color: inherit;
+}
+
+/* Re-assert text color for specific elements that might override inherit */
+.card-white h1,
+.card-white h2,
+.card-white h3,
+.card-white h4,
+.card-white h5,
+.card-white h6,
+.modern-section h1,
+.modern-section h2,
+.modern-section h3,
+.modern-section h4,
+.modern-section h5,
+.modern-section h6 {
+    color: #f8fafc !important;
+}
+
+.card-white p,
+.card-white span,
+.card-white div,
+.modern-section p,
+.modern-section span,
+.modern-section div {
+    color: #cbd5e1 !important;
+}
