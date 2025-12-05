@@ -145,12 +145,213 @@ select {
 .employee-planning-empty {
     background: rgba(30, 41, 59, 0.4) !important;
     border: 2px dashed rgba(148, 163, 184, 0.2) !important;
-}
+    /* ============================================
+   MOBILE DASHBOARD THEME
+   Enforces Dark Mode & Glassmorphism on Mobile
+   ============================================ */
 
-.employee-planning-empty-title {
-    color: #f8fafc !important;
-}
+    /* Global Mobile Background */
+    body {
+        background-color: #0f172a !important;
+        /* Slate 900 */
+        color: #f8fafc !important;
+        /* Slate 50 */
+    }
 
-.employee-planning-empty-description {
-    color: #94a3b8 !important;
-}
+    /* Mobile Menu Container */
+    .mobile-menu-container,
+    .min-h-screen.bg-gray-50 {
+        background-color: #0f172a !important;
+    }
+
+    /* Mobile Cards (Menu Items) */
+    .mobile-menu-item,
+    button.bg-white {
+        background: rgba(30, 41, 59, 0.7) !important;
+        /* Slate 800 + Opacity */
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    button.bg-white span {
+        color: #f8fafc !important;
+    }
+
+    /* Mobile Header */
+    .mobile-header,
+    .mobile-upload-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
+        color: white !important;
+    }
+
+    .mobile-header h1,
+    .mobile-upload-header h2 {
+        color: white !important;
+    }
+
+    /* Mobile Upload Page */
+    .mobile-upload-page {
+        background-color: #0f172a !important;
+        min-height: 100vh;
+    }
+
+    .upload-dropzone {
+        background: rgba(30, 41, 59, 0.4) !important;
+        border: 2px dashed rgba(148, 163, 184, 0.2) !important;
+        border-radius: 1rem !important;
+    }
+
+    .upload-queue-item {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        color: white !important;
+    }
+
+    .file-name {
+        color: #f8fafc !important;
+    }
+
+    .file-status-text {
+        color: #94a3b8 !important;
+    }
+
+    /* Bottom Navigation */
+    .mobile-nav {
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(16px) !important;
+        border-top: 1px solid rgba(148, 163, 184, 0.1) !important;
+    }
+
+    .mobile-nav-item {
+        color: #94a3b8 !important;
+    }
+
+    .mobile-nav-item.active {
+        color: #6366f1 !important;
+        /* Indigo 500 */
+    }
+
+    /* Inputs on Mobile */
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+        background-color: rgba(15, 23, 42, 0.6) !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+        color: white !important;
+    }
+
+    /* ==================== PLANNING VIEW MOBILE OVERRIDES ==================== */
+    .employee-planning-view {
+        background-color: #0f172a !important;
+        /* Force Dark Background */
+    }
+
+    .planning-title {
+        color: #f8fafc !important;
+        /* Force White Title */
+    }
+
+    .planning-subtitle {
+        color: #94a3b8 !important;
+        /* Force Slate-400 Subtitle */
+    }
+
+    /* Intervention Cards (Dark/Glass) */
+    .intervention-card {
+        background: rgba(30, 41, 59, 0.7) !important;
+        /* Slate 800 + Opacity */
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .intervention-card-title {
+        color: #f8fafc !important;
+        /* White Text */
+    }
+
+    .intervention-card-service {
+        color: #cbd5e1 !important;
+        /* Light Gray Text */
+    }
+
+    .info-item {
+        color: #94a3b8 !important;
+        /* Muted Text */
+    }
+
+    .info-icon {
+        color: #6366f1 !important;
+        /* Indigo Icon */
+    }
+
+    /* Empty State */
+    .employee-planning-empty {
+        background: rgba(30, 41, 59, 0.4) !important;
+        border: 2px dashed rgba(148, 163, 184, 0.2) !important;
+    }
+
+    .employee-planning-empty-title {
+        color: #f8fafc !important;
+    }
+
+    .employee-planning-empty-description {
+        color: #94a3b8 !important;
+    }
+
+    /* ==================== INTERVENTION DETAIL MOBILE OVERRIDES ==================== */
+    .intervention-detail-modern {
+        background: #0f172a !important;
+    }
+
+    /* Force dark background on sections */
+    .modern-section,
+    .card-white,
+    .card-slim {
+        background: rgba(30, 41, 59, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        color: #f8fafc !important;
+    }
+
+    /* Force text colors */
+    .modern-section h2,
+    .modern-section h3,
+    .card-white h2,
+    .card-white h3,
+    .section-title {
+        color: #f8fafc !important;
+    }
+
+    .text-muted,
+    .section-subtitle,
+    .form-label-modern {
+        color: #cbd5e1 !important;
+    }
+
+    /* Fix Buttons */
+    .btn-secondary,
+    .btn-secondary-modern {
+        background: rgba(148, 163, 184, 0.1) !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    }
+
+    .btn-danger,
+    .btn-danger-modern {
+        background: rgba(220, 38, 38, 0.2) !important;
+        color: #fca5a5 !important;
+        border: 1px solid rgba(220, 38, 38, 0.5) !important;
+    }
+
+    /* Fix Inputs in Detail View */
+    .form-input-modern,
+    .form-textarea-modern {
+        background: rgba(15, 23, 42, 0.6) !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+        color: white !important;
+    }
