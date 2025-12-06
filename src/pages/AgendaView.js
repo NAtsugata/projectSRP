@@ -19,7 +19,7 @@ import {
   getDateRange,
   navigatePeriod
 } from '../utils/agendaHelpers';
-import { getAgendaNotifications } from '../utils/notificationHelper';
+// eslint-disable-next-line no-unused-vars -- Reserved for future notification features
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import logger from '../utils/logger';

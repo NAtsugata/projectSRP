@@ -256,7 +256,7 @@ export const storageService = {
 
     // Note: Supabase JS SDK ne supporte pas onProgress nativement dans upload() simple
     // On utilise upload() standard
-    const { data, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('intervention-files')
       .upload(filePath, file, {
         cacheControl: '3600',

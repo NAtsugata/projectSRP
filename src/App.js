@@ -2,11 +2,10 @@
 // FILE: src/App.js — REFACTORISÉ (Containers + React Query)
 // =============================
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, Link, useNavigate, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService, profileService, supabase } from './lib/supabase';
 import { Toast, ConfirmationModal } from './components/SharedUI';
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, CalendarIcon, BriefcaseIcon, ArchiveIcon, SunIcon, UsersIcon, FolderIcon, LockIcon, DollarSignIcon, CheckCircleIcon, FileTextIcon } from './components/SharedUI';
 import { ToastProvider } from './contexts/ToastContext';
 import { useAuthStore } from './store/authStore';
 import { DownloadProvider } from './contexts/DownloadContext';

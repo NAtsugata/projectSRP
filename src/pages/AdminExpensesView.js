@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
-  XCircleIcon,
   UserIcon,
   ChevronDownIcon,
   CalendarIcon,
@@ -659,7 +658,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     rejected: { count: 0, total: 0 },
     total: 0
   });
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [_statsLoading, setStatsLoading] = useState(true);
 
   // Catégories de frais (même que ExpensesView)
   const categories = [
