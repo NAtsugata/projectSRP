@@ -41,25 +41,26 @@ reportWebVitals();
 // - Installation comme app native (iOS, Android, Desktop)
 // - Fonctionnement hors ligne
 // - Cache intelligent des assets et données
-// ⚠️ DÉSACTIVATION TEMPORAIRE DU SERVICE WORKER POUR DEBUGGING
-// On désenregistre pour forcer le rechargement des assets
-serviceWorkerRegistration.unregister();
-/*
+// ✅ RÉACTIVÉ - PWA Mode actif
 serviceWorkerRegistration.register({
   onSuccess: (registration) => {
     console.log('✅ PWA prête - Mode hors ligne disponible');
+    console.log('📱 Installation possible sur l\'écran d\'accueil');
   },
   onUpdate: (registration) => {
+    console.log('🔄 Nouvelle version disponible');
     const waitingServiceWorker = registration.waiting;
     if (waitingServiceWorker) {
-      waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
-      waitingServiceWorker.addEventListener("statechange", event => {
-        if (event.target.state === "activated") {
-          window.location.reload();
-        }
-      });
+      // Afficher notification de mise à jour
+      if (window.confirm('Une nouvelle version est disponible. Rafraîchir maintenant ?')) {
+        waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+        waitingServiceWorker.addEventListener("statechange", event => {
+          if (event.target.state === "activated") {
+            window.location.reload();
+          }
+        });
+      }
     }
   }
 });
-*/
 
