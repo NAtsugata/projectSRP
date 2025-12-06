@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
 import './index.css';
 import './styles/mobile-enhancements.css';
+import './styles/mobile-dashboard.css'; // 🌙 Thème dark unifié mobile
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import reportWebVitals from './reportWebVitals';

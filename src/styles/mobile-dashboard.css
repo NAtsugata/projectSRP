@@ -1,65 +1,80 @@
 /* ============================================
-   MOBILE DASHBOARD THEME
-   Enforces Dark Mode & Glassmorphism on Mobile
+   MOBILE DASHBOARD THEME - UNIFIED
+   Dark Glassmorphism for all mobile views
    ============================================ */
 
-/* Global Mobile Background */
+/* ==================== GLOBAL MOBILE BACKGROUND ==================== */
 body {
     background-color: #0f172a !important;
-    /* Slate 900 */
     color: #f8fafc !important;
-    /* Slate 50 */
 }
 
-/* Mobile Menu Container */
+/* ==================== MOBILE CONTAINERS ==================== */
 .mobile-menu-container,
-.min-h-screen.bg-gray-50 {
+.min-h-screen.bg-gray-50,
+.mobile-upload-page {
     background-color: #0f172a !important;
+    min-height: 100vh;
 }
 
-/* Mobile Cards (Menu Items) */
+/* ==================== MOBILE CARDS (Glassmorphism) ==================== */
 .mobile-menu-item,
+.card-white,
+.card-slim,
+.modern-section,
+.intervention-card,
+.expense-card,
+.expense-item,
+.leave-request-card,
+.leave-item,
+.archive-item,
+.vault-folder,
+.vault-document,
+.document-card,
+.agenda-day,
+.agenda-event,
+.checklist-item,
+.checklist-template,
+.user-card,
+.user-item,
+.call-button-card,
+.scanner-controls,
+.shower-form-section,
+.upload-queue-item,
 button.bg-white {
     background: rgba(30, 41, 59, 0.7) !important;
-    /* Slate 800 + Opacity */
     backdrop-filter: blur(12px) !important;
     border: 1px solid rgba(148, 163, 184, 0.1) !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+    color: #f8fafc !important;
 }
 
 button.bg-white span {
     color: #f8fafc !important;
 }
 
-/* Mobile Header */
+/* ==================== MOBILE HEADER ==================== */
 .mobile-header,
-.mobile-upload-header {
+.mobile-upload-header,
+.intervention-header {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
     border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
     color: white !important;
 }
 
 .mobile-header h1,
-.mobile-upload-header h2 {
-    color: white !important;
+.mobile-upload-header h2,
+.header-main,
+.client-info,
+.client-name {
+    color: #f8fafc !important;
 }
 
-/* Mobile Upload Page */
-.mobile-upload-page {
-    background-color: #0f172a !important;
-    min-height: 100vh;
-}
-
+/* ==================== UPLOAD DROPZONE ==================== */
 .upload-dropzone {
     background: rgba(30, 41, 59, 0.4) !important;
     border: 2px dashed rgba(148, 163, 184, 0.2) !important;
     border-radius: 1rem !important;
-}
-
-.upload-queue-item {
-    background: rgba(30, 41, 59, 0.7) !important;
-    border: 1px solid rgba(148, 163, 184, 0.1) !important;
-    color: white !important;
 }
 
 .file-name {
@@ -70,7 +85,7 @@ button.bg-white span {
     color: #94a3b8 !important;
 }
 
-/* Bottom Navigation */
+/* ==================== BOTTOM NAVIGATION ==================== */
 .mobile-nav {
     background: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px) !important;
@@ -83,66 +98,100 @@ button.bg-white span {
 
 .mobile-nav-item.active {
     color: #6366f1 !important;
-    /* Indigo 500 */
 }
 
-/* Inputs on Mobile */
+/* ==================== FORM INPUTS ==================== */
 input[type="text"],
 input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
 textarea,
-select {
+select,
+.form-input-modern,
+.form-textarea-modern,
+.form-control {
     background-color: rgba(15, 23, 42, 0.6) !important;
     border-color: rgba(148, 163, 184, 0.2) !important;
     color: white !important;
 }
 
-/* ==================== PLANNING VIEW MOBILE OVERRIDES ==================== */
-.employee-planning-view {
+/* ==================== VIEW BACKGROUNDS ==================== */
+.employee-planning-view,
+.intervention-detail-modern,
+.expenses-view,
+.admin-expenses-view,
+.expenses-container,
+.leave-view,
+.admin-leave-view,
+.employee-leave-view,
+.archive-view,
+.admin-archive-view,
+.vault-view,
+.admin-vault-view,
+.coffre-numerique-view,
+.my-documents-view,
+.agenda-view,
+.checklist-view,
+.admin-checklist-view,
+.scanner-view,
+.document-scanner-view,
+.admin-user-view,
+.admin-planning-view,
+.ir-shower-forms-view {
     background-color: #0f172a !important;
-    /* Force Dark Background */
+    min-height: 100vh;
 }
 
-.planning-title {
+/* ==================== TITLES & HEADINGS ==================== */
+.planning-title,
+.section-title,
+.intervention-card-title,
+.folder-name,
+.document-name,
+.agenda-event-title,
+.checklist-title,
+.user-name,
+.call-button-number,
+.modern-section h2,
+.modern-section h3,
+.card-white h2,
+.card-white h3 {
     color: #f8fafc !important;
-    /* Force White Title */
 }
 
-.planning-subtitle {
+/* ==================== SUBTITLES & MUTED TEXT ==================== */
+.planning-subtitle,
+.text-muted,
+.section-subtitle,
+.form-label-modern,
+.intervention-card-service,
+.info-item,
+.expense-status,
+.leave-dates,
+.document-date,
+.document-size,
+.user-role,
+.call-button-label,
+.service-type {
     color: #94a3b8 !important;
-    /* Force Slate-400 Subtitle */
 }
 
-/* Intervention Cards (Dark/Glass) */
-.intervention-card {
-    background: rgba(30, 41, 59, 0.7) !important;
-    /* Slate 800 + Opacity */
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(148, 163, 184, 0.1) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-}
-
-.intervention-card-title {
-    color: #f8fafc !important;
-    /* White Text */
-}
-
-.intervention-card-service {
-    color: #cbd5e1 !important;
-    /* Light Gray Text */
-}
-
-.info-item {
-    color: #94a3b8 !important;
-    /* Muted Text */
-}
-
-.info-icon {
+/* ==================== ACCENT COLORS ==================== */
+.info-icon,
+.agenda-date {
     color: #6366f1 !important;
-    /* Indigo Icon */
 }
 
-/* Empty State */
-.employee-planning-empty {
+.expense-amount {
+    color: #10b981 !important;
+}
+
+/* ==================== EMPTY STATES ==================== */
+.employee-planning-empty,
+.empty-state,
+.no-data,
+.placeholder {
     background: rgba(30, 41, 59, 0.4) !important;
     border: 2px dashed rgba(148, 163, 184, 0.2) !important;
 }
@@ -155,95 +204,7 @@ select {
     color: #94a3b8 !important;
 }
 
-/* ==================== INTERVENTION DETAIL MOBILE OVERRIDES ==================== */
-.intervention-detail-modern {
-    background: #0f172a !important;
-}
-
-/* Force dark background on sections */
-.modern-section,
-.card-white,
-.card-slim {
-    background: rgba(30, 41, 59, 0.7) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(148, 163, 184, 0.1) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-    color: #f8fafc !important;
-}
-
-/* Force text colors */
-.modern-section h2,
-.modern-section h3,
-.card-white h2,
-.card-white h3,
-.section-title {
-    color: #f8fafc !important;
-}
-
-.text-muted,
-.section-subtitle,
-.form-label-modern {
-    color: #cbd5e1 !important;
-}
-
-/* Fix Buttons */
-.btn-secondary,
-.btn-secondary-modern {
-    background: rgba(148, 163, 184, 0.1) !important;
-    color: #f8fafc !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
-}
-
-.btn-danger,
-.btn-danger-modern {
-    background: rgba(220, 38, 38, 0.2) !important;
-    color: #fca5a5 !important;
-    border: 1px solid rgba(220, 38, 38, 0.5) !important;
-}
-
-/* Fix Inputs in Detail View */
-.form-input-modern,
-.form-textarea-modern {
-    background: rgba(15, 23, 42, 0.6) !important;
-    border-color: rgba(148, 163, 184, 0.2) !important;
-    color: white !important;
-}
-
-/* ==================== AGGRESSIVE VISIBILITY FIXES ==================== */
-
-/* Header & Client Info */
-.intervention-header,
-.header-main,
-.client-info,
-.header-address,
-.header-datetime {
-    color: #f8fafc !important;
-}
-
-.client-name {
-    color: #f8fafc !important;
-}
-
-.service-type {
-    color: #cbd5e1 !important;
-}
-
-/* Call Buttons Card */
-.call-button-card {
-    background: rgba(30, 41, 59, 0.7) !important;
-    border: 1px solid rgba(148, 163, 184, 0.1) !important;
-    color: #f8fafc !important;
-}
-
-.call-button-label {
-    color: #94a3b8 !important;
-}
-
-.call-button-number {
-    color: #f8fafc !important;
-}
-
-/* Force all buttons to be visible */
+/* ==================== BUTTONS ==================== */
 button,
 .btn,
 .action-btn {
@@ -251,7 +212,14 @@ button,
     visibility: visible !important;
 }
 
-/* Specific fix for Red/Danger buttons */
+.btn-secondary,
+.btn-secondary-modern,
+button.bg-gray-100 {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
 .btn-danger,
 .btn-danger-modern,
 button.bg-red-500,
@@ -261,48 +229,107 @@ button.text-red-600 {
     border: 1px solid rgba(220, 38, 38, 0.5) !important;
 }
 
-/* Specific fix for Secondary/Gray buttons */
-.btn-secondary,
-.btn-secondary-modern,
-button.bg-gray-100 {
-    background: rgba(148, 163, 184, 0.1) !important;
-    color: #f8fafc !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+.btn-primary,
+button.bg-indigo-500,
+button.bg-blue-500 {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    color: white !important;
+    border: none !important;
 }
 
-/* Fix Icons */
+.btn-success,
+button.bg-green-500 {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
+}
+
+/* ==================== ICONS ==================== */
 svg {
     color: currentColor !important;
 }
 
-/* Force all text inside cards to be light */
-.card-white *,
-.modern-section *,
-.intervention-detail-modern * {
-    color: inherit;
-}
+/* ==================== GLOBAL MOBILE OVERRIDES ==================== */
+@media (max-width: 768px) {
 
-/* Re-assert text color for specific elements that might override inherit */
-.card-white h1,
-.card-white h2,
-.card-white h3,
-.card-white h4,
-.card-white h5,
-.card-white h6,
-.modern-section h1,
-.modern-section h2,
-.modern-section h3,
-.modern-section h4,
-.modern-section h5,
-.modern-section h6 {
-    color: #f8fafc !important;
-}
+    /* Force dark background on all containers */
+    .main-content,
+    .app-container,
+    .page-container,
+    [class*="container"],
+    [class*="View"] {
+        background-color: #0f172a !important;
+    }
 
-.card-white p,
-.card-white span,
-.card-white div,
-.modern-section p,
-.modern-section span,
-.modern-section div {
-    color: #cbd5e1 !important;
+    /* Force white backgrounds to dark */
+    .bg-white,
+    [class*="bg-white"],
+    .card,
+    .panel {
+        background: rgba(30, 41, 59, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        color: #f8fafc !important;
+    }
+
+    /* Force light grays to dark */
+    .bg-gray-50,
+    .bg-gray-100,
+    .bg-slate-50 {
+        background-color: #0f172a !important;
+    }
+
+    /* Universal text colors */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .title,
+    .heading {
+        color: #f8fafc !important;
+    }
+
+    p,
+    span,
+    div,
+    li {
+        color: #cbd5e1 !important;
+    }
+
+    /* Tables */
+    table,
+    th,
+    td {
+        background: transparent !important;
+        color: #f8fafc !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+    }
+
+    th {
+        background: rgba(30, 41, 59, 0.5) !important;
+    }
+
+    /* Links */
+    a {
+        color: #6366f1 !important;
+    }
+
+    a:hover {
+        color: #818cf8 !important;
+    }
+
+    /* Modal overlays */
+    .modal-overlay,
+    .overlay {
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(4px) !important;
+    }
+
+    .modal-content,
+    .modal-body {
+        background: #1e293b !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        color: #f8fafc !important;
+    }
 }
