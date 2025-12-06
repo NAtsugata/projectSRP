@@ -16,6 +16,7 @@ import { debounce } from './utils/debounce';
 import { setToastFunction, overrideAlert } from './utils/alertOverride';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
+import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
@@ -178,6 +179,7 @@ function App() {
     <DownloadProvider>
       <ToastProvider>
         <OfflineIndicator />
+        <PWAInstallPrompt />
 
 
         {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
