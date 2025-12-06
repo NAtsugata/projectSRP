@@ -21,4 +21,5 @@ if (isProduction) {
   originalError('🔇 Mode production : console.log désactivé. Seules les erreurs et warnings sont affichés.');
 }
 
-export default {};
+const consoleOverride = { isProduction };
+export default consoleOverride;

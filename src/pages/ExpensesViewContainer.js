@@ -27,8 +27,7 @@ const ExpensesViewContainer = () => {
         error,
         createExpense,
         deleteExpense,
-        isCreating,
-        isDeleting
+        // isCreating, isDeleting unused - available for future loading state UI
     } = useExpenses(profile?.id, filters);
 
     // Handler pour soumettre une note de frais

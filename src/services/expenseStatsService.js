@@ -398,7 +398,7 @@ const getExpensesToPayFallback = async () => {
 };
 
 // Export par défaut
-export default {
+const expenseStatsService = {
   getGlobalStats,
   getUserStats,
   getMonthlyStats,
@@ -406,3 +406,5 @@ export default {
   refreshRealtimeStats,
   refreshAllStats
 };
+
+export default expenseStatsService;

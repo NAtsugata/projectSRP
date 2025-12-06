@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // throw new Error('Supabase URL or ANON KEY not defined');
 }
 
-// Initialise Supabase client
+// Initialise Supabase client avec optimisations mobile
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -23,7 +23,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'X-Client-Info': 'supabase-js-mobile',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+    fetch: (url, options = {}) => {
+      // Timeout de 30 secondes pour les requêtes mobiles
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
     },
   },
   db: { schema: 'public' },

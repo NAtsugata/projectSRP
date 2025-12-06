@@ -192,6 +192,7 @@ export const sanitizeURL = (url, options = {}) => {
   if (allowRelative) {
     if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('?')) {
       // Sanitize pour éviter javascript: dans les URLs relatives
+      // eslint-disable-next-line no-script-url -- Vérification intentionnelle de sécurité
       if (trimmed.toLowerCase().includes('javascript:')) return '';
       if (trimmed.toLowerCase().includes('data:')) return '';
       return DOMPurify.sanitize(trimmed, { ALLOWED_TAGS: [] });
@@ -336,6 +337,7 @@ export const sanitizeFilename = (filename) => {
 
   return filename
     // Retirer les caractères dangereux
+    // eslint-disable-next-line no-control-regex -- Retrait intentionnel des caractères de contrôle dangereux
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
     // Retirer les points au début (fichiers cachés)
     .replace(/^\.+/, '')
@@ -426,7 +428,7 @@ export const sanitizeString = sanitizeText;
 // Export des limites pour tests/configuration
 export { SECURITY_LIMITS };
 
-export default {
+const sanitizeUtils = {
   sanitizeHTML,
   sanitizeText,
   sanitizeURL,
@@ -441,3 +443,5 @@ export default {
   getCacheStats,
   SECURITY_LIMITS
 };
+
+export default sanitizeUtils;

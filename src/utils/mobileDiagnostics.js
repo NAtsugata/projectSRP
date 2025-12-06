@@ -29,12 +29,12 @@ export const runMobileDiagnostics = () => {
     // Capacités du navigateur
     capabilities: {
       fileAPI: typeof window.File !== 'undefined' &&
-               typeof window.FileReader !== 'undefined' &&
-               typeof window.FileList !== 'undefined' &&
-               typeof window.Blob !== 'undefined',
+        typeof window.FileReader !== 'undefined' &&
+        typeof window.FileList !== 'undefined' &&
+        typeof window.Blob !== 'undefined',
       dataTransfer: typeof DataTransfer !== 'undefined',
       dataTransferItems: typeof DataTransfer !== 'undefined' &&
-                         DataTransfer.prototype.hasOwnProperty('items'),
+        DataTransfer.prototype.hasOwnProperty('items'),
       canvas: typeof document.createElement('canvas').getContext !== 'undefined',
       createObjectURL: typeof URL.createObjectURL !== 'undefined',
       webWorkers: typeof Worker !== 'undefined',
@@ -395,8 +395,10 @@ export const testFileUpload = async (file) => {
   return test;
 };
 
-export default {
+const mobileDiagnosticsUtils = {
   runMobileDiagnostics,
   generateDiagnosticReport,
   testFileUpload,
 };
+
+export default mobileDiagnosticsUtils;

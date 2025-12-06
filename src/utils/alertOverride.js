@@ -89,8 +89,10 @@ export const restoreAlert = () => {
   }
 };
 
-export default {
+const alertOverrideUtils = {
   setToastFunction,
   overrideAlert,
   restoreAlert
 };
+
+export default alertOverrideUtils;

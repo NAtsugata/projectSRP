@@ -19,7 +19,7 @@ const EmployeeLeaveViewContainer = () => {
         isLoading,
         error,
         createLeaveRequest,
-        isCreating
+        // isCreating unused - available for future loading state UI
     } = useLeaveRequests(profile?.id);
 
     // Handler pour soumettre une demande de congé

@@ -1,0 +1,41 @@
+<svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Legs -->
+  <path d="M20 50 L20 70 L10 70 L10 75 L25 75 L25 50 Z" fill="#0000CD"/>
+  <path d="M40 50 L40 70 L50 70 L50 75 L35 75 L35 50 Z" fill="#0000CD"/>
+  
+  <!-- Shoes -->
+  <path d="M10 70 Q5 70 5 75 Q5 80 15 80 L25 80 L25 70 Z" fill="#8B4513"/>
+  <path d="M50 70 Q55 70 55 75 Q55 80 45 80 L35 80 L35 70 Z" fill="#8B4513"/>
+  
+  <!-- Body/Shirt -->
+  <rect x="15" y="40" width="30" height="20" rx="5" fill="#FF0000"/>
+  <rect x="18" y="45" width="24" height="20" rx="5" fill="#0000CD"/> <!-- Overalls -->
+  
+  <!-- Buttons -->
+  <circle cx="22" cy="50" r="3" fill="#FFD700"/>
+  <circle cx="38" cy="50" r="3" fill="#FFD700"/>
+  
+  <!-- Head -->
+  <circle cx="30" cy="25" r="15" fill="#FFDAB9"/>
+  
+  <!-- Mustache -->
+  <path d="M25 30 Q30 28 35 30 Q40 32 35 35 Q30 35 25 30" fill="#000"/>
+  
+  <!-- Nose -->
+  <circle cx="35" cy="28" r="4" fill="#FFDAB9"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="32" cy="22" rx="2" ry="4" fill="#000"/>
+  
+  <!-- Hat -->
+  <path d="M10 20 Q10 10 30 10 Q50 10 50 20 L55 20 L55 25 L10 25 Z" fill="#FF0000"/>
+  <circle cx="30" cy="15" r="8" fill="#FF0000"/>
+  
+  <!-- Arms -->
+  <path d="M15 45 Q5 55 15 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M45 45 Q55 55 45 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Hands -->
+  <circle cx="15" cy="65" r="6" fill="#FFF"/>
+  <circle cx="45" cy="65" r="6" fill="#FFF"/>
+</svg>

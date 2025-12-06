@@ -1,0 +1,34 @@
+<svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Legs (Jumping) -->
+  <path d="M20 50 L15 65 L25 60 L25 50 Z" fill="#0000CD"/>
+  <path d="M40 50 L45 60 L35 65 L35 50 Z" fill="#0000CD"/>
+  
+  <!-- Shoes -->
+  <path d="M15 65 Q10 70 15 75 L25 70 L20 60 Z" fill="#8B4513"/>
+  <path d="M45 60 Q50 65 45 70 L35 65 L40 55 Z" fill="#8B4513"/>
+  
+  <!-- Body/Shirt -->
+  <rect x="15" y="40" width="30" height="20" rx="5" fill="#FF0000"/>
+  <rect x="18" y="45" width="24" height="20" rx="5" fill="#0000CD"/>
+  
+  <!-- Buttons -->
+  <circle cx="22" cy="50" r="3" fill="#FFD700"/>
+  <circle cx="38" cy="50" r="3" fill="#FFD700"/>
+  
+  <!-- Head -->
+  <circle cx="30" cy="25" r="15" fill="#FFDAB9"/>
+  <path d="M25 30 Q30 28 35 30 Q40 32 35 35 Q30 35 25 30" fill="#000"/>
+  <circle cx="35" cy="28" r="4" fill="#FFDAB9"/>
+  <ellipse cx="32" cy="22" rx="2" ry="4" fill="#000"/>
+  
+  <!-- Hat -->
+  <path d="M10 20 Q10 10 30 10 Q50 10 50 20 L55 20 L55 25 L10 25 Z" fill="#FF0000"/>
+  
+  <!-- Arms (One Up) -->
+  <path d="M45 45 Q55 35 55 25" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M15 45 Q5 55 15 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Hands -->
+  <circle cx="15" cy="65" r="6" fill="#FFF"/>
+  <circle cx="55" cy="25" r="6" fill="#FFF"/>
+</svg>

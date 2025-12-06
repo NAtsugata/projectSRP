@@ -2,7 +2,7 @@
 // Fonctions de validation pour sécuriser les entrées utilisateur
 
 import { sanitizeText } from './sanitize';
-import { FILE_SIZE, fileUtils } from '../config/fileConfig';
+import { fileUtils } from '../config/fileConfig';
 
 /**
  * Valide une adresse email

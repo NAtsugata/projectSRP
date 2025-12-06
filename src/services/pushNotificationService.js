@@ -207,7 +207,7 @@ export const testNotification = async () => {
   await showLocalNotification(title, options);
 };
 
-export default {
+const pushNotificationService = {
   isNotificationSupported,
   isNotificationEnabled,
   requestNotificationPermission,
@@ -219,3 +219,5 @@ export default {
   notifyMessage,
   testNotification
 };
+
+export default pushNotificationService;

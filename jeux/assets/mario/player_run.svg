@@ -1,0 +1,52 @@
+<svg width="180" height="80" viewBox="0 0 180 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Frame 1 -->
+  <g transform="translate(0,0)">
+    <path d="M20 50 L10 65 L25 60 L25 50 Z" fill="#0000CD"/>
+    <path d="M40 50 L50 65 L35 60 L35 50 Z" fill="#0000CD"/>
+    <path d="M10 65 Q5 70 10 75 L20 70 Z" fill="#8B4513"/>
+    <path d="M50 65 Q55 70 50 75 L40 70 Z" fill="#8B4513"/>
+    <rect x="15" y="40" width="30" height="20" rx="5" fill="#FF0000"/>
+    <rect x="18" y="45" width="24" height="20" rx="5" fill="#0000CD"/>
+    <circle cx="30" cy="25" r="15" fill="#FFDAB9"/>
+    <path d="M25 30 Q30 28 35 30 Q40 32 35 35 Q30 35 25 30" fill="#000"/>
+    <path d="M10 20 Q10 10 30 10 Q50 10 50 20 L55 20 L55 25 L10 25 Z" fill="#FF0000"/>
+    <path d="M15 45 Q5 55 15 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M45 45 Q55 55 45 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <circle cx="15" cy="65" r="6" fill="#FFF"/>
+    <circle cx="45" cy="65" r="6" fill="#FFF"/>
+  </g>
+  
+  <!-- Frame 2 -->
+  <g transform="translate(60,0)">
+    <path d="M25 50 L25 70 L15 70 L15 75 L30 75 L30 50 Z" fill="#0000CD"/>
+    <path d="M35 50 L35 70 L45 70 L45 75 L30 75 L30 50 Z" fill="#0000CD"/>
+    <path d="M15 70 Q10 70 10 75 L20 75 Z" fill="#8B4513"/>
+    <path d="M45 70 Q50 70 50 75 L40 75 Z" fill="#8B4513"/>
+    <rect x="15" y="40" width="30" height="20" rx="5" fill="#FF0000"/>
+    <rect x="18" y="45" width="24" height="20" rx="5" fill="#0000CD"/>
+    <circle cx="30" cy="25" r="15" fill="#FFDAB9"/>
+    <path d="M25 30 Q30 28 35 30 Q40 32 35 35 Q30 35 25 30" fill="#000"/>
+    <path d="M10 20 Q10 10 30 10 Q50 10 50 20 L55 20 L55 25 L10 25 Z" fill="#FF0000"/>
+    <path d="M15 45 Q25 55 15 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M45 45 Q35 55 45 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <circle cx="15" cy="65" r="6" fill="#FFF"/>
+    <circle cx="45" cy="65" r="6" fill="#FFF"/>
+  </g>
+  
+  <!-- Frame 3 -->
+  <g transform="translate(120,0)">
+    <path d="M20 50 L10 60 L25 65 L25 50 Z" fill="#0000CD"/>
+    <path d="M40 50 L50 60 L35 65 L35 50 Z" fill="#0000CD"/>
+    <path d="M10 60 Q5 65 10 70 L20 65 Z" fill="#8B4513"/>
+    <path d="M50 60 Q55 65 50 70 L40 65 Z" fill="#8B4513"/>
+    <rect x="15" y="40" width="30" height="20" rx="5" fill="#FF0000"/>
+    <rect x="18" y="45" width="24" height="20" rx="5" fill="#0000CD"/>
+    <circle cx="30" cy="25" r="15" fill="#FFDAB9"/>
+    <path d="M25 30 Q30 28 35 30 Q40 32 35 35 Q30 35 25 30" fill="#000"/>
+    <path d="M10 20 Q10 10 30 10 Q50 10 50 20 L55 20 L55 25 L10 25 Z" fill="#FF0000"/>
+    <path d="M15 45 Q5 55 15 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M45 45 Q55 55 45 65" stroke="#FF0000" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <circle cx="15" cy="65" r="6" fill="#FFF"/>
+    <circle cx="45" cy="65" r="6" fill="#FFF"/>
+  </g>
+</svg>

@@ -16,6 +16,7 @@ export function debounce(func, wait, options = {}) {
   const { leading = false, trailing = true } = options;
   let timeout;
   let lastCallTime;
+  // eslint-disable-next-line no-unused-vars -- lastInvokeTime est utilisé pour le tracking d'état
   let lastInvokeTime = 0;
   let lastArgs;
   let lastThis;
@@ -42,7 +43,6 @@ export function debounce(func, wait, options = {}) {
 
   function remainingWait(time) {
     const timeSinceLastCall = time - lastCallTime;
-    const timeSinceLastInvoke = time - lastInvokeTime;
     const timeWaiting = wait - timeSinceLastCall;
 
     return timeWaiting;
@@ -50,7 +50,6 @@ export function debounce(func, wait, options = {}) {
 
   function shouldInvoke(time) {
     const timeSinceLastCall = time - lastCallTime;
-    const timeSinceLastInvoke = time - lastInvokeTime;
 
     // Invoquer si premier appel, ou si le temps d'attente est écoulé
     return (

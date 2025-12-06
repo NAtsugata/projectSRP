@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super SRP Bros</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui-layer">
+            <div id="start-screen" class="screen active">
+                <h1>SUPER SRP BROS</h1>
+                <p>Utilisez les flèches ou WASD pour bouger</p>
+                <p>ESPACE pour sauter</p>
+                <button id="start-btn" class="btn">COMMENCER</button>
+            </div>
+            <div id="game-over-screen" class="screen">
+                <h1>GAME OVER</h1>
+                <button id="retry-btn" class="btn">RÉESSAYER</button>
+            </div>
+            <div id="level-complete-screen" class="screen">
+                <h1>NIVEAU TERMINÉ !</h1>
+                <button id="next-level-btn" class="btn">NIVEAU SUIVANT</button>
+            </div>
+            <div id="victory-screen" class="screen">
+                <h1>VICTOIRE !</h1>
+                <p>Vous avez terminé tous les niveaux !</p>
+                <button id="restart-btn" class="btn">REJOUER</button>
+            </div>
+            <div id="hud">
+                <div class="hud-item">SCORE: <span id="score">0</span></div>
+                <div class="hud-item">NIVEAU: <span id="level">1</span></div>
+            </div>
+        </div>
+    </div>
+    <script src="levels.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
