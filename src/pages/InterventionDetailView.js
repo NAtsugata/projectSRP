@@ -546,62 +546,115 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     try {
       const JSZip = window.JSZip;
       const zip = new JSZip();
+      const totalFiles = report.files.length;
+      let successCount = 0;
+      let failCount = 0;
 
-      console.log('📦 Création du ZIP avec', report.files.length, 'fichier(s)');
+      console.log('📦 Création du ZIP avec', totalFiles, 'fichier(s)');
 
-      // Télécharger tous les fichiers et les ajouter au ZIP
-      for (let i = 0; i < report.files.length; i++) {
-        const file = report.files[i];
-        try {
-          console.log(`📥 Téléchargement ${i + 1}/${report.files.length}:`, file.name);
+      // Fonction pour télécharger un fichier avec retry
+      const downloadFile = async (file, index) => {
+        const maxRetries = 3;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`📥 Téléchargement ${index + 1}/${totalFiles} (tentative ${attempt}):`, file.name);
 
-          // Fetch le fichier avec timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+            // Timeout plus long pour mobile (60s)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-          const response = await fetch(file.url, { signal: controller.signal });
-          clearTimeout(timeoutId);
+            const response = await fetch(file.url, {
+              signal: controller.signal,
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache' }
+            });
+            clearTimeout(timeoutId);
 
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-          const blob = await response.blob();
-
-          // Ajouter au ZIP avec un nom unique si nécessaire
-          let fileName = file.name || `fichier-${i + 1}`;
-          // Éviter les doublons
-          let counter = 1;
-          let uniqueName = fileName;
-          while (zip.file(uniqueName)) {
-            const ext = fileName.match(/\.[^.]+$/)?.[0] || '';
-            const base = fileName.replace(/\.[^.]+$/, '');
-            uniqueName = `${base}-${counter}${ext}`;
-            counter++;
+            const blob = await response.blob();
+            return { success: true, blob, file };
+          } catch (error) {
+            console.warn(`⚠️ Tentative ${attempt}/${maxRetries} échouée pour ${file.name}:`, error.message);
+            if (attempt === maxRetries) {
+              return { success: false, error, file };
+            }
+            // Attendre avant retry
+            await new Promise(r => setTimeout(r, 1000 * attempt));
           }
-
-          zip.file(uniqueName, blob);
-          console.log(`✅ Ajouté au ZIP: ${uniqueName}`);
-        } catch (error) {
-          console.error(`❌ Erreur téléchargement ${file.name}:`, error);
-          // Continuer avec les autres fichiers
         }
+      };
+
+      // Télécharger par batch de 2 fichiers pour ne pas surcharger le mobile
+      const BATCH_SIZE = 2;
+      for (let i = 0; i < report.files.length; i += BATCH_SIZE) {
+        const batch = report.files.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map((file, idx) => downloadFile(file, i + idx))
+        );
+
+        for (const result of results) {
+          if (result.success) {
+            // Ajouter au ZIP avec un nom unique
+            let fileName = result.file.name || `fichier-${successCount + 1}`;
+            let counter = 1;
+            let uniqueName = fileName;
+            while (zip.file(uniqueName)) {
+              const ext = fileName.match(/\.[^.]+$/)?.[0] || '';
+              const base = fileName.replace(/\.[^.]+$/, '');
+              uniqueName = `${base}-${counter}${ext}`;
+              counter++;
+            }
+            zip.file(uniqueName, result.blob);
+            successCount++;
+            console.log(`✅ Ajouté au ZIP: ${uniqueName}`);
+          } else {
+            failCount++;
+            console.error(`❌ Échec final ${result.file.name}:`, result.error?.message);
+          }
+        }
+      }
+
+      if (successCount === 0) {
+        throw new Error('Aucun fichier n\'a pu être téléchargé');
       }
 
       // Générer le ZIP
       console.log('🗜️ Compression du ZIP...');
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
 
-      // Télécharger le ZIP
+      // Télécharger le ZIP - méthode optimisée mobile
       const zipName = `Intervention-${intervention.client || intervention.id}-Fichiers.zip`;
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(zipBlob);
-      link.download = zipName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
+
+      // Utiliser saveAs si disponible (plus fiable sur mobile)
+      if (window.saveAs) {
+        window.saveAs(zipBlob, zipName);
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = zipName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        // Délai pour iOS
+        setTimeout(() => {
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+          }, 100);
+        }, 100);
+      }
 
       console.log('✅ ZIP téléchargé:', zipName);
-      alert(`✅ Tous les fichiers ont été téléchargés dans ${zipName}`);
+      if (failCount > 0) {
+        alert(`⚠️ ZIP créé avec ${successCount} fichier(s). ${failCount} fichier(s) n'ont pas pu être récupérés.`);
+      } else {
+        alert(`✅ Tous les ${successCount} fichiers ont été téléchargés dans ${zipName}`);
+      }
     } catch (error) {
       console.error('❌ Erreur création ZIP:', error);
       alert('Erreur lors de la création du fichier ZIP: ' + error.message);
