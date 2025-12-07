@@ -2,7 +2,7 @@
 // Service Worker pour gérer les notifications push natives et le mode hors ligne
 
 // Noms des caches (version unique)
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
 const API_CACHE = `srp-api-${CACHE_VERSION}`;
@@ -270,8 +270,8 @@ async function handleNavigationRequest(request, url) {
  */
 function isApiRequest(url) {
   return (url.hostname.includes('supabase.co') &&
-          (url.pathname.startsWith('/rest/v1/') ||
-           url.pathname.startsWith('/auth/v1/')));
+    (url.pathname.startsWith('/rest/v1/') ||
+      url.pathname.startsWith('/auth/v1/')));
 }
 
 /**
@@ -279,10 +279,10 @@ function isApiRequest(url) {
  */
 function isStaticAsset(request, url) {
   return request.destination === 'script' ||
-         request.destination === 'style' ||
-         request.destination === 'image' ||
-         request.destination === 'font' ||
-         url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|woff|woff2|ttf|ico)$/);
+    request.destination === 'style' ||
+    request.destination === 'image' ||
+    request.destination === 'font' ||
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|woff|woff2|ttf|ico)$/);
 }
 
 /**
@@ -395,7 +395,7 @@ self.addEventListener('message', (event) => {
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.filter(name => name.startsWith('srp-'))
-                    .map(cacheName => caches.delete(cacheName))
+            .map(cacheName => caches.delete(cacheName))
         );
       })
     );
