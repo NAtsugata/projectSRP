@@ -56,12 +56,16 @@
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
+
   33% {
     transform: translate(30px, -30px) scale(1.1);
   }
+
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
@@ -76,7 +80,7 @@
   padding: 3rem 2rem;
   border-radius: 2rem;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+    0 0 0 1px rgba(255, 255, 255, 0.1);
   max-width: 440px;
   width: 100%;
   animation: modalSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -95,6 +99,16 @@
   margin-bottom: 1.5rem;
 }
 
+.logo-image {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 25px rgba(205, 127, 50, 0.4));
+}
+
+/* Fallback for old logo-icon class if still used elsewhere */
 .logo-icon {
   width: 88px;
   height: 88px;
@@ -117,7 +131,7 @@
 .logo-text {
   font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #CD7F32 0%, #B87333 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -387,7 +401,7 @@
   .login-card {
     background: rgba(17, 24, 39, 0.95);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
+      0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .login-input {
@@ -407,6 +421,7 @@
 
 /* ==================== ACCESSIBILITY ==================== */
 @media (prefers-reduced-motion: reduce) {
+
   .gradient-orb,
   .logo-icon,
   .login-card {

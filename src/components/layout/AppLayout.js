@@ -14,15 +14,17 @@ import {
     FileTextIcon,
     CheckCircleIcon,
     DollarSignIcon,
-    XIcon,
     ChevronDownIcon
 } from '../SharedUI';
+import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
+import { useAuthStore } from '../../store/authStore';
 import './AppLayout.css';
 
-const AppLayout = ({ profile, handleLogout }) => {
+const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
     const isAdmin = profile?.is_admin;
 
     const navigation = isAdmin
@@ -62,7 +64,10 @@ const AppLayout = ({ profile, handleLogout }) => {
             {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
-                    <h1>Portail SRP</h1>
+                    <div className="sidebar-logo">
+                        <img src="/logo192.png" alt="SRP" className="sidebar-logo-img" />
+                        <h1>Portail SRP</h1>
+                    </div>
                     <p>{profile?.full_name}</p>
                 </div>
                 <nav className="sidebar-nav">
@@ -89,10 +94,19 @@ const AppLayout = ({ profile, handleLogout }) => {
 
             {/* Mobile Header */}
             <div className="mobile-header">
-                <h1>Portail SRP</h1>
-                <button onClick={handleLogout} className="btn-icon-logout">
-                    <LogOutIcon />
-                </button>
+                <div className="mobile-header-logo">
+                    <img src="/logo192.png" alt="SRP" className="mobile-logo-img" />
+                    <h1>SRP</h1>
+                </div>
+                <div className="mobile-header-actions">
+                    <NotificationBadge
+                        count={0}
+                        onClick={() => setShowNotifications(true)}
+                    />
+                    <button onClick={handleLogout} className="btn-icon-logout">
+                        <LogOutIcon />
+                    </button>
+                </div>
             </div>
 
             {/* Main Content */}
@@ -151,6 +165,13 @@ const AppLayout = ({ profile, handleLogout }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Centre de Notifications */}
+            <NotificationCenter
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+                lastNotification={lastNotification}
+            />
         </div>
     );
 };

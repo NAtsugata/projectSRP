@@ -197,7 +197,7 @@ function App() {
           {!session || !profile ? (
             <Route path="*" element={<LoginScreen />} />
           ) : (
-            <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} />}>
+            <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} lastNotification={pushNotifications.lastNotification} />}>
               {profile.is_admin ? (
                 <>
                   <Route index element={<Navigate to="/dashboard" replace />} />

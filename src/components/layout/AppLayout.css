@@ -606,3 +606,56 @@
 .dark-mode-layout .text-yellow-600 {
     color: #facc15;
 }
+/* Mobile Header Actions Container */
+.mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==================== LOGO IMAGES ==================== */
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-logo-img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+
+.sidebar-logo h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.mobile-header-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mobile-logo-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+}
+
+.mobile-header-logo h1 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Dark mode logo adjustments */
+.dark-mode-layout .sidebar-logo h1,
+.dark-mode-layout .mobile-header-logo h1 {
+    color: #fff;
+}

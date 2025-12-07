@@ -52,9 +52,11 @@ export default function LoginScreen() {
                 {/* Logo & branding */}
                 <div className="login-header">
                     <div className="logo-container">
-                        <div className="logo-icon">
-                            <BriefcaseIcon size={40} />
-                        </div>
+                        <img
+                            src="/logo192.png"
+                            alt="SRP Logo"
+                            className="logo-image"
+                        />
                         <h1 className="logo-text">Portail SRP</h1>
                     </div>
                     <p className="tagline">Gestion des interventions terrain</p>
