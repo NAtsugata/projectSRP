@@ -47,19 +47,66 @@ serviceWorkerRegistration.register({
     console.log('✅ PWA prête - Mode hors ligne disponible');
     console.log('📱 Installation possible sur l\'écran d\'accueil');
   },
-  onUpdate: (registration) => {
-    console.log('🔄 Nouvelle version disponible');
+  onUpdate: async (registration) => {
+    console.log('🔄 Nouvelle version détectée - Mise à jour forcée');
+
     const waitingServiceWorker = registration.waiting;
-    if (waitingServiceWorker) {
-      // Afficher notification de mise à jour
-      if (window.confirm('Une nouvelle version est disponible. Rafraîchir maintenant ?')) {
+
+    // Créer et afficher le popup de mise à jour
+    const updateDiv = document.createElement('div');
+    updateDiv.id = 'force-update-overlay';
+    updateDiv.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        padding: 1rem;
+      ">
+        <div style="
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          border-radius: 1.5rem;
+          padding: 2.5rem 2rem;
+          max-width: 400px;
+          text-align: center;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        ">
+          <div style="font-size: 4rem; animation: spin 2s linear infinite;">🔄</div>
+          <h2 style="color: #fff; font-size: 1.5rem; margin: 1rem 0 0.5rem;">Mise à jour en cours...</h2>
+          <p style="color: rgba(255, 255, 255, 0.7); margin: 0;">L'application se recharge automatiquement.</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      </style>
+    `;
+    document.body.appendChild(updateDiv);
+
+    try {
+      // 1. Demander au SW en attente de prendre le contrôle
+      if (waitingServiceWorker) {
         waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
-        waitingServiceWorker.addEventListener("statechange", event => {
-          if (event.target.state === "activated") {
-            window.location.reload();
-          }
-        });
       }
+
+      // 2. Vider tous les caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('✅ Caches vidés:', cacheNames);
+      }
+
+      // 3. Attendre un court instant puis recharger
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+      // Forcer le rechargement quand même
+      window.location.reload(true);
     }
   }
 });
