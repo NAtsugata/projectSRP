@@ -39,6 +39,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
             { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },
             { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
             { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
         ]
         : [
