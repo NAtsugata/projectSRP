@@ -3,6 +3,8 @@
 // Admin view for managing maintenance contracts
 // =============================
 import React, { useState, useCallback } from 'react';
+import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
+import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import './AdminContractsView.css';
 
 // Contract type labels
@@ -62,6 +64,9 @@ function AdminContractsView({
     const [formData, setFormData] = useState(INITIAL_FORM);
     const [filters, setFilters] = useState({ status: '', type: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showCerfaModal, setShowCerfaModal] = useState(false);
+    const [cerfaData, setCerfaData] = useState(null);
+    const [selectedContractId, setSelectedContractId] = useState(null);
 
     // Open modal for new contract
     const handleNewContract = useCallback(() => {
@@ -145,6 +150,14 @@ function AdminContractsView({
             showToast?.(`Erreur: ${err.message}`, 'error');
         }
     }, [onDeleteContract, showToast]);
+
+    // Generate CERFA
+    const handleGenerateCerfa = useCallback((contract) => {
+        const data = prepareCerfaDataFromContract(contract, { display_name: localStorage.getItem('user_name') || '' });
+        setCerfaData(data);
+        setSelectedContractId(contract.id);
+        setShowCerfaModal(true);
+    }, []);
 
     // Filter contracts
     const filteredContracts = contracts.filter(c => {
@@ -321,6 +334,15 @@ function AdminContractsView({
                                     <span>Visites planifiées</span>
                                 </div>
                                 <div className="contract-actions">
+                                    {contract.contract_type === 'entretien_chaudiere' && (
+                                        <button
+                                            className="btn-icon cerfa"
+                                            onClick={() => handleGenerateCerfa(contract)}
+                                            title="Générer CERFA"
+                                        >
+                                            📄
+                                        </button>
+                                    )}
                                     <button
                                         className="btn-icon"
                                         onClick={() => handleEditContract(contract)}
@@ -509,6 +531,16 @@ function AdminContractsView({
                     </div>
                 </div>
             )}
+
+            {/* Modal CERFA */}
+            <CerfaGeneratorModal
+                isOpen={showCerfaModal}
+                onClose={() => setShowCerfaModal(false)}
+                initialData={cerfaData}
+                sourceType="contract"
+                sourceId={selectedContractId}
+                showToast={showToast}
+            />
         </div>
     );
 }

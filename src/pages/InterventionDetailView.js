@@ -30,6 +30,8 @@ import {
   ScheduledDatesEditor
 } from '../components/intervention';
 import useMobileFileManager, { UploadQueue } from '../hooks/useMobileFileManager';
+import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
+import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import './InterventionDetailView_Modern.css';
 
 const MIN_REQUIRED_PHOTOS = 2;
@@ -305,6 +307,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
+  const [showCerfaModal, setShowCerfaModal] = useState(false);
+  const [cerfaData, setCerfaData] = useState(null);
 
   // Lifted upload state for Paste support
   const { handleFileUpload, uploadState, reset } = useMobileFileManager(interventionId);
@@ -1081,11 +1085,48 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </div>
         </div>
 
+        {/* Génération CERFA - visible pour interventions entretien chaudière */}
+        {(intervention.type?.toLowerCase()?.includes('entretien') ||
+          intervention.type?.toLowerCase()?.includes('chaudière') ||
+          intervention.type?.toLowerCase()?.includes('chaudiere') ||
+          intervention.service?.toLowerCase()?.includes('entretien')) && (
+            <div className="modern-section">
+              <h3 className="section-title">
+                <span className="section-title-icon">📄</span>
+                Attestation CERFA
+              </h3>
+              <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+                Générez l'attestation d'entretien annuel (CERFA 15497-04) pour cette intervention.
+              </p>
+              <button
+                onClick={() => {
+                  const data = prepareCerfaDataFromIntervention(intervention, { display_name: localStorage.getItem('user_name') || '' });
+                  setCerfaData(data);
+                  setShowCerfaModal(true);
+                }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                📄 Générer CERFA 15497
+              </button>
+            </div>
+          )}
+
         <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>{isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
       </div>
 
       {/* Modale signature */}
       {showSignatureModal && <SignatureModal onSave={(sig) => { handleReportChange('signature', sig); setShowSignatureModal(false); }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
+
+      {/* Modal CERFA */}
+      <CerfaGeneratorModal
+        isOpen={showCerfaModal}
+        onClose={() => setShowCerfaModal(false)}
+        initialData={cerfaData}
+        sourceType="intervention"
+        sourceId={intervention?.id}
+        showToast={(msg, type) => alert(msg)}
+      />
     </div>
   );
 }
