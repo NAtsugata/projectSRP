@@ -15,7 +15,12 @@ import {
 import logger from '../utils/logger';
 import './AdminDashboard.css';
 
-export default function AdminDashboard({ interventions = [], leaveRequests = [] }) {
+export default function AdminDashboard({
+  interventions = [],
+  leaveRequests = [],
+  expiringContracts = [],
+  upcomingVisits = []
+}) {
   const navigate = useNavigate();
 
   // Calcul des statistiques
@@ -126,6 +131,12 @@ export default function AdminDashboard({ interventions = [], leaveRequests = [] 
       icon: <UsersIcon />,
       variant: 'secondary',
       onClick: () => navigate('/users')
+    },
+    {
+      label: 'Contrats Maintenance',
+      icon: <CalendarIcon />,
+      variant: 'secondary',
+      onClick: () => navigate('/contracts')
     }
   ];
 
@@ -168,8 +179,44 @@ export default function AdminDashboard({ interventions = [], leaveRequests = [] 
       });
     }
 
+    // Alerte contrats expirant bientôt
+    if (expiringContracts.length > 0) {
+      alertList.push({
+        title: `${expiringContracts.length} contrat${expiringContracts.length > 1 ? 's' : ''} à renouveler`,
+        message: 'Des contrats de maintenance expirent dans les 30 prochains jours.',
+        variant: 'warning',
+        icon: <CalendarIcon />,
+        action: (
+          <button
+            className="alert-action-link"
+            onClick={() => navigate('/contracts')}
+          >
+            Voir les contrats →
+          </button>
+        )
+      });
+    }
+
+    // Alerte visites à venir
+    if (upcomingVisits.length > 0) {
+      alertList.push({
+        title: `${upcomingVisits.length} visite${upcomingVisits.length > 1 ? 's' : ''} cette semaine`,
+        message: 'Des visites de maintenance sont prévues prochainement.',
+        variant: 'info',
+        icon: <CalendarIcon />,
+        action: (
+          <button
+            className="alert-action-link"
+            onClick={() => navigate('/contracts')}
+          >
+            Voir les visites →
+          </button>
+        )
+      });
+    }
+
     return alertList;
-  }, [stats, navigate]);
+  }, [stats, navigate, expiringContracts, upcomingVisits]);
 
   return (
     <div className="admin-dashboard">

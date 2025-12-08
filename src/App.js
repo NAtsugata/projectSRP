@@ -30,6 +30,7 @@ const AdminVaultViewContainer = lazy(() => import('./pages/AdminVaultViewContain
 const AdminArchiveViewContainer = lazy(() => import('./pages/AdminArchiveViewContainer'));
 const AdminExpensesViewContainer = lazy(() => import('./pages/AdminExpensesViewContainer'));
 const AdminChecklistTemplatesViewContainer = lazy(() => import('./pages/AdminChecklistTemplatesViewContainer'));
+const AdminContractsViewContainer = lazy(() => import('./pages/AdminContractsViewContainer'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -152,6 +153,12 @@ function App() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'checklists' }, () => {
           invalidateDebounced(['checklists']);
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_contracts' }, () => {
+          invalidateDebounced(['contracts']);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'contract_visits' }, () => {
+          invalidateDebounced(['contracts', 'contractVisits']);
+        })
         .subscribe();
 
       return () => {
@@ -263,6 +270,11 @@ function App() {
                   <Route path="expenses" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminExpensesViewContainer showConfirmationModal={showConfirmationModal} />
+                    </Suspense>
+                  } />
+                  <Route path="contracts" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminContractsViewContainer />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
