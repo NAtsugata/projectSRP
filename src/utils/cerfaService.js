@@ -131,12 +131,8 @@ export const inspectCerfaFields = async () => {
     }
 };
 
-// =============================
-// CERFA 15497-04 FILLING
-// =============================
-
 /**
- * Remplit le CERFA 15497-04 (Attestation entretien chaudière gaz)
+ * Remplit le CERFA 15497-04 (Fiche d'intervention fluides frigorigènes)
  * @param {Object} data - Données pour remplir le formulaire
  * @returns {Promise<Blob>} PDF rempli en Blob
  */
@@ -150,75 +146,83 @@ export const fillCerfa15497 = async (data) => {
         const pdfBytes = await response.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes);
         const form = pdfDoc.getForm();
+        const allFields = form.getFields();
 
-        // Mapper les données vers les champs du PDF
-        // Note: Les noms de champs doivent correspondre au PDF fillable
-        const fieldMappings = {
-            // === PARTIE A - OCCUPANT ===
-            'Nom occupant': data.clientName || '',
-            'Prénom occupant': data.clientFirstName || '',
-            'Adresse occupant': data.clientAddress || '',
-            'Code postal occupant': data.clientPostalCode || '',
-            'Ville occupant': data.clientCity || '',
+        console.log('[CERFA] Nombre de champs trouvés:', allFields.length);
+        console.log('[CERFA] Liste des champs:');
+        allFields.forEach((f, i) => console.log(`  [${i}] ${f.getName()} - ${f.constructor.name}`));
 
-            // === PARTIE B - APPAREIL ===
-            'Type appareil': data.equipmentType || 'Chaudière gaz',
-            'Marque': data.equipmentBrand || '',
-            'Modèle': data.equipmentModel || '',
-            'Puissance nominale': data.equipmentPower || '',
-            'Année installation': data.installationYear || '',
-            'Emplacement': data.equipmentLocation || '',
+        // Préparer les valeurs dans l'ordre des champs du PDF
+        // Basé sur l'inspection: les champs sont dans l'ordre XFA
+        const textFieldValues = [
+            // Index 0-4: Intervenant
+            data.intervenantNom || data.companyName || '',      // Intervenant_Nom
+            data.intervenantAdresse || data.companyAddress || '', // Intervenant_Adresse
+            data.intervenantTel || '',                           // Intervenant_Tel
+            data.intervenantAttestation || '',                   // Intervenant_Attestation
+            data.intervenantSiret || data.siret || '',           // Intervenant_Siret
 
-            // === PARTIE C - ENTRETIEN ===
-            'Date entretien': data.maintenanceDate || new Date().toLocaleDateString('fr-FR'),
-            'Nettoyage brûleur': data.cleanedBurner ? 'Oui' : 'Non',
-            'Vérification combustion': data.checkedCombustion ? 'Oui' : 'Non',
-            'Mesure CO': data.coLevel || '',
-            'Rendement': data.efficiency || '',
+            // Index 5-8: Détenteur
+            data.detenteurNom || data.clientName || '',          // Detenteur_Nom
+            data.detenteurAdresse || data.clientAddress || '',   // Detenteur_Adresse
+            data.detenteurTel || '',                             // Detenteur_Tel
+            data.detenteurSiret || '',                           // Detenteur_Siret
 
-            // === PARTIE D - PROFESSIONNEL ===
-            'Raison sociale': data.companyName || '',
-            'SIRET': data.siret || '',
-            'Adresse entreprise': data.companyAddress || '',
-            'Qualification': data.qualification || '',
-            'Nom technicien': data.technicianName || '',
-            'Date': data.date || new Date().toLocaleDateString('fr-FR'),
-        };
+            // Index 9-14: Équipement
+            data.typeEquipement || '',                           // Equipement_Type
+            data.marque || '',                                   // Equipement_Marque
+            data.modele || '',                                   // Equipement_Modele
+            data.numeroSerie || '',                              // Equipement_Serie
+            data.dateMiseService || '',                          // Equipement_MiseService
+            data.emplacement || '',                              // Equipement_Emplacement
 
-        // Remplir les champs texte
-        for (const [fieldName, value] of Object.entries(fieldMappings)) {
-            try {
-                const field = form.getTextField(fieldName);
-                if (field) {
-                    field.setText(String(value));
+            // Index 15: Intervention
+            data.dateIntervention || new Date().toLocaleDateString('fr-FR'), // Intervention_Date
+        ];
+
+        // Remplir les champs texte par index
+        let textFieldIndex = 0;
+        for (const field of allFields) {
+            if (field.constructor.name === 'PDFTextField') {
+                if (textFieldIndex < textFieldValues.length) {
+                    try {
+                        field.setText(textFieldValues[textFieldIndex]);
+                        console.log(`[CERFA] Rempli champ ${textFieldIndex}: ${field.getName()} = "${textFieldValues[textFieldIndex]}"`);
+                    } catch (e) {
+                        console.warn(`[CERFA] Erreur remplissage champ ${textFieldIndex}:`, e.message);
+                    }
                 }
-            } catch {
-                // Le champ n'existe pas ou n'est pas du bon type, on ignore
-                console.debug(`Champ non trouvé ou incompatible: ${fieldName}`);
+                textFieldIndex++;
             }
         }
 
-        // Gérer les cases à cocher si présentes
-        const checkboxMappings = {
-            'CB_Nettoyage': data.cleanedBurner,
-            'CB_Combustion': data.checkedCombustion,
-            'CB_Etancheite': data.checkedSealing,
-            'CB_Ventilation': data.checkedVentilation,
-            'CB_Evacuation': data.checkedExhaust,
-        };
+        // Gérer les cases à cocher par index
+        const checkboxValues = [
+            data.natureMiseEnService,      // Nature_MiseService
+            data.natureControleEtancheite, // Nature_Controle
+            data.natureMaintenance,        // Nature_Maintenance
+            data.natureReparationFuite,    // Nature_Reparation
+            data.natureDemontage,          // Nature_Demontage
+            data.natureDemantelement,      // Nature_Demantelement
+            data.natureAutre,              // Nature_Autre
+            data.fuiteDetectee === 'oui',  // Fuite_Detect_Oui
+            data.fuiteDetectee === 'non',  // Fuite_Detect_Non
+            data.fuiteReparation === 'oui',// Fuite_Repar_Oui
+            data.fuiteReparation === 'non',// Fuite_Repar_Non
+        ];
 
-        for (const [fieldName, checked] of Object.entries(checkboxMappings)) {
-            try {
-                const checkbox = form.getCheckBox(fieldName);
-                if (checkbox) {
-                    if (checked) {
-                        checkbox.check();
-                    } else {
-                        checkbox.uncheck();
+        let checkboxIndex = 0;
+        for (const field of allFields) {
+            if (field.constructor.name === 'PDFCheckBox') {
+                if (checkboxIndex < checkboxValues.length && checkboxValues[checkboxIndex]) {
+                    try {
+                        field.check();
+                        console.log(`[CERFA] Coché checkbox ${checkboxIndex}: ${field.getName()}`);
+                    } catch (e) {
+                        console.warn(`[CERFA] Erreur checkbox ${checkboxIndex}:`, e.message);
                     }
                 }
-            } catch {
-                // Case à cocher non trouvée, on ignore
+                checkboxIndex++;
             }
         }
 

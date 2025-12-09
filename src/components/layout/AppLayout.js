@@ -41,6 +41,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
             { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+            { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
         ]
         : [
             { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
@@ -51,6 +52,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
             { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+            { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
         ];
 
     const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
@@ -73,16 +75,29 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 </div>
                 <nav className="sidebar-nav">
                     {navigation.map((item) => (
-                        <NavLink
-                            key={item.name}
-                            to={item.href}
-                            className={({ isActive }) =>
-                                `nav-link ${isActive ? 'active' : ''}`
-                            }
-                        >
-                            <item.icon className="nav-icon" />
-                            {item.name}
-                        </NavLink>
+                        item.isExternal ? (
+                            <a
+                                key={item.name}
+                                href={item.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="nav-link"
+                            >
+                                <item.icon className="nav-icon" />
+                                {item.name}
+                            </a>
+                        ) : (
+                            <NavLink
+                                key={item.name}
+                                to={item.href}
+                                className={({ isActive }) =>
+                                    `nav-link ${isActive ? 'active' : ''}`
+                                }
+                            >
+                                <item.icon className="nav-icon" />
+                                {item.name}
+                            </NavLink>
+                        )
                     ))}
                 </nav>
                 <div className="sidebar-footer">
@@ -152,16 +167,32 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     </div>
                     <div className="mobile-menu-grid">
                         {navigation.map((item) => (
-                            <button
-                                key={item.name}
-                                onClick={() => handleMenuNavigation(item.href)}
-                                className={`menu-grid-item ${location.pathname === item.href ? 'active' : ''}`}
-                            >
-                                <div className={`menu-icon-wrapper ${item.bg} ${item.color}`}>
-                                    <item.icon size={24} />
-                                </div>
-                                <span className="menu-item-label">{item.name}</span>
-                            </button>
+                            item.isExternal ? (
+                                <a
+                                    key={item.name}
+                                    href={item.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="menu-grid-item"
+                                    onClick={() => setShowMobileMenu(false)}
+                                >
+                                    <div className={`menu-icon-wrapper ${item.bg} ${item.color}`}>
+                                        <item.icon size={24} />
+                                    </div>
+                                    <span className="menu-item-label">{item.name}</span>
+                                </a>
+                            ) : (
+                                <button
+                                    key={item.name}
+                                    onClick={() => handleMenuNavigation(item.href)}
+                                    className={`menu-grid-item ${location.pathname === item.href ? 'active' : ''}`}
+                                >
+                                    <div className={`menu-icon-wrapper ${item.bg} ${item.color}`}>
+                                        <item.icon size={24} />
+                                    </div>
+                                    <span className="menu-item-label">{item.name}</span>
+                                </button>
+                            )
                         ))}
                     </div>
                 </div>

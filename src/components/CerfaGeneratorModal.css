@@ -394,3 +394,130 @@
 .cerfa-modal-body::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
 }
+
+/* =============================
+   CERFA PAGE STYLES (Full Page)
+   ============================= */
+
+.cerfa-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.cerfa-page-container {
+    background: linear-gradient(145deg, #1e1e2e, #252536);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.cerfa-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(90deg, rgba(14, 165, 165, 0.15), transparent);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cerfa-page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.cerfa-page-body {
+    padding: 2rem;
+}
+
+.cerfa-page-footer {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cerfa-btn-large {
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+}
+
+/* Toast for CerfaPage */
+.cerfa-toast {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    z-index: 10000;
+    animation: toast-slide-in 0.3s ease;
+}
+
+.cerfa-toast-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.cerfa-toast-error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Mobile responsive for cerfa-page */
+@media (max-width: 768px) {
+    .cerfa-page {
+        padding: 0;
+    }
+
+    .cerfa-page-container {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .cerfa-page-header {
+        padding: 1.25rem 1rem;
+    }
+
+    .cerfa-page-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .cerfa-page-body {
+        padding: 1rem;
+    }
+
+    .cerfa-page-footer {
+        padding: 1rem;
+    }
+
+    .cerfa-btn-large {
+        width: 100%;
+        padding: 0.9rem 1.5rem;
+        font-size: 1rem;
+    }
+}

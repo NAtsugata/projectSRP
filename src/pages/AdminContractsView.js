@@ -3,7 +3,6 @@
 // Admin view for managing maintenance contracts
 // =============================
 import React, { useState, useCallback } from 'react';
-import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import './AdminContractsView.css';
 
@@ -64,9 +63,7 @@ function AdminContractsView({
     const [formData, setFormData] = useState(INITIAL_FORM);
     const [filters, setFilters] = useState({ status: '', type: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showCerfaModal, setShowCerfaModal] = useState(false);
-    const [cerfaData, setCerfaData] = useState(null);
-    const [selectedContractId, setSelectedContractId] = useState(null);
+    // Les états CERFA sont supprimés car on ouvre dans un nouvel onglet
 
     // Open modal for new contract
     const handleNewContract = useCallback(() => {
@@ -151,12 +148,13 @@ function AdminContractsView({
         }
     }, [onDeleteContract, showToast]);
 
-    // Generate CERFA
+    // Generate CERFA - Ouvre dans un nouvel onglet
     const handleGenerateCerfa = useCallback((contract) => {
         const data = prepareCerfaDataFromContract(contract, { display_name: localStorage.getItem('user_name') || '' });
-        setCerfaData(data);
-        setSelectedContractId(contract.id);
-        setShowCerfaModal(true);
+        // Encode les données en JSON pour les passer via URL
+        const encodedData = encodeURIComponent(JSON.stringify(data));
+        // Ouvre le formulaire CERFA dans un nouvel onglet
+        window.open(`/cerfa?data=${encodedData}`, '_blank');
     }, []);
 
     // Filter contracts
@@ -532,15 +530,7 @@ function AdminContractsView({
                 </div>
             )}
 
-            {/* Modal CERFA */}
-            <CerfaGeneratorModal
-                isOpen={showCerfaModal}
-                onClose={() => setShowCerfaModal(false)}
-                initialData={cerfaData}
-                sourceType="contract"
-                sourceId={selectedContractId}
-                showToast={showToast}
-            />
+            {/* Le CERFA s'ouvre maintenant dans un nouvel onglet */}
         </div>
     );
 }
