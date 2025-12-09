@@ -44,6 +44,7 @@ const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewConta
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
 const MobileMenu = lazy(() => import('./pages/MobileMenu'));
 const CerfaManager = lazy(() => import('./pages/CerfaManager'));
+const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 
 
 
@@ -298,6 +299,11 @@ function App() {
                       <CerfaManager />
                     </Suspense>
                   } />
+                  <Route path="cerfa-form" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CerfaPage />
+                    </Suspense>
+                  } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </>
               ) : (
@@ -364,6 +370,11 @@ function App() {
                   <Route path="cerfa" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaManager />
+                    </Suspense>
+                  } />
+                  <Route path="cerfa-form" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CerfaPage />
                     </Suspense>
                   } />
                   <Route path="*" element={<Navigate to="/planning" replace />} />

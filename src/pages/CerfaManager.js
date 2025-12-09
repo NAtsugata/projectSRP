@@ -19,7 +19,8 @@ const CERFA_TEMPLATES = [
         id: 'cerfa_15497-04',
         name: 'CERFA 15497-04',
         description: 'Fiche d\'intervention - Fluides frigorigènes',
-        path: '/cerfa/cerfa_15497-04.pdf'
+        path: '/cerfa-form',  // Formulaire HTML mobile-friendly
+        pdfPath: '/cerfa/cerfa_15497-04.pdf'  // PDF pour référence
     },
     // Ajouter d'autres templates ici
 ];
