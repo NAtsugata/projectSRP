@@ -600,6 +600,19 @@ export const maintenanceContractService = {
     return { data, error: null };
   },
 
+  async deleteMaintenanceReport(reportId) {
+    const { error } = await supabase
+      .from('maintenance_reports')
+      .delete()
+      .eq('id', reportId);
+
+    if (error) {
+      console.error('Error deleting report:', error);
+      return { error };
+    }
+    return { error: null };
+  },
+
   async getContractReports(contractId) {
     try {
       const { data, error } = await supabase

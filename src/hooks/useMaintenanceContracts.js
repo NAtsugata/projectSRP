@@ -371,3 +371,21 @@ export function useCreateReport() {
         },
     });
 }
+
+/**
+ * Hook pour supprimer un rapport d'entretien
+ */
+export function useDeleteReport() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (reportId) => {
+            const { error } = await maintenanceContractService.deleteMaintenanceReport(reportId);
+            if (error) throw error;
+        },
+        onSuccess: (_, reportId) => {
+            // Invalider les requêtes de rapports pour tous les contrats (ou optimiser si on avait le contractId)
+            queryClient.invalidateQueries({ queryKey: ['maintenance-contracts'] });
+        },
+    });
+}

@@ -2,8 +2,9 @@
 // Mes documents scannés - Chaque utilisateur voit ses propres documents
 // Les admins peuvent voir tous les documents de tous les utilisateurs
 
-import React, { useState, useMemo, useCallback } from 'react';
-import DocumentScannerView from './DocumentScannerView';
+import React, { useState, useMemo, useCallback, Suspense } from 'react';
+// Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
+const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
 import {
   CameraIcon,
   SearchIcon,
@@ -160,10 +161,12 @@ export default function MyDocumentsView({
 
   if (showScanner && isAdmin) {
     return (
-      <DocumentScannerView
-        onSave={handleSaveScannedDocs}
-        onClose={() => setShowScanner(false)}
-      />
+      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement du scanner...</p></div>}>
+        <DocumentScannerView
+          onSave={handleSaveScannedDocs}
+          onClose={() => setShowScanner(false)}
+        />
+      </Suspense>
     );
   }
 

@@ -14,7 +14,8 @@ import {
     useUpdateEquipment,
     useDeleteEquipment,
     useContractReports,
-    useCreateReport
+    useCreateReport,
+    useDeleteReport
 } from '../hooks/useMaintenanceContracts';
 import { useToast } from '../contexts/ToastContext';
 
@@ -45,6 +46,7 @@ function ContractDetailViewContainer() {
 
     // Mutation rapport
     const createReport = useCreateReport();
+    const deleteReport = useDeleteReport();
 
     // Handler pour édition (navigation vers le formulaire)
     const handleEdit = (contract) => {
@@ -87,6 +89,11 @@ function ContractDetailViewContainer() {
         showToast('Rapport enregistré avec succès', 'success');
     };
 
+    const handleDeleteReport = async (reportId) => {
+        await deleteReport.mutateAsync(reportId);
+        showToast('Rapport supprimé', 'success');
+    };
+
     return (
         <ContractDetailView
             contract={contractData}
@@ -103,10 +110,10 @@ function ContractDetailViewContainer() {
             onUpdateEquipment={handleUpdateEquipment}
             onDeleteEquipment={handleDeleteEquipment}
             onCreateReport={handleCreateReport}
+            onDeleteReport={handleDeleteReport}
             isAddingEquipment={addEquipment.isPending}
             isUpdatingEquipment={updateEquipment.isPending}
             isCreatingReport={createReport.isPending}
-            showToast={showToast}
         />
     );
 }

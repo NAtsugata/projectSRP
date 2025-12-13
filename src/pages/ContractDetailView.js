@@ -641,13 +641,49 @@ function ContractDetailView({
                                                         📅 {formatDate(report.intervention_date)}
                                                     </span>
                                                 </div>
-                                                <button
-                                                    className="btn-secondary"
-                                                    onClick={() => generateMaintenanceReportPDF(report, contract, equipment)}
-                                                    title="Imprimer le rapport"
-                                                >
-                                                    🖨️ Imprimer
-                                                </button>
+                                                <div className="report-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        className="btn-icon-sm"
+                                                        onClick={() => {
+                                                            const htmlContent = generateMaintenanceReportPDF(report, contract, equipment);
+                                                            const printWindow = window.open('', '_blank');
+                                                            printWindow.document.write(htmlContent);
+                                                            printWindow.document.close();
+                                                        }}
+                                                        title="Ouvrir"
+                                                    >
+                                                        👁️
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon-sm"
+                                                        onClick={() => generateMaintenanceReportPDF(report, contract, equipment)}
+                                                        title="Imprimer"
+                                                    >
+                                                        🖨️
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon-sm"
+                                                        onClick={() => {
+                                                            const subject = `Rapport d'entretien - ${contract.client_name}`;
+                                                            const body = `Bonjour,\n\nVeuillez trouver ci-joint le rapport d'entretien du ${formatDate(report.created_at)}.\n\nCordialement,`;
+                                                            window.location.href = `mailto:${contract.client_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                                        }}
+                                                        title="Envoyer par email"
+                                                    >
+                                                        📧
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon-sm delete"
+                                                        onClick={() => {
+                                                            if (window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport ?')) {
+                                                                onDeleteReport(report.id);
+                                                            }
+                                                        }}
+                                                        title="Supprimer"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="report-details">
                                                 {report.technician_name && (
