@@ -78,6 +78,7 @@ function ContractDetailView({
     onUpdateEquipment,
     onDeleteEquipment,
     onCreateReport,
+    onDeleteReport,
     isAddingEquipment = false,
     isUpdatingEquipment = false,
     isCreatingReport = false,

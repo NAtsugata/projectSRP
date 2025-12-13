@@ -3,8 +3,6 @@
 // Les admins peuvent voir tous les documents de tous les utilisateurs
 
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
-// Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
-const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
 import {
   CameraIcon,
   SearchIcon,
@@ -16,6 +14,9 @@ import {
   UserIcon
 } from '../components/SharedUI';
 import { useDownload } from '../hooks/useDownload';
+
+// Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
+const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
 
 const CATEGORIES = [
   { value: 'facture', label: '💰 Facture', color: '#10b981' },
