@@ -232,3 +232,142 @@ export function useLinkVisitToIntervention() {
         },
     });
 }
+
+/**
+ * Hook pour récupérer un contrat avec tous ses détails (visites, équipements, historique)
+ */
+export function useContractWithDetails(contractId) {
+    return useQuery({
+        queryKey: [...contractKeys.detail(contractId), 'full'],
+        queryFn: async () => {
+            const { data, error } = await maintenanceContractService.getContractWithDetails(contractId);
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!contractId,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+}
+
+/**
+ * Hook pour récupérer l'historique d'un contrat
+ */
+export function useContractHistory(contractId) {
+    return useQuery({
+        queryKey: [...contractKeys.detail(contractId), 'history'],
+        queryFn: async () => {
+            const { data, error } = await maintenanceContractService.getContractHistory(contractId);
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!contractId,
+    });
+}
+
+/**
+ * Hook pour récupérer les équipements d'un contrat
+ */
+export function useContractEquipment(contractId) {
+    return useQuery({
+        queryKey: [...contractKeys.detail(contractId), 'equipment'],
+        queryFn: async () => {
+            const { data, error } = await maintenanceContractService.getContractEquipment(contractId);
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!contractId,
+    });
+}
+
+/**
+ * Hook pour ajouter un équipement à un contrat
+ */
+export function useAddEquipment() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ contractId, data }) => {
+            const { data: equipment, error } = await maintenanceContractService.addEquipment(contractId, data);
+            if (error) throw error;
+            return equipment;
+        },
+        onSuccess: (_, variables) => {
+            // Invalider à la fois la query equipment et la query full
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'equipment'] });
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'full'] });
+        },
+    });
+}
+
+/**
+ * Hook pour modifier un équipement
+ */
+export function useUpdateEquipment() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ equipmentId, updates, contractId }) => {
+            const { data, error } = await maintenanceContractService.updateEquipment(equipmentId, updates);
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'equipment'] });
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'full'] });
+        },
+    });
+}
+
+/**
+ * Hook pour supprimer un équipement
+ */
+export function useDeleteEquipment() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ equipmentId, contractId }) => {
+            const { error } = await maintenanceContractService.deleteEquipment(equipmentId);
+            if (error) throw error;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'equipment'] });
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'full'] });
+        },
+    });
+}
+
+// ========== RAPPORTS D'ENTRETIEN ==========
+
+/**
+ * Hook pour récupérer les rapports d'un contrat
+ */
+export function useContractReports(contractId) {
+    return useQuery({
+        queryKey: [...contractKeys.detail(contractId), 'reports'],
+        queryFn: async () => {
+            const { data, error } = await maintenanceContractService.getContractReports(contractId);
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!contractId,
+    });
+}
+
+/**
+ * Hook pour créer un rapport d'entretien
+ */
+export function useCreateReport() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ contractId, reportData }) => {
+            const { data, error } = await maintenanceContractService.createMaintenanceReport(contractId, reportData);
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'reports'] });
+            queryClient.invalidateQueries({ queryKey: [...contractKeys.detail(variables.contractId), 'full'] });
+        },
+    });
+}

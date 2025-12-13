@@ -327,7 +327,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }
       detectionHistoryRef.current = [];
     };
-  }, [mode, stream, detectDocumentWithCurrentDetector]);
+  }, [mode, stream, detectDocumentWithCurrentDetector, detectorType]);
 
   // Démarrer la caméra
   const startCamera = useCallback(async () => {
@@ -454,7 +454,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocumentWithCurrentDetector, detectorType, yoloModelLoaded]);
+  }, [stopCamera, detectDocumentWithCurrentDetector]);
 
   // Appliquer un mode d'amélioration
   const applyEnhanceMode = useCallback((targetMode) => {

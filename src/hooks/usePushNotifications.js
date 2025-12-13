@@ -309,8 +309,10 @@ export const useRealtimePushNotifications = (userId) => {
   };
 };
 
-export default {
+const pushNotifications = {
   usePushNotifications,
   useInterventionNotifications,
   useRealtimePushNotifications
 };
+
+export default pushNotifications;

@@ -658,6 +658,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     rejected: { count: 0, total: 0 },
     total: 0
   });
+  // eslint-disable-next-line no-unused-vars
   const [_statsLoading, setStatsLoading] = useState(true);
 
   // Catégories de frais (même que ExpensesView)

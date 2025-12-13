@@ -3,6 +3,7 @@
 // Admin view for managing maintenance contracts
 // =============================
 import React, { useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import './AdminContractsView.css';
 
@@ -45,7 +46,8 @@ const INITIAL_FORM = {
     price: '',
     notes: '',
     equipment_details: '',
-    renewal_reminder_days: 30
+    renewal_reminder_days: 30,
+    auto_renew: false
 };
 
 function AdminContractsView({
@@ -62,8 +64,21 @@ function AdminContractsView({
     const [editingContract, setEditingContract] = useState(null);
     const [formData, setFormData] = useState(INITIAL_FORM);
     const [filters, setFilters] = useState({ status: '', type: '' });
+    const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, contractId: null, contractName: '' });
+    const navigate = useNavigate();
+    const location = useLocation();
     // Les états CERFA sont supprimés car on ouvre dans un nouvel onglet
+
+    // Gestion de l'édition depuis la navigation (state)
+    React.useEffect(() => {
+        if (location.state?.editContract) {
+            handleEditContract(location.state.editContract);
+            // Nettoyer le state
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
 
     // Open modal for new contract
     const handleNewContract = useCallback(() => {
@@ -92,7 +107,8 @@ function AdminContractsView({
             price: contract.price || '',
             notes: contract.notes || '',
             equipment_details: contract.equipment_details || '',
-            renewal_reminder_days: contract.renewal_reminder_days || 30
+            renewal_reminder_days: contract.renewal_reminder_days || 30,
+            auto_renew: contract.auto_renew || false
         });
         setShowModal(true);
     }, []);
@@ -119,34 +135,69 @@ function AdminContractsView({
             return;
         }
 
+        // Sanitize data: convert empty strings to null for optional fields
+        const sanitizedData = {
+            ...formData,
+            contract_number: formData.contract_number?.trim() || null,
+            client_address: formData.client_address?.trim() || null,
+            client_phone: formData.client_phone?.trim() || null,
+            client_email: formData.client_email?.trim() || null,
+            notes: formData.notes?.trim() || null,
+            equipment_details: formData.equipment_details?.trim() || null,
+            price: formData.price ? parseFloat(formData.price) : null,
+            renewal_reminder_days: parseInt(formData.renewal_reminder_days) || 30,
+            auto_renew: Boolean(formData.auto_renew)
+        };
+
+        console.log('Submitting contract data:', sanitizedData);
+
         setIsSubmitting(true);
         try {
             if (editingContract) {
-                await onUpdateContract({ id: editingContract.id, updates: formData });
+                await onUpdateContract({ id: editingContract.id, updates: sanitizedData });
                 showToast?.('Contrat mis à jour avec succès', 'success');
             } else {
-                await onCreateContract(formData);
+                await onCreateContract(sanitizedData);
                 showToast?.('Contrat créé avec succès', 'success');
             }
             handleCloseModal();
         } catch (err) {
+            console.error('Contract submit error:', err);
             showToast?.(`Erreur: ${err.message}`, 'error');
         } finally {
             setIsSubmitting(false);
         }
     }, [formData, editingContract, onCreateContract, onUpdateContract, showToast, handleCloseModal]);
 
-    // Delete contract
-    const handleDelete = useCallback(async (id) => {
-        if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?')) return;
+    // Delete contract - show confirmation
+    const handleDeleteClick = useCallback((contract) => {
+        setDeleteConfirm({
+            show: true,
+            contractId: contract.id,
+            contractName: contract.client_name
+        });
+    }, []);
+
+    // Confirm delete
+    const confirmDelete = useCallback(async () => {
+        if (!deleteConfirm.contractId) return;
 
         try {
-            await onDeleteContract(id);
+            console.log('Deleting contract:', deleteConfirm.contractId);
+            await onDeleteContract(deleteConfirm.contractId);
             showToast?.('Contrat supprimé', 'success');
         } catch (err) {
+            console.error('Delete contract error:', err);
             showToast?.(`Erreur: ${err.message}`, 'error');
+        } finally {
+            setDeleteConfirm({ show: false, contractId: null, contractName: '' });
         }
-    }, [onDeleteContract, showToast]);
+    }, [deleteConfirm.contractId, onDeleteContract, showToast]);
+
+    // Cancel delete
+    const cancelDelete = useCallback(() => {
+        setDeleteConfirm({ show: false, contractId: null, contractName: '' });
+    }, []);
 
     // Generate CERFA - Ouvre dans un nouvel onglet
     const handleGenerateCerfa = useCallback((contract) => {
@@ -157,12 +208,40 @@ function AdminContractsView({
         window.open(`/cerfa?data=${encodedData}`, '_blank');
     }, []);
 
-    // Filter contracts
+    // Filter contracts with search
     const filteredContracts = contracts.filter(c => {
+        // Search filter
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const matchesName = c.client_name?.toLowerCase().includes(term);
+            const matchesPhone = c.client_phone?.toLowerCase().includes(term);
+            const matchesAddress = c.client_address?.toLowerCase().includes(term);
+            const matchesNumber = c.contract_number?.toLowerCase().includes(term);
+            if (!matchesName && !matchesPhone && !matchesAddress && !matchesNumber) return false;
+        }
+        // Status filter
         if (filters.status && c.status !== filters.status) return false;
+        // Type filter
         if (filters.type && c.contract_type !== filters.type) return false;
         return true;
     });
+
+    // Sort by expiry date (soonest first), then by status
+    const sortedContracts = [...filteredContracts].sort((a, b) => {
+        // Priority for pending_renewal
+        if (a.status === 'pending_renewal' && b.status !== 'pending_renewal') return -1;
+        if (b.status === 'pending_renewal' && a.status !== 'pending_renewal') return 1;
+        // Then by end date
+        return new Date(a.end_date) - new Date(b.end_date);
+    });
+
+    // Calculate days until expiry
+    const getDaysUntilExpiry = (endDate) => {
+        if (!endDate) return null;
+        const end = new Date(endDate);
+        const today = new Date();
+        return Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+    };
 
     // Format date
     const formatDate = (dateStr) => {
@@ -249,6 +328,28 @@ function AdminContractsView({
 
             {/* Toolbar */}
             <div className="contracts-toolbar">
+                {/* Search */}
+                <div className="search-container">
+                    <span className="search-icon">🔍</span>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Rechercher par nom, téléphone, adresse..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                        <button
+                            className="search-clear"
+                            onClick={() => setSearchTerm('')}
+                            aria-label="Effacer la recherche"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+
+                {/* Filters */}
                 <div className="contracts-filters">
                     <select
                         className="filter-select"
@@ -274,91 +375,112 @@ function AdminContractsView({
                 </div>
             </div>
 
+            {/* Results count */}
+            <div className="results-info">
+                {sortedContracts.length} contrat{sortedContracts.length !== 1 ? 's' : ''} trouvé{sortedContracts.length !== 1 ? 's' : ''}
+                {searchTerm && <span> pour "{searchTerm}"</span>}
+            </div>
+
             {/* Contracts List */}
-            {filteredContracts.length === 0 ? (
+            {sortedContracts.length === 0 ? (
                 <div className="empty-state">
                     <div className="icon">📋</div>
-                    <h3>Aucun contrat</h3>
-                    <p>Créez votre premier contrat de maintenance</p>
+                    <h3>{searchTerm ? 'Aucun résultat' : 'Aucun contrat'}</h3>
+                    <p>{searchTerm ? 'Essayez avec d\'autres termes' : 'Créez votre premier contrat de maintenance'}</p>
                 </div>
             ) : (
                 <div className="contracts-list">
-                    {filteredContracts.map(contract => (
-                        <div key={contract.id} className="contract-card">
-                            <div className="contract-card-header">
-                                <div className="contract-client">
-                                    <span className="contract-client-name">{contract.client_name}</span>
-                                    <span className="contract-type">{CONTRACT_TYPES[contract.contract_type] || contract.contract_type}</span>
-                                </div>
-                                <span className={`contract-status ${contract.status}`}>
-                                    {STATUS_LABELS[contract.status] || contract.status}
-                                </span>
-                            </div>
+                    {sortedContracts.map(contract => {
+                        const daysUntilExpiry = getDaysUntilExpiry(contract.end_date);
+                        const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+                        const isExpired = daysUntilExpiry !== null && daysUntilExpiry <= 0;
 
-                            <div className="contract-card-body">
-                                <div className="contract-info-item">
-                                    <span className="label">📅 Début</span>
-                                    <span className="value">{formatDate(contract.start_date)}</span>
-                                </div>
-                                <div className="contract-info-item">
-                                    <span className="label">📅 Fin</span>
-                                    <span className="value">{formatDate(contract.end_date)}</span>
-                                </div>
-                                <div className="contract-info-item">
-                                    <span className="label">🔄 Fréquence</span>
-                                    <span className="value">{FREQUENCIES[contract.frequency] || contract.frequency}</span>
-                                </div>
-                                <div className="contract-info-item">
-                                    <span className="label">💰 Prix</span>
-                                    <span className="value">{formatPrice(contract.price)}</span>
-                                </div>
-                                {contract.client_phone && (
-                                    <div className="contract-info-item">
-                                        <span className="label">📞 Téléphone</span>
-                                        <span className="value">{contract.client_phone}</span>
+                        return (
+                            <div
+                                key={contract.id}
+                                className={`contract-card clickable ${isExpiringSoon ? 'expiring-soon' : ''} ${isExpired ? 'expired-card' : ''}`}
+                                onClick={() => navigate(`/contracts/${contract.id}`)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => e.key === 'Enter' && navigate(`/contracts/${contract.id}`)}
+                            >
+                                {/* Expiry Alert Badge */}
+                                {isExpiringSoon && (
+                                    <div className="expiry-alert-badge warning">
+                                        ⚠️ Expire dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}
                                     </div>
                                 )}
-                                {contract.client_address && (
-                                    <div className="contract-info-item">
-                                        <span className="label">📍 Adresse</span>
-                                        <span className="value">{contract.client_address}</span>
+                                {isExpired && (
+                                    <div className="expiry-alert-badge danger">
+                                        ❌ Expiré depuis {Math.abs(daysUntilExpiry)} jour{Math.abs(daysUntilExpiry) > 1 ? 's' : ''}
                                     </div>
                                 )}
-                            </div>
 
-                            <div className="contract-card-footer">
-                                <div className="contract-visits-badge">
-                                    <span>🗓️</span>
-                                    <span>Visites planifiées</span>
+                                <div className="contract-card-header">
+                                    <div className="contract-client">
+                                        <span className="contract-client-name">{contract.client_name}</span>
+                                        <span className="contract-type">{CONTRACT_TYPES[contract.contract_type] || contract.contract_type}</span>
+                                    </div>
+                                    <span className={`contract-status ${contract.status}`}>
+                                        {STATUS_LABELS[contract.status] || contract.status}
+                                    </span>
                                 </div>
-                                <div className="contract-actions">
-                                    {contract.contract_type === 'entretien_chaudiere' && (
-                                        <button
-                                            className="btn-icon cerfa"
-                                            onClick={() => handleGenerateCerfa(contract)}
-                                            title="Générer CERFA"
-                                        >
-                                            📄
-                                        </button>
+
+                                <div className="contract-card-body">
+                                    <div className="contract-info-item">
+                                        <span className="label">📅 Période</span>
+                                        <span className="value">{formatDate(contract.start_date)} → {formatDate(contract.end_date)}</span>
+                                    </div>
+                                    <div className="contract-info-item">
+                                        <span className="label">🔄 Fréquence</span>
+                                        <span className="value">{FREQUENCIES[contract.frequency] || contract.frequency}</span>
+                                    </div>
+                                    <div className="contract-info-item">
+                                        <span className="label">💰 Prix</span>
+                                        <span className="value price-value">{formatPrice(contract.price)}</span>
+                                    </div>
+                                    {contract.client_phone && (
+                                        <div className="contract-info-item">
+                                            <span className="label">📞 Tél.</span>
+                                            <span className="value">{contract.client_phone}</span>
+                                        </div>
                                     )}
-                                    <button
-                                        className="btn-icon"
-                                        onClick={() => handleEditContract(contract)}
-                                        title="Modifier"
-                                    >
-                                        ✏️
-                                    </button>
-                                    <button
-                                        className="btn-icon delete"
-                                        onClick={() => handleDelete(contract.id)}
-                                        title="Supprimer"
-                                    >
-                                        🗑️
-                                    </button>
+                                </div>
+
+                                <div className="contract-card-footer">
+                                    <div className="contract-visits-badge">
+                                        <span>🗓️</span>
+                                        <span>Visites planifiées</span>
+                                    </div>
+                                    <div className="contract-actions">
+                                        {contract.contract_type === 'entretien_chaudiere' && (
+                                            <button
+                                                className="btn-icon cerfa"
+                                                onClick={(e) => { e.stopPropagation(); handleGenerateCerfa(contract); }}
+                                                title="Générer CERFA"
+                                            >
+                                                📄
+                                            </button>
+                                        )}
+                                        <button
+                                            className="btn-icon"
+                                            onClick={(e) => { e.stopPropagation(); handleEditContract(contract); }}
+                                            title="Modifier"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            className="btn-icon delete"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(contract); }}
+                                            title="Supprimer"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -468,6 +590,23 @@ function AdminContractsView({
                                     </div>
                                 </div>
 
+                                {/* Toggle Renouvellement Auto */}
+                                <div
+                                    className={`form-group toggle-group ${formData.auto_renew ? 'active' : ''}`}
+                                    onClick={() => setFormData(prev => ({ ...prev, auto_renew: !prev.auto_renew }))}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className="toggle-container">
+                                        <div className={`toggle-switch ${formData.auto_renew ? 'on' : ''}`}>
+                                            <div className="toggle-knob"></div>
+                                        </div>
+                                        <div className="toggle-text">
+                                            <span>🔄 Renouvellement automatique</span>
+                                            <small>Le contrat sera renouvelé automatiquement à échéance</small>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label>Fréquence des visites *</label>
@@ -531,6 +670,30 @@ function AdminContractsView({
             )}
 
             {/* Le CERFA s'ouvre maintenant dans un nouvel onglet */}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm.show && (
+                <div className="modal-overlay" onClick={cancelDelete}>
+                    <div className="modal-content delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>⚠️ Confirmer la suppression</h2>
+                            <button className="modal-close" onClick={cancelDelete}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Êtes-vous sûr de vouloir supprimer le contrat de <strong>{deleteConfirm.contractName}</strong> ?</p>
+                            <p className="warning-text">Cette action est irréversible. Toutes les visites associées seront également supprimées.</p>
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn-secondary" onClick={cancelDelete}>
+                                Annuler
+                            </button>
+                            <button type="button" className="btn-danger" onClick={confirmDelete}>
+                                🗑️ Supprimer définitivement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

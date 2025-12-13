@@ -97,16 +97,79 @@
     color: #fff;
 }
 
-/* ========== Filters & Actions ========== */
+/* ========== Toolbar ========== */
 .contracts-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
+/* ========== Search Input ========== */
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 2.75rem;
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    border-color: rgba(139, 92, 246, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-clear {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* ========== Filters ========== */
 .contracts-filters {
     display: flex;
     gap: 0.75rem;
@@ -130,6 +193,18 @@
     outline: none;
 }
 
+/* ========== Results Info ========== */
+.results-info {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1rem;
+}
+
+.results-info span {
+    color: #a78bfa;
+}
+
+/* ========== Primary Button ========== */
 .btn-primary {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     border: none;
@@ -162,7 +237,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 1.25rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .contract-card:hover {
@@ -170,6 +245,45 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+.contract-card.clickable {
+    cursor: pointer;
+}
+
+.contract-card.clickable:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* ========== Expiry States ========== */
+.contract-card.expiring-soon {
+    border-left: 3px solid #f59e0b;
+}
+
+.contract-card.expired-card {
+    border-left: 3px solid #ef4444;
+    opacity: 0.85;
+}
+
+.expiry-alert-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+.expiry-alert-badge.warning {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.expiry-alert-badge.danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* ========== Card Sections ========== */
 .contract-card-header {
     display: flex;
     justify-content: space-between;
@@ -245,6 +359,11 @@
 .contract-info-item .value {
     font-size: 0.875rem;
     color: #fff;
+}
+
+.price-value {
+    font-weight: 600;
+    color: #10b981 !important;
 }
 
 .contract-card-footer {
@@ -494,6 +613,11 @@
         align-items: stretch;
     }
 
+    .search-container {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
     .contracts-filters {
         flex-direction: column;
     }
@@ -519,4 +643,106 @@
         right: 0;
         max-width: 100%;
     }
+}
+
+/* ========== Toggle Switch ========== */
+.toggle-group {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.toggle-group:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.toggle-group.active {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.toggle-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 13px;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+
+.toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.toggle-switch.on {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.toggle-switch.on .toggle-knob {
+    transform: translateX(22px);
+    background: #fff;
+}
+
+.toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.toggle-text small {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+}
+/* ========== Delete Confirmation Modal ========== */
+.delete-confirm-modal {
+    max-width: 450px;
+}
+
+.delete-confirm-modal .modal-body p {
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.delete-confirm-modal .warning-text {
+    color: #f59e0b;
+    font-size: 0.875rem;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 0.75rem;
+    border-radius: 8px;
+    border-left: 3px solid #f59e0b;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }

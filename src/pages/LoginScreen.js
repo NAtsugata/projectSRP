@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../lib/supabase';
-import { BriefcaseIcon, MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
+import { MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
 import './LoginScreen.css';
 
 export default function LoginScreen() {

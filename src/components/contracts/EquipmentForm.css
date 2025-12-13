@@ -1,0 +1,58 @@
+/* ========== Equipment Form Modal ========== */
+.equipment-modal {
+    max-width: 600px;
+}
+
+.equipment-modal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.equipment-modal .form-group {
+    margin-bottom: 1rem;
+}
+
+.equipment-modal .form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.5rem;
+}
+
+.equipment-modal .form-group input,
+.equipment-modal .form-group select,
+.equipment-modal .form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+}
+
+.equipment-modal .form-group input:focus,
+.equipment-modal .form-group select:focus,
+.equipment-modal .form-group textarea:focus {
+    border-color: rgba(139, 92, 246, 0.5);
+    outline: none;
+}
+
+.equipment-modal .form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 600px) {
+    .equipment-modal .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .equipment-modal {
+        margin: 0 1rem;
+    }
+}

@@ -31,6 +31,7 @@ const AdminArchiveViewContainer = lazy(() => import('./pages/AdminArchiveViewCon
 const AdminExpensesViewContainer = lazy(() => import('./pages/AdminExpensesViewContainer'));
 const AdminChecklistTemplatesViewContainer = lazy(() => import('./pages/AdminChecklistTemplatesViewContainer'));
 const AdminContractsViewContainer = lazy(() => import('./pages/AdminContractsViewContainer'));
+const ContractDetailViewContainer = lazy(() => import('./pages/ContractDetailViewContainer'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -277,6 +278,11 @@ function App() {
                   <Route path="contracts" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminContractsViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="contracts/:contractId" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ContractDetailViewContainer />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={

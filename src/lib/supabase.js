@@ -498,6 +498,183 @@ export const maintenanceContractService = {
     };
 
     return stats;
+  },
+
+  // ========== HISTORIQUE ==========
+
+  async getContractHistory(contractId) {
+    try {
+      const { data, error } = await supabase
+        .from('contract_history')
+        .select('*')
+        .eq('contract_id', contractId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Historique non disponible:', error.message);
+        return { data: [], error: null };
+      }
+      return { data: data || [], error: null };
+    } catch (e) {
+      console.warn('Erreur récupération historique:', e);
+      return { data: [], error: null };
+    }
+  },
+
+  // ========== ÉQUIPEMENTS ==========
+
+  async getContractEquipment(contractId) {
+    try {
+      const { data, error } = await supabase
+        .from('contract_equipment')
+        .select('*')
+        .eq('contract_id', contractId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('Équipements non disponibles:', error.message);
+        return { data: [], error: null };
+      }
+      return { data: data || [], error: null };
+    } catch (e) {
+      console.warn('Erreur récupération équipements:', e);
+      return { data: [], error: null };
+    }
+  },
+
+  async addEquipment(contractId, data) {
+    const { data: equipment, error } = await supabase
+      .from('contract_equipment')
+      .insert([{ ...data, contract_id: contractId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding equipment:', error);
+      return { error };
+    }
+    return { data: equipment, error: null };
+  },
+
+  async updateEquipment(equipmentId, updates) {
+    const { data, error } = await supabase
+      .from('contract_equipment')
+      .update(updates)
+      .eq('id', equipmentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating equipment:', error);
+      return { error };
+    }
+    return { data, error: null };
+  },
+
+  async deleteEquipment(equipmentId) {
+    const { error } = await supabase
+      .from('contract_equipment')
+      .delete()
+      .eq('id', equipmentId);
+
+    if (error) {
+      console.error('Error deleting equipment:', error);
+      return { error };
+    }
+    return { error: null };
+  },
+
+  // ========== RAPPORTS D'ENTRETIEN ==========
+
+  async createMaintenanceReport(contractId, reportData) {
+    const { data, error } = await supabase
+      .from('maintenance_reports')
+      .insert([{ ...reportData, contract_id: contractId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating report:', error);
+      return { error };
+    }
+    return { data, error: null };
+  },
+
+  async getContractReports(contractId) {
+    try {
+      const { data, error } = await supabase
+        .from('maintenance_reports')
+        .select('*')
+        .eq('contract_id', contractId)
+        .order('intervention_date', { ascending: false });
+
+      if (error) {
+        console.warn('Rapports non disponibles:', error.message);
+        return { data: [], error: null };
+      }
+      return { data: data || [], error: null };
+    } catch (e) {
+      console.warn('Erreur récupération rapports:', e);
+      return { data: [], error: null };
+    }
+  },
+
+  async getReport(reportId) {
+    const { data, error } = await supabase
+      .from('maintenance_reports')
+      .select('*')
+      .eq('id', reportId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching report:', error);
+      return { error };
+    }
+    return { data, error: null };
+  },
+
+  // ========== DÉTAILS COMPLETS ==========
+
+  async getContractWithDetails(contractId) {
+    // Récupérer le contrat (sans relations imbriquées pour éviter les erreurs de cache)
+    const { data: contract, error: contractError } = await supabase
+      .from('maintenance_contracts')
+      .select('*')
+      .eq('id', contractId)
+      .single();
+
+    if (contractError) return { error: contractError };
+
+    // Récupérer le technicien préféré séparément si défini
+    let preferredTechnician = null;
+    if (contract.preferred_technician_id) {
+      const { data: tech } = await supabase
+        .from('profiles')
+        .select('id, display_name, full_name')
+        .eq('id', contract.preferred_technician_id)
+        .single();
+      preferredTechnician = tech;
+    }
+
+    // Récupérer les visites
+    const { data: visits } = await this.getContractVisits(contractId);
+
+    // Récupérer les équipements
+    const { data: equipment } = await this.getContractEquipment(contractId);
+
+    // Récupérer l'historique
+    const { data: history } = await this.getContractHistory(contractId);
+
+    return {
+      data: {
+        ...contract,
+        preferred_technician: preferredTechnician,
+        visits: visits || [],
+        equipment: equipment || [],
+        history: history || []
+      },
+      error: null
+    };
   }
 };
 
