@@ -126,17 +126,6 @@ const AbsenceManager = ({
     }
   };
 
-  // Vérifier si un employé est absent à une date donnée
-  const isEmployeeAbsent = (employeeId, date) => {
-    return absences.some(absence => {
-      return (
-        absence.employeeId === employeeId &&
-        date >= absence.startDate &&
-        date <= absence.endDate
-      );
-    });
-  };
-
   // Obtenir les absences en cours
   const getCurrentAbsences = () => {
     const today = new Date().toISOString().split('T')[0];

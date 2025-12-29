@@ -17,7 +17,6 @@ import {
     ChevronDownIcon
 } from '../SharedUI';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
-import { useAuthStore } from '../../store/authStore';
 import './AppLayout.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {

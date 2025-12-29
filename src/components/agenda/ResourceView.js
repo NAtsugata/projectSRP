@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { AlertTriangleIcon, ClockIcon } from '../SharedUI';
-import { checkEmployeeOverload, getUrgentCount, hasSAV } from '../../utils/agendaHelpers';
+import { getUrgentCount, hasSAV } from '../../utils/agendaHelpers';
 import './ResourceView.css';
 
 /**
