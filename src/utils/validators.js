@@ -3,6 +3,7 @@
 
 import { sanitizeText } from './sanitize';
 import { fileUtils } from '../config/fileConfig';
+import { AUTH, VALIDATION } from '../config/constants';
 
 /**
  * Valide une adresse email
@@ -37,8 +38,8 @@ export const validatePassword = (password) => {
     return { isValid: false, message: 'Le mot de passe est requis' };
   }
 
-  if (password.length < 6) {
-    return { isValid: false, message: 'Le mot de passe doit contenir au moins 6 caractères' };
+  if (password.length < AUTH.MIN_PASSWORD_LENGTH) {
+    return { isValid: false, message: `Le mot de passe doit contenir au moins ${AUTH.MIN_PASSWORD_LENGTH} caractères` };
   }
 
   return { isValid: true, message: '' };
@@ -142,12 +143,12 @@ export const validateIntervention = (intervention) => {
 export const validateUser = (user) => {
   const errors = [];
 
-  if (!user.full_name || user.full_name.trim().length < 2) {
-    errors.push('Le nom complet doit contenir au moins 2 caractères');
+  if (!user.full_name || user.full_name.trim().length < VALIDATION.MIN_USER_NAME_LENGTH) {
+    errors.push(`Le nom complet doit contenir au moins ${VALIDATION.MIN_USER_NAME_LENGTH} caractères`);
   }
 
-  if (user.full_name && user.full_name.length > 100) {
-    errors.push('Le nom complet ne peut pas dépasser 100 caractères');
+  if (user.full_name && user.full_name.length > VALIDATION.MAX_USER_NAME_LENGTH) {
+    errors.push(`Le nom complet ne peut pas dépasser ${VALIDATION.MAX_USER_NAME_LENGTH} caractères`);
   }
 
   return {
@@ -173,8 +174,8 @@ export const validateLeaveRequest = (leaveRequest) => {
     errors.push('Le motif est requis');
   }
 
-  if (leaveRequest.reason && leaveRequest.reason.length > 500) {
-    errors.push('Le motif ne peut pas dépasser 500 caractères');
+  if (leaveRequest.reason && leaveRequest.reason.length > VALIDATION.MAX_LEAVE_REASON_LENGTH) {
+    errors.push(`Le motif ne peut pas dépasser ${VALIDATION.MAX_LEAVE_REASON_LENGTH} caractères`);
   }
 
   return {
@@ -194,7 +195,7 @@ export const sanitizeString = (str) => {
   // ✅ Utilise DOMPurify pour une sanitisation robuste contre XSS
   const cleaned = sanitizeText(str);
   // Limite la longueur
-  return cleaned.substring(0, 1000);
+  return cleaned.substring(0, VALIDATION.MAX_STRING_LENGTH);
 };
 
 /**

@@ -19,8 +19,8 @@ import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
+import LoadingFallback from './components/ui/LoadingFallback';
 
-// Lazy loading des Containers
 // Lazy loading des Containers
 const AdminDashboardContainer = lazy(() => import('./pages/AdminDashboardContainer'));
 const AdminPlanningViewContainer = lazy(() => import('./pages/AdminPlanningViewContainer'));
@@ -212,101 +212,101 @@ function App() {
                 <>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminDashboardContainer />
                     </Suspense>
                   } />
                   <Route path="agenda" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AgendaViewContainer />
                     </Suspense>
                   } />
                   <Route
                     path="planning"
                     element={
-                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <Suspense fallback={<LoadingFallback />}>
                         <AdminPlanningViewContainer />
                       </Suspense>
                     }
                   />
                   <Route path="planning/:interventionId" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <InterventionDetailViewContainer />
                     </Suspense>
                   } />
                   <Route path="archives" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                     </Suspense>
                   } />
                   <Route
                     path="leaves"
                     element={
-                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <Suspense fallback={<LoadingFallback />}>
                         <AdminLeaveViewContainer />
                       </Suspense>
                     }
                   />
                   <Route path="users" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminUserViewContainer />
                     </Suspense>
                   } />
                   <Route
                     path="vault"
                     element={
-                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <Suspense fallback={<LoadingFallback />}>
                         <AdminVaultViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                       </Suspense>
                     }
                   />
                   <Route path="documents" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MyDocumentsViewContainer />
                     </Suspense>
                   } />
                   <Route path="checklist-templates" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminChecklistTemplatesViewContainer showToast={showToast} />
                     </Suspense>
                   } />
                   <Route path="expenses" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminExpensesViewContainer showConfirmationModal={showConfirmationModal} />
                     </Suspense>
                   } />
                   <Route path="contracts" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AdminContractsViewContainer />
                     </Suspense>
                   } />
                   <Route path="contracts/:contractId" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <ContractDetailViewContainer />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <IRShowerFormsViewContainer />
                     </Suspense>
                   } />
                   <Route path="mobile-diagnostics" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MobileDiagnosticsPageContainer />
                     </Suspense>
                   } />
                   <Route path="menu" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MobileMenu />
                     </Suspense>
                   } />
                   <Route path="cerfa" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <CerfaManager />
                     </Suspense>
                   } />
                   <Route path="cerfa-form" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <CerfaPage />
                     </Suspense>
                   } />
@@ -316,70 +316,70 @@ function App() {
                 <>
                   <Route index element={<Navigate to="/planning" replace />} />
                   <Route path="planning" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <EmployeePlanningViewContainer />
                     </Suspense>
                   } />
                   <Route path="planning/:interventionId" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <InterventionDetailViewContainer />
                     </Suspense>
                   } />
                   <Route path="agenda" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <AgendaViewContainer />
                     </Suspense>
                   } />
                   <Route
                     path="leaves"
                     element={
-                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <Suspense fallback={<LoadingFallback />}>
                         <EmployeeLeaveViewContainer />
                       </Suspense>
                     }
                   />
                   <Route path="vault" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <CoffreNumeriqueViewContainer />
                     </Suspense>
                   } />
                   <Route path="documents" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MyDocumentsViewContainer />
                     </Suspense>
                   } />
                   <Route path="checklists" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <ChecklistViewContainer />
                     </Suspense>
                   } />
                   <Route path="expenses" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <ExpensesViewContainer />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <IRShowerFormsViewContainer />
                     </Suspense>
                   } />
                   <Route path="mobile-diagnostics" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MobileDiagnosticsPageContainer />
                     </Suspense>
                   } />
                   <Route path="menu" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <MobileMenu />
                     </Suspense>
                   } />
                   <Route path="cerfa" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <CerfaManager />
                     </Suspense>
                   } />
                   <Route path="cerfa-form" element={
-                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                    <Suspense fallback={<LoadingFallback />}>
                       <CerfaPage />
                     </Suspense>
                   } />

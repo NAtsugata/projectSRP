@@ -4,13 +4,17 @@
 import { createClient } from '@supabase/supabase-js';
 import logger from '../utils/logger';
 
+// Configuration constants
+const NETWORK_TIMEOUT_MS = 15000; // 15 secondes optimisé pour mobile
+
 // Load environment variables (must be defined in .env)
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase environment variables missing. Check .env file.');
-  // throw new Error('Supabase URL or ANON KEY not defined');
+  const errorMsg = '❌ Supabase environment variables missing. Check .env file.';
+  console.error(errorMsg);
+  throw new Error('Supabase URL or ANON KEY not defined');
 }
 
 // Initialise Supabase client avec optimisations mobile
@@ -27,9 +31,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'Pragma': 'no-cache',
     },
     fetch: (url, options = {}) => {
-      // Timeout de 30 secondes pour les requêtes mobiles
+      // Timeout optimisé pour les requêtes mobiles
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
       return fetch(url, {
         ...options,
         signal: controller.signal,
@@ -170,8 +174,8 @@ export const interventionService = {
       if (assignError) logger.error('Erreur assignation:', assignError);
     }
 
-    // 3. Upload fichiers (simplifié)
-    // TODO: Implémenter upload fichiers si nécessaire
+    // Note: L'upload de fichiers est géré séparément via addBriefingDocuments()
+    // après création de l'intervention si nécessaire
 
     return { data: intervention, error: null };
   },
@@ -182,6 +186,20 @@ export const interventionService = {
 
   async deleteIntervention(id) {
     return await supabase.from('interventions').delete().eq('id', id);
+  },
+
+  async getInterventionById(id) {
+    return await supabase
+      .from('interventions')
+      .select(`
+        *,
+        intervention_assignments (
+          user_id,
+          profiles (full_name)
+        )
+      `)
+      .eq('id', id)
+      .single();
   },
 
   async addBriefingDocuments(id, files) {

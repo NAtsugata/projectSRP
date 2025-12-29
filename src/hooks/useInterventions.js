@@ -94,11 +94,7 @@ export function useIntervention(interventionId) {
     return useQuery({
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
-            const { data, error } = await interventionService.supabase
-                .from('interventions')
-                .select('*')
-                .eq('id', interventionId)
-                .single();
+            const { data, error } = await interventionService.getInterventionById(interventionId);
 
             if (error) throw error;
             return data;

@@ -31,7 +31,14 @@ export const useAuthStore = create((set, get) => ({
                 set({ user: session.user });
 
                 // Charger le profil
-                const profile = await profileService.getProfile(session.user.id);
+                const { data: profile, error: profileError } = await profileService.getProfile(session.user.id);
+
+                if (profileError) {
+                    console.error('Error loading profile:', profileError);
+                    set({ error: profileError.message, loading: false });
+                    return;
+                }
+
                 set({ profile, loading: false });
             } else {
                 set({ user: null, profile: null, loading: false });
@@ -55,7 +62,14 @@ export const useAuthStore = create((set, get) => ({
                 set({ user: data.user });
 
                 // Charger le profil
-                const profile = await profileService.getProfile(data.user.id);
+                const { data: profile, error: profileError } = await profileService.getProfile(data.user.id);
+
+                if (profileError) {
+                    console.error('Error loading profile:', profileError);
+                    set({ error: profileError.message, loading: false });
+                    return { success: false, error: profileError.message };
+                }
+
                 set({ profile, loading: false });
 
                 return { success: true };
@@ -84,10 +98,18 @@ export const useAuthStore = create((set, get) => ({
         if (!user) return;
 
         try {
-            const profile = await profileService.getProfile(user.id);
+            const { data: profile, error } = await profileService.getProfile(user.id);
+
+            if (error) {
+                console.error('Error refreshing profile:', error);
+                set({ error: error.message });
+                return;
+            }
+
             set({ profile });
         } catch (error) {
             console.error('Error refreshing profile:', error);
+            set({ error: error.message });
         }
     },
 }));

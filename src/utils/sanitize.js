@@ -69,8 +69,8 @@ class LRUCache {
   }
 }
 
-// Cache global pour les sanitizations fréquentes
-const sanitizeCache = new LRUCache(200);
+// Cache global pour les sanitizations fréquentes (optimisé pour mobile)
+const sanitizeCache = new LRUCache(100);
 
 /**
  * Vérifie si une chaîne dépasse la limite de taille
