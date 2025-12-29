@@ -7,7 +7,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ContractDetailView from './ContractDetailView';
 import {
     useContractWithDetails,
-    useUpdateContract,
     useDeleteContract,
     useUpdateVisitStatus,
     useAddEquipment,
@@ -35,7 +34,6 @@ function ContractDetailViewContainer() {
     const { data: reports = [] } = useContractReports(contractId);
 
     // Mutations contrat
-    const updateContract = useUpdateContract();
     const deleteContract = useDeleteContract();
     const updateVisitStatus = useUpdateVisitStatus();
 

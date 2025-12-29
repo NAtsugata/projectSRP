@@ -180,28 +180,6 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
     }
   };
 
-  const handleExplainNotifications = async () => {
-    console.log('🔔 [1/4] handleExplainNotifications appelé - Affichage modal...');
-
-    try {
-      const confirmed = await modal.confirm(
-        '🔔 Notifications',
-        'Recevez des alertes sur votre téléphone quand une intervention vous est assignée ou modifiée.'
-      );
-
-      console.log('🔔 [2/4] Réponse modal:', confirmed);
-
-      if (confirmed) {
-        console.log('🔔 [3/4] Utilisateur a confirmé - Appel handleEnableNotifications...');
-        handleEnableNotifications();
-      } else {
-        console.log('🔔 [3/4] Utilisateur a annulé');
-      }
-    } catch (error) {
-      console.error('❌ Erreur dans handleExplainNotifications:', error);
-    }
-  };
-
   if (!pushNotifications?.isSupported) {
     return null;
   }
