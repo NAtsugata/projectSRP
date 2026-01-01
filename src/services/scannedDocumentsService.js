@@ -1,5 +1,17 @@
 // src/services/scannedDocumentsService.js - SERVICE DOCUMENTS SCANNÉS
 import { supabase, storageService } from '../lib/supabase';
+import { sanitizeFilename } from '../utils/sanitize';
+
+/**
+ * Échappe les caractères spéciaux pour les requêtes SQL LIKE
+ * Prévient les injections SQL via les wildcards
+ * @param {string} str - Chaîne à échapper
+ * @returns {string} Chaîne échappée
+ */
+const escapeSQLLike = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[%_\\]/g, '\\$&');
+};
 
 /**
  * Service pour gérer les documents scannés des utilisateurs
@@ -65,9 +77,11 @@ const scannedDocumentsService = {
   async createDocument({ userId, title, description = '', category = 'autre', tags = [], file, metadata = {} }) {
     try {
       // 1. Upload le fichier vers Supabase Storage
+      // Sanitize le nom de fichier pour éviter path traversal
+      const safeFileName = sanitizeFilename(file.name);
       const uploadResult = await storageService.uploadFile(
         file,
-        `scanned-docs/${userId}/${Date.now()}-${file.name}`
+        `scanned-docs/${userId}/${Date.now()}-${safeFileName}`
       );
 
       if (uploadResult.error) throw uploadResult.error;
@@ -84,7 +98,7 @@ const scannedDocumentsService = {
         title,
         description,
         file_url: uploadResult.publicURL,
-        file_name: file.name,
+        file_name: safeFileName, // Utiliser le nom sanitizé
         file_size: file.size,
         file_type: file.type,
         thumbnail_url: thumbnailUrl,
@@ -207,9 +221,10 @@ const scannedDocumentsService = {
         query = query.eq('user_id', userId);
       }
 
-      // Recherche textuelle
+      // Recherche textuelle (avec échappement des caractères spéciaux SQL)
       if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        const safeTerm = escapeSQLLike(searchTerm);
+        query = query.or(`title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`);
       }
 
       query = query.order('created_at', { ascending: false });

@@ -3,6 +3,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import logger from '../utils/logger';
+import { sanitizeFilename } from '../utils/sanitize';
 
 // Load environment variables (must be defined in .env)
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -228,8 +229,10 @@ export const vaultService = {
 
 export const storageService = {
   async uploadVaultFile(file, userId) {
-    console.log('📦 storageService: uploadVaultFile started', { userId, fileName: file.name });
-    const fileExt = file.name.split('.').pop();
+    // Sanitize le nom de fichier pour éviter path traversal et caractères dangereux
+    const safeName = sanitizeFilename(file.name);
+    console.log('📦 storageService: uploadVaultFile started', { userId, fileName: safeName });
+    const fileExt = safeName.split('.').pop().toLowerCase();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     const filePath = `vault/${fileName}`;
 
@@ -250,7 +253,9 @@ export const storageService = {
   },
 
   async uploadInterventionFile(file, interventionId, folder = 'general', onProgress) {
-    const fileExt = file.name.split('.').pop();
+    // Sanitize le nom de fichier pour éviter path traversal et caractères dangereux
+    const safeName = sanitizeFilename(file.name);
+    const fileExt = safeName.split('.').pop().toLowerCase();
     const fileName = `${interventionId}/${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = fileName; // Le bucket est la racine
 
