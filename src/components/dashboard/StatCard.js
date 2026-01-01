@@ -108,4 +108,5 @@ const StatCard = ({
   );
 };
 
-export default StatCard;
+// React.memo pour éviter les re-renders inutiles
+export default React.memo(StatCard);

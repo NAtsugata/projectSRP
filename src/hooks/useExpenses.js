@@ -27,8 +27,9 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
             const { data } = await expenseService.getAllExpenses(1, limit, filters);
             return data || [];
         },
-        enabled: true,
-        keepPreviousData: true, // Keep data while fetching new filter
+        staleTime: 3 * 60 * 1000,  // 3 minutes - dépenses peuvent changer
+        gcTime: 10 * 60 * 1000,    // 10 minutes en cache
+        placeholderData: (previousData) => previousData, // Remplace keepPreviousData (deprecated)
     });
 
     // Mutation pour créer une note de frais

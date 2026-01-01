@@ -5,9 +5,9 @@ import React from 'react';
 import './RecentActivity.css';
 
 /**
- * ActivityItem
+ * ActivityItem - Memoized pour éviter les re-renders inutiles
  */
-const ActivityItem = ({ icon, title, description, time, variant = 'default' }) => {
+const ActivityItem = React.memo(({ icon, title, description, time, variant = 'default' }) => {
   return (
     <div className={`activity-item activity-item-${variant}`}>
       <div className="activity-icon">
@@ -20,7 +20,7 @@ const ActivityItem = ({ icon, title, description, time, variant = 'default' }) =
       </div>
     </div>
   );
-};
+});
 
 /**
  * RecentActivity Component
@@ -46,7 +46,7 @@ const RecentActivity = ({
         <div className="activity-list">
           {displayedActivities.map((activity, index) => (
             <ActivityItem
-              key={index}
+              key={activity.id || `activity-${index}-${activity.title}`}
               icon={activity.icon}
               title={activity.title}
               description={activity.description}
@@ -64,4 +64,5 @@ const RecentActivity = ({
   );
 };
 
-export default RecentActivity;
+// React.memo pour éviter les re-renders inutiles
+export default React.memo(RecentActivity);

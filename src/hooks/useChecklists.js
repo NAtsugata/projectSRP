@@ -22,6 +22,8 @@ export function useChecklists(userId = null) {
             }
             return await checklistService.getAllChecklists();
         },
+        staleTime: 5 * 60 * 1000,  // 5 minutes
+        gcTime: 15 * 60 * 1000,
     });
 
     // Query pour récupérer les templates
@@ -35,6 +37,8 @@ export function useChecklists(userId = null) {
             const result = await checklistService.getAllTemplates();
             return result.data || [];
         },
+        staleTime: 30 * 60 * 1000, // 30 minutes - templates changent rarement
+        gcTime: 60 * 60 * 1000,    // 1 heure en cache
     });
 
     // Mutation pour mettre à jour une checklist

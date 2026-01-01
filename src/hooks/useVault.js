@@ -30,6 +30,8 @@ export function useVault(userId = null) {
 
             return documents;
         },
+        staleTime: 5 * 60 * 1000,  // 5 minutes - documents changent peu
+        gcTime: 15 * 60 * 1000,    // 15 minutes en cache
     });
 
     // Mutation pour envoyer un document

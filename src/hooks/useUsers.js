@@ -21,6 +21,8 @@ export function useUsers() {
             if (result.error) throw result.error;
             return result.data || [];
         },
+        staleTime: 10 * 60 * 1000, // 10 minutes - utilisateurs changent rarement
+        gcTime: 30 * 60 * 1000,    // 30 minutes en cache
     });
 
     // Mutation pour mettre à jour un utilisateur

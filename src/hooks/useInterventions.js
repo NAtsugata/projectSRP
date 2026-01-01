@@ -23,7 +23,8 @@ export function useInterventions(userId = null, isArchived = false) {
             if (error) throw error;
             return data || [];
         },
-        enabled: true, // Toujours actif
+        staleTime: 2 * 60 * 1000, // 2 minutes - interventions changent modérément
+        gcTime: 10 * 60 * 1000,   // 10 minutes en cache
     });
 
     // Mutation pour créer une intervention
@@ -94,15 +95,15 @@ export function useIntervention(interventionId) {
     return useQuery({
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
-            const { data, error } = await interventionService.supabase
-                .from('interventions')
-                .select('*')
-                .eq('id', interventionId)
-                .single();
-
+            const { data, error } = await interventionService.getInterventions(null, null);
             if (error) throw error;
-            return data;
+            // Filtrer pour trouver l'intervention spécifique
+            const intervention = data?.find(i => i.id === interventionId);
+            if (!intervention) throw new Error('Intervention non trouvée');
+            return intervention;
         },
         enabled: !!interventionId,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 10 * 60 * 1000,
     });
 }

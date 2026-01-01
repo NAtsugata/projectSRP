@@ -22,7 +22,8 @@ export function useLeaveRequests(userId = null) {
             if (error) throw error;
             return data || [];
         },
-        enabled: true,
+        staleTime: 5 * 60 * 1000, // 5 minutes - congés changent peu fréquemment
+        gcTime: 15 * 60 * 1000,   // 15 minutes en cache
     });
 
     // Mutation pour créer une demande de congé
