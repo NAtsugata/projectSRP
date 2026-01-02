@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import logger from '../utils/logger';
 
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(() => {
@@ -16,12 +17,12 @@ export function useOnlineStatus() {
   useEffect(() => {
     // Fonction pour mettre à jour le statut
     function handleOnline() {
-      console.log('📶 Connexion rétablie');
+      logger.log('📶 Connexion rétablie');
       setIsOnline(true);
     }
 
     function handleOffline() {
-      console.log('📵 Connexion perdue');
+      logger.log('📵 Connexion perdue');
       setIsOnline(false);
     }
 
@@ -34,7 +35,7 @@ export function useOnlineStatus() {
       const currentStatus = navigator.onLine;
       if (currentStatus !== isOnline) {
         setIsOnline(currentStatus);
-        console.log(`📡 Statut connexion mis à jour: ${currentStatus ? 'en ligne' : 'hors ligne'}`);
+        logger.log(`📡 Statut connexion mis à jour: ${currentStatus ? 'en ligne' : 'hors ligne'}`);
       }
     }, 5000); // Vérifier toutes les 5 secondes
 

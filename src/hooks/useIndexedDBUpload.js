@@ -2,6 +2,7 @@
 // N'affecte pas les hooks existants
 import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
+import logger from '../utils/logger';
 import {
   storeFileForUpload,
   getPendingUploads,
@@ -68,7 +69,7 @@ export const useIndexedDBUpload = () => {
     try {
       const uploadId = await storeFileForUpload(file, metadata);
       await loadPendingUploads();
-      console.log(`✅ Fichier ${file.name} mis en cache (${uploadId})`);
+      logger.log(`✅ Fichier ${file.name} mis en cache (${uploadId})`);
       return uploadId;
     } catch (err) {
       console.error('Failed to store file for later upload:', err);
@@ -79,13 +80,13 @@ export const useIndexedDBUpload = () => {
   // Uploader les fichiers en attente
   const processPendingUploads = useCallback(async () => {
     if (!isOnline) {
-      console.log('⚠️ Hors ligne - uploads en attente');
+      logger.log('⚠️ Hors ligne - uploads en attente');
       return;
     }
 
     try {
       const pending = await getPendingUploads('pending');
-      console.log(`📤 Traitement de ${pending.length} upload(s) en attente...`);
+      logger.log(`📤 Traitement de ${pending.length} upload(s) en attente...`);
 
       for (const item of pending) {
         try {
@@ -103,7 +104,7 @@ export const useIndexedDBUpload = () => {
               uploadedUrl: result.url,
               completedAt: new Date().toISOString()
             });
-            console.log(`✅ Upload réussi: ${item.fileName}`);
+            logger.log(`✅ Upload réussi: ${item.fileName}`);
           } else {
             await updateUploadStatus(item.id, 'failed', {
               retryCount: (item.retryCount || 0) + 1,

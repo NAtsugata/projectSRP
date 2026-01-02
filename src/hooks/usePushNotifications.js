@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 import {
   isNotificationSupported,
   isNotificationEnabled,
@@ -94,7 +95,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
       return;
     }
 
-    console.log('🔔 Écoute des interventions pour l\'utilisateur:', userId);
+    logger.log('🔔 Écoute des interventions pour l\'utilisateur:', userId);
 
     // Canal pour les assignations (nouvelles interventions assignées)
     const assignmentChannel = supabase
@@ -108,7 +109,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
           filter: `user_id=eq.${userId}`
         },
         async (payload) => {
-          console.log('🆕 Nouvelle assignation détectée:', payload);
+          logger.log('🆕 Nouvelle assignation détectée:', payload);
 
           try {
             // Récupérer les détails de l'intervention
@@ -132,7 +133,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Statut subscription assignations:', status);
+        logger.log('📡 Statut subscription assignations:', status);
       });
 
     // Canal pour les modifications d'interventions
@@ -156,7 +157,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
 
           if (!assignment) return; // L'utilisateur n'est pas assigné
 
-          console.log('📝 Intervention modifiée:', payload);
+          logger.log('📝 Intervention modifiée:', payload);
 
           try {
             const old = payload.old;
@@ -183,12 +184,12 @@ export const useInterventionNotifications = (userId, enabled = true) => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Statut subscription interventions:', status);
+        logger.log('📡 Statut subscription interventions:', status);
       });
 
     // Cleanup
     return () => {
-      console.log('🔕 Arrêt écoute interventions');
+      logger.log('🔕 Arrêt écoute interventions');
       assignmentChannel.unsubscribe();
       interventionChannel.unsubscribe();
     };
@@ -241,7 +242,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
               scheduledDate > thirtyMinLater &&
               scheduledDate <= oneHourLater
             ) {
-              console.log('⏰ Rappel 1h avant pour:', intervention.client);
+              logger.log('⏰ Rappel 1h avant pour:', intervention.client);
 
               await showLocalNotification('⏰ Rappel intervention dans 1h', {
                 body: `${intervention.client}\n${intervention.address || 'Adresse non spécifiée'}`,

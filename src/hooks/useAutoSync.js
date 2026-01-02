@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPendingUploads } from '../utils/indexedDBCache';
+import logger from '../utils/logger';
 
 /**
  * Hook pour la synchronisation automatique des uploads
@@ -31,7 +32,7 @@ export const useAutoSync = (onSync) => {
             const pending = await checkPending();
 
             if (pending.length > 0 && onSync) {
-                console.log(`🔄 Synchronisation de ${pending.length} upload(s)...`);
+                logger.log(`🔄 Synchronisation de ${pending.length} upload(s)...`);
                 await onSync(pending);
                 await checkPending(); // Rafraîchir le compte
             }
@@ -47,7 +48,7 @@ export const useAutoSync = (onSync) => {
         checkPending();
 
         const handleOnline = async () => {
-            console.log('✅ Connexion rétablie');
+            logger.log('✅ Connexion rétablie');
             setIsOnline(true);
 
             // Attendre 2 secondes pour stabiliser la connexion
@@ -58,7 +59,7 @@ export const useAutoSync = (onSync) => {
         };
 
         const handleOffline = () => {
-            console.log('❌ Connexion perdue');
+            logger.log('❌ Connexion perdue');
             setIsOnline(false);
         };
 
