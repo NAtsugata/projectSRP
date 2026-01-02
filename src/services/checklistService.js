@@ -1,5 +1,6 @@
 // src/services/checklistService.js - SERVICE CHECKLISTS D'INTERVENTION
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 
 /**
  * Service pour gérer les checklists d'intervention plomberie
@@ -52,7 +53,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Template créé:', data);
+      logger.log('✅ Template créé:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur createTemplate:', error);
@@ -82,7 +83,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Template mis à jour:', data);
+      logger.log('✅ Template mis à jour:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur updateTemplate:', error);
@@ -102,7 +103,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Template supprimé:', templateId);
+      logger.log('✅ Template supprimé:', templateId);
       return { data: true, error: null };
     } catch (error) {
       console.error('❌ Erreur deleteTemplate:', error);
@@ -149,7 +150,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Checklists assignées:', data.length);
+      logger.log('✅ Checklists assignées:', data.length);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur assignChecklistToIntervention:', error);
@@ -238,7 +239,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Checklist mise à jour:', data);
+      logger.log('✅ Checklist mise à jour:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur updateChecklist:', error);
@@ -258,7 +259,7 @@ const checklistService = {
 
       if (error) throw error;
 
-      console.log('✅ Checklist supprimée:', checklistId);
+      logger.log('✅ Checklist supprimée:', checklistId);
       return { data: true, error: null };
     } catch (error) {
       console.error('❌ Erreur deleteChecklist:', error);

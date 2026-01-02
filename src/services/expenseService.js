@@ -1,5 +1,6 @@
 // src/services/expenseService.js - SERVICE NOTES DE FRAIS
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 
 /**
  * Service pour gérer les notes de frais des employés
@@ -145,7 +146,7 @@ const expenseService = {
 
       if (error) throw error;
 
-      console.log('✅ Note de frais créée:', data);
+      logger.log('✅ Note de frais créée:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur createExpense:', error);
@@ -175,7 +176,7 @@ const expenseService = {
 
       if (error) throw error;
 
-      console.log('✅ Note de frais approuvée:', data);
+      logger.log('✅ Note de frais approuvée:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur approveExpense:', error);
@@ -209,7 +210,7 @@ const expenseService = {
 
       if (error) throw error;
 
-      console.log('✅ Note de frais rejetée:', data);
+      logger.log('✅ Note de frais rejetée:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur rejectExpense:', error);
@@ -241,7 +242,7 @@ const expenseService = {
 
       if (deleteError) throw deleteError;
 
-      console.log('✅ Note de frais supprimée:', expenseId);
+      logger.log('✅ Note de frais supprimée:', expenseId);
       return { data: true, error: null };
     } catch (error) {
       console.error('❌ Erreur deleteExpense:', error);
@@ -313,7 +314,7 @@ const expenseService = {
 
       if (error) throw error;
 
-      console.log('✅ Note de frais marquée comme payée:', data);
+      logger.log('✅ Note de frais marquée comme payée:', data);
       return { data, error: null };
     } catch (error) {
       console.error('❌ Erreur markAsPaid:', error);

@@ -1,7 +1,7 @@
 // src/utils/consoleOverride.js
 // Override console methods en production pour éviter les logs inutiles
 
-const isProduction = false; // process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production';
 
 if (isProduction) {
   // Sauvegarder les méthodes originales pour les erreurs

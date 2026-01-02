@@ -1,5 +1,6 @@
 // src/services/pushNotificationService.js
 // Service de gestion des notifications push natives
+import logger from '../utils/logger';
 
 /**
  * Vérifie si les notifications sont supportées
@@ -46,7 +47,7 @@ export const registerServiceWorker = async () => {
 
   try {
     const registration = await navigator.serviceWorker.register('/service-worker.js');
-    console.log('✅ Service Worker enregistré:', registration);
+    logger.log('✅ Service Worker enregistré:', registration);
     return registration;
   } catch (error) {
     console.error('❌ Erreur Service Worker:', error);
@@ -79,7 +80,7 @@ export const showLocalNotification = async (title, options = {}) => {
     };
 
     await registration.showNotification(title, notificationOptions);
-    console.log('✅ Notification affichée:', title);
+    logger.log('✅ Notification affichée:', title);
   } catch (error) {
     console.error('❌ Erreur affichage notification:', error);
     throw error;

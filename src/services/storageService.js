@@ -3,21 +3,22 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { sanitizeFilename } from '../utils/sanitize';
+import logger from '../utils/logger';
 
 export const storageService = {
   async uploadVaultFile(file, userId) {
     const safeName = sanitizeFilename(file.name);
-    console.log('📦 storageService: uploadVaultFile started', { userId, fileName: safeName });
+    logger.log('📦 storageService: uploadVaultFile started', { userId, fileName: safeName });
     const fileExt = safeName.split('.').pop().toLowerCase();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     const filePath = `vault/${fileName}`;
 
-    console.log('📦 storageService: uploading to', filePath);
+    logger.log('📦 storageService: uploading to', filePath);
     const { error: uploadError } = await supabase.storage
       .from('vault-files')
       .upload(filePath, file);
 
-    console.log('📦 storageService: upload result', { uploadError });
+    logger.log('📦 storageService: upload result', { uploadError });
 
     if (uploadError) return { error: uploadError };
 
