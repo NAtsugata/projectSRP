@@ -28,6 +28,7 @@ import {
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
+import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 
 const MIN_REQUIRED_PHOTOS = 2;
@@ -44,7 +45,7 @@ const withCacheBust = (url) => {
   if (!url || typeof url !== 'string') return url;
   const sep = url.includes('?') ? '&' : '?';
   const cacheBusted = `${url}${sep}v=${Date.now()}&r=${Math.random().toString(36).substring(7)}`;
-  console.log('🖼️ Cache-bust URL:', cacheBusted);
+  logger.log('🖼️ Cache-bust URL:', cacheBusted);
   return cacheBusted;
 };
 
@@ -75,7 +76,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
-    console.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
+    logger.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
   }, [uploadQueue]);
 
   // === Scroll locks + restauration ===
@@ -246,7 +247,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Suppression d'image --------
   const handleDeleteImage = useCallback(async (image) => {
     try {
-      console.log('🗑️ Suppression de l\'image:', image.url);
+      logger.log('🗑️ Suppression de l\'image:', image.url);
 
       // Supprimer du stockage Supabase
       const { error: storageError } = await storageService.deleteInterventionFile(image.url);
@@ -263,7 +264,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       // Persister
       await persistReport(updated);
 
-      console.log('✅ Image supprimée avec succès');
+      logger.log('✅ Image supprimée avec succès');
     } catch (error) {
       console.error('❌ Erreur suppression image:', error);
       throw error;
@@ -292,14 +293,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       let successCount = 0;
       let failCount = 0;
 
-      console.log('📦 Création du ZIP avec', totalFiles, 'fichier(s)');
+      logger.log('📦 Création du ZIP avec', totalFiles, 'fichier(s)');
 
       // Fonction pour télécharger un fichier avec retry
       const downloadFile = async (file, index) => {
         const maxRetries = 3;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            console.log(`📥 Téléchargement ${index + 1}/${totalFiles} (tentative ${attempt}):`, file.name);
+            logger.log(`📥 Téléchargement ${index + 1}/${totalFiles} (tentative ${attempt}):`, file.name);
 
             // Timeout plus long pour mobile (60s)
             const controller = new AbortController();
@@ -349,7 +350,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             }
             zip.file(uniqueName, result.blob);
             successCount++;
-            console.log(`✅ Ajouté au ZIP: ${uniqueName}`);
+            logger.log(`✅ Ajouté au ZIP: ${uniqueName}`);
           } else {
             failCount++;
             console.error(`❌ Échec final ${result.file.name}:`, result.error?.message);
@@ -362,7 +363,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       }
 
       // Générer le ZIP
-      console.log('🗜️ Compression du ZIP...');
+      logger.log('🗜️ Compression du ZIP...');
       const zipBlob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
@@ -391,7 +392,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         }, 100);
       }
 
-      console.log('✅ ZIP téléchargé:', zipName);
+      logger.log('✅ ZIP téléchargé:', zipName);
       if (failCount > 0) {
         alert(`⚠️ ZIP créé avec ${successCount} fichier(s). ${failCount} fichier(s) n'ont pas pu être récupérés.`);
       } else {
@@ -533,13 +534,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         {/* ACTIONS RAPIDES */}
         <QuickActionsBar
           intervention={intervention}
-          onAction={(action) => console.log('Action:', action)}
+          onAction={(action) => logger.log('Action:', action)}
         />
 
         {/* BOUTONS D'APPEL ULTRA-VISIBLES */}
         <CallButtons
           intervention={intervention}
-          onCall={(label) => console.log('Appel vers:', label)}
+          onCall={(label) => logger.log('Appel vers:', label)}
         />
 
         {/* CHRONOMÈTRE AVANCÉ AVEC PAUSE/REPRISE */}
