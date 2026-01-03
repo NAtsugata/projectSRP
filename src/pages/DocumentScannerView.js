@@ -17,6 +17,7 @@ import {
 } from '../utils/documentScanner';
 import documentDetectorUtils from '../utils/documentDetector';
 import { getYOLODetector } from '../utils/yoloDetector';
+import logger from '../utils/logger';
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
@@ -58,11 +59,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const loadYOLOModel = async () => {
       if (detectorType === 'yolo' && !yoloModelLoaded) {
         try {
-          console.log('🚀 Chargement du modèle YOLO...');
+          logger.log('🚀 Chargement du modèle YOLO...');
           const detector = getYOLODetector();
           await detector.loadModel(yoloModelPath);
           setYoloModelLoaded(true);
-          console.log('✅ Modèle YOLO chargé avec succès !');
+          logger.log('✅ Modèle YOLO chargé avec succès !');
         } catch (error) {
           console.error('❌ Erreur chargement modèle YOLO:', error);
           console.warn('⚠️ Retour au mode OpenCV');
@@ -133,7 +134,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Détection en temps réel sur le flux vidéo avec lissage
   useEffect(() => {
-    console.log('[LIVE DETECTION] useEffect triggered', {
+    logger.log('[LIVE DETECTION] useEffect triggered', {
       mode,
       hasStream: !!stream,
       hasVideo: !!videoRef.current,
@@ -141,7 +142,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       openCvReady: !!(window.cv && window.cv.Mat)
     });
 
-    console.log('[LIVE DETECTION] Checking conditions:', {
+    logger.log('[LIVE DETECTION] Checking conditions:', {
       mode,
       hasStream: !!stream,
       hasVideo: !!videoRef.current,
@@ -150,10 +151,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
     });
 
     if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current) {
-      console.log('[LIVE DETECTION] Conditions not met, skipping loop.');
+      logger.log('[LIVE DETECTION] Conditions not met, skipping loop.');
       // Nettoyer l'interval si on n'est plus en mode capture
       if (detectionIntervalRef.current) {
-        console.log('[LIVE DETECTION] Clearing interval');
+        logger.log('[LIVE DETECTION] Clearing interval');
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
@@ -163,7 +164,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       return;
     }
 
-    console.log('[LIVE DETECTION] Starting real-time detection loop');
+    logger.log('[LIVE DETECTION] Starting real-time detection loop');
 
     const detectLive = async () => {
       const video = videoRef.current;
@@ -196,7 +197,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         // Détecter avec le détecteur sélectionné (OpenCV ou YOLO)
         const result = await detectDocumentWithCurrentDetector(file);
 
-        console.log(`[LIVE DETECTION] Result from ${detectorType}:`, {
+        logger.log(`[LIVE DETECTION] Result from ${detectorType}:`, {
           detected: result.detected,
           method: result.method,
           confidence: result.confidence,
@@ -221,7 +222,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         const successCount = recentDetections.filter(d => d.detected && d.contour?.length === 4).length;
         const successRate = successCount / recentDetections.length;
 
-        console.log('[LIVE DETECTION] Success rate:', successRate, `(${successCount}/${recentDetections.length})`);
+        logger.log('[LIVE DETECTION] Success rate:', successRate, `(${successCount}/${recentDetections.length})`);
 
         // Afficher seulement si au moins 75% de succès (3/4)
         if (successRate >= 0.75 && result.detected && result.contour && result.contour.length === 4) {
@@ -243,8 +244,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
             });
           }
 
-          console.log('[LIVE DETECTION] Document detected (stable)! Drawing overlay...');
-          console.log('[LIVE DETECTION] Smoothed corners (%):', smoothedCorners);
+          logger.log('[LIVE DETECTION] Document detected (stable)! Drawing overlay...');
+          logger.log('[LIVE DETECTION] Smoothed corners (%):', smoothedCorners);
           setLiveCorners(smoothedCorners);
           setDetectionConfidence(100);
 
@@ -260,8 +261,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
             y: (corner.y / 100) * video.videoHeight
           }));
 
-          console.log('[LIVE DETECTION] Corners in pixels:', cornersInPixels);
-          console.log('[LIVE DETECTION] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+          logger.log('[LIVE DETECTION] Corners in pixels:', cornersInPixels);
+          logger.log('[LIVE DETECTION] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
 
           // Dessiner le polygone vert autour du document
           overlayCtx.strokeStyle = '#10b981';
@@ -291,10 +292,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
             overlayCtx.stroke();
           });
 
-          console.log('[LIVE DETECTION] Overlay drawn successfully');
+          logger.log('[LIVE DETECTION] Overlay drawn successfully');
         } else {
           // Pas assez stable ou pas de document détecté
-          console.log('[LIVE DETECTION] No stable document detected');
+          logger.log('[LIVE DETECTION] No stable document detected');
           setLiveCorners(null);
           setDetectionConfidence(Math.round(successRate * 100));
           // Effacer l'overlay
@@ -316,12 +317,12 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
 
     // Lancer la détection toutes les 600ms (plus stable)
-    console.log('[LIVE DETECTION] Setting interval (600ms)');
+    logger.log('[LIVE DETECTION] Setting interval (600ms)');
     detectionIntervalRef.current = setInterval(detectLive, 600);
 
     return () => {
       if (detectionIntervalRef.current) {
-        console.log('[LIVE DETECTION] Cleanup - clearing interval');
+        logger.log('[LIVE DETECTION] Cleanup - clearing interval');
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
@@ -394,7 +395,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     try {
       // Attendre que OpenCV soit prêt si nécessaire
       if (!isOpenCvReady()) {
-        console.log('Waiting for OpenCV...');
+        logger.log('Waiting for OpenCV...');
         await new Promise(r => setTimeout(r, 500));
       }
 

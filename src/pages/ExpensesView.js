@@ -15,6 +15,7 @@ import {
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { detectDocument } from '../utils/documentDetector';
 import { safeStorage } from '../utils/safeStorage';
+import logger from '../utils/logger';
 
 // Modal de visualisation des justificatifs
 const ReceiptsModal = ({ receipts, onClose }) => {
@@ -113,7 +114,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   // vident sessionStorage quand l'onglet est suspendu pour ouvrir la caméra
   const [isCreating, setIsCreating] = useState(() => {
     const saved = safeStorage.getJSON('expense_form_isCreating', false);
-    console.log('🔄 Restauration isCreating depuis localStorage:', saved);
+    logger.log('🔄 Restauration isCreating depuis localStorage:', saved);
     return saved;
   });
   const [newExpense, setNewExpense] = useState(() => {
@@ -125,9 +126,9 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       receipts: []
     };
     const saved = safeStorage.getJSON('expense_form_data', defaultExpense);
-    console.log('🔄 Restauration expense_form_data depuis localStorage:', saved !== defaultExpense ? 'OUI' : 'NON');
+    logger.log('🔄 Restauration expense_form_data depuis localStorage:', saved !== defaultExpense ? 'OUI' : 'NON');
     if (saved && saved !== defaultExpense) {
-      console.log('✅ Données restaurées:', {
+      logger.log('✅ Données restaurées:', {
         receipts: saved.receipts?.length || 0,
         date: saved.date,
         amount: saved.amount
@@ -151,7 +152,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     if (isCreating) {
       safeStorage.setJSON('expense_form_isCreating', isCreating);
       safeStorage.setJSON('expense_form_data', newExpense);
-      console.log('💾 Form state sauvegardé dans localStorage', {
+      logger.log('💾 Form state sauvegardé dans localStorage', {
         receipts: newExpense.receipts?.length || 0
       });
     }
@@ -161,31 +162,31 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ Page redevenue visible - vérification localStorage...');
+        logger.log('👁️ Page redevenue visible - vérification localStorage...');
         const saved = safeStorage.getJSON('expense_form_isCreating', false);
         const savedData = safeStorage.getJSON('expense_form_data', null);
 
         if (saved) {
-          console.log('🔄 Formulaire devrait être ouvert, forçage du state...');
+          logger.log('🔄 Formulaire devrait être ouvert, forçage du state...');
           setIsCreating(true);
 
           if (savedData) {
-            console.log('🔄 Restauration forcée des données:', {
+            logger.log('🔄 Restauration forcée des données:', {
               receipts: savedData.receipts?.length || 0
             });
             setNewExpense(savedData);
           }
         }
       } else {
-        console.log('👁️ Page cachée/suspendue');
+        logger.log('👁️ Page cachée/suspendue');
       }
     };
 
     const handlePageShow = (event) => {
-      console.log('📄 pageshow event', { persisted: event.persisted });
+      logger.log('📄 pageshow event', { persisted: event.persisted });
       if (event.persisted) {
         // Page restaurée depuis le cache (back/forward)
-        console.log('🔄 Page restaurée depuis cache, rechargement du state...');
+        logger.log('🔄 Page restaurée depuis cache, rechargement du state...');
         const saved = safeStorage.getJSON('expense_form_isCreating', false);
         if (saved) {
           setIsCreating(true);
@@ -199,8 +200,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('focus', () => console.log('🎯 Window focus'));
-    window.addEventListener('blur', () => console.log('💤 Window blur'));
+    window.addEventListener('focus', () => logger.log('🎯 Window focus'));
+    window.addEventListener('blur', () => logger.log('💤 Window blur'));
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -287,24 +288,24 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   const processNextPhoto = useCallback(async () => {
     if (pendingPhotos.length === 0) {
       setIsProcessingPhoto(false);
-      console.log('🔓 Toutes les photos traitées, flag isProcessingPhoto désactivé');
+      logger.log('🔓 Toutes les photos traitées, flag isProcessingPhoto désactivé');
       return;
     }
 
     const file = pendingPhotos[0];
     setCurrentPhotoFile(file);
-    console.log('📸 Traitement de la photo:', file.name);
+    logger.log('📸 Traitement de la photo:', file.name);
 
     try {
       // Détecter le document dans l'image
-      console.log('🔍 Début détection de document...');
+      logger.log('🔍 Début détection de document...');
       const result = await detectDocument(file, {
         minArea: 0.1,
         autoTransform: true,
         drawContours: true
       });
 
-      console.log('✅ Détection terminée:', result.detected ? 'Document détecté' : 'Aucun document');
+      logger.log('✅ Détection terminée:', result.detected ? 'Document détecté' : 'Aucun document');
       setDocumentDetectionResult(result);
 
     } catch (error) {
@@ -334,33 +335,33 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   // Gestion des photos
   const handleReceiptCapture = useCallback((event) => {
-    console.log('💰 handleReceiptCapture appelé', event);
-    console.log('💰 event.target:', event.target);
-    console.log('💰 event.target.files:', event.target.files);
+    logger.log('💰 handleReceiptCapture appelé', event);
+    logger.log('💰 event.target:', event.target);
+    logger.log('💰 event.target.files:', event.target.files);
 
     // Activer le flag pour empêcher fermeture du formulaire
     setIsProcessingPhoto(true);
-    console.log('🔒 Flag isProcessingPhoto activé');
+    logger.log('🔒 Flag isProcessingPhoto activé');
 
     const files = Array.from(event.target.files);
-    console.log('💰 Nombre de fichiers:', files.length);
-    console.log('💰 Fichiers:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    logger.log('💰 Nombre de fichiers:', files.length);
+    logger.log('💰 Fichiers:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
 
     if (files.length === 0) {
       console.warn('💰 Aucun fichier à traiter');
       setIsProcessingPhoto(false);
-      console.log('🔓 Flag isProcessingPhoto désactivé (aucun fichier)');
+      logger.log('🔓 Flag isProcessingPhoto désactivé (aucun fichier)');
       return;
     }
 
-    console.log('💰 Ajout des fichiers à la file d\'attente pour détection...');
+    logger.log('💰 Ajout des fichiers à la file d\'attente pour détection...');
     setPendingPhotos(files);
 
   }, []);
 
   // Accepter le recadrage du document
   const handleAcceptCrop = useCallback((croppedImageUrl) => {
-    console.log('✅ Utilisateur accepte le recadrage');
+    logger.log('✅ Utilisateur accepte le recadrage');
     const receipt = {
       id: Date.now() + Math.random(),
       url: croppedImageUrl,
@@ -381,7 +382,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   // Utiliser l'image originale
   const handleUseOriginal = useCallback((originalImageUrl) => {
-    console.log('📷 Utilisateur utilise l\'image originale');
+    logger.log('📷 Utilisateur utilise l\'image originale');
     const receipt = {
       id: Date.now() + Math.random(),
       url: originalImageUrl,
@@ -402,7 +403,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   // Annuler et ne pas ajouter la photo
   const handleCancelCrop = useCallback(() => {
-    console.log('❌ Utilisateur annule la photo');
+    logger.log('❌ Utilisateur annule la photo');
 
     // Vider la file d'attente
     setDocumentDetectionResult(null);
@@ -449,7 +450,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       setIsCreating(false);
       localStorage.removeItem('expense_form_isCreating');
       localStorage.removeItem('expense_form_data');
-      console.log('🗑️ LocalStorage nettoyé (soumission réussie)');
+      logger.log('🗑️ LocalStorage nettoyé (soumission réussie)');
     } catch (err) {
       console.error('Erreur soumission note de frais:', err);
       setError(`Erreur: ${err.message}`);
@@ -825,7 +826,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                   setError(null);
                   localStorage.removeItem('expense_form_isCreating');
                   localStorage.removeItem('expense_form_data');
-                  console.log('🗑️ LocalStorage nettoyé (annulé)');
+                  logger.log('🗑️ LocalStorage nettoyé (annulé)');
                 } else {
                   console.warn('⚠️ Annulation bloquée - traitement photo en cours');
                 }
