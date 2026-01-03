@@ -173,6 +173,7 @@ export default function ChecklistView({
 
         .checklist-card {
           background: white;
+          color: #1f2937;
           border: 2px solid #e5e7eb;
           border-radius: 0.75rem;
           padding: 1rem;
@@ -184,7 +185,7 @@ export default function ChecklistView({
           border-color: var(--copper-main, #CD7F32);
           box-shadow: 0 4px 12px rgba(205, 127, 50, 0.2);
         }
-        .checklist-card.completed { border-color: #10b981; background: #f0fdf4; }
+        .checklist-card.completed { border-color: #10b981; background: #f0fdf4; color: #1f2937; }
         .checklist-card.in-progress { border-color: #f59e0b; }
 
         .progress-bar {
@@ -203,12 +204,13 @@ export default function ChecklistView({
 
         .checklist-item {
           background: white;
+          color: #1f2937;
           border: 2px solid #e5e7eb;
           border-radius: 0.5rem;
           padding: 1rem;
           margin-bottom: 0.75rem;
         }
-        .checklist-item.checked { border-color: #10b981; background: #f0fdf4; }
+        .checklist-item.checked { border-color: #10b981; background: #f0fdf4; color: #1f2937; }
         .checklist-item.required { border-left: 4px solid #ef4444; }
 
         .checklist-checkbox {
@@ -257,6 +259,7 @@ export default function ChecklistView({
           position: sticky;
           bottom: 0;
           background: white;
+          color: #1f2937;
           padding: 1rem;
           border-top: 2px solid #e5e7eb;
           box-shadow: 0 -4px 12px rgba(0,0,0,0.1);

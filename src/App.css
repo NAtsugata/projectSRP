@@ -87,6 +87,7 @@ body {
 /* Cards */
 .card-white {
     background-color: var(--color-card-bg);
+    color: #1f2937;
     padding: 1.5rem;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
@@ -292,6 +293,7 @@ body {
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
     background-color: white;
+    color: #1f2937;
     -webkit-appearance: none;
     appearance: none;
 }
