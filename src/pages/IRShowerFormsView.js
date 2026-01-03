@@ -1,61 +1,15 @@
 // FILE: src/pages/IRShowerFormsView.jsx
-import React, { useMemo, useRef, useState, useEffect } from "react";
+// Refactoré - Composants UI et hook Canvas extraits dans des modules séparés
+import React, { useRef, useState, useEffect } from "react";
 import { storageService, supabase } from '../lib/supabase';
-
-/**
- * IRShowerFormsView — Version améliorée
- * NOUVELLES FONCTIONNALITÉS :
- * - Capture de photos AVANT/APRÈS avec caméra mobile
- * - Sauvegarde automatique dans localStorage (toutes les 5 sec)
- * - Restauration automatique au chargement
- * - Validation des champs obligatoires avant export PDF
- * - Design moderne avec gradients et ombres
- * - Bouton "Nouvelle étude" pour réinitialiser
- * - Export PDF incluant les photos
- * - UX mobile optimisée (tactile feedback)
- */
+import logger from '../utils/logger';
+import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../components/ir-shower';
+import { usePlanCanvas } from '../hooks/usePlanCanvas';
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
 const BANNER_H = 40;
 const LABEL_OFFSET = 8;
-
-/* ---------- UI helpers ---------- */
-const Section = ({ title, children, style, className = "" }) => (
-  <div
-    className={className}
-    style={{
-      border: "1px solid #e5e7eb",
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-      background: "#fff",
-      ...style,
-    }}
-  >
-    {title && <h3 style={{ margin: 0, marginBottom: 12, fontSize: 16, fontWeight: 700 }}>{title}</h3>}
-    {children}
-  </div>
-);
-const Row = ({ children }) => <div className="ir-row">{children}</div>;
-const Col = ({ span = 6, children }) => <div className={`ir-col span-${Math.min(12, Math.max(1, span))}`}>{children}</div>;
-const Label = ({ children, required }) => (
-  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 4 }}>
-    {children} {required && <span style={{ color: "#ef4444" }}>*</span>}
-  </label>
-);
-const Input = (props) => <input {...props} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 10px", fontSize: 14, minHeight: 44 }} />;
-const Check = ({ label, ...props }) => (
-  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, marginRight: 12 }}>
-    <input type="checkbox" {...props} /> {label}
-  </label>
-);
-const Radio = ({ label, name, ...props }) => (
-  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, marginRight: 12 }}>
-    <input type="radio" name={name} {...props} /> {label}
-  </label>
-);
-const Small = ({ children }) => <div style={{ fontSize: 12, color: "#64748b" }}>{children}</div>;
 
 /* ---------- helpers ---------- */
 let _nextId = 1;
@@ -70,202 +24,6 @@ function distToSegment(px, py, x1, y1, x2, y2) {
   const dx = px - xx, dy = py - yy;
   return Math.sqrt(dx * dx + dy * dy);
 }
-
-/* ---------- Canvas engine ---------- */
-const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
-  const drawBase = (ctx, w, h) => {
-    ctx.clearRect(0, 0, w, h);
-    const midY = Math.floor(h / 2);
-
-    // zones
-    ctx.fillStyle = "#f8fafc"; ctx.fillRect(0, 0, w, midY);
-    ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, midY, w, h-midY);
-
-    // bandeaux (murs)
-    ctx.save();
-    ctx.fillStyle = "rgba(14,165,233,0.12)";
-    ctx.fillRect(0, 0, w, BANNER_H);
-    ctx.fillRect(0, midY, w, BANNER_H);
-    ctx.fillStyle = "#0ea5a5";
-    ctx.font = "600 16px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("SdB AVANT  —  AVEC DIMENSIONS", w/2, BANNER_H/2);
-    ctx.fillText("SdB APRÈS  —  AVEC DIMENSIONS", w/2, midY + BANNER_H/2);
-    ctx.restore();
-
-    // cadre + séparation
-    ctx.strokeStyle = "#0ea5a5"; ctx.lineWidth = 2;
-    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
-    ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
-
-    // grille
-    ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
-    for (let x = GRID_SIZE + 0.5; x < w; x += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-    for (let y = GRID_SIZE + 0.5; y < h; y += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-  };
-
-  const api = useMemo(() => ({
-    resizeCtx() {
-      const c = canvasRef.current; if (!c) return null;
-      const dpr = window.devicePixelRatio || 1;
-      const cw = c.clientWidth, ch = c.clientHeight;
-      c.width = Math.floor(cw * dpr); c.height = Math.floor(ch * dpr);
-      const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { ctx, w: cw, h: ch };
-    },
-    draw(elements = [], preview = null, selectedId = null) {
-      const sized = api.resizeCtx(); if (!sized) return;
-      const { ctx, w, h } = sized;
-      drawBase(ctx, w, h);
-      const all = [...elements, ...(preview ? [preview] : [])];
-
-      const drawDim = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 2;
-
-        ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
-
-        const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
-        const dx = el.x2 - el.x1, dy = el.y2 - el.y1;
-        const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len, ny = dx / len;
-        const lx = mx + nx * labelOffsetPx, ly = my + ny * labelOffsetPx;
-        const cm = toCm(len);
-        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(`${cm.toFixed(1)} cm`, lx, ly);
-        ctx.restore();
-      };
-
-      const drawRect = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2; ctx.strokeRect(el.x, el.y, el.w, el.h);
-        ctx.restore();
-      };
-
-      const drawText = (el) => {
-        ctx.save();
-        ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.font = "bold 12px sans-serif"; ctx.fillText(el.text, el.x, el.y);
-        ctx.restore();
-      };
-
-      const drawMixer = (el) => {
-        ctx.save();
-        ctx.translate(el.x, el.y);
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(20, -3); ctx.stroke();
-        ctx.restore();
-      };
-
-      const drawSeat = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        const r = 18;
-        if (el.orient === "top") {
-          ctx.beginPath(); ctx.moveTo(el.x - r, el.y); ctx.lineTo(el.x + r, el.y); ctx.stroke();
-          ctx.beginPath(); ctx.arc(el.x, el.y, r, Math.PI, 0, false); ctx.stroke();
-        } else if (el.orient === "left") {
-          ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
-          ctx.beginPath(); ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, false); ctx.stroke();
-        } else if (el.orient === "right") {
-          ctx.beginPath(); ctx.moveTo(el.x, el.y - r); ctx.lineTo(el.x, el.y + r); ctx.stroke();
-          ctx.beginPath(); ctx.arc(el.x, el.y, r, -Math.PI/2, Math.PI/2, true); ctx.stroke();
-        }
-        ctx.restore();
-      };
-
-      const drawBar = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(el.x1, el.y1);
-        ctx.lineTo(el.x2, el.y2);
-        ctx.stroke();
-        // Poignée centrale
-        const mx = (el.x1 + el.x2) / 2, my = (el.y1 + el.y2) / 2;
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.beginPath();
-        ctx.arc(mx, my, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      };
-
-      const drawShower = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        // Ligne d'alimentation
-        ctx.beginPath();
-        ctx.moveTo(el.x, el.y);
-        ctx.lineTo(el.x + 40, el.y);
-        ctx.stroke();
-        // Pomme de douche
-        ctx.beginPath();
-        ctx.arc(el.x + 40, el.y, 8, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      const drawDoor = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        const w = 60; // largeur porte
-        // Arc d'ouverture
-        ctx.beginPath();
-        ctx.arc(el.x, el.y, w, 0, Math.PI / 2);
-        ctx.stroke();
-        // Ligne de la porte
-        ctx.beginPath();
-        ctx.moveTo(el.x, el.y);
-        ctx.lineTo(el.x + w, el.y);
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      const drawWindow = (el) => {
-        ctx.save();
-        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
-        ctx.lineWidth = 2;
-        const w = el.w || 60, h = el.h || 40;
-        // Rectangle fenêtre
-        ctx.strokeRect(el.x, el.y, w, h);
-        // Croix centrale
-        ctx.beginPath();
-        ctx.moveTo(el.x + w/2, el.y);
-        ctx.lineTo(el.x + w/2, el.y + h);
-        ctx.moveTo(el.x, el.y + h/2);
-        ctx.lineTo(el.x + w, el.y + h/2);
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      for (const el of all) {
-        if (el.type === "dim") drawDim(el);
-        else if (el.type === "rect") drawRect(el);
-        else if (el.type === "text") drawText(el);
-        else if (el.type === "symbol") {
-          if (el.kind === "mixer") drawMixer(el);
-          else if (el.kind === "seat") drawSeat(el);
-          else if (el.kind === "bar") drawBar(el);
-          else if (el.kind === "shower") drawShower(el);
-          else if (el.kind === "door") drawDoor(el);
-          else if (el.kind === "window") drawWindow(el);
-        }
-      }
-    },
-  }), [canvasRef, toCm, labelOffsetPx]);
-
-  return api;
-};
 
 /* ---------- Main ---------- */
 export default function IRShowerFormsView({ profile }) {
@@ -365,7 +123,7 @@ export default function IRShowerFormsView({ profile }) {
         c.toBlob(b => {
           if (b) {
             const compressed = new File([b], file.name, {type: 'image/jpeg', lastModified: Date.now()});
-            console.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
+            logger.log(`📸 Compression: ${(file.size/1024).toFixed(0)}KB → ${(b.size/1024).toFixed(0)}KB (${((1-b.size/file.size)*100).toFixed(0)}% économisé)`);
             res(compressed);
           } else {
             res(file);
@@ -381,9 +139,9 @@ export default function IRShowerFormsView({ profile }) {
   };
 
   const handlePhotoCapture = async (e, type) => {
-    console.log('📸 handlePhotoCapture appelé, type:', type, 'event:', e);
+    logger.log('📸 handlePhotoCapture appelé, type:', type, 'event:', e);
     const files = Array.from(e.target.files);
-    console.log('📸 Fichiers détectés:', files.length);
+    logger.log('📸 Fichiers détectés:', files.length);
     if (files.length === 0) {
       console.warn('⚠️ Aucun fichier capturé');
       return;
@@ -394,13 +152,13 @@ export default function IRShowerFormsView({ profile }) {
       return;
     }
 
-    console.log('📸 Début upload des fichiers vers le cloud...');
+    logger.log('📸 Début upload des fichiers vers le cloud...');
 
     try {
       // Uploader tous les fichiers en parallèle
       const uploadPromises = files.map(async (file) => {
         try {
-          console.log('📸 Upload fichier:', file.name);
+          logger.log('📸 Upload fichier:', file.name);
 
           // Compresser l'image d'abord
           const compressedFile = await compressImage(file);
@@ -410,13 +168,13 @@ export default function IRShowerFormsView({ profile }) {
             compressedFile,
             userId,
             (progress) => {
-              console.log(`📤 Progression ${file.name}: ${progress}%`);
+              logger.log(`📤 Progression ${file.name}: ${progress}%`);
             }
           );
 
           if (error) throw error;
 
-          console.log('✅ Fichier uploadé avec succès:', publicURL);
+          logger.log('✅ Fichier uploadé avec succès:', publicURL);
 
           return {
             id: newId(),
@@ -431,13 +189,13 @@ export default function IRShowerFormsView({ profile }) {
 
       const uploadedPhotos = await Promise.all(uploadPromises);
 
-      console.log('✅ Tous les fichiers uploadés:', uploadedPhotos.length);
+      logger.log('✅ Tous les fichiers uploadés:', uploadedPhotos.length);
 
       if (type === 'avant') {
-        console.log('📸 Ajout photos AVANT');
+        logger.log('📸 Ajout photos AVANT');
         setPhotosAvant(prev => [...prev, ...uploadedPhotos]);
       } else {
-        console.log('📸 Ajout photos APRÈS');
+        logger.log('📸 Ajout photos APRÈS');
         setPhotosApres(prev => [...prev, ...uploadedPhotos]);
       }
 
