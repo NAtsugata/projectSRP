@@ -188,6 +188,9 @@
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
+  color: #374151;
+  background: white;
+  border: 1px solid #d1d5db;
 }
 
 .expense-filter-btn.active {
@@ -319,12 +322,13 @@
 .user-stat-value {
   font-size: 1rem;
   font-weight: 600;
+  color: #1f2937; /* Couleur par défaut sombre pour fond clair */
 }
 
-.user-stat-value.pending { color: #f59e0b; }
-.user-stat-value.approved { color: #10b981; }
-.user-stat-value.paid { color: #6366f1; }
-.user-stat-value.rejected { color: #ef4444; }
+.user-stat-value.pending { color: #d97706; }
+.user-stat-value.approved { color: #059669; }
+.user-stat-value.paid { color: #4f46e5; }
+.user-stat-value.rejected { color: #dc2626; }
 
 /* Admin Expense Card */
 .admin-expense-card {

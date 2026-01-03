@@ -222,15 +222,15 @@ const UserExpensesAccordion = ({
     };
 
     if (expense.is_paid) {
-      return { ...base, backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8' };
+      return { ...base, backgroundColor: 'rgba(99, 102, 241, 0.3)', color: '#6366f1' };
     }
     if (expense.status === 'approved') {
-      return { ...base, backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399' };
+      return { ...base, backgroundColor: 'rgba(16, 185, 129, 0.3)', color: '#059669' };
     }
     if (expense.status === 'rejected') {
-      return { ...base, backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171' };
+      return { ...base, backgroundColor: 'rgba(239, 68, 68, 0.3)', color: '#dc2626' };
     }
-    return { ...base, backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' };
+    return { ...base, backgroundColor: 'rgba(245, 158, 11, 0.3)', color: '#d97706' };
   };
 
   const getStatusLabel = (expense) => {

@@ -193,11 +193,16 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           transition: all 0.2s;
           font-weight: 600;
           font-size: 0.875rem;
+          color: #374151;
         }
         .filter-tab.active {
           background: var(--copper-main, #CD7F32);
           color: white;
           border-color: var(--copper-main, #CD7F32);
+        }
+        .accordion-content {
+          background: white;
+          color: #1f2937;
         }
       `}</style>
 
