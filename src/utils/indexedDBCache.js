@@ -1,5 +1,6 @@
 // src/utils/indexedDBCache.js - Système de cache IndexedDB pour uploads mobiles
 // Permet de stocker les fichiers volumineux (fiches de paye PDF, etc.) en cache
+import logger from './logger';
 
 const DB_NAME = 'SRP_FileCache';
 const DB_VERSION = 1;
@@ -73,7 +74,7 @@ export const storeFileForUpload = async (file, metadata = {}) => {
       const request = store.add(uploadItem);
 
       request.onsuccess = () => {
-        console.log(`✅ Fichier stocké en cache: ${file.name} (${uploadItem.id})`);
+        logger.log(`✅ Fichier stocké en cache: ${file.name} (${uploadItem.id})`);
         resolve(uploadItem.id);
       };
 
@@ -199,7 +200,7 @@ export const updateUploadStatus = async (id, status, updates = {}) => {
         const putRequest = store.put(updatedItem);
 
         putRequest.onsuccess = () => {
-          console.log(`✅ Upload ${id} mis à jour: ${status}`);
+          logger.log(`✅ Upload ${id} mis à jour: ${status}`);
           resolve(true);
         };
 
@@ -237,7 +238,7 @@ export const deleteUpload = async (id) => {
       const request = store.delete(id);
 
       request.onsuccess = () => {
-        console.log(`✅ Upload ${id} supprimé du cache`);
+        logger.log(`✅ Upload ${id} supprimé du cache`);
         resolve(true);
       };
 
@@ -278,7 +279,7 @@ export const clearCompletedUploads = async () => {
           count++;
           cursor.continue();
         } else {
-          console.log(`✅ ${count} upload(s) complété(s) supprimé(s)`);
+          logger.log(`✅ ${count} upload(s) complété(s) supprimé(s)`);
           resolve(count);
         }
       };
@@ -335,7 +336,7 @@ export const clearAllUploads = async () => {
       const request = store.clear();
 
       request.onsuccess = () => {
-        console.log('✅ Tous les uploads supprimés du cache');
+        logger.log('✅ Tous les uploads supprimés du cache');
         resolve(true);
       };
 
@@ -393,7 +394,7 @@ export const cleanOldUploads = async (maxAgeDays = 7) => {
           }
           cursor.continue();
         } else {
-          console.log(`✅ ${count} upload(s) ancien(s) supprimé(s)`);
+          logger.log(`✅ ${count} upload(s) ancien(s) supprimé(s)`);
           resolve(count);
         }
       };
@@ -423,7 +424,7 @@ export const getUploadStats = getCacheStats;
  */
 export const initCacheCleanup = async () => {
   try {
-    console.log('🧹 Nettoyage automatique du cache...');
+    logger.log('🧹 Nettoyage automatique du cache...');
 
     // Nettoyer les uploads complétés de plus de 24h
     const completedCleaned = await clearCompletedUploads();
@@ -433,8 +434,8 @@ export const initCacheCleanup = async () => {
 
     const stats = await getCacheStats();
 
-    console.log(`✅ Cache nettoyé: ${completedCleaned} complétés, ${oldCleaned} anciens supprimés`);
-    console.log(`📊 Cache actuel: ${stats.count} fichiers (${stats.totalSizeMB} MB)`);
+    logger.log(`✅ Cache nettoyé: ${completedCleaned} complétés, ${oldCleaned} anciens supprimés`);
+    logger.log(`📊 Cache actuel: ${stats.count} fichiers (${stats.totalSizeMB} MB)`);
   } catch (error) {
     console.error('❌ Erreur nettoyage cache:', error);
   }

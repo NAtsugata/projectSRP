@@ -4,6 +4,7 @@
  * This utility detects document edges in an image and provides
  * automatic cropping and perspective correction.
  */
+import logger from './logger';
 
 /**
  * Wait for OpenCV.js to be loaded
@@ -326,15 +327,15 @@ export const detectDocument = async (input, options = {}) => {
       const imageArea = src.rows * src.cols;
       // Réduire minArea à 5% (0.05) au lieu de 10%
       const effectiveMinArea = minArea < 0.1 ? minArea : 0.05;
-      console.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * effectiveMinArea} (${effectiveMinArea * 100}%)`);
-      console.log(`[Scanner Debug] Total contours found: ${contours.size()}`);
+      logger.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * effectiveMinArea} (${effectiveMinArea * 100}%)`);
+      logger.log(`[Scanner Debug] Total contours found: ${contours.size()}`);
 
       const documentContour = findDocumentContour(contours, imageArea, effectiveMinArea);
 
       if (documentContour) {
-        console.log(`[Scanner Debug] Best contour found with ${documentContour.rows} points`);
+        logger.log(`[Scanner Debug] Best contour found with ${documentContour.rows} points`);
       } else {
-        console.log('[Scanner Debug] No valid document contour found');
+        logger.log('[Scanner Debug] No valid document contour found');
       }
 
       if (documentContour && documentContour.rows === 4) {

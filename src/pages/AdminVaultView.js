@@ -10,6 +10,7 @@ import {
   UserIcon,
   CustomFileInput // On importe CustomFileInput
 } from '../components/SharedUI';
+import logger from '../utils/logger';
 
 // Composant Accordion pour chaque employé
 const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) => {
@@ -80,15 +81,15 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
   }, [vaultDocuments, users]);
 
   const handleFileSelect = useCallback((event) => {
-    console.log('🔍 handleFileSelect appelé', event);
-    console.log('🔍 event.target:', event.target);
-    console.log('🔍 event.target.files:', event.target.files);
+    logger.log('🔍 handleFileSelect appelé', event);
+    logger.log('🔍 event.target:', event.target);
+    logger.log('🔍 event.target.files:', event.target.files);
 
     const selectedFile = event.target.files?.[0];
-    console.log('🔍 selectedFile:', selectedFile);
+    logger.log('🔍 selectedFile:', selectedFile);
 
     if (selectedFile) {
-      console.log('✅ Fichier sélectionné:', {
+      logger.log('✅ Fichier sélectionné:', {
         name: selectedFile.name,
         size: selectedFile.size,
         type: selectedFile.type
@@ -110,10 +111,10 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('📤 handleSubmit appelé');
-    console.log('📤 file:', file);
-    console.log('📤 selectedUserId:', selectedUserId);
-    console.log('📤 documentName:', documentName);
+    logger.log('📤 handleSubmit appelé');
+    logger.log('📤 file:', file);
+    logger.log('📤 selectedUserId:', selectedUserId);
+    logger.log('📤 documentName:', documentName);
 
     if (!file || !selectedUserId || !documentName.trim()) {
       const errorMsg = 'Veuillez remplir tous les champs obligatoires.';
@@ -122,7 +123,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
       return;
     }
 
-    console.log('✅ Validation passée, début de l\'upload');
+    logger.log('✅ Validation passée, début de l\'upload');
     setIsUploading(true);
     setError(null);
     setSuccess(false);
@@ -135,7 +136,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
       const tags = tagsInput.trim() ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
 
-      console.log('📤 Appel onSendDocument avec:', {
+      logger.log('📤 Appel onSendDocument avec:', {
         fileName: file.name,
         fileSize: file.size,
         userId: selectedUserId,
@@ -152,7 +153,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
         tags
       });
 
-      console.log('✅ onSendDocument terminé avec succès');
+      logger.log('✅ onSendDocument terminé avec succès');
 
       clearInterval(progressInterval);
       setUploadProgress(100);

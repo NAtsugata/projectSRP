@@ -4,6 +4,7 @@
 // =============================
 
 import { PDFDocument } from 'pdf-lib';
+import logger from './logger';
 
 // =============================
 // CONSTANTS
@@ -123,7 +124,7 @@ export const inspectCerfaFields = async () => {
             type: field.constructor.name
         }));
 
-        console.log('CERFA Fields:', fieldInfo);
+        logger.log('CERFA Fields:', fieldInfo);
         return fieldInfo;
     } catch (e) {
         console.error('Erreur inspection CERFA:', e);
@@ -148,9 +149,9 @@ export const fillCerfa15497 = async (data) => {
         const form = pdfDoc.getForm();
         const allFields = form.getFields();
 
-        console.log('[CERFA] Nombre de champs trouvés:', allFields.length);
-        console.log('[CERFA] Liste des champs:');
-        allFields.forEach((f, i) => console.log(`  [${i}] ${f.getName()} - ${f.constructor.name}`));
+        logger.log('[CERFA] Nombre de champs trouvés:', allFields.length);
+        logger.log('[CERFA] Liste des champs:');
+        allFields.forEach((f, i) => logger.log(`  [${i}] ${f.getName()} - ${f.constructor.name}`));
 
         // Préparer les valeurs dans l'ordre des champs du PDF
         // Basé sur l'inspection: les champs sont dans l'ordre XFA
@@ -187,7 +188,7 @@ export const fillCerfa15497 = async (data) => {
                 if (textFieldIndex < textFieldValues.length) {
                     try {
                         field.setText(textFieldValues[textFieldIndex]);
-                        console.log(`[CERFA] Rempli champ ${textFieldIndex}: ${field.getName()} = "${textFieldValues[textFieldIndex]}"`);
+                        logger.log(`[CERFA] Rempli champ ${textFieldIndex}: ${field.getName()} = "${textFieldValues[textFieldIndex]}"`);
                     } catch (e) {
                         console.warn(`[CERFA] Erreur remplissage champ ${textFieldIndex}:`, e.message);
                     }
@@ -217,7 +218,7 @@ export const fillCerfa15497 = async (data) => {
                 if (checkboxIndex < checkboxValues.length && checkboxValues[checkboxIndex]) {
                     try {
                         field.check();
-                        console.log(`[CERFA] Coché checkbox ${checkboxIndex}: ${field.getName()}`);
+                        logger.log(`[CERFA] Coché checkbox ${checkboxIndex}: ${field.getName()}`);
                     } catch (e) {
                         console.warn(`[CERFA] Erreur checkbox ${checkboxIndex}:`, e.message);
                     }

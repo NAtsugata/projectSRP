@@ -2,6 +2,7 @@
 // Détection de documents avec YOLO + ONNX Runtime
 
 import * as ort from 'onnxruntime-web';
+import logger from './logger';
 
 /**
  * Classe pour la détection de documents avec YOLO
@@ -19,14 +20,14 @@ class YOLODocumentDetector {
    */
   async loadModel(modelPath) {
     try {
-      console.log('🔄 Chargement du modèle YOLO ONNX...');
-      console.log('📁 Chemin du modèle:', modelPath);
+      logger.log('🔄 Chargement du modèle YOLO ONNX...');
+      logger.log('📁 Chemin du modèle:', modelPath);
 
       // Configurer ONNX Runtime pour utiliser WebGL (plus rapide)
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.simd = true;
 
-      console.log('⚙️ Configuration ONNX Runtime...');
+      logger.log('⚙️ Configuration ONNX Runtime...');
 
       // Charger le modèle
       this.session = await ort.InferenceSession.create(modelPath, {
@@ -39,10 +40,10 @@ class YOLODocumentDetector {
       // Récupérer les informations du modèle
       const inputName = this.session.inputNames[0];
 
-      console.log('✅ Modèle YOLO chargé avec succès !');
-      console.log('📊 Input name:', inputName);
-      console.log('📊 Output names:', this.session.outputNames);
-      console.log('🎯 MODE DEBUG ACTIVÉ - Détectera TOUS les objets');
+      logger.log('✅ Modèle YOLO chargé avec succès !');
+      logger.log('📊 Input name:', inputName);
+      logger.log('📊 Output names:', this.session.outputNames);
+      logger.log('🎯 MODE DEBUG ACTIVÉ - Détectera TOUS les objets');
 
       return true;
     } catch (error) {
@@ -122,23 +123,23 @@ class YOLODocumentDetector {
       const tensor = new ort.Tensor('float32', inputData, [1, 3, ...this.inputShape]);
 
       // Exécuter l'inférence
-      console.log('🔍 Exécution de l\'inférence YOLO...');
+      logger.log('🔍 Exécution de l\'inférence YOLO...');
       const startTime = performance.now();
 
       const feeds = { [inputName]: tensor };
       const results = await this.session.run(feeds);
 
       const inferenceTime = performance.now() - startTime;
-      console.log(`⚡ Inférence terminée en ${inferenceTime.toFixed(2)}ms`);
+      logger.log(`⚡ Inférence terminée en ${inferenceTime.toFixed(2)}ms`);
 
       // Traiter les résultats
       const outputName = this.session.outputNames[0];
       const output = results[outputName];
 
-      console.log(`📦 YOLO output name: ${outputName}`);
-      console.log(`📏 YOLO output dims: [${output.dims}]`);
-      console.log(`📊 YOLO output data size: ${output.data.length}`);
-      console.log(`🔢 First 20 values: [${Array.from(output.data.slice(0, 20)).map(v => v.toFixed(3)).join(', ')}]`);
+      logger.log(`📦 YOLO output name: ${outputName}`);
+      logger.log(`📏 YOLO output dims: [${output.dims}]`);
+      logger.log(`📊 YOLO output data size: ${output.data.length}`);
+      logger.log(`🔢 First 20 values: [${Array.from(output.data.slice(0, 20)).map(v => v.toFixed(3)).join(', ')}]`);
 
       // Décoder les détections YOLO
       const detections = this.decodeYOLOOutput(
@@ -161,7 +162,7 @@ class YOLODocumentDetector {
         )
       }));
 
-      console.log(`📍 ${scaledDetections.length} document(s) détecté(s)`);
+      logger.log(`📍 ${scaledDetections.length} document(s) détecté(s)`);
 
       return {
         detected: scaledDetections.length > 0,
@@ -200,7 +201,7 @@ class YOLODocumentDetector {
     const numAnchors = dims[2] || 8400;
     const numClasses = (dims[1] || 84) - 4; // Soustraire x, y, w, h
 
-    console.log(`📊 YOLO Output dims: [${dims}], anchors: ${numAnchors}, classes: ${numClasses}`);
+    logger.log(`📊 YOLO Output dims: [${dims}], anchors: ${numAnchors}, classes: ${numClasses}`);
 
     // Parcourir toutes les ancres
     for (let i = 0; i < numAnchors; i++) {
@@ -246,12 +247,12 @@ class YOLODocumentDetector {
         });
 
         if (detections.length <= 5) {
-          console.log(`✓ Détection YOLO: classe=${maxClassId}, conf=${maxConf.toFixed(3)}, bbox=[${x.toFixed(1)}, ${y.toFixed(1)}, ${w.toFixed(1)}, ${h.toFixed(1)}]`);
+          logger.log(`✓ Détection YOLO: classe=${maxClassId}, conf=${maxConf.toFixed(3)}, bbox=[${x.toFixed(1)}, ${y.toFixed(1)}, ${w.toFixed(1)}, ${h.toFixed(1)}]`);
         }
       }
     }
 
-    console.log(`📍 Total détections avant NMS: ${detections.length}`);
+    logger.log(`📍 Total détections avant NMS: ${detections.length}`);
 
     // Appliquer NMS (Non-Maximum Suppression)
     const nmsDetections = this.nonMaxSuppression(detections, iouThreshold);
