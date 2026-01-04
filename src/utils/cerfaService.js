@@ -139,6 +139,16 @@ export const inspectCerfaFields = async () => {
  */
 export const fillCerfa15497 = async (data) => {
     try {
+        // Debug: Log all input data
+        console.log('[CERFA] === Données reçues ===');
+        console.log('[CERFA] fluide:', data.fluide);
+        console.log('[CERFA] denominationFluide:', data.denominationFluide);
+        console.log('[CERFA] charge:', data.charge);
+        console.log('[CERFA] technicianName:', data.technicianName);
+        console.log('[CERFA] clientSignatureName:', data.clientSignatureName);
+        console.log('[CERFA] date:', data.date);
+        console.log('[CERFA] dateIntervention:', data.dateIntervention);
+
         // Charger le PDF template
         const response = await fetch(CERFA_PATH);
         if (!response.ok) {
@@ -152,12 +162,18 @@ export const fillCerfa15497 = async (data) => {
         const fillTextField = (fieldName, value) => {
             try {
                 const field = form.getTextField(fieldName);
-                if (field && value) {
-                    field.setText(String(value));
-                    logger.log(`[CERFA] Rempli: ${fieldName} = "${value}"`);
+                if (field) {
+                    // Toujours écrire, même si vide (pour debug)
+                    const textValue = value ? String(value) : '';
+                    field.setText(textValue);
+                    if (textValue) {
+                        console.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
+                    }
+                } else {
+                    console.log(`[CERFA] ✗ Champ introuvable: ${fieldName}`);
                 }
             } catch (e) {
-                logger.log(`[CERFA] Champ non trouvé ou erreur: ${fieldName}`);
+                console.log(`[CERFA] ✗ Erreur ${fieldName}: ${e.message}`);
             }
         };
 

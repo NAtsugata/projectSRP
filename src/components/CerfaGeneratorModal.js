@@ -71,6 +71,18 @@ function CerfaGeneratorModal({
     // Générer le CERFA
     const handleGenerate = useCallback(async () => {
         setIsGenerating(true);
+
+        // Debug: Log form data before generation
+        console.log('[CERFA Modal] === formData avant génération ===');
+        console.log('[CERFA Modal] fluide:', formData.fluide);
+        console.log('[CERFA Modal] denominationFluide:', formData.denominationFluide);
+        console.log('[CERFA Modal] charge:', formData.charge);
+        console.log('[CERFA Modal] technicianName:', formData.technicianName);
+        console.log('[CERFA Modal] clientName:', formData.clientName);
+        console.log('[CERFA Modal] clientSignatureName:', formData.clientSignatureName);
+        console.log('[CERFA Modal] date:', formData.date);
+        console.log('[CERFA Modal] Full formData:', JSON.stringify(formData, null, 2));
+
         try {
             if (saveEquipment && sourceId) {
                 const equipmentData = {
