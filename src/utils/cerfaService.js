@@ -10,7 +10,8 @@ import logger from './logger';
 // CONSTANTS
 // =============================
 
-const CERFA_PATH = '/cerfa/cerfa_15497-04.pdf';
+// Utiliser PUBLIC_URL pour s'assurer que le chemin fonctionne en production
+const CERFA_PATH = `${process.env.PUBLIC_URL || ''}/cerfa/cerfa_15497-04.pdf`;
 
 // Informations entreprise par défaut (SRP)
 const DEFAULT_COMPANY_INFO = {
@@ -149,10 +150,22 @@ export const fillCerfa15497 = async (data) => {
         console.log('[CERFA] date:', data.date);
         console.log('[CERFA] dateIntervention:', data.dateIntervention);
 
-        // Charger le PDF template
-        const response = await fetch(CERFA_PATH);
+        // Charger le PDF template avec gestion d'erreur améliorée
+        console.log('[CERFA] Chargement du PDF depuis:', CERFA_PATH);
+
+        let response;
+        try {
+            response = await fetch(CERFA_PATH);
+        } catch (fetchError) {
+            console.error('[CERFA] Erreur fetch:', fetchError);
+            // Essayer avec le chemin absolu basé sur window.location
+            const absolutePath = `${window.location.origin}/cerfa/cerfa_15497-04.pdf`;
+            console.log('[CERFA] Tentative avec chemin absolu:', absolutePath);
+            response = await fetch(absolutePath);
+        }
+
         if (!response.ok) {
-            throw new Error('Impossible de charger le formulaire CERFA');
+            throw new Error(`Impossible de charger le formulaire CERFA (${response.status}: ${response.statusText})`);
         }
         const pdfBytes = await response.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
