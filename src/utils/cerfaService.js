@@ -292,28 +292,79 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false || !data.fuiteDetectee);
 
         // Catégorie de fluide et seuils (cases à cocher section 6)
-        // HCFC
-        checkBox('Case_HCFC_2', data.categorie === 'HCFC_2');
-        checkBox('Case_HCFC_30', data.categorie === 'HCFC_30');
-        checkBox('Case_HCFC_300', data.categorie === 'HCFC_300');
-        // HFC
-        checkBox('Case_HFC_5', data.categorie === 'HFC_5');
-        checkBox('Case_HFC_50', data.categorie === 'HFC_50');
-        checkBox('Case_HFC_500', data.categorie === 'HFC_500');
-        // HFO
-        checkBox('Case_HFO_1', data.categorie === 'HFO_1');
-        checkBox('Case_HFO_10', data.categorie === 'HFO_10');
-        checkBox('Case_HFO_100', data.categorie === 'HFO_100');
+        // Déterminer automatiquement la catégorie basée sur le fluide et les quantités
+        const fluideType = data.fluideDesignation || data.fluide || '';
+        const chargeKg = parseFloat(data.fluideChargeInitiale || data.charge || 0);
+        const teqCO2Value = parseFloat(data.teqCO2 || 0);
+
+        // Classification des fluides
+        const HCFC_FLUIDS = ['R-22'];
+        const HFC_FLUIDS = ['R-32', 'R-410A', 'R-407C', 'R-134a', 'R-404A', 'R-507A', 'R-448A', 'R-449A', 'R-452A', 'R-454B'];
+        const HFO_FLUIDS = ['R-1234yf', 'R-1234ze', 'R-290', 'R-600a'];
+
+        let fluidCategory = null;
+        let frequencyMonths = null;
+
+        if (HCFC_FLUIDS.includes(fluideType)) {
+            fluidCategory = 'HCFC';
+            // HCFC basé sur kg
+            if (chargeKg >= 300) {
+                checkBox('Case_HCFC_300', true);
+                frequencyMonths = 3;
+            } else if (chargeKg >= 30) {
+                checkBox('Case_HCFC_30', true);
+                frequencyMonths = 6;
+            } else if (chargeKg >= 2) {
+                checkBox('Case_HCFC_2', true);
+                frequencyMonths = 12;
+            }
+        } else if (HFC_FLUIDS.includes(fluideType)) {
+            fluidCategory = 'HFC';
+            // HFC/PFC basé sur teqCO2
+            if (teqCO2Value >= 500) {
+                checkBox('Case_HFC_500', true);
+                frequencyMonths = 3;
+            } else if (teqCO2Value >= 50) {
+                checkBox('Case_HFC_50', true);
+                frequencyMonths = 6;
+            } else if (teqCO2Value >= 5) {
+                checkBox('Case_HFC_5', true);
+                frequencyMonths = 12;
+            }
+        } else if (HFO_FLUIDS.includes(fluideType)) {
+            fluidCategory = 'HFO';
+            // HFO basé sur kg
+            if (chargeKg >= 100) {
+                checkBox('Case_HFO_100', true);
+                frequencyMonths = 6;
+            } else if (chargeKg >= 10) {
+                checkBox('Case_HFO_10', true);
+                frequencyMonths = 12;
+            } else if (chargeKg >= 1) {
+                checkBox('Case_HFO_1', true);
+                frequencyMonths = 24;
+            }
+        }
 
         // Fréquence de contrôle d'étanchéité (section 7)
-        // Sans système de détection
-        checkBox('Case_Sans_12m', data.frequenceControle === 'sans_12m');
-        checkBox('Case_Sans_6m', data.frequenceControle === 'sans_6m');
-        checkBox('Case_Sans_3m', data.frequenceControle === 'sans_3m');
-        // Avec système de détection
-        checkBox('Case_Avec_24m', data.frequenceControle === 'avec_24m');
-        checkBox('Case_Avec_12m', data.frequenceControle === 'avec_12m');
-        checkBox('Case_Avec_6m', data.frequenceControle === 'avec_6m');
+        // Cocher automatiquement en fonction de la présence d'un système de détection
+        const hasDetectionSystem = data.systemeDetectionPermanent === 'oui';
+
+        if (frequencyMonths) {
+            if (hasDetectionSystem) {
+                // Avec système de détection permanent (fréquence doublée)
+                if (frequencyMonths === 3) checkBox('Case_Avec_6m', true);
+                else if (frequencyMonths === 6) checkBox('Case_Avec_12m', true);
+                else if (frequencyMonths === 12) checkBox('Case_Avec_24m', true);
+                else if (frequencyMonths === 24) checkBox('Case_Avec_24m', true); // Max 24 mois
+            } else {
+                // Sans système de détection
+                if (frequencyMonths === 3) checkBox('Case_Sans_3m', true);
+                else if (frequencyMonths === 6) checkBox('Case_Sans_6m', true);
+                else if (frequencyMonths === 12) checkBox('Case_Sans_12m', true);
+                else if (frequencyMonths === 24) checkBox('Case_Sans_24m', true);
+            }
+        }
 
         // Localisation des fuites - Support CerfaPage (fuiteLocalisation, fuiteLocalisation2, fuiteLocalisation3) et CerfaGeneratorModal
         // Fuite 1
@@ -423,16 +474,21 @@ export const fillCerfa15497 = async (data) => {
             }
         };
 
-        // Position des signatures (à ajuster selon le PDF réel)
-        // Ces coordonnées sont approximatives - le bas-gauche est (0,0)
-        // Signature opérateur (généralement en bas à gauche)
+        // Position des signatures dans le PDF CERFA 15497-04
+        // Le PDF A4 fait environ 595 x 842 points (bas-gauche = 0,0)
+        // Les zones de signature sont en bas du document, sous les champs de date
+        // Section signature est généralement entre y=30 et y=100 environ
+
+        // Signature opérateur (à gauche, dans l'encadré sous la date opérateur)
+        // Position approximative: x=40, y=35 (juste au-dessus du bas de page)
         if (data.signatureOperateur) {
-            await embedSignature(data.signatureOperateur, 50, 80, 150, 60);
+            await embedSignature(data.signatureOperateur, 40, 35, 120, 45);
         }
 
-        // Signature détenteur/client (généralement en bas à droite)
+        // Signature détenteur/client (à droite, dans l'encadré sous la date détenteur)
+        // Position approximative: x=320, y=35
         if (data.signatureDetenteur) {
-            await embedSignature(data.signatureDetenteur, width - 200, 80, 150, 60);
+            await embedSignature(data.signatureDetenteur, 320, 35, 120, 45);
         }
 
         // Générer le PDF
