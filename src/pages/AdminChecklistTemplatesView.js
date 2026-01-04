@@ -139,12 +139,13 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
     <div>
       <style>{`
         .template-card {
-          background: white;
-          border: 2px solid #e5e7eb;
+          background: var(--bg-primary, white);
+          border: 2px solid var(--border-color, #e5e7eb);
           border-radius: 0.75rem;
           padding: 1.5rem;
           margin-bottom: 1rem;
           transition: all 0.2s;
+          color: var(--text-primary, #1f2937);
         }
         .template-card:hover {
           border-color: var(--copper-main, #CD7F32);
@@ -159,7 +160,7 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
         .template-title {
           font-size: 1.25rem;
           font-weight: 700;
-          color: #1f2937;
+          color: var(--text-primary, #1f2937);
           margin: 0;
         }
         .template-meta {
@@ -178,16 +179,16 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
           font-weight: 600;
         }
         .badge-category {
-          background: #dbeafe;
-          color: #1e40af;
+          background: rgba(59, 130, 246, 0.2);
+          color: var(--color-info, #38bdf8);
         }
         .badge-items {
-          background: #f3f4f6;
-          color: #374151;
+          background: var(--bg-secondary, #f3f4f6);
+          color: var(--text-primary, #374151);
         }
         .item-list {
           margin-top: 1rem;
-          border-top: 1px solid #e5e7eb;
+          border-top: 1px solid var(--border-color, #e5e7eb);
           padding-top: 1rem;
         }
         .item-row {
@@ -195,29 +196,29 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
           align-items: center;
           gap: 0.75rem;
           padding: 0.75rem;
-          background: #f9fafb;
+          background: var(--bg-secondary, #f9fafb);
           border-radius: 0.5rem;
           margin-bottom: 0.5rem;
         }
         .item-text {
           flex: 1;
           font-size: 0.875rem;
-          color: #1f2937;
+          color: var(--text-primary, #1f2937);
         }
         .item-badges {
           display: flex;
           gap: 0.25rem;
         }
         .form-builder {
-          background: linear-gradient(145deg, #FFFAF0 0%, #FFF8DC 100%);
+          background: var(--bg-secondary, linear-gradient(145deg, #FFFAF0 0%, #FFF8DC 100%));
           border: 2px solid var(--copper-main, #CD7F32);
           border-radius: 0.75rem;
           padding: 1.5rem;
           margin-bottom: 1.5rem;
         }
         .add-item-section {
-          background: white;
-          border: 2px dashed #cbd5e1;
+          background: var(--bg-primary, white);
+          border: 2px dashed var(--border-color, #cbd5e1);
           border-radius: 0.5rem;
           padding: 1rem;
           margin-top: 1rem;

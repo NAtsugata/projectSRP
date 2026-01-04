@@ -128,11 +128,12 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     <div>
       <style>{`
         .user-accordion {
-          background: white;
+          background: var(--bg-primary, white);
           border-radius: 0.5rem;
           margin-bottom: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
           overflow: visible;
+          color: var(--text-primary, #1f2937);
         }
         .accordion-header {
           width: 100%;
@@ -141,14 +142,14 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
-          background-color: white;
+          background-color: var(--bg-primary, white);
           border: none;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--border-color, #e5e7eb);
           text-align: left;
           border-radius: 0.5rem 0.5rem 0 0;
         }
         .accordion-header:hover {
-          background-color: #f9fafb;
+          background-color: var(--bg-secondary, #f9fafb);
         }
         .accordion-title {
           display: flex;
@@ -156,19 +157,19 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           gap: 0.75rem;
           font-weight: 600;
           font-size: 1rem;
-          color: #1f2937;
+          color: var(--text-primary, #1f2937);
         }
         .document-count {
           font-size: 0.875rem;
-          color: #6c757d;
+          color: var(--text-secondary, #6c757d);
           font-weight: normal;
-          background-color: #e9ecef;
+          background-color: var(--bg-secondary, #e9ecef);
           padding: 2px 8px;
           border-radius: 12px;
         }
         .accordion-chevron {
           transition: transform 0.2s ease;
-          color: #6c757d;
+          color: var(--text-secondary, #6c757d);
         }
         .accordion-chevron.open {
           transform: rotate(180deg);
@@ -186,14 +187,14 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
         }
         .filter-tab {
           padding: 0.5rem 1rem;
-          border: 2px solid #e5e7eb;
-          background: white;
+          border: 2px solid var(--border-color, #e5e7eb);
+          background: var(--bg-primary, white);
           border-radius: 0.5rem;
           cursor: pointer;
           transition: all 0.2s;
           font-weight: 600;
           font-size: 0.875rem;
-          color: #374151;
+          color: var(--text-primary, #374151);
         }
         .filter-tab.active {
           background: var(--copper-main, #CD7F32);
@@ -201,8 +202,8 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           border-color: var(--copper-main, #CD7F32);
         }
         .accordion-content {
-          background: white;
-          color: #1f2937;
+          background: var(--bg-primary, white);
+          color: var(--text-primary, #1f2937);
         }
       `}</style>
 

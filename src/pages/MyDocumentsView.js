@@ -213,7 +213,7 @@ export default function MyDocumentsView({
         }
 
         .docs-filters {
-          background: white;
+          background: var(--bg-primary, white);
           padding: 1rem;
           border-radius: 0.75rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -222,6 +222,7 @@ export default function MyDocumentsView({
           gap: 1rem;
           flex-wrap: wrap;
           align-items: center;
+          color: var(--text-primary, #1f2937);
         }
 
         .search-box {
@@ -254,10 +255,11 @@ export default function MyDocumentsView({
 
         .filter-select {
           padding: 0.75rem 1rem;
-          border: 2px solid #e5e7eb;
+          border: 2px solid var(--border-color, #e5e7eb);
           border-radius: 0.5rem;
           font-size: 0.875rem;
-          background: white;
+          background: var(--bg-primary, white);
+          color: var(--text-primary, #1f2937);
           cursor: pointer;
           transition: border-color 0.2s;
         }
@@ -280,12 +282,13 @@ export default function MyDocumentsView({
         }
 
         .doc-card {
-          background: white;
+          background: var(--bg-primary, white);
           border-radius: 0.75rem;
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           transition: all 0.2s;
           cursor: pointer;
+          color: var(--text-primary, #1f2937);
         }
 
         .doc-card:hover {
@@ -380,8 +383,9 @@ export default function MyDocumentsView({
         .empty-state {
           text-align: center;
           padding: 4rem 2rem;
-          background: white;
+          background: var(--bg-primary, white);
           border-radius: 0.75rem;
+          color: var(--text-primary, #1f2937);
         }
 
         .empty-icon {
