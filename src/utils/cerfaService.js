@@ -475,20 +475,20 @@ export const fillCerfa15497 = async (data) => {
         };
 
         // Position des signatures dans le PDF CERFA 15497-04
-        // Le PDF A4 fait environ 595 x 842 points (bas-gauche = 0,0)
-        // Les signatures sont sur la ligne "Date et signature" tout en bas
-        // Elles doivent être petites et à droite de la date
+        // Basé sur les positions réelles des champs:
+        // Sign_Operateur_Date: x=127.5, y=44.9, width=209.8, height=18.5
+        // Sign_Detenteur_Date: x=345.2, y=43.7, width=208.3, height=19.7
+        // La signature va à droite du texte de date (après "04/01/2026")
 
-        // Signature opérateur (colonne gauche, à droite de la date 04/01/2026)
-        // Position: après le champ date opérateur, dans la zone jaune
+        // Signature opérateur (dans le champ date, à droite du texte)
+        // Date texte ~60px, donc signature commence à x=190
         if (data.signatureOperateur) {
-            await embedSignature(data.signatureOperateur, 505, 27, 75, 18);
+            await embedSignature(data.signatureOperateur, 200, 45, 130, 17);
         }
 
-        // Signature détenteur/client (colonne droite, à droite de la date)
-        // Position: après le champ date détenteur, dans la zone jaune
+        // Signature détenteur (dans le champ date détenteur, à droite du texte)
         if (data.signatureDetenteur) {
-            await embedSignature(data.signatureDetenteur, 720, 27, 75, 18);
+            await embedSignature(data.signatureDetenteur, 420, 44, 130, 17);
         }
 
         // Générer le PDF
