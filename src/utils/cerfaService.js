@@ -6,12 +6,15 @@
 import { PDFDocument } from 'pdf-lib';
 import logger from './logger';
 
+// Importer le PDF comme asset (Webpack le gère automatiquement)
+import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
+
 // =============================
 // CONSTANTS
 // =============================
 
-// Utiliser PUBLIC_URL pour s'assurer que le chemin fonctionne en production
-const CERFA_PATH = `${process.env.PUBLIC_URL || ''}/cerfa/cerfa_15497-04.pdf`;
+// Utiliser l'asset importé comme chemin principal
+const CERFA_PATH = cerfaPdfAsset;
 
 // Informations entreprise par défaut (SRP)
 const DEFAULT_COMPANY_INFO = {
@@ -150,24 +153,23 @@ export const fillCerfa15497 = async (data) => {
         console.log('[CERFA] date:', data.date);
         console.log('[CERFA] dateIntervention:', data.dateIntervention);
 
-        // Charger le PDF template avec gestion d'erreur améliorée
+        // Charger le PDF template (importé comme asset webpack)
         console.log('[CERFA] Chargement du PDF depuis:', CERFA_PATH);
 
-        let response;
-        try {
-            response = await fetch(CERFA_PATH);
-        } catch (fetchError) {
-            console.error('[CERFA] Erreur fetch:', fetchError);
-            // Essayer avec le chemin absolu basé sur window.location
-            const absolutePath = `${window.location.origin}/cerfa/cerfa_15497-04.pdf`;
-            console.log('[CERFA] Tentative avec chemin absolu:', absolutePath);
-            response = await fetch(absolutePath);
+        let pdfResponse = await fetch(CERFA_PATH);
+
+        if (!pdfResponse.ok) {
+            // Fallback: essayer depuis le dossier public
+            console.warn('[CERFA] Asset non trouvé, tentative depuis /cerfa/...');
+            const fallbackPath = `${window.location.origin}/cerfa/cerfa_15497-04.pdf`;
+            pdfResponse = await fetch(fallbackPath);
+            if (!pdfResponse.ok) {
+                throw new Error(`Impossible de charger le formulaire CERFA (${pdfResponse.status})`);
+            }
         }
 
-        if (!response.ok) {
-            throw new Error(`Impossible de charger le formulaire CERFA (${response.status}: ${response.statusText})`);
-        }
-        const pdfBytes = await response.arrayBuffer();
+        console.log('[CERFA] PDF chargé avec succès');
+        const pdfBytes = await pdfResponse.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
 
