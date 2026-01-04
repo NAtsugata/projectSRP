@@ -145,87 +145,139 @@ export const fillCerfa15497 = async (data) => {
             throw new Error('Impossible de charger le formulaire CERFA');
         }
         const pdfBytes = await response.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
-        const allFields = form.getFields();
 
-        logger.log('[CERFA] Nombre de champs trouvés:', allFields.length);
-        logger.log('[CERFA] Liste des champs:');
-        allFields.forEach((f, i) => logger.log(`  [${i}] ${f.getName()} - ${f.constructor.name}`));
-
-        // Préparer les valeurs dans l'ordre des champs du PDF
-        // Basé sur l'inspection: les champs sont dans l'ordre XFA
-        const textFieldValues = [
-            // Index 0-4: Intervenant
-            data.intervenantNom || data.companyName || '',      // Intervenant_Nom
-            data.intervenantAdresse || data.companyAddress || '', // Intervenant_Adresse
-            data.intervenantTel || '',                           // Intervenant_Tel
-            data.intervenantAttestation || '',                   // Intervenant_Attestation
-            data.intervenantSiret || data.siret || '',           // Intervenant_Siret
-
-            // Index 5-8: Détenteur
-            data.detenteurNom || data.clientName || '',          // Detenteur_Nom
-            data.detenteurAdresse || data.clientAddress || '',   // Detenteur_Adresse
-            data.detenteurTel || '',                             // Detenteur_Tel
-            data.detenteurSiret || '',                           // Detenteur_Siret
-
-            // Index 9-14: Équipement
-            data.typeEquipement || '',                           // Equipement_Type
-            data.marque || '',                                   // Equipement_Marque
-            data.modele || '',                                   // Equipement_Modele
-            data.numeroSerie || '',                              // Equipement_Serie
-            data.dateMiseService || '',                          // Equipement_MiseService
-            data.emplacement || '',                              // Equipement_Emplacement
-
-            // Index 15: Intervention
-            data.dateIntervention || new Date().toLocaleDateString('fr-FR'), // Intervention_Date
-        ];
-
-        // Remplir les champs texte par index
-        let textFieldIndex = 0;
-        for (const field of allFields) {
-            if (field.constructor.name === 'PDFTextField') {
-                if (textFieldIndex < textFieldValues.length) {
-                    try {
-                        field.setText(textFieldValues[textFieldIndex]);
-                        logger.log(`[CERFA] Rempli champ ${textFieldIndex}: ${field.getName()} = "${textFieldValues[textFieldIndex]}"`);
-                    } catch (e) {
-                        console.warn(`[CERFA] Erreur remplissage champ ${textFieldIndex}:`, e.message);
-                    }
+        // Helper pour remplir un champ texte de manière sécurisée
+        const fillTextField = (fieldName, value) => {
+            try {
+                const field = form.getTextField(fieldName);
+                if (field && value) {
+                    field.setText(String(value));
+                    logger.log(`[CERFA] Rempli: ${fieldName} = "${value}"`);
                 }
-                textFieldIndex++;
+            } catch (e) {
+                logger.log(`[CERFA] Champ non trouvé ou erreur: ${fieldName}`);
             }
-        }
+        };
 
-        // Gérer les cases à cocher par index
-        const checkboxValues = [
-            data.natureMiseEnService,      // Nature_MiseService
-            data.natureControleEtancheite, // Nature_Controle
-            data.natureMaintenance,        // Nature_Maintenance
-            data.natureReparationFuite,    // Nature_Reparation
-            data.natureDemontage,          // Nature_Demontage
-            data.natureDemantelement,      // Nature_Demantelement
-            data.natureAutre,              // Nature_Autre
-            data.fuiteDetectee === 'oui',  // Fuite_Detect_Oui
-            data.fuiteDetectee === 'non',  // Fuite_Detect_Non
-            data.fuiteReparation === 'oui',// Fuite_Repar_Oui
-            data.fuiteReparation === 'non',// Fuite_Repar_Non
-        ];
-
-        let checkboxIndex = 0;
-        for (const field of allFields) {
-            if (field.constructor.name === 'PDFCheckBox') {
-                if (checkboxIndex < checkboxValues.length && checkboxValues[checkboxIndex]) {
-                    try {
+        // Helper pour cocher une case
+        const checkBox = (fieldName, shouldCheck) => {
+            try {
+                if (shouldCheck) {
+                    const field = form.getCheckBox(fieldName);
+                    if (field) {
                         field.check();
-                        logger.log(`[CERFA] Coché checkbox ${checkboxIndex}: ${field.getName()}`);
-                    } catch (e) {
-                        console.warn(`[CERFA] Erreur checkbox ${checkboxIndex}:`, e.message);
+                        logger.log(`[CERFA] Coché: ${fieldName}`);
                     }
                 }
-                checkboxIndex++;
+            } catch (e) {
+                logger.log(`[CERFA] Checkbox non trouvée: ${fieldName}`);
             }
+        };
+
+        // ===== REMPLISSAGE DES CHAMPS =====
+
+        // Numéro de fiche
+        fillTextField('Fiche_no', data.ficheNo || '');
+
+        // Opérateur / Intervenant
+        const operateurInfo = [
+            data.companyName || 'SRP - Services Réparation Plomberie',
+            data.companyAddress || '',
+            data.siret ? `SIRET: ${data.siret}` : '',
+            data.qualification || ''
+        ].filter(Boolean).join('\n');
+        fillTextField('Operateur', operateurInfo);
+        fillTextField('Attestation_no', data.attestationNumber || data.intervenantAttestation || '');
+
+        // Détenteur / Client
+        const detenteurInfo = [
+            data.clientName ? `${data.clientFirstName || ''} ${data.clientName}`.trim() : '',
+            data.clientAddress || '',
+            data.clientPostalCode && data.clientCity ? `${data.clientPostalCode} ${data.clientCity}` : '',
+            data.detenteurSiret ? `SIRET: ${data.detenteurSiret}` : ''
+        ].filter(Boolean).join('\n');
+        fillTextField('Detenteur', detenteurInfo);
+
+        // Équipement
+        const equipementId = [
+            data.equipmentType || data.typeEquipement || '',
+            data.equipmentBrand || data.marque || '',
+            data.equipmentModel || data.modele || '',
+            data.numeroSerie || ''
+        ].filter(Boolean).join(' - ');
+        fillTextField('Equipement_ID', equipementId);
+        fillTextField('Equipement_Fluide', data.fluide || data.typeFluide || '');
+        fillTextField('Equipement_Charge', data.charge || data.chargeInitiale || '');
+        fillTextField('Equipement_teqCO2', data.teqCO2 || '');
+
+        // Nature de l'intervention (cases à cocher)
+        checkBox('Case_MiseService', data.natureMiseEnService);
+        checkBox('Case_Maintenance', data.natureMaintenance);
+        checkBox('Case_CtrlPerio', data.natureControleEtancheite || data.controlePeriodicite);
+        checkBox('Case_CtrlNonPerio', data.controleNonPeriodique);
+        checkBox('Case_Demantel', data.natureDemantelement || data.natureDemontage);
+        checkBox('Case_Modif', data.modification);
+        checkBox('Case_Assemblage', data.assemblage);
+        checkBox('Case_Autre', data.natureAutre);
+        fillTextField('Autre', data.autreNature || '');
+
+        // Détecteur
+        fillTextField('Detecteur_ID', data.detecteurId || '');
+
+        // Date du contrôle
+        const dateIntervention = data.dateIntervention || data.maintenanceDate || new Date().toLocaleDateString('fr-FR');
+        const dateParts = dateIntervention.split('/');
+        if (dateParts.length === 3) {
+            fillTextField('Controle_Jour', dateParts[0]);
+            fillTextField('Controle_Mois', dateParts[1]);
+            fillTextField('Controle_Annee', dateParts[2]);
         }
+
+        // Fuite détectée
+        checkBox('Case_Fuite_Oui', data.fuiteDetectee === 'oui' || data.fuiteDetectee === true);
+        checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false);
+
+        // Localisation des fuites
+        fillTextField('Fuite_Loca_1', data.fuiteLoca1 || data.localisationFuite1 || '');
+        checkBox('Case_Rep_Fuite1_realisee', data.reparationFuite1Realisee);
+        checkBox('Case_Rep_Fuite1_AFaire', data.reparationFuite1AFaire);
+
+        fillTextField('Fuite_Loca_2', data.fuiteLoca2 || data.localisationFuite2 || '');
+        checkBox('Case_Rep_Fuite2_realisee', data.reparationFuite2Realisee);
+        checkBox('Case_Rep_Fuite2_AFaire', data.reparationFuite2AFaire);
+
+        fillTextField('Fuite_Loca_3', data.fuiteLoca3 || data.localisationFuite3 || '');
+        checkBox('Case_Rep_Fuite3_realisee', data.reparationFuite3Realisee);
+        checkBox('Case_Rep_Fuite3_AFaire', data.reparationFuite3AFaire);
+
+        // Quantités de fluide (section 11)
+        fillTextField('11_Quantite', data.quantiteFluide || '');
+        fillTextField('11_QA', data.quantiteRecuperee || '');
+        fillTextField('11_Denom', data.denominationFluide || data.fluide || '');
+        fillTextField('11_QB', data.quantiteChargee || '');
+        fillTextField('11_QC', data.quantiteAjoutee || '');
+        fillTextField('11_QDE', data.quantiteDE || '');
+        fillTextField('11_QD', data.quantiteD || '');
+        fillTextField('11_BSFF', data.bsffNumber || '');
+        fillTextField('11_QE', data.quantiteE || '');
+        fillTextField('11_Contenant_ID', data.contenantId || '');
+
+        // Installation (section 13)
+        fillTextField('13_Instal', data.installationInfo || data.emplacement || data.equipmentLocation || '');
+
+        // Observations (section 14)
+        fillTextField('14_Observations', data.observations || data.notes || '');
+
+        // Signatures
+        fillTextField('Sign_Operateur_Nom', data.technicianName || data.intervenantNom || '');
+        fillTextField('Sign_Operateur_Qualite', data.technicianQualite || data.qualification || 'Technicien');
+        fillTextField('Sign_Operateur_Date', data.date || dateIntervention);
+
+        fillTextField('Sign_Detenteur_Nom', data.clientSignatureName || `${data.clientFirstName || ''} ${data.clientName || ''}`.trim());
+        fillTextField('Sign_Detenteur_Qualite', data.clientQualite || 'Propriétaire');
+        fillTextField('Sign_Detenteur_Date', data.clientSignatureDate || data.date || dateIntervention);
 
         // Aplatir le formulaire pour figer les données
         form.flatten();
