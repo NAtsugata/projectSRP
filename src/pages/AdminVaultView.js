@@ -213,10 +213,10 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
           font-size: 1.25rem;
         }
         .vault-form-card {
-          background: white;
+          background: var(--bg-primary, #1e293b);
           padding: 1.5rem;
           border-radius: 0.5rem;
-          color: #1f2937;
+          color: var(--text-primary, #f8fafc);
         }
         .file-selected-info {
           background-color: #f0f9ff;
@@ -237,16 +237,16 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
         /* --- Styles de la Liste des Documents (Nouveau) --- */
         .documents-list-section {
-          background-color: #f8f9fa;
+          background-color: var(--bg-secondary, #334155);
           padding: 1rem;
           border-radius: 0.5rem;
         }
         .user-accordion {
-          background: white;
-          color: #1f2937;
+          background: var(--bg-primary, #1e293b);
+          color: var(--text-primary, #f8fafc);
           border-radius: 0.5rem;
           margin-bottom: 1rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
           overflow: visible;
         }
         .accordion-header {
@@ -256,15 +256,15 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
-          background-color: white;
+          background-color: var(--bg-primary, #1e293b);
           border: none;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--border-color, rgba(148, 163, 184, 0.15));
           text-align: left;
         }
-        .accordion-header:hover { background-color: #f9fafb; }
-        .accordion-title { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; font-size: 1rem; color: #1f2937; }
-        .document-count { font-size: 0.875rem; color: #6c757d; font-weight: normal; background-color: #e9ecef; padding: 2px 8px; border-radius: 12px; }
-        .accordion-chevron { transition: transform 0.2s ease; color: #6c757d; }
+        .accordion-header:hover { background-color: var(--bg-secondary, #334155); }
+        .accordion-title { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; font-size: 1rem; color: var(--text-primary, #f8fafc); }
+        .document-count { font-size: 0.875rem; color: var(--text-tertiary, #94a3b8); font-weight: normal; background-color: var(--bg-secondary, #334155); padding: 2px 8px; border-radius: 12px; }
+        .accordion-chevron { transition: transform 0.2s ease; color: var(--text-tertiary, #94a3b8); }
         .accordion-chevron.open { transform: rotate(180deg); }
         .accordion-content {
           padding: 0.5rem;

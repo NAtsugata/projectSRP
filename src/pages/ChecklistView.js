@@ -172,9 +172,9 @@ export default function ChecklistView({
         .stat-label { font-size: 0.875rem; opacity: 0.9; }
 
         .checklist-card {
-          background: white;
-          color: #1f2937;
-          border: 2px solid #e5e7eb;
+          background: var(--bg-primary, #1e293b);
+          color: var(--text-primary, #f8fafc);
+          border: 2px solid var(--border-color, rgba(148, 163, 184, 0.15));
           border-radius: 0.75rem;
           padding: 1rem;
           margin-bottom: 1rem;
@@ -185,7 +185,7 @@ export default function ChecklistView({
           border-color: var(--copper-main, #CD7F32);
           box-shadow: 0 4px 12px rgba(205, 127, 50, 0.2);
         }
-        .checklist-card.completed { border-color: #10b981; background: #f0fdf4; color: #1f2937; }
+        .checklist-card.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.15); }
         .checklist-card.in-progress { border-color: #f59e0b; }
 
         .progress-bar {
@@ -203,14 +203,14 @@ export default function ChecklistView({
         }
 
         .checklist-item {
-          background: white;
-          color: #1f2937;
-          border: 2px solid #e5e7eb;
+          background: var(--bg-primary, #1e293b);
+          color: var(--text-primary, #f8fafc);
+          border: 2px solid var(--border-color, rgba(148, 163, 184, 0.15));
           border-radius: 0.5rem;
           padding: 1rem;
           margin-bottom: 0.75rem;
         }
-        .checklist-item.checked { border-color: #10b981; background: #f0fdf4; color: #1f2937; }
+        .checklist-item.checked { border-color: #10b981; background: rgba(16, 185, 129, 0.15); }
         .checklist-item.required { border-left: 4px solid #ef4444; }
 
         .checklist-checkbox {
@@ -258,11 +258,11 @@ export default function ChecklistView({
         .sticky-actions {
           position: sticky;
           bottom: 0;
-          background: white;
-          color: #1f2937;
+          background: var(--bg-primary, #1e293b);
+          color: var(--text-primary, #f8fafc);
           padding: 1rem;
-          border-top: 2px solid #e5e7eb;
-          box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+          border-top: 2px solid var(--border-color, rgba(148, 163, 184, 0.15));
+          box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
           display: flex;
           gap: 0.75rem;
           z-index: 100;

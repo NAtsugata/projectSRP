@@ -225,3 +225,125 @@ tr:hover td {
     color: var(--text-primary) !important;
     border-bottom-color: var(--border-color) !important;
 }
+
+/* ==================== ADDITIONAL OVERRIDES FOR WHITE BACKGROUNDS ==================== */
+
+/* Checklist View */
+.checklist-card,
+.checklist-item,
+.sticky-actions {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Admin Vault / Coffre Numérique */
+.user-accordion,
+.accordion-header,
+.accordion-content,
+.document-card,
+.vault-card {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.accordion-header:hover {
+    background: var(--bg-secondary) !important;
+}
+
+/* Admin Expenses View */
+.filter-tab {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.filter-tab.active {
+    background: var(--color-primary-500) !important;
+    color: white !important;
+    border-color: var(--color-primary-500) !important;
+}
+
+.user-stats-grid {
+    background: var(--bg-secondary) !important;
+}
+
+.user-stat-label {
+    color: var(--text-tertiary) !important;
+}
+
+.user-stat-value {
+    color: var(--text-primary) !important;
+}
+
+/* Expenses Styles */
+.expense-form-card,
+.expense-item,
+.expense-filter-btn {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.receipt-item {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* IR Shower / Douche Form Elements */
+.ir-section,
+.ir-form-section {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.ir-section-title {
+    color: var(--text-primary) !important;
+}
+
+.ir-label,
+.ir-check,
+.ir-radio {
+    color: var(--text-secondary) !important;
+}
+
+.ir-input {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.ir-small {
+    color: var(--text-tertiary) !important;
+}
+
+/* Intervention Detail */
+.modern-section,
+.intervention-card,
+.time-tracker-card,
+.quick-actions-bar {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* My Documents View */
+.document-list-item,
+.folder-card {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* General white background overrides */
+[style*="background: white"],
+[style*="background:#fff"],
+[style*="background: #fff"],
+[style*="backgroundColor: white"],
+[style*="backgroundColor: 'white'"],
+[style*="backgroundColor:'white'"] {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
