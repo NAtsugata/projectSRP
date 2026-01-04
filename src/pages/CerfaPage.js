@@ -13,6 +13,7 @@ import {
     saveCompanyInfo,
     saveGenerationRecord
 } from '../utils/cerfaService';
+import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 
 // GWP (Global Warming Potential) des fluides frigorigènes - pour calcul teqCO2
@@ -32,6 +33,64 @@ const GWP_VALUES = {
     'R-454B': 466,
     'R-1234yf': 4,
     'R-1234ze': 7,
+};
+
+// Classification des fluides par catégorie (HCFC, HFC/PFC, HFO)
+const FLUID_CATEGORIES = {
+    // HCFC (Hydrochlorofluorocarbures) - basé sur kg
+    'R-22': 'HCFC',
+    // HFC (Hydrofluorocarbures) - basé sur teqCO2
+    'R-32': 'HFC',
+    'R-410A': 'HFC',
+    'R-407C': 'HFC',
+    'R-134a': 'HFC',
+    'R-404A': 'HFC',
+    'R-507A': 'HFC',
+    'R-448A': 'HFC',
+    'R-449A': 'HFC',
+    'R-452A': 'HFC',
+    'R-454B': 'HFC',
+    // HFO (Hydrofluorooléfines) - basé sur kg
+    'R-1234yf': 'HFO',
+    'R-1234ze': 'HFO',
+    // Hydrocarbures naturels (considérés comme HFO pour la fréquence)
+    'R-290': 'HFO',
+    'R-600a': 'HFO',
+};
+
+// Calcul de la fréquence minimale de contrôle périodique
+const calculateControlFrequency = (fluidType, chargeKg, teqCO2) => {
+    const category = FLUID_CATEGORIES[fluidType];
+    const charge = parseFloat(chargeKg) || 0;
+    const teq = parseFloat(teqCO2) || 0;
+
+    if (!category) return null;
+
+    if (category === 'HCFC') {
+        // HCFC basé sur kg
+        if (charge >= 300) return { months: 3, label: '3 mois' };
+        if (charge >= 30) return { months: 6, label: '6 mois' };
+        if (charge >= 2) return { months: 12, label: '12 mois' };
+        return null; // Pas de contrôle obligatoire sous 2 kg
+    }
+
+    if (category === 'HFC') {
+        // HFC/PFC basé sur teqCO2
+        if (teq >= 500) return { months: 3, label: '3 mois' };
+        if (teq >= 50) return { months: 6, label: '6 mois' };
+        if (teq >= 5) return { months: 12, label: '12 mois' };
+        return null; // Pas de contrôle obligatoire sous 5 teqCO2
+    }
+
+    if (category === 'HFO') {
+        // HFO basé sur kg
+        if (charge >= 100) return { months: 6, label: '6 mois' };
+        if (charge >= 10) return { months: 12, label: '12 mois' };
+        if (charge >= 1) return { months: 24, label: '24 mois' };
+        return null; // Pas de contrôle obligatoire sous 1 kg
+    }
+
+    return null;
 };
 
 function CerfaPage() {
@@ -150,6 +209,20 @@ function CerfaPage() {
         };
     }, [formData.fluideVierge, formData.fluideRecycle, formData.fluideRegenere, formData.fluideTraitement, formData.fluideConserve]);
 
+    // Calcul automatique de la fréquence de contrôle périodique
+    const controlFrequency = useMemo(() => {
+        return calculateControlFrequency(
+            formData.fluideDesignation,
+            formData.fluideChargeInitiale,
+            calculatedTeqCO2
+        );
+    }, [formData.fluideDesignation, formData.fluideChargeInitiale, calculatedTeqCO2]);
+
+    // Catégorie du fluide (HCFC, HFC, HFO)
+    const fluidCategory = useMemo(() => {
+        return FLUID_CATEGORIES[formData.fluideDesignation] || null;
+    }, [formData.fluideDesignation]);
+
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
         const data = searchParams.get('data');
@@ -212,6 +285,9 @@ function CerfaPage() {
                 teqCO2: calculatedTeqCO2,
                 quantiteChargeeTotal: totaux.charge,
                 quantiteRecupereeTotal: totaux.recupere,
+                // Fréquence de contrôle périodique
+                frequenceControle: controlFrequency ? controlFrequency.label : '',
+                categorieFluid: fluidCategory || '',
             };
 
             // Passer les données au service PDF
@@ -237,7 +313,7 @@ function CerfaPage() {
         } finally {
             setIsGenerating(false);
         }
-    }, [formData, calculatedTeqCO2, totaux, showToast]);
+    }, [formData, calculatedTeqCO2, totaux, controlFrequency, fluidCategory, showToast]);
 
     return (
         <div className="cerfa-page">
@@ -611,6 +687,51 @@ function CerfaPage() {
                                 />
                             </div>
                         </div>
+
+                        {/* Affichage de la fréquence de contrôle périodique */}
+                        {controlFrequency && (
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '1rem',
+                                background: 'rgba(33, 150, 243, 0.15)',
+                                borderRadius: '0.5rem',
+                                borderLeft: '4px solid #2196F3'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>📅</span>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', color: '#2196F3' }}>
+                                            Fréquence minimale de contrôle périodique
+                                        </div>
+                                        <div style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.9)' }}>
+                                            <strong>{controlFrequency.label}</strong>
+                                            {fluidCategory && (
+                                                <span style={{ fontSize: '0.85rem', marginLeft: '0.5rem', opacity: 0.7 }}>
+                                                    ({fluidCategory} - {fluidCategory === 'HFC' ? `${calculatedTeqCO2} teqCO2` : `${formData.fluideChargeInitiale} kg`})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tableau récapitulatif des seuils */}
+                        {formData.fluideDesignation && !controlFrequency && (
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '0.75rem',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.85rem',
+                                color: 'rgba(255,255,255,0.6)'
+                            }}>
+                                ℹ️ Quantité insuffisante pour contrôle périodique obligatoire
+                                {fluidCategory === 'HCFC' && ' (seuil: 2 kg min)'}
+                                {fluidCategory === 'HFC' && ' (seuil: 5 teqCO2 min)'}
+                                {fluidCategory === 'HFO' && ' (seuil: 1 kg min)'}
+                            </div>
+                        )}
                     </section>
 
                     {/* Section 11: MANIPULATION DU FLUIDE */}
@@ -914,22 +1035,13 @@ function CerfaPage() {
                                 />
                             </div>
                             <div className="cerfa-form-group">
-                                <label>Signature (zone de signature)</label>
-                                <div
-                                    style={{
-                                        border: '2px dashed rgba(255,255,255,0.3)',
-                                        borderRadius: '0.5rem',
-                                        height: '100px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'rgba(255,255,255,0.5)',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={() => alert('Fonctionnalité de signature à venir')}
-                                >
-                                    ✍️ Cliquer pour signer
-                                </div>
+                                <label>Signature de l'opérateur</label>
+                                <SignaturePad
+                                    onSave={(dataUrl) => handleChange('signatureOperateur', dataUrl)}
+                                    initialValue={formData.signatureOperateur}
+                                    width={300}
+                                    height={120}
+                                />
                             </div>
                         </div>
 
@@ -966,22 +1078,13 @@ function CerfaPage() {
                                 />
                             </div>
                             <div className="cerfa-form-group">
-                                <label>Signature (zone de signature)</label>
-                                <div
-                                    style={{
-                                        border: '2px dashed rgba(255,255,255,0.3)',
-                                        borderRadius: '0.5rem',
-                                        height: '100px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'rgba(255,255,255,0.5)',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={() => alert('Fonctionnalité de signature à venir')}
-                                >
-                                    ✍️ Cliquer pour signer
-                                </div>
+                                <label>Signature du client</label>
+                                <SignaturePad
+                                    onSave={(dataUrl) => handleChange('signatureDetenteur', dataUrl)}
+                                    initialValue={formData.signatureDetenteur}
+                                    width={300}
+                                    height={120}
+                                />
                             </div>
                         </div>
                     </section>

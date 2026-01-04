@@ -3,7 +3,7 @@
 // Service pour remplir les formulaires CERFA
 // =============================
 
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
 
 // Importer le PDF comme asset (Webpack le gère automatiquement)
@@ -384,6 +384,56 @@ export const fillCerfa15497 = async (data) => {
 
         // Aplatir le formulaire pour figer les données
         form.flatten();
+
+        // ===== INTÉGRATION DES SIGNATURES (après flatten) =====
+        // Les signatures sont des images base64 dessinées sur le PDF
+        const pages = pdfDoc.getPages();
+        const page = pages[0]; // Le CERFA est sur une seule page
+        const { width, height } = page.getSize();
+
+        // Helper pour intégrer une signature image
+        const embedSignature = async (signatureDataUrl, x, y, maxWidth, maxHeight) => {
+            if (!signatureDataUrl || !signatureDataUrl.startsWith('data:image/png')) {
+                return;
+            }
+            try {
+                // Extraire les données base64
+                const base64Data = signatureDataUrl.split(',')[1];
+                const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+
+                // Intégrer l'image PNG
+                const signatureImage = await pdfDoc.embedPng(imageBytes);
+                const { width: imgWidth, height: imgHeight } = signatureImage;
+
+                // Calculer les dimensions pour s'adapter à la zone
+                const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+
+                // Dessiner l'image sur la page
+                page.drawImage(signatureImage, {
+                    x: x,
+                    y: y,
+                    width: scaledWidth,
+                    height: scaledHeight,
+                });
+                console.log(`[CERFA] ✓ Signature intégrée à x=${x}, y=${y}`);
+            } catch (e) {
+                console.warn('[CERFA] ✗ Erreur intégration signature:', e.message);
+            }
+        };
+
+        // Position des signatures (à ajuster selon le PDF réel)
+        // Ces coordonnées sont approximatives - le bas-gauche est (0,0)
+        // Signature opérateur (généralement en bas à gauche)
+        if (data.signatureOperateur) {
+            await embedSignature(data.signatureOperateur, 50, 80, 150, 60);
+        }
+
+        // Signature détenteur/client (généralement en bas à droite)
+        if (data.signatureDetenteur) {
+            await embedSignature(data.signatureDetenteur, width - 200, 80, 150, 60);
+        }
 
         // Générer le PDF
         const filledPdfBytes = await pdfDoc.save();
