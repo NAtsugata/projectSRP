@@ -4,7 +4,7 @@
 // Optimisé pour mobile
 // =============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     fillCerfa15497,
@@ -14,6 +14,25 @@ import {
     saveGenerationRecord
 } from '../utils/cerfaService';
 import '../components/CerfaGeneratorModal.css';
+
+// GWP (Global Warming Potential) des fluides frigorigènes - pour calcul teqCO2
+const GWP_VALUES = {
+    'R-32': 675,
+    'R-410A': 2088,
+    'R-407C': 1774,
+    'R-134a': 1430,
+    'R-22': 1810,
+    'R-290': 3,      // Propane
+    'R-600a': 3,     // Isobutane
+    'R-404A': 3922,
+    'R-507A': 3985,
+    'R-448A': 1387,
+    'R-449A': 1397,
+    'R-452A': 2140,
+    'R-454B': 466,
+    'R-1234yf': 4,
+    'R-1234ze': 7,
+};
 
 function CerfaPage() {
     const [searchParams] = useSearchParams();
@@ -62,6 +81,27 @@ function CerfaPage() {
         // Fluide frigorigène
         fluideDesignation: '',
         fluideChargeInitiale: '',
+
+        // Section 11 - Manipulation du fluide frigorigène
+        // Quantités chargées (A+B+C)
+        fluideVierge: '',           // A - Fluide vierge
+        fluideRecycle: '',          // B - Fluide recyclé (récupéré et réintroduit)
+        fluideRegenere: '',         // C - Fluide régénéré
+        // Quantités récupérées (D+E)
+        fluideTraitement: '',       // D - Fluide destiné au traitement
+        fluideConserve: '',         // E - Fluide conservé pour réutilisation
+        // Autres champs section 11
+        denominationChangement: '', // Dénomination si changement de fluide
+        bsffNumber: '',             // Numéro BSFF (Trackdéchets)
+        contenantId: '',            // Identification du contenant
+
+        // Section 12 - Classification déchets ADR/RID
+        dechetUN1078: false,        // UN 1078 - Gaz non inflammable
+        dechetUN3161: false,        // UN 3161 - Gaz inflammable
+        autreDechetNonInflammable: '',
+        autreDechetInflammable: '',
+
+        // Legacy fields (pour compatibilité)
         fluideQuantiteRecuperee: '',
         fluideQuantiteReintroduite: '',
         fluideQuantiteAjoutee: '',
@@ -85,6 +125,30 @@ function CerfaPage() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
+
+    // Calcul automatique du teqCO2 basé sur le fluide et la charge
+    const calculatedTeqCO2 = useMemo(() => {
+        const gwp = GWP_VALUES[formData.fluideDesignation] || 0;
+        const charge = parseFloat(formData.fluideChargeInitiale) || 0;
+        if (gwp && charge) {
+            // teqCO2 = charge (kg) * GWP / 1000
+            return ((charge * gwp) / 1000).toFixed(2);
+        }
+        return '';
+    }, [formData.fluideDesignation, formData.fluideChargeInitiale]);
+
+    // Calcul des totaux chargés (A+B+C) et récupérés (D+E)
+    const totaux = useMemo(() => {
+        const a = parseFloat(formData.fluideVierge) || 0;
+        const b = parseFloat(formData.fluideRecycle) || 0;
+        const c = parseFloat(formData.fluideRegenere) || 0;
+        const d = parseFloat(formData.fluideTraitement) || 0;
+        const e = parseFloat(formData.fluideConserve) || 0;
+        return {
+            charge: (a + b + c).toFixed(2),
+            recupere: (d + e).toFixed(2)
+        };
+    }, [formData.fluideVierge, formData.fluideRecycle, formData.fluideRegenere, formData.fluideTraitement, formData.fluideConserve]);
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
@@ -142,8 +206,16 @@ function CerfaPage() {
     const handleGenerate = useCallback(async () => {
         setIsGenerating(true);
         try {
-            // Passer les données directement au service PDF
-            const pdfBlob = await fillCerfa15497(formData);
+            // Enrichir les données avec les calculs automatiques
+            const enrichedData = {
+                ...formData,
+                teqCO2: calculatedTeqCO2,
+                quantiteChargeeTotal: totaux.charge,
+                quantiteRecupereeTotal: totaux.recupere,
+            };
+
+            // Passer les données au service PDF
+            const pdfBlob = await fillCerfa15497(enrichedData);
 
             const clientName = (formData.detenteurNom || 'client').replace(/\s+/g, '_');
             const date = new Date().toISOString().split('T')[0];
@@ -165,7 +237,7 @@ function CerfaPage() {
         } finally {
             setIsGenerating(false);
         }
-    }, [formData, showToast]);
+    }, [formData, calculatedTeqCO2, totaux, showToast]);
 
     return (
         <div className="cerfa-page">
@@ -492,77 +564,199 @@ function CerfaPage() {
                         </div>
                     </section>
 
-                    {/* Section 5: FLUIDE FRIGORIGÈNE */}
+                    {/* Section 5: ÉQUIPEMENT - FLUIDE */}
                     <section className="cerfa-section">
-                        <h3>💨 5. FLUIDE FRIGORIGÈNE</h3>
-                        <div className="cerfa-form-group">
-                            <label>Désignation du fluide</label>
-                            <select
-                                value={formData.fluideDesignation}
-                                onChange={(e) => handleChange('fluideDesignation', e.target.value)}
-                            >
-                                <option value="">-- Sélectionner --</option>
-                                <option value="R-32">R-32</option>
-                                <option value="R-410A">R-410A</option>
-                                <option value="R-407C">R-407C</option>
-                                <option value="R-134a">R-134a</option>
-                                <option value="R-22">R-22 (interdit)</option>
-                                <option value="R-290">R-290 (Propane)</option>
-                                <option value="R-600a">R-600a (Isobutane)</option>
-                                <option value="Autre">Autre</option>
-                            </select>
-                        </div>
+                        <h3>💨 5. ÉQUIPEMENT - FLUIDE</h3>
                         <div className="cerfa-form-row">
+                            <div className="cerfa-form-group" style={{ flex: 2 }}>
+                                <label>Désignation du fluide *</label>
+                                <select
+                                    value={formData.fluideDesignation}
+                                    onChange={(e) => handleChange('fluideDesignation', e.target.value)}
+                                >
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="R-32">R-32 (GWP: 675)</option>
+                                    <option value="R-410A">R-410A (GWP: 2088)</option>
+                                    <option value="R-407C">R-407C (GWP: 1774)</option>
+                                    <option value="R-134a">R-134a (GWP: 1430)</option>
+                                    <option value="R-404A">R-404A (GWP: 3922)</option>
+                                    <option value="R-507A">R-507A (GWP: 3985)</option>
+                                    <option value="R-448A">R-448A (GWP: 1387)</option>
+                                    <option value="R-449A">R-449A (GWP: 1397)</option>
+                                    <option value="R-22">R-22 (interdit)</option>
+                                    <option value="R-290">R-290 Propane (GWP: 3)</option>
+                                    <option value="R-600a">R-600a Isobutane (GWP: 3)</option>
+                                    <option value="R-1234yf">R-1234yf (GWP: 4)</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
                             <div className="cerfa-form-group">
-                                <label>Charge initiale (kg)</label>
+                                <label>Charge (kg) *</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     value={formData.fluideChargeInitiale}
                                     onChange={(e) => handleChange('fluideChargeInitiale', e.target.value)}
-                                    placeholder="Ex: 2.5"
+                                    placeholder="2.5"
                                 />
                             </div>
                             <div className="cerfa-form-group">
-                                <label>Quantité récupérée (kg)</label>
+                                <label>teqCO2 (auto)</label>
                                 <input
                                     type="text"
-                                    value={formData.fluideQuantiteRecuperee}
-                                    onChange={(e) => handleChange('fluideQuantiteRecuperee', e.target.value)}
-                                    placeholder="Ex: 0"
+                                    value={calculatedTeqCO2 ? `${calculatedTeqCO2} t` : ''}
+                                    readOnly
+                                    style={{ background: 'rgba(255,255,255,0.1)', fontWeight: 'bold' }}
+                                    placeholder="Calculé auto"
                                 />
                             </div>
                         </div>
+                    </section>
+
+                    {/* Section 11: MANIPULATION DU FLUIDE */}
+                    <section className="cerfa-section">
+                        <h3>🔄 11. MANIPULATION DU FLUIDE FRIGORIGÈNE</h3>
+
+                        {/* Quantités chargées */}
+                        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(76, 175, 80, 0.1)', borderRadius: '0.5rem', borderLeft: '3px solid #4CAF50' }}>
+                            <label style={{ fontWeight: 'bold', color: '#4CAF50', marginBottom: '0.5rem', display: 'block' }}>
+                                📥 Quantités CHARGÉES (A+B+C) = {totaux.charge} kg
+                            </label>
+                            <div className="cerfa-form-row">
+                                <div className="cerfa-form-group">
+                                    <label>A - Fluide vierge (kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.fluideVierge}
+                                        onChange={(e) => handleChange('fluideVierge', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div className="cerfa-form-group">
+                                    <label>B - Fluide recyclé (kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.fluideRecycle}
+                                        onChange={(e) => handleChange('fluideRecycle', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div className="cerfa-form-group">
+                                    <label>C - Fluide régénéré (kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.fluideRegenere}
+                                        onChange={(e) => handleChange('fluideRegenere', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quantités récupérées */}
+                        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255, 152, 0, 0.1)', borderRadius: '0.5rem', borderLeft: '3px solid #FF9800' }}>
+                            <label style={{ fontWeight: 'bold', color: '#FF9800', marginBottom: '0.5rem', display: 'block' }}>
+                                📤 Quantités RÉCUPÉRÉES (D+E) = {totaux.recupere} kg
+                            </label>
+                            <div className="cerfa-form-row">
+                                <div className="cerfa-form-group">
+                                    <label>D - Destiné au traitement (kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.fluideTraitement}
+                                        onChange={(e) => handleChange('fluideTraitement', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div className="cerfa-form-group">
+                                    <label>E - Conservé réutilisation (kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.fluideConserve}
+                                        onChange={(e) => handleChange('fluideConserve', e.target.value)}
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Autres informations section 11 */}
                         <div className="cerfa-form-row">
                             <div className="cerfa-form-group">
-                                <label>Quantité réintroduite (kg)</label>
+                                <label>Dénomination si changement fluide</label>
                                 <input
                                     type="text"
-                                    value={formData.fluideQuantiteReintroduite}
-                                    onChange={(e) => handleChange('fluideQuantiteReintroduite', e.target.value)}
-                                    placeholder="Ex: 0"
+                                    value={formData.denominationChangement}
+                                    onChange={(e) => handleChange('denominationChangement', e.target.value)}
+                                    placeholder="Si fluide différent"
                                 />
                             </div>
                             <div className="cerfa-form-group">
-                                <label>Quantité ajoutée (kg)</label>
+                                <label>N° BSFF (Trackdéchets)</label>
                                 <input
                                     type="text"
-                                    value={formData.fluideQuantiteAjoutee}
-                                    onChange={(e) => handleChange('fluideQuantiteAjoutee', e.target.value)}
-                                    placeholder="Ex: 0.3"
+                                    value={formData.bsffNumber}
+                                    onChange={(e) => handleChange('bsffNumber', e.target.value)}
+                                    placeholder="Numéro BSFF"
                                 />
                             </div>
                         </div>
                         <div className="cerfa-form-group">
-                            <label>Origine du fluide ajouté</label>
-                            <select
-                                value={formData.fluideOrigine}
-                                onChange={(e) => handleChange('fluideOrigine', e.target.value)}
-                            >
-                                <option value="">-- Sélectionner --</option>
-                                <option value="Neuf">Neuf</option>
-                                <option value="Recyclé">Recyclé</option>
-                                <option value="Régénéré">Régénéré</option>
-                            </select>
+                            <label>Identification du/des contenants</label>
+                            <input
+                                type="text"
+                                value={formData.contenantId}
+                                onChange={(e) => handleChange('contenantId', e.target.value)}
+                                placeholder="N° bouteille, contenant..."
+                            />
+                        </div>
+                    </section>
+
+                    {/* Section 12: CLASSIFICATION DÉCHETS ADR/RID */}
+                    <section className="cerfa-section">
+                        <h3>⚠️ 12. CLASSIFICATION DÉCHETS ADR/RID</h3>
+                        <div className="cerfa-checkboxes">
+                            <label className="cerfa-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.dechetUN1078}
+                                    onChange={() => handleCheckbox('dechetUN1078')}
+                                />
+                                <span>UN 1078 - Gaz frigorigène NSA 2.2 (non inflammable)</span>
+                            </label>
+                            <label className="cerfa-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.dechetUN3161}
+                                    onChange={() => handleCheckbox('dechetUN3161')}
+                                />
+                                <span>UN 3161 - Gaz liquéfié inflammable NSA 2.1</span>
+                            </label>
+                        </div>
+                        <div className="cerfa-form-row">
+                            <div className="cerfa-form-group">
+                                <label>Autres fluides non inflammables</label>
+                                <input
+                                    type="text"
+                                    value={formData.autreDechetNonInflammable}
+                                    onChange={(e) => handleChange('autreDechetNonInflammable', e.target.value)}
+                                    placeholder="Préciser..."
+                                />
+                            </div>
+                            <div className="cerfa-form-group">
+                                <label>Autres fluides inflammables</label>
+                                <input
+                                    type="text"
+                                    value={formData.autreDechetInflammable}
+                                    onChange={(e) => handleChange('autreDechetInflammable', e.target.value)}
+                                    placeholder="Préciser..."
+                                />
+                            </div>
                         </div>
                     </section>
 

@@ -331,17 +331,26 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Rep_Fuite3_realisee', data.reparationFuite3Realisee || data.fuiteReparation3 === 'oui');
         checkBox('Case_Rep_Fuite3_AFaire', data.reparationFuite3AFaire || data.fuiteReparation3 === 'non');
 
-        // Quantités de fluide (section 11) - Support CerfaPage (fluideXxx) et CerfaGeneratorModal
-        fillTextField('11_Quantite', data.quantiteFluide || data.fluideChargeInitiale || '');
-        fillTextField('11_QA', data.quantiteRecuperee || data.fluideQuantiteRecuperee || '');
-        // Dénomination du fluide - support des deux formats
-        fillTextField('11_Denom', data.denominationFluide || data.fluide || data.fluideDesignation || '');
-        fillTextField('11_QB', data.quantiteChargee || '');
-        fillTextField('11_QC', data.quantiteAjoutee || data.fluideQuantiteAjoutee || '');
-        fillTextField('11_QDE', data.quantiteDE || data.fluideQuantiteReintroduite || '');
-        fillTextField('11_QD', data.quantiteD || '');
+        // Quantités de fluide (section 11) - Manipulation du fluide frigorigène
+        // Quantité chargée totale (A+B+C)
+        fillTextField('11_Quantite', data.quantiteChargeeTotal || data.quantiteFluide || '');
+        // A - Fluide vierge
+        fillTextField('11_QA', data.fluideVierge || data.quantiteRecuperee || data.fluideQuantiteRecuperee || '');
+        // B - Fluide recyclé (récupéré et réintroduit)
+        fillTextField('11_QB', data.fluideRecycle || data.quantiteChargee || '');
+        // C - Fluide régénéré
+        fillTextField('11_QC', data.fluideRegenere || data.quantiteAjoutee || data.fluideQuantiteAjoutee || '');
+        // D - Fluide destiné au traitement
+        fillTextField('11_QD', data.fluideTraitement || data.quantiteD || '');
+        // D+E total (quantité récupérée totale)
+        fillTextField('11_QDE', data.quantiteRecupereeTotal || data.quantiteDE || data.fluideQuantiteReintroduite || '');
+        // E - Fluide conservé pour réutilisation
+        fillTextField('11_QE', data.fluideConserve || data.quantiteE || '');
+        // Dénomination du fluide si changement
+        fillTextField('11_Denom', data.denominationChangement || data.denominationFluide || data.fluide || data.fluideDesignation || '');
+        // N° BSFF (Trackdéchets)
         fillTextField('11_BSFF', data.bsffNumber || '');
-        fillTextField('11_QE', data.quantiteE || '');
+        // Identification du/des contenants
         fillTextField('11_Contenant_ID', data.contenantId || '');
 
         // Classification des déchets (section 12)
