@@ -212,20 +212,20 @@ export const fillCerfa15497 = async (data) => {
         // Numéro de fiche
         fillTextField('Fiche_no', data.ficheNo || '');
 
-        // Opérateur / Intervenant
+        // Opérateur / Intervenant - Support CerfaPage (intervenantXxx) et CerfaGeneratorModal (companyXxx)
         const operateurInfo = [
-            data.companyName || 'SRP - Services Réparation Plomberie',
-            data.companyAddress || '',
-            data.siret ? `SIRET: ${data.siret}` : '',
+            data.companyName || data.intervenantNom || 'SRP - Services Réparation Plomberie',
+            data.companyAddress || data.intervenantAdresse || '',
+            (data.siret || data.intervenantSiret) ? `SIRET: ${data.siret || data.intervenantSiret}` : '',
             data.qualification || ''
         ].filter(Boolean).join('\n');
         fillTextField('Operateur', operateurInfo);
         fillTextField('Attestation_no', data.attestationNumber || data.intervenantAttestation || '');
 
-        // Détenteur / Client
+        // Détenteur / Client - Support CerfaPage (detenteurXxx) et CerfaGeneratorModal (clientXxx)
         const detenteurInfo = [
-            data.clientName ? `${data.clientFirstName || ''} ${data.clientName}`.trim() : '',
-            data.clientAddress || '',
+            data.detenteurNom || (data.clientName ? `${data.clientFirstName || ''} ${data.clientName}`.trim() : ''),
+            data.detenteurAdresse || data.clientAddress || '',
             data.clientPostalCode && data.clientCity ? `${data.clientPostalCode} ${data.clientCity}` : '',
             data.detenteurSiret ? `SIRET: ${data.detenteurSiret}` : ''
         ].filter(Boolean).join('\n');
@@ -239,8 +239,9 @@ export const fillCerfa15497 = async (data) => {
             data.numeroSerie || ''
         ].filter(Boolean).join(' - ');
         fillTextField('Equipement_ID', equipementId);
-        fillTextField('Equipement_Fluide', data.fluide || data.typeFluide || '');
-        fillTextField('Equipement_Charge', data.charge || data.chargeInitiale || '');
+        // Support des deux formats: CerfaGeneratorModal (fluide) et CerfaPage (fluideDesignation)
+        fillTextField('Equipement_Fluide', data.fluide || data.fluideDesignation || data.typeFluide || '');
+        fillTextField('Equipement_Charge', data.charge || data.fluideChargeInitiale || data.chargeInitiale || '');
         fillTextField('Equipement_teqCO2', data.teqCO2 || '');
 
         // Nature de l'intervention (cases à cocher)
@@ -268,7 +269,7 @@ export const fillCerfa15497 = async (data) => {
 
         // Fuite détectée
         checkBox('Case_Fuite_Oui', data.fuiteDetectee === 'oui' || data.fuiteDetectee === true);
-        checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false);
+        checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false || !data.fuiteDetectee);
 
         // Catégorie de fluide et seuils (cases à cocher section 6)
         // HCFC
@@ -294,10 +295,10 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Avec_12m', data.frequenceControle === 'avec_12m');
         checkBox('Case_Avec_6m', data.frequenceControle === 'avec_6m');
 
-        // Localisation des fuites
-        fillTextField('Fuite_Loca_1', data.fuiteLoca1 || data.localisationFuite1 || '');
-        checkBox('Case_Rep_Fuite1_realisee', data.reparationFuite1Realisee);
-        checkBox('Case_Rep_Fuite1_AFaire', data.reparationFuite1AFaire);
+        // Localisation des fuites - Support CerfaPage (fuiteLocalisation) et CerfaGeneratorModal
+        fillTextField('Fuite_Loca_1', data.fuiteLoca1 || data.fuiteLocalisation || data.localisationFuite1 || '');
+        checkBox('Case_Rep_Fuite1_realisee', data.reparationFuite1Realisee || data.fuiteReparation === 'oui');
+        checkBox('Case_Rep_Fuite1_AFaire', data.reparationFuite1AFaire || data.fuiteReparation === 'non');
 
         fillTextField('Fuite_Loca_2', data.fuiteLoca2 || data.localisationFuite2 || '');
         checkBox('Case_Rep_Fuite2_realisee', data.reparationFuite2Realisee);
@@ -307,13 +308,14 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Rep_Fuite3_realisee', data.reparationFuite3Realisee);
         checkBox('Case_Rep_Fuite3_AFaire', data.reparationFuite3AFaire);
 
-        // Quantités de fluide (section 11)
-        fillTextField('11_Quantite', data.quantiteFluide || '');
-        fillTextField('11_QA', data.quantiteRecuperee || '');
-        fillTextField('11_Denom', data.denominationFluide || data.fluide || '');
+        // Quantités de fluide (section 11) - Support CerfaPage (fluideXxx) et CerfaGeneratorModal
+        fillTextField('11_Quantite', data.quantiteFluide || data.fluideChargeInitiale || '');
+        fillTextField('11_QA', data.quantiteRecuperee || data.fluideQuantiteRecuperee || '');
+        // Dénomination du fluide - support des deux formats
+        fillTextField('11_Denom', data.denominationFluide || data.fluide || data.fluideDesignation || '');
         fillTextField('11_QB', data.quantiteChargee || '');
-        fillTextField('11_QC', data.quantiteAjoutee || '');
-        fillTextField('11_QDE', data.quantiteDE || '');
+        fillTextField('11_QC', data.quantiteAjoutee || data.fluideQuantiteAjoutee || '');
+        fillTextField('11_QDE', data.quantiteDE || data.fluideQuantiteReintroduite || '');
         fillTextField('11_QD', data.quantiteD || '');
         fillTextField('11_BSFF', data.bsffNumber || '');
         fillTextField('11_QE', data.quantiteE || '');
@@ -335,12 +337,16 @@ export const fillCerfa15497 = async (data) => {
         // Observations (section 14)
         fillTextField('14_Observations', data.observations || data.notes || '');
 
-        // Signatures
-        fillTextField('Sign_Operateur_Nom', data.technicianName || data.intervenantNom || '');
+        // Signatures - Support CerfaPage (intervenantNom, detenteurNom) et CerfaGeneratorModal
+        // Signature opérateur
+        const operateurNom = data.technicianName || data.intervenantNom || data.companyName || '';
+        fillTextField('Sign_Operateur_Nom', operateurNom);
         fillTextField('Sign_Operateur_Qualite', data.technicianQualite || data.qualification || 'Technicien');
         fillTextField('Sign_Operateur_Date', data.date || dateIntervention);
 
-        fillTextField('Sign_Detenteur_Nom', data.clientSignatureName || `${data.clientFirstName || ''} ${data.clientName || ''}`.trim());
+        // Signature détenteur/client
+        const detenteurNom = data.clientSignatureName || data.detenteurNom || `${data.clientFirstName || ''} ${data.clientName || ''}`.trim();
+        fillTextField('Sign_Detenteur_Nom', detenteurNom);
         fillTextField('Sign_Detenteur_Qualite', data.clientQualite || 'Propriétaire');
         fillTextField('Sign_Detenteur_Date', data.clientSignatureDate || data.date || dateIntervention);
 
