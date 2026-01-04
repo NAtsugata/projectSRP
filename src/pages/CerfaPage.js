@@ -38,19 +38,26 @@ function CerfaPage() {
         numeroSerie: '',
         dateMiseService: '',
         emplacement: '',
+        detecteurId: '', // N° détecteur manuel de fuites
 
         // INTERVENTION
         dateIntervention: new Date().toLocaleDateString('fr-FR'),
 
         // Nature de l'intervention (cases à cocher)
+        assemblage: false, // Assemblage de l'équipement
         natureMiseEnService: false,
+        modification: false, // Modification de l'équipement
         natureControleEtancheite: false,
+        controleNonPeriodique: false, // Contrôle d'étanchéité non périodique
         natureMaintenance: false,
         natureReparationFuite: false,
         natureDemontage: false,
         natureDemantelement: false,
         natureAutre: false,
         natureAutreTexte: '',
+
+        // Système permanent de détection de fuites
+        systemeDetectionPermanent: '', // 'oui' ou 'non'
 
         // Fluide frigorigène
         fluideDesignation: '',
@@ -63,10 +70,18 @@ function CerfaPage() {
         // Détection de fuite
         fuiteDetectee: '',
         fuiteLocalisation: '',
+        fuiteLocalisation2: '',
+        fuiteLocalisation3: '',
         fuiteReparation: '',
+        fuiteReparation2: '',
+        fuiteReparation3: '',
 
         // Observations
         observations: '',
+
+        // Signatures
+        signatureOperateur: null,
+        signatureDetenteur: null,
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
@@ -345,6 +360,15 @@ function CerfaPage() {
                                 value={formData.emplacement}
                                 onChange={(e) => handleChange('emplacement', e.target.value)}
                                 placeholder="Ex: Local technique, Extérieur..."
+                            />
+                        </div>
+                        <div className="cerfa-form-group">
+                            <label>N° détecteur manuel de fuites</label>
+                            <input
+                                type="text"
+                                value={formData.detecteurId}
+                                onChange={(e) => handleChange('detecteurId', e.target.value)}
+                                placeholder="Identification du détecteur"
                             />
                         </div>
                     </section>
