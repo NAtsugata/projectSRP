@@ -393,6 +393,14 @@ function CerfaPage() {
                             <label className="cerfa-checkbox">
                                 <input
                                     type="checkbox"
+                                    checked={formData.assemblage}
+                                    onChange={() => handleCheckbox('assemblage')}
+                                />
+                                <span>Assemblage de l'équipement</span>
+                            </label>
+                            <label className="cerfa-checkbox">
+                                <input
+                                    type="checkbox"
                                     checked={formData.natureMiseEnService}
                                     onChange={() => handleCheckbox('natureMiseEnService')}
                                 />
@@ -401,10 +409,26 @@ function CerfaPage() {
                             <label className="cerfa-checkbox">
                                 <input
                                     type="checkbox"
+                                    checked={formData.modification}
+                                    onChange={() => handleCheckbox('modification')}
+                                />
+                                <span>Modification de l'équipement</span>
+                            </label>
+                            <label className="cerfa-checkbox">
+                                <input
+                                    type="checkbox"
                                     checked={formData.natureControleEtancheite}
                                     onChange={() => handleCheckbox('natureControleEtancheite')}
                                 />
-                                <span>Contrôle d'étanchéité</span>
+                                <span>Contrôle d'étanchéité périodique</span>
+                            </label>
+                            <label className="cerfa-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.controleNonPeriodique}
+                                    onChange={() => handleCheckbox('controleNonPeriodique')}
+                                />
+                                <span>Contrôle d'étanchéité non périodique</span>
                             </label>
                             <label className="cerfa-checkbox">
                                 <input
@@ -413,22 +437,6 @@ function CerfaPage() {
                                     onChange={() => handleCheckbox('natureMaintenance')}
                                 />
                                 <span>Maintenance / Entretien</span>
-                            </label>
-                            <label className="cerfa-checkbox">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.natureReparationFuite}
-                                    onChange={() => handleCheckbox('natureReparationFuite')}
-                                />
-                                <span>Réparation de fuite</span>
-                            </label>
-                            <label className="cerfa-checkbox">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.natureDemontage}
-                                    onChange={() => handleCheckbox('natureDemontage')}
-                                />
-                                <span>Démontage</span>
                             </label>
                             <label className="cerfa-checkbox">
                                 <input
@@ -458,6 +466,30 @@ function CerfaPage() {
                                 />
                             </div>
                         )}
+
+                        <div className="cerfa-form-group" style={{ marginTop: '1rem' }}>
+                            <label>Présence d'un système permanent de détection de fuites :</label>
+                            <div className="cerfa-checkboxes" style={{ flexDirection: 'row', gap: '2rem' }}>
+                                <label className="cerfa-checkbox">
+                                    <input
+                                        type="radio"
+                                        name="systemeDetection"
+                                        checked={formData.systemeDetectionPermanent === 'oui'}
+                                        onChange={() => handleChange('systemeDetectionPermanent', 'oui')}
+                                    />
+                                    <span>OUI</span>
+                                </label>
+                                <label className="cerfa-checkbox">
+                                    <input
+                                        type="radio"
+                                        name="systemeDetection"
+                                        checked={formData.systemeDetectionPermanent === 'non'}
+                                        onChange={() => handleChange('systemeDetectionPermanent', 'non')}
+                                    />
+                                    <span>NON</span>
+                                </label>
+                            </div>
+                        </div>
                     </section>
 
                     {/* Section 5: FLUIDE FRIGORIGÈNE */}
@@ -562,36 +594,75 @@ function CerfaPage() {
                         </div>
                         {formData.fuiteDetectee === 'oui' && (
                             <>
-                                <div className="cerfa-form-group">
-                                    <label>Localisation de la fuite</label>
-                                    <input
-                                        type="text"
-                                        value={formData.fuiteLocalisation}
-                                        onChange={(e) => handleChange('fuiteLocalisation', e.target.value)}
-                                        placeholder="Ex: Raccord haute pression"
-                                    />
+                                {/* Fuite 1 */}
+                                <div className="cerfa-form-row" style={{ alignItems: 'flex-end' }}>
+                                    <div className="cerfa-form-group" style={{ flex: 2 }}>
+                                        <label>Fuite n°1 - Localisation</label>
+                                        <input
+                                            type="text"
+                                            value={formData.fuiteLocalisation}
+                                            onChange={(e) => handleChange('fuiteLocalisation', e.target.value)}
+                                            placeholder="Ex: Raccord haute pression"
+                                        />
+                                    </div>
+                                    <div className="cerfa-form-group" style={{ flex: 1 }}>
+                                        <label>Réparation</label>
+                                        <select
+                                            value={formData.fuiteReparation}
+                                            onChange={(e) => handleChange('fuiteReparation', e.target.value)}
+                                        >
+                                            <option value="">--</option>
+                                            <option value="oui">Réalisée</option>
+                                            <option value="non">À faire</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="cerfa-form-group">
-                                    <label>Réparation effectuée ?</label>
-                                    <div className="cerfa-checkboxes" style={{ flexDirection: 'row', gap: '2rem' }}>
-                                        <label className="cerfa-checkbox">
-                                            <input
-                                                type="radio"
-                                                name="fuiteReparation"
-                                                checked={formData.fuiteReparation === 'oui'}
-                                                onChange={() => handleChange('fuiteReparation', 'oui')}
-                                            />
-                                            <span>Oui</span>
-                                        </label>
-                                        <label className="cerfa-checkbox">
-                                            <input
-                                                type="radio"
-                                                name="fuiteReparation"
-                                                checked={formData.fuiteReparation === 'non'}
-                                                onChange={() => handleChange('fuiteReparation', 'non')}
-                                            />
-                                            <span>Non</span>
-                                        </label>
+
+                                {/* Fuite 2 */}
+                                <div className="cerfa-form-row" style={{ alignItems: 'flex-end' }}>
+                                    <div className="cerfa-form-group" style={{ flex: 2 }}>
+                                        <label>Fuite n°2 - Localisation (optionnel)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.fuiteLocalisation2}
+                                            onChange={(e) => handleChange('fuiteLocalisation2', e.target.value)}
+                                            placeholder="Optionnel"
+                                        />
+                                    </div>
+                                    <div className="cerfa-form-group" style={{ flex: 1 }}>
+                                        <label>Réparation</label>
+                                        <select
+                                            value={formData.fuiteReparation2}
+                                            onChange={(e) => handleChange('fuiteReparation2', e.target.value)}
+                                        >
+                                            <option value="">--</option>
+                                            <option value="oui">Réalisée</option>
+                                            <option value="non">À faire</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Fuite 3 */}
+                                <div className="cerfa-form-row" style={{ alignItems: 'flex-end' }}>
+                                    <div className="cerfa-form-group" style={{ flex: 2 }}>
+                                        <label>Fuite n°3 - Localisation (optionnel)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.fuiteLocalisation3}
+                                            onChange={(e) => handleChange('fuiteLocalisation3', e.target.value)}
+                                            placeholder="Optionnel"
+                                        />
+                                    </div>
+                                    <div className="cerfa-form-group" style={{ flex: 1 }}>
+                                        <label>Réparation</label>
+                                        <select
+                                            value={formData.fuiteReparation3}
+                                            onChange={(e) => handleChange('fuiteReparation3', e.target.value)}
+                                        >
+                                            <option value="">--</option>
+                                            <option value="oui">Réalisée</option>
+                                            <option value="non">À faire</option>
+                                        </select>
                                     </div>
                                 </div>
                             </>
@@ -609,6 +680,115 @@ function CerfaPage() {
                                 rows={4}
                                 style={{ resize: 'vertical' }}
                             />
+                        </div>
+                    </section>
+
+                    {/* Section 8: SIGNATURES */}
+                    <section className="cerfa-section">
+                        <h3>✍️ 8. SIGNATURES</h3>
+
+                        {/* Signature Opérateur */}
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                            <h4 style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.9)' }}>👷 Opérateur / Intervenant</h4>
+                            <div className="cerfa-form-row">
+                                <div className="cerfa-form-group">
+                                    <label>Nom</label>
+                                    <input
+                                        type="text"
+                                        value={formData.intervenantNom}
+                                        onChange={(e) => handleChange('intervenantNom', e.target.value)}
+                                        placeholder="Nom de l'intervenant"
+                                    />
+                                </div>
+                                <div className="cerfa-form-group">
+                                    <label>Qualité</label>
+                                    <input
+                                        type="text"
+                                        value={formData.intervenantQualite || ''}
+                                        onChange={(e) => handleChange('intervenantQualite', e.target.value)}
+                                        placeholder="Technicien frigoriste"
+                                    />
+                                </div>
+                            </div>
+                            <div className="cerfa-form-group">
+                                <label>Date</label>
+                                <input
+                                    type="text"
+                                    value={formData.dateIntervention}
+                                    readOnly
+                                    style={{ opacity: 0.7 }}
+                                />
+                            </div>
+                            <div className="cerfa-form-group">
+                                <label>Signature (zone de signature)</label>
+                                <div
+                                    style={{
+                                        border: '2px dashed rgba(255,255,255,0.3)',
+                                        borderRadius: '0.5rem',
+                                        height: '100px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'rgba(255,255,255,0.5)',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => alert('Fonctionnalité de signature à venir')}
+                                >
+                                    ✍️ Cliquer pour signer
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Signature Détenteur */}
+                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                            <h4 style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.9)' }}>👤 Détenteur / Client</h4>
+                            <div className="cerfa-form-row">
+                                <div className="cerfa-form-group">
+                                    <label>Nom</label>
+                                    <input
+                                        type="text"
+                                        value={formData.detenteurNom}
+                                        onChange={(e) => handleChange('detenteurNom', e.target.value)}
+                                        placeholder="Nom du client"
+                                    />
+                                </div>
+                                <div className="cerfa-form-group">
+                                    <label>Qualité</label>
+                                    <input
+                                        type="text"
+                                        value={formData.detenteurQualite || ''}
+                                        onChange={(e) => handleChange('detenteurQualite', e.target.value)}
+                                        placeholder="Propriétaire, Gérant..."
+                                    />
+                                </div>
+                            </div>
+                            <div className="cerfa-form-group">
+                                <label>Date</label>
+                                <input
+                                    type="text"
+                                    value={formData.dateIntervention}
+                                    readOnly
+                                    style={{ opacity: 0.7 }}
+                                />
+                            </div>
+                            <div className="cerfa-form-group">
+                                <label>Signature (zone de signature)</label>
+                                <div
+                                    style={{
+                                        border: '2px dashed rgba(255,255,255,0.3)',
+                                        borderRadius: '0.5rem',
+                                        height: '100px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'rgba(255,255,255,0.5)',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => alert('Fonctionnalité de signature à venir')}
+                                >
+                                    ✍️ Cliquer pour signer
+                                </div>
+                            </div>
                         </div>
                     </section>
 

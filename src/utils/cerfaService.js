@@ -199,11 +199,24 @@ export const fillCerfa15497 = async (data) => {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
                         field.check();
-                        logger.log(`[CERFA] Coché: ${fieldName}`);
+                        console.log(`[CERFA] ✓ Coché: ${fieldName}`);
                     }
                 }
             } catch (e) {
-                logger.log(`[CERFA] Checkbox non trouvée: ${fieldName}`);
+                console.log(`[CERFA] ✗ Checkbox non trouvée: ${fieldName}`);
+            }
+        };
+
+        // Helper pour sélectionner un bouton radio
+        const selectRadio = (groupName, optionValue) => {
+            try {
+                const radioGroup = form.getRadioGroup(groupName);
+                if (radioGroup && optionValue) {
+                    radioGroup.select(optionValue);
+                    console.log(`[CERFA] ✓ Radio: ${groupName} = "${optionValue}"`);
+                }
+            } catch (e) {
+                console.log(`[CERFA] ✗ Radio non trouvé: ${groupName} - ${e.message}`);
             }
         };
 
@@ -258,6 +271,13 @@ export const fillCerfa15497 = async (data) => {
         // Détecteur
         fillTextField('Detecteur_ID', data.detecteurId || '');
 
+        // Système permanent de détection de fuites (radio Bouton_Oui: "1" = OUI, "2" = NON)
+        if (data.systemeDetectionPermanent === 'oui') {
+            selectRadio('Bouton_Oui', '1');
+        } else if (data.systemeDetectionPermanent === 'non') {
+            selectRadio('Bouton_Oui', '2');
+        }
+
         // Date du contrôle
         const dateIntervention = data.dateIntervention || data.maintenanceDate || new Date().toLocaleDateString('fr-FR');
         const dateParts = dateIntervention.split('/');
@@ -295,18 +315,21 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Avec_12m', data.frequenceControle === 'avec_12m');
         checkBox('Case_Avec_6m', data.frequenceControle === 'avec_6m');
 
-        // Localisation des fuites - Support CerfaPage (fuiteLocalisation) et CerfaGeneratorModal
+        // Localisation des fuites - Support CerfaPage (fuiteLocalisation, fuiteLocalisation2, fuiteLocalisation3) et CerfaGeneratorModal
+        // Fuite 1
         fillTextField('Fuite_Loca_1', data.fuiteLoca1 || data.fuiteLocalisation || data.localisationFuite1 || '');
         checkBox('Case_Rep_Fuite1_realisee', data.reparationFuite1Realisee || data.fuiteReparation === 'oui');
         checkBox('Case_Rep_Fuite1_AFaire', data.reparationFuite1AFaire || data.fuiteReparation === 'non');
 
-        fillTextField('Fuite_Loca_2', data.fuiteLoca2 || data.localisationFuite2 || '');
-        checkBox('Case_Rep_Fuite2_realisee', data.reparationFuite2Realisee);
-        checkBox('Case_Rep_Fuite2_AFaire', data.reparationFuite2AFaire);
+        // Fuite 2
+        fillTextField('Fuite_Loca_2', data.fuiteLoca2 || data.fuiteLocalisation2 || data.localisationFuite2 || '');
+        checkBox('Case_Rep_Fuite2_realisee', data.reparationFuite2Realisee || data.fuiteReparation2 === 'oui');
+        checkBox('Case_Rep_Fuite2_AFaire', data.reparationFuite2AFaire || data.fuiteReparation2 === 'non');
 
-        fillTextField('Fuite_Loca_3', data.fuiteLoca3 || data.localisationFuite3 || '');
-        checkBox('Case_Rep_Fuite3_realisee', data.reparationFuite3Realisee);
-        checkBox('Case_Rep_Fuite3_AFaire', data.reparationFuite3AFaire);
+        // Fuite 3
+        fillTextField('Fuite_Loca_3', data.fuiteLoca3 || data.fuiteLocalisation3 || data.localisationFuite3 || '');
+        checkBox('Case_Rep_Fuite3_realisee', data.reparationFuite3Realisee || data.fuiteReparation3 === 'oui');
+        checkBox('Case_Rep_Fuite3_AFaire', data.reparationFuite3AFaire || data.fuiteReparation3 === 'non');
 
         // Quantités de fluide (section 11) - Support CerfaPage (fluideXxx) et CerfaGeneratorModal
         fillTextField('11_Quantite', data.quantiteFluide || data.fluideChargeInitiale || '');
@@ -341,13 +364,13 @@ export const fillCerfa15497 = async (data) => {
         // Signature opérateur
         const operateurNom = data.technicianName || data.intervenantNom || data.companyName || '';
         fillTextField('Sign_Operateur_Nom', operateurNom);
-        fillTextField('Sign_Operateur_Qualite', data.technicianQualite || data.qualification || 'Technicien');
+        fillTextField('Sign_Operateur_Qualite', data.technicianQualite || data.intervenantQualite || data.qualification || 'Technicien');
         fillTextField('Sign_Operateur_Date', data.date || dateIntervention);
 
         // Signature détenteur/client
         const detenteurNom = data.clientSignatureName || data.detenteurNom || `${data.clientFirstName || ''} ${data.clientName || ''}`.trim();
         fillTextField('Sign_Detenteur_Nom', detenteurNom);
-        fillTextField('Sign_Detenteur_Qualite', data.clientQualite || 'Propriétaire');
+        fillTextField('Sign_Detenteur_Qualite', data.clientQualite || data.detenteurQualite || 'Propriétaire');
         fillTextField('Sign_Detenteur_Date', data.clientSignatureDate || data.date || dateIntervention);
 
         // Aplatir le formulaire pour figer les données
