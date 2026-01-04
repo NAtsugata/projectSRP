@@ -239,6 +239,30 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Fuite_Oui', data.fuiteDetectee === 'oui' || data.fuiteDetectee === true);
         checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false);
 
+        // Catégorie de fluide et seuils (cases à cocher section 6)
+        // HCFC
+        checkBox('Case_HCFC_2', data.categorie === 'HCFC_2');
+        checkBox('Case_HCFC_30', data.categorie === 'HCFC_30');
+        checkBox('Case_HCFC_300', data.categorie === 'HCFC_300');
+        // HFC
+        checkBox('Case_HFC_5', data.categorie === 'HFC_5');
+        checkBox('Case_HFC_50', data.categorie === 'HFC_50');
+        checkBox('Case_HFC_500', data.categorie === 'HFC_500');
+        // HFO
+        checkBox('Case_HFO_1', data.categorie === 'HFO_1');
+        checkBox('Case_HFO_10', data.categorie === 'HFO_10');
+        checkBox('Case_HFO_100', data.categorie === 'HFO_100');
+
+        // Fréquence de contrôle d'étanchéité (section 7)
+        // Sans système de détection
+        checkBox('Case_Sans_12m', data.frequenceControle === 'sans_12m');
+        checkBox('Case_Sans_6m', data.frequenceControle === 'sans_6m');
+        checkBox('Case_Sans_3m', data.frequenceControle === 'sans_3m');
+        // Avec système de détection
+        checkBox('Case_Avec_24m', data.frequenceControle === 'avec_24m');
+        checkBox('Case_Avec_12m', data.frequenceControle === 'avec_12m');
+        checkBox('Case_Avec_6m', data.frequenceControle === 'avec_6m');
+
         // Localisation des fuites
         fillTextField('Fuite_Loca_1', data.fuiteLoca1 || data.localisationFuite1 || '');
         checkBox('Case_Rep_Fuite1_realisee', data.reparationFuite1Realisee);
@@ -263,6 +287,16 @@ export const fillCerfa15497 = async (data) => {
         fillTextField('11_BSFF', data.bsffNumber || '');
         fillTextField('11_QE', data.quantiteE || '');
         fillTextField('11_Contenant_ID', data.contenantId || '');
+
+        // Classification des déchets (section 12)
+        // Fluides non inflammables
+        checkBox('Case_12_UN1078', data.dechetUN1078);
+        checkBox('Case_12_Autre140601', data.dechetAutre140601);
+        fillTextField('Autre-FF-NON-inflammable', data.autreDechetNonInflammable || '');
+        // Fluides inflammables
+        checkBox('Case_12_UN3161', data.dechetUN3161);
+        checkBox('Case_12_Autre160504', data.dechetAutre160504);
+        fillTextField('Autre-FF-inflammable', data.autreDechetInflammable || '');
 
         // Installation (section 13)
         fillTextField('13_Instal', data.installationInfo || data.emplacement || data.equipmentLocation || '');

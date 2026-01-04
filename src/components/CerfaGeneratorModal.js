@@ -465,6 +465,54 @@ function CerfaGeneratorModal({
                                     placeholder="Numéro du détecteur"
                                 />
                             </div>
+
+                            <h4>Catégorie de fluide (seuils de charge)</h4>
+                            <div className="cerfa-form-group">
+                                <label>Catégorie</label>
+                                <select
+                                    value={formData.categorie || ''}
+                                    onChange={(e) => handleChange('categorie', e.target.value)}
+                                >
+                                    <option value="">Sélectionner la catégorie...</option>
+                                    <optgroup label="HCFC (interdit depuis 2015)">
+                                        <option value="HCFC_2">HCFC ≥ 2 kg</option>
+                                        <option value="HCFC_30">HCFC ≥ 30 kg</option>
+                                        <option value="HCFC_300">HCFC ≥ 300 kg</option>
+                                    </optgroup>
+                                    <optgroup label="HFC">
+                                        <option value="HFC_5">HFC ≥ 5 t éq. CO2</option>
+                                        <option value="HFC_50">HFC ≥ 50 t éq. CO2</option>
+                                        <option value="HFC_500">HFC ≥ 500 t éq. CO2</option>
+                                    </optgroup>
+                                    <optgroup label="HFO">
+                                        <option value="HFO_1">HFO ≥ 1 kg</option>
+                                        <option value="HFO_10">HFO ≥ 10 kg</option>
+                                        <option value="HFO_100">HFO ≥ 100 kg</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <h4>Fréquence de contrôle d'étanchéité</h4>
+                            <div className="cerfa-form-group">
+                                <label>Périodicité</label>
+                                <select
+                                    value={formData.frequenceControle || ''}
+                                    onChange={(e) => handleChange('frequenceControle', e.target.value)}
+                                >
+                                    <option value="">Sélectionner...</option>
+                                    <optgroup label="Sans système de détection">
+                                        <option value="sans_12m">Tous les 12 mois</option>
+                                        <option value="sans_6m">Tous les 6 mois</option>
+                                        <option value="sans_3m">Tous les 3 mois</option>
+                                    </optgroup>
+                                    <optgroup label="Avec système de détection">
+                                        <option value="avec_24m">Tous les 24 mois</option>
+                                        <option value="avec_12m">Tous les 12 mois</option>
+                                        <option value="avec_6m">Tous les 6 mois</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
                             <label className="cerfa-checkbox">
                                 <input
                                     type="checkbox"
@@ -784,6 +832,73 @@ function CerfaGeneratorModal({
                                     onChange={(e) => handleChange('contenantId', e.target.value)}
                                     placeholder="Identification du contenant"
                                 />
+                            </div>
+
+                            <h4>Classification des déchets (Section 12)</h4>
+                            <p className="cerfa-section-info">
+                                Classification du fluide récupéré selon le règlement ADR
+                            </p>
+
+                            <div className="cerfa-form-group">
+                                <label>Fluides NON inflammables</label>
+                                <div className="cerfa-checkboxes">
+                                    <label className="cerfa-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.dechetUN1078 || false}
+                                            onChange={() => handleCheckbox('dechetUN1078')}
+                                        />
+                                        <span>UN 1078 - Gaz frigorifique NSA</span>
+                                    </label>
+                                    <label className="cerfa-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.dechetAutre140601 || false}
+                                            onChange={() => handleCheckbox('dechetAutre140601')}
+                                        />
+                                        <span>Autre (code 14 06 01*)</span>
+                                    </label>
+                                </div>
+                                {formData.dechetAutre140601 && (
+                                    <input
+                                        type="text"
+                                        value={formData.autreDechetNonInflammable || ''}
+                                        onChange={(e) => handleChange('autreDechetNonInflammable', e.target.value)}
+                                        placeholder="Préciser le code déchet"
+                                        style={{ marginTop: '0.5rem' }}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="cerfa-form-group">
+                                <label>Fluides inflammables</label>
+                                <div className="cerfa-checkboxes">
+                                    <label className="cerfa-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.dechetUN3161 || false}
+                                            onChange={() => handleCheckbox('dechetUN3161')}
+                                        />
+                                        <span>UN 3161 - Gaz liquéfié inflammable NSA</span>
+                                    </label>
+                                    <label className="cerfa-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.dechetAutre160504 || false}
+                                            onChange={() => handleCheckbox('dechetAutre160504')}
+                                        />
+                                        <span>Autre (code 16 05 04*)</span>
+                                    </label>
+                                </div>
+                                {formData.dechetAutre160504 && (
+                                    <input
+                                        type="text"
+                                        value={formData.autreDechetInflammable || ''}
+                                        onChange={(e) => handleChange('autreDechetInflammable', e.target.value)}
+                                        placeholder="Préciser le code déchet"
+                                        style={{ marginTop: '0.5rem' }}
+                                    />
+                                )}
                             </div>
                         </section>
                     )}
