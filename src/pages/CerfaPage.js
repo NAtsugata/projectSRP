@@ -11,7 +11,9 @@ import {
     downloadCerfa,
     getCompanyInfo,
     saveCompanyInfo,
-    saveGenerationRecord
+    saveGenerationRecord,
+    getCurrentFicheInfo,
+    resetFicheCounter
 } from '../utils/cerfaService';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
@@ -184,6 +186,13 @@ function CerfaPage() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
+    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [showAdminReset, setShowAdminReset] = useState(false);
+
+    // Rafraîchir le numéro de fiche après génération
+    const refreshFicheInfo = useCallback(() => {
+        setFicheInfo(getCurrentFicheInfo());
+    }, []);
 
     // Calcul automatique du teqCO2 basé sur le fluide et la charge
     const calculatedTeqCO2 = useMemo(() => {
@@ -307,13 +316,24 @@ function CerfaPage() {
             });
 
             showToast('CERFA généré avec succès !', 'success');
+            refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche
         } catch (error) {
             console.error('Erreur génération CERFA:', error);
             showToast(`Erreur: ${error.message}`, 'error');
         } finally {
             setIsGenerating(false);
         }
-    }, [formData, calculatedTeqCO2, totaux, controlFrequency, fluidCategory, showToast]);
+    }, [formData, calculatedTeqCO2, totaux, controlFrequency, fluidCategory, showToast, refreshFicheInfo]);
+
+    // Réinitialiser le compteur (admin)
+    const handleResetCounter = useCallback(() => {
+        if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA à 0 ?')) {
+            resetFicheCounter(0);
+            refreshFicheInfo();
+            showToast('Compteur réinitialisé', 'success');
+            setShowAdminReset(false);
+        }
+    }, [refreshFicheInfo, showToast]);
 
     return (
         <div className="cerfa-page">
@@ -334,7 +354,75 @@ function CerfaPage() {
                             <p>Fiche d'intervention - Fluides frigorigènes</p>
                         </div>
                     </div>
+                    {/* Numéro de fiche */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '0.25rem'
+                    }}>
+                        <div style={{
+                            background: 'rgba(33, 150, 243, 0.2)',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.9rem'
+                        }}>
+                            <span style={{ opacity: 0.7 }}>Prochaine fiche: </span>
+                            <strong style={{ color: '#2196F3' }}>
+                                CERFA-{ficheInfo.year}-{String(ficheInfo.nextNumber).padStart(4, '0')}
+                            </strong>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowAdminReset(!showAdminReset)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.4)',
+                                fontSize: '0.7rem',
+                                cursor: 'pointer',
+                                padding: '0.25rem'
+                            }}
+                        >
+                            ⚙️ Admin
+                        </button>
+                    </div>
                 </div>
+
+                {/* Admin: Réinitialiser le compteur */}
+                {showAdminReset && (
+                    <div style={{
+                        background: 'rgba(244, 67, 54, 0.1)',
+                        border: '1px solid rgba(244, 67, 54, 0.3)',
+                        borderRadius: '0.5rem',
+                        padding: '1rem',
+                        marginBottom: '1rem'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <strong style={{ color: '#f44336' }}>Administration</strong>
+                                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', opacity: 0.7 }}>
+                                    Compteur actuel: {ficheInfo.count} fiches générées en {ficheInfo.year}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleResetCounter}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: 'rgba(244, 67, 54, 0.8)',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                🔄 Réinitialiser à 0
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Body */}
                 <div className="cerfa-page-body">

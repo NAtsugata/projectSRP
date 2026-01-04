@@ -32,6 +32,80 @@ const DEFAULT_COMPANY_INFO = {
 
 const STORAGE_KEY_COMPANY = 'cerfa_company_info';
 const STORAGE_KEY_HISTORY = 'cerfa_generation_history';
+const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
+
+// =============================
+// NUMÉROTATION DES FICHES
+// =============================
+
+/**
+ * Récupère le prochain numéro de fiche CERFA
+ * Format: CERFA-YYYY-NNNN (ex: CERFA-2026-0001)
+ * @returns {string} Numéro de fiche formaté
+ */
+export const getNextFicheNumber = () => {
+    try {
+        const currentYear = new Date().getFullYear();
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
+
+        // Réinitialiser le compteur si on change d'année
+        if (stored.year !== currentYear) {
+            stored.year = currentYear;
+            stored.count = 0;
+        }
+
+        // Incrémenter le compteur
+        stored.count = (stored.count || 0) + 1;
+        localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(stored));
+
+        // Formater le numéro (CERFA-2026-0001)
+        const paddedCount = String(stored.count).padStart(4, '0');
+        return `CERFA-${currentYear}-${paddedCount}`;
+    } catch (e) {
+        console.error('Erreur génération numéro fiche:', e);
+        return `CERFA-${Date.now()}`;
+    }
+};
+
+/**
+ * Récupère le numéro actuel sans incrémenter
+ * @returns {Object} { year, count, formatted }
+ */
+export const getCurrentFicheInfo = () => {
+    try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
+        const year = stored.year || new Date().getFullYear();
+        const count = stored.count || 0;
+        const paddedCount = String(count).padStart(4, '0');
+        return {
+            year,
+            count,
+            formatted: `CERFA-${year}-${paddedCount}`,
+            nextNumber: count + 1
+        };
+    } catch (e) {
+        return { year: new Date().getFullYear(), count: 0, formatted: 'CERFA-0000', nextNumber: 1 };
+    }
+};
+
+/**
+ * Réinitialise le compteur de fiches (admin uniquement)
+ * @param {number} startNumber - Numéro de départ (défaut: 0)
+ * @returns {boolean} Succès
+ */
+export const resetFicheCounter = (startNumber = 0) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify({
+            year: currentYear,
+            count: startNumber
+        }));
+        return true;
+    } catch (e) {
+        console.error('Erreur réinitialisation compteur:', e);
+        return false;
+    }
+};
 
 // =============================
 // COMPANY INFO MANAGEMENT
@@ -143,6 +217,10 @@ export const inspectCerfaFields = async () => {
  */
 export const fillCerfa15497 = async (data) => {
     try {
+        // Générer le numéro de fiche automatiquement
+        const ficheNumber = data.ficheNo || getNextFicheNumber();
+        console.log('[CERFA] Numéro de fiche:', ficheNumber);
+
         // Debug: Log all input data
         console.log('[CERFA] === Données reçues ===');
         console.log('[CERFA] fluide:', data.fluide);
@@ -223,7 +301,7 @@ export const fillCerfa15497 = async (data) => {
         // ===== REMPLISSAGE DES CHAMPS =====
 
         // Numéro de fiche
-        fillTextField('Fiche_no', data.ficheNo || '');
+        fillTextField('Fiche_no', ficheNumber);
 
         // Opérateur / Intervenant - Support CerfaPage (intervenantXxx) et CerfaGeneratorModal (companyXxx)
         const operateurInfo = [
@@ -481,14 +559,14 @@ export const fillCerfa15497 = async (data) => {
         // La signature va à droite du texte de date (après "04/01/2026")
 
         // Signature opérateur (dans le champ date, à droite du texte)
-        // Date texte ~60px, donc signature commence à x=190
+        // Zone plus large pour meilleure lisibilité
         if (data.signatureOperateur) {
-            await embedSignature(data.signatureOperateur, 195, 45, 140, 17);
+            await embedSignature(data.signatureOperateur, 180, 43, 155, 20);
         }
 
         // Signature détenteur (dans le champ date détenteur, à droite du texte)
         if (data.signatureDetenteur) {
-            await embedSignature(data.signatureDetenteur, 415, 44, 140, 17);
+            await embedSignature(data.signatureDetenteur, 400, 42, 155, 20);
         }
 
         // Générer le PDF
