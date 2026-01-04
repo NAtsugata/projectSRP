@@ -483,12 +483,12 @@ export const fillCerfa15497 = async (data) => {
         // Signature opérateur (dans le champ date, à droite du texte)
         // Date texte ~60px, donc signature commence à x=190
         if (data.signatureOperateur) {
-            await embedSignature(data.signatureOperateur, 200, 45, 130, 17);
+            await embedSignature(data.signatureOperateur, 195, 45, 140, 17);
         }
 
         // Signature détenteur (dans le champ date détenteur, à droite du texte)
         if (data.signatureDetenteur) {
-            await embedSignature(data.signatureDetenteur, 420, 44, 130, 17);
+            await embedSignature(data.signatureDetenteur, 415, 44, 140, 17);
         }
 
         // Générer le PDF
