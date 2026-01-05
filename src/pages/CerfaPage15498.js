@@ -145,8 +145,51 @@ function CerfaPage15498() {
         }
     }, [formData, showToast]);
 
+    // Validation des champs obligatoires
+    const validateForm = useCallback(() => {
+        const errors = [];
+
+        // Acquéreur - obligatoire
+        if (!formData.acq_nom?.trim()) {
+            errors.push('Nom de l\'acquéreur obligatoire');
+        }
+        if (!formData.acq_voie?.trim() && !formData.acq_lieu?.trim()) {
+            errors.push('Adresse de l\'acquéreur obligatoire (voie ou lieu-dit)');
+        }
+        if (!formData.acq_postal?.trim()) {
+            errors.push('Code postal de l\'acquéreur obligatoire');
+        }
+        if (!formData.acq_commune?.trim()) {
+            errors.push('Commune de l\'acquéreur obligatoire');
+        }
+
+        // Installateur - obligatoire
+        if (!formData.inst_raison?.trim()) {
+            errors.push('Raison sociale de l\'installateur obligatoire');
+        }
+
+        // Signature acquéreur obligatoire
+        if (!formData.signatureAcquereur) {
+            errors.push('Signature de l\'acquéreur obligatoire');
+        }
+
+        // Signature installateur obligatoire
+        if (!formData.signatureInstallateur) {
+            errors.push('Signature de l\'installateur obligatoire');
+        }
+
+        return errors;
+    }, [formData]);
+
     // Générer le CERFA
     const handleGenerate = useCallback(async () => {
+        // Valider le formulaire
+        const errors = validateForm();
+        if (errors.length > 0) {
+            showToast(errors[0], 'error');
+            return;
+        }
+
         setIsGenerating(true);
         try {
             // Générer le numéro de fiche
@@ -208,7 +251,7 @@ function CerfaPage15498() {
         } finally {
             setIsGenerating(false);
         }
-    }, [formData, showToast, refreshFicheInfo]);
+    }, [formData, showToast, refreshFicheInfo, validateForm]);
 
     // Réinitialiser le compteur (admin)
     const handleResetCounter = useCallback(() => {
@@ -353,7 +396,7 @@ function CerfaPage15498() {
 
                     {/* Section 1: ACQUÉREUR */}
                     <section className="cerfa-section">
-                        <h3>👤 1. ACQUÉREUR (Client)</h3>
+                        <h3>👤 1. ACQUÉREUR (Client) <span style={{ color: '#f44336', fontSize: '0.8rem' }}>* obligatoire</span></h3>
                         <div className="cerfa-form-group">
                             <label>Nom / Raison sociale *</label>
                             <input
@@ -361,6 +404,8 @@ function CerfaPage15498() {
                                 value={formData.acq_nom}
                                 onChange={(e) => handleChange('acq_nom', e.target.value)}
                                 placeholder="Nom du client ou société"
+                                required
+                                style={{ borderColor: !formData.acq_nom?.trim() ? 'rgba(244, 67, 54, 0.5)' : undefined }}
                             />
                         </div>
                         <div className="cerfa-form-row">
@@ -374,12 +419,13 @@ function CerfaPage15498() {
                                 />
                             </div>
                             <div className="cerfa-form-group" style={{ flex: 2 }}>
-                                <label>Voie</label>
+                                <label>Voie *</label>
                                 <input
                                     type="text"
                                     value={formData.acq_voie}
                                     onChange={(e) => handleChange('acq_voie', e.target.value)}
                                     placeholder="Rue, avenue..."
+                                    style={{ borderColor: !formData.acq_voie?.trim() && !formData.acq_lieu?.trim() ? 'rgba(244, 67, 54, 0.5)' : undefined }}
                                 />
                             </div>
                         </div>
@@ -393,31 +439,34 @@ function CerfaPage15498() {
                             />
                         </div>
                         <div className="cerfa-form-group">
-                            <label>Lieu-dit</label>
+                            <label>Lieu-dit {!formData.acq_voie?.trim() ? '*' : ''}</label>
                             <input
                                 type="text"
                                 value={formData.acq_lieu}
                                 onChange={(e) => handleChange('acq_lieu', e.target.value)}
                                 placeholder="Lieu-dit"
+                                style={{ borderColor: !formData.acq_voie?.trim() && !formData.acq_lieu?.trim() ? 'rgba(244, 67, 54, 0.5)' : undefined }}
                             />
                         </div>
                         <div className="cerfa-form-row">
                             <div className="cerfa-form-group">
-                                <label>Code postal</label>
+                                <label>Code postal *</label>
                                 <input
                                     type="text"
                                     value={formData.acq_postal}
                                     onChange={(e) => handleChange('acq_postal', e.target.value)}
                                     placeholder="75000"
+                                    style={{ borderColor: !formData.acq_postal?.trim() ? 'rgba(244, 67, 54, 0.5)' : undefined }}
                                 />
                             </div>
                             <div className="cerfa-form-group" style={{ flex: 2 }}>
-                                <label>Commune</label>
+                                <label>Commune *</label>
                                 <input
                                     type="text"
                                     value={formData.acq_commune}
                                     onChange={(e) => handleChange('acq_commune', e.target.value)}
                                     placeholder="Paris"
+                                    style={{ borderColor: !formData.acq_commune?.trim() ? 'rgba(244, 67, 54, 0.5)' : undefined }}
                                 />
                             </div>
                         </div>
@@ -612,7 +661,7 @@ function CerfaPage15498() {
 
                     {/* Section 3: DISTRIBUTEUR */}
                     <section className="cerfa-section">
-                        <h3>🏭 3. DISTRIBUTEUR</h3>
+                        <h3>🏭 3. DISTRIBUTEUR <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>(optionnel)</span></h3>
                         <div className="cerfa-form-group">
                             <label>Raison sociale</label>
                             <input
@@ -768,9 +817,16 @@ function CerfaPage15498() {
                         <h3>✍️ 5. SIGNATURES</h3>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                            {/* Signature Acquéreur */}
-                            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
-                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.9)' }}>👤 Acquéreur</h4>
+                            {/* Signature Acquéreur - OBLIGATOIRE */}
+                            <div style={{
+                                padding: '1rem',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '0.5rem',
+                                border: !formData.signatureAcquereur ? '1px solid rgba(244, 67, 54, 0.3)' : '1px solid transparent'
+                            }}>
+                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.9)' }}>
+                                    👤 Acquéreur <span style={{ color: '#f44336', fontSize: '0.75rem' }}>*</span>
+                                </h4>
                                 <div className="cerfa-form-group">
                                     <label>Nom</label>
                                     <input
@@ -781,7 +837,7 @@ function CerfaPage15498() {
                                     />
                                 </div>
                                 <div className="cerfa-form-group">
-                                    <label>Signature</label>
+                                    <label>Signature *</label>
                                     <SignaturePad
                                         onSave={(dataUrl) => handleChange('signatureAcquereur', dataUrl)}
                                         initialValue={formData.signatureAcquereur}
@@ -791,9 +847,16 @@ function CerfaPage15498() {
                                 </div>
                             </div>
 
-                            {/* Signature Installateur */}
-                            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
-                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.9)' }}>🔧 Installateur</h4>
+                            {/* Signature Installateur - OBLIGATOIRE */}
+                            <div style={{
+                                padding: '1rem',
+                                background: 'rgba(255,255,255,0.05)',
+                                borderRadius: '0.5rem',
+                                border: !formData.signatureInstallateur ? '1px solid rgba(244, 67, 54, 0.3)' : '1px solid transparent'
+                            }}>
+                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.9)' }}>
+                                    🔧 Installateur <span style={{ color: '#f44336', fontSize: '0.75rem' }}>*</span>
+                                </h4>
                                 <div className="cerfa-form-group">
                                     <label>Nom</label>
                                     <input
@@ -804,7 +867,7 @@ function CerfaPage15498() {
                                     />
                                 </div>
                                 <div className="cerfa-form-group">
-                                    <label>Signature</label>
+                                    <label>Signature *</label>
                                     <SignaturePad
                                         onSave={(dataUrl) => handleChange('signatureInstallateur', dataUrl)}
                                         initialValue={formData.signatureInstallateur}
@@ -814,9 +877,11 @@ function CerfaPage15498() {
                                 </div>
                             </div>
 
-                            {/* Signature Distributeur */}
-                            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
-                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.9)' }}>🏭 Distributeur</h4>
+                            {/* Signature Distributeur - OPTIONNEL */}
+                            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', opacity: 0.8 }}>
+                                <h4 style={{ marginBottom: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                                    🏭 Distributeur <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>(optionnel)</span>
+                                </h4>
                                 <div className="cerfa-form-group">
                                     <label>Nom</label>
                                     <input
