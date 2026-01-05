@@ -740,16 +740,18 @@ export const fillCerfa15498 = async (data) => {
             }
         };
 
-        // Intégrer les signatures - positions approximatives pour le CERFA 15498
-        // Ces positions devront être ajustées après test avec le PDF réel
+        // Intégrer les signatures - positions exactes depuis les champs PDF
+        // sig_acq_box: x=90.0, y=64.4, w=119.4, h=25.4
+        // sig_inst_box: x=265.6, y=63.2, w=117.5, h=26.6
+        // sig_dist_box: x=440.0, y=62.5, w=113.1, h=27.2
         if (data.signatureAcquereur) {
-            await embedSignature(data.signatureAcquereur, 80, 100, 120, 40);
+            await embedSignature(data.signatureAcquereur, 90, 64, 119, 25);
         }
         if (data.signatureInstallateur) {
-            await embedSignature(data.signatureInstallateur, 250, 100, 120, 40);
+            await embedSignature(data.signatureInstallateur, 266, 63, 117, 27);
         }
         if (data.signatureDistributeur) {
-            await embedSignature(data.signatureDistributeur, 420, 100, 120, 40);
+            await embedSignature(data.signatureDistributeur, 440, 62, 113, 27);
         }
 
         // Générer le PDF
