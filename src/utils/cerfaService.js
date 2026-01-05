@@ -6,8 +6,9 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
 
-// Importer le PDF comme asset (Webpack le gère automatiquement)
+// Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
+import cerfa15498PdfAsset from '../assets/cerfa_15498.pdf';
 
 // =============================
 // CONSTANTS
@@ -576,6 +577,188 @@ export const fillCerfa15497 = async (data) => {
         return new Blob([filledPdfBytes], { type: 'application/pdf' });
     } catch (e) {
         console.error('Erreur remplissage CERFA:', e);
+        throw e;
+    }
+};
+
+// =============================
+// CERFA 15498 - Attestation d'acquisition de fluides frigorigènes
+// =============================
+
+/**
+ * Remplit le CERFA 15498 (Attestation d'acquisition de fluides frigorigènes)
+ * @param {Object} data - Données pour remplir le formulaire
+ * @returns {Promise<Blob>} PDF rempli en Blob
+ */
+export const fillCerfa15498 = async (data) => {
+    try {
+        // Utiliser le numéro de fiche fourni
+        const ficheNumber = data.ficheNo || data.ficheNumber || '';
+        console.log('[CERFA 15498] Numéro de fiche:', ficheNumber);
+
+        // Charger le PDF template
+        console.log('[CERFA 15498] Chargement du PDF depuis:', cerfa15498PdfAsset);
+
+        let pdfResponse = await fetch(cerfa15498PdfAsset);
+
+        if (!pdfResponse.ok) {
+            // Fallback: essayer depuis le dossier public
+            console.warn('[CERFA 15498] Asset non trouvé, tentative depuis /cerfa/...');
+            const fallbackPath = `${window.location.origin}/cerfa/CERFA_15498_Interactif_V2_PRO.pdf`;
+            pdfResponse = await fetch(fallbackPath);
+            if (!pdfResponse.ok) {
+                throw new Error(`Impossible de charger le formulaire CERFA 15498 (${pdfResponse.status})`);
+            }
+        }
+
+        console.log('[CERFA 15498] PDF chargé avec succès');
+        const pdfBytes = await pdfResponse.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const form = pdfDoc.getForm();
+
+        // Helper pour remplir un champ texte de manière sécurisée
+        const fillTextField = (fieldName, value) => {
+            try {
+                const field = form.getTextField(fieldName);
+                if (field) {
+                    const textValue = value ? String(value) : '';
+                    field.setText(textValue);
+                    if (textValue) {
+                        console.log(`[CERFA 15498] ✓ Rempli: ${fieldName} = "${textValue}"`);
+                    }
+                } else {
+                    console.log(`[CERFA 15498] ✗ Champ introuvable: ${fieldName}`);
+                }
+            } catch (e) {
+                console.log(`[CERFA 15498] ✗ Erreur ${fieldName}: ${e.message}`);
+            }
+        };
+
+        // Helper pour cocher une case
+        const checkBox = (fieldName, shouldCheck) => {
+            try {
+                if (shouldCheck) {
+                    const field = form.getCheckBox(fieldName);
+                    if (field) {
+                        field.check();
+                        console.log(`[CERFA 15498] ✓ Coché: ${fieldName}`);
+                    }
+                }
+            } catch (e) {
+                console.log(`[CERFA 15498] ✗ Checkbox non trouvée: ${fieldName}`);
+            }
+        };
+
+        // ===== REMPLISSAGE DES CHAMPS =====
+
+        // ACQUÉREUR (Client)
+        fillTextField('acq_nom', data.acq_nom || '');
+        fillTextField('acq_num', data.acq_num || '');
+        fillTextField('acq_voie', data.acq_voie || '');
+        fillTextField('acq_compl', data.acq_compl || '');
+        fillTextField('acq_lieu', data.acq_lieu || '');
+        fillTextField('acq_postal', data.acq_postal || '');
+        fillTextField('acq_commune', data.acq_commune || '');
+        fillTextField('acq_pays', data.acq_pays || 'France');
+        fillTextField('acq_ref', data.acq_ref || '');
+
+        // INSTALLATEUR (Intervenant)
+        fillTextField('inst_raison', data.inst_raison || '');
+        fillTextField('inst_service', data.inst_service || '');
+        fillTextField('inst_num', data.inst_num || '');
+        fillTextField('inst_voie', data.inst_voie || '');
+        fillTextField('inst_lieu', data.inst_lieu || '');
+        fillTextField('inst_postal', data.inst_postal || '');
+        fillTextField('inst_commune', data.inst_commune || '');
+        fillTextField('inst_pays', data.inst_pays || 'France');
+        fillTextField('inst_siret', data.inst_siret || '');
+        fillTextField('inst_attestation', data.inst_attestation || '');
+        fillTextField('inst_contact', data.inst_contact || '');
+        fillTextField('inst_tel', data.inst_tel || '');
+        fillTextField('inst_fax', data.inst_fax || '');
+        fillTextField('inst_email', data.inst_email || '');
+        fillTextField('inst_ref', data.inst_ref || '');
+
+        // DISTRIBUTEUR
+        fillTextField('dist_raison', data.dist_raison || '');
+        fillTextField('dist_service', data.dist_service || '');
+        fillTextField('dist_num', data.dist_num || '');
+        fillTextField('dist_voie', data.dist_voie || '');
+        fillTextField('dist_lieu', data.dist_lieu || '');
+        fillTextField('dist_postal', data.dist_postal || '');
+        fillTextField('dist_commune', data.dist_commune || '');
+        fillTextField('dist_pays', data.dist_pays || 'France');
+        fillTextField('dist_siret', data.dist_siret || '');
+        fillTextField('dist_tel', data.dist_tel || '');
+        fillTextField('dist_fax', data.dist_fax || '');
+        fillTextField('dist_email', data.dist_email || '');
+
+        // Type d'équipement (checkboxes)
+        checkBox('climatisation', data.climatisation);
+        checkBox('pompe', data.pompe);
+        checkBox('hfc', data.hfc);
+        checkBox('pfc', data.pfc);
+
+        // Période et détails
+        fillTextField('periode', data.periode || '');
+        fillTextField('details', data.details || '');
+
+        // Signatures
+        fillTextField('sig_acq', data.sig_acq || '');
+        fillTextField('sig_inst', data.sig_inst || '');
+        fillTextField('sig_dist', data.sig_dist || '');
+
+        // Aplatir le formulaire pour figer les données
+        form.flatten();
+
+        // ===== INTÉGRATION DES SIGNATURES (après flatten) =====
+        const pages = pdfDoc.getPages();
+        const page = pages[0];
+
+        // Helper pour intégrer une signature image
+        const embedSignature = async (signatureDataUrl, x, y, maxWidth, maxHeight) => {
+            if (!signatureDataUrl || !signatureDataUrl.startsWith('data:image/png')) {
+                return;
+            }
+            try {
+                const base64Data = signatureDataUrl.split(',')[1];
+                const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                const signatureImage = await pdfDoc.embedPng(imageBytes);
+                const { width: imgWidth, height: imgHeight } = signatureImage;
+                const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+                page.drawImage(signatureImage, {
+                    x: x,
+                    y: y,
+                    width: scaledWidth,
+                    height: scaledHeight,
+                });
+                console.log(`[CERFA 15498] ✓ Signature intégrée à x=${x}, y=${y}`);
+            } catch (e) {
+                console.warn('[CERFA 15498] ✗ Erreur intégration signature:', e.message);
+            }
+        };
+
+        // Intégrer les signatures - positions approximatives pour le CERFA 15498
+        // Ces positions devront être ajustées après test avec le PDF réel
+        if (data.signatureAcquereur) {
+            await embedSignature(data.signatureAcquereur, 80, 100, 120, 40);
+        }
+        if (data.signatureInstallateur) {
+            await embedSignature(data.signatureInstallateur, 250, 100, 120, 40);
+        }
+        if (data.signatureDistributeur) {
+            await embedSignature(data.signatureDistributeur, 420, 100, 120, 40);
+        }
+
+        // Générer le PDF
+        const filledPdfBytes = await pdfDoc.save();
+
+        // Créer et retourner le Blob
+        return new Blob([filledPdfBytes], { type: 'application/pdf' });
+    } catch (e) {
+        console.error('Erreur remplissage CERFA 15498:', e);
         throw e;
     }
 };

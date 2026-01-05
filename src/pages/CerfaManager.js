@@ -22,7 +22,13 @@ const CERFA_TEMPLATES = [
         path: '/cerfa-form',  // Formulaire HTML mobile-friendly
         pdfPath: '/cerfa/cerfa_15497-04.pdf'  // PDF pour référence
     },
-    // Ajouter d'autres templates ici
+    {
+        id: 'cerfa_15498',
+        name: 'CERFA 15498',
+        description: 'Attestation d\'acquisition de fluides frigorigènes',
+        path: '/cerfa-form-15498',  // Formulaire HTML mobile-friendly
+        pdfPath: '/cerfa/CERFA_15498_Interactif_V2_PRO.pdf'  // PDF pour référence
+    },
 ];
 
 function CerfaManager() {
