@@ -217,8 +217,8 @@ export const inspectCerfaFields = async () => {
  */
 export const fillCerfa15497 = async (data) => {
     try {
-        // Générer le numéro de fiche automatiquement
-        const ficheNumber = data.ficheNo || getNextFicheNumber();
+        // Utiliser le numéro de fiche fourni (ne pas incrémenter ici, c'est fait dans CerfaPage)
+        const ficheNumber = data.ficheNo || data.ficheNumber || '';
         console.log('[CERFA] Numéro de fiche:', ficheNumber);
 
         // Debug: Log all input data

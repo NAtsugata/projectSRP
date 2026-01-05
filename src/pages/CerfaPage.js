@@ -13,8 +13,10 @@ import {
     saveCompanyInfo,
     saveGenerationRecord,
     getCurrentFicheInfo,
-    resetFicheCounter
+    resetFicheCounter,
+    getNextFicheNumber
 } from '../utils/cerfaService';
+import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 
@@ -288,9 +290,15 @@ function CerfaPage() {
     const handleGenerate = useCallback(async () => {
         setIsGenerating(true);
         try {
+            // Générer le numéro de fiche
+            const ficheNumber = getNextFicheNumber();
+            const clientName = (formData.detenteurNom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
+            const date = new Date().toISOString().split('T')[0];
+
             // Enrichir les données avec les calculs automatiques
             const enrichedData = {
                 ...formData,
+                ficheNo: ficheNumber,
                 teqCO2: calculatedTeqCO2,
                 quantiteChargeeTotal: totaux.charge,
                 quantiteRecupereeTotal: totaux.recupere,
@@ -302,20 +310,48 @@ function CerfaPage() {
             // Passer les données au service PDF
             const pdfBlob = await fillCerfa15497(enrichedData);
 
-            const clientName = (formData.detenteurNom || 'client').replace(/\s+/g, '_');
-            const date = new Date().toISOString().split('T')[0];
-            const filename = `CERFA_15497_${clientName}_${date}.pdf`;
+            // Nom du fichier avec numéro de fiche
+            const filename = `${ficheNumber}_${clientName}_${date}.pdf`;
 
+            // Télécharger le PDF
             downloadCerfa(pdfBlob, filename);
+
+            // Enregistrer dans Supabase Storage
+            try {
+                const filePath = `cerfa/${filename}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('cerfa-documents')
+                    .upload(filePath, pdfBlob, { upsert: true });
+
+                if (!uploadError) {
+                    // Enregistrer dans la base de données
+                    await supabase
+                        .from('cerfa_documents')
+                        .insert({
+                            numero: ficheNumber,
+                            template_name: 'CERFA 15497-04',
+                            file_path: filePath,
+                            file_name: filename,
+                            client_name: formData.detenteurNom || '',
+                            intervention_date: formData.dateIntervention || null,
+                            notes: formData.observations || ''
+                        });
+                    console.log('[CERFA] ✓ Document enregistré dans Supabase');
+                }
+            } catch (storageError) {
+                console.warn('[CERFA] ✗ Erreur enregistrement Supabase:', storageError.message);
+                // Continue même si l'enregistrement échoue
+            }
 
             saveGenerationRecord({
                 type: 'cerfa_15497',
                 sourceType: 'manual',
                 clientName: formData.detenteurNom,
-                filename
+                filename,
+                ficheNumber
             });
 
-            showToast('CERFA généré avec succès !', 'success');
+            showToast(`CERFA ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche
         } catch (error) {
             console.error('Erreur génération CERFA:', error);
