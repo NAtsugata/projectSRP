@@ -3,7 +3,7 @@
 // Gestionnaire de PDF CERFA
 // =============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -31,6 +31,33 @@ const CERFA_TEMPLATES = [
     },
 ];
 
+// Icône pour les groupes
+const ChevronDownIcon = ({ size = 18, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+);
+
+const UsersIcon = ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+);
+
+const ListIcon = ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+    </svg>
+);
+
 function CerfaManager() {
     const toast = useToast();
     const [documents, setDocuments] = useState([]);
@@ -47,6 +74,8 @@ function CerfaManager() {
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [editingNumero, setEditingNumero] = useState(null);
+    const [viewMode, setViewMode] = useState('clients'); // 'list' ou 'clients'
+    const [expandedClients, setExpandedClients] = useState({});
 
     // Charger les documents
     const loadDocuments = useCallback(async () => {
@@ -93,6 +122,66 @@ function CerfaManager() {
         };
         fetchNextNumero();
     }, [getNextNumero, documents]);
+
+    // Filtrer les documents
+    const filteredDocuments = useMemo(() => {
+        return documents.filter(doc =>
+            doc.numero?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (doc.client_name && doc.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (doc.template_name && doc.template_name.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [documents, searchTerm]);
+
+    // Grouper les documents par client
+    const groupedByClient = useMemo(() => {
+        const groups = {};
+        filteredDocuments.forEach(doc => {
+            const clientName = doc.client_name || 'Non spécifié';
+            if (!groups[clientName]) {
+                groups[clientName] = {
+                    name: clientName,
+                    documents: [],
+                    lastDate: null,
+                    templates: new Set()
+                };
+            }
+            groups[clientName].documents.push(doc);
+            groups[clientName].templates.add(doc.template_name || 'Non spécifié');
+            const docDate = new Date(doc.created_at);
+            if (!groups[clientName].lastDate || docDate > groups[clientName].lastDate) {
+                groups[clientName].lastDate = docDate;
+            }
+        });
+
+        // Convertir en tableau et trier par date de dernier document
+        return Object.values(groups).sort((a, b) => {
+            if (!a.lastDate) return 1;
+            if (!b.lastDate) return -1;
+            return b.lastDate - a.lastDate;
+        });
+    }, [filteredDocuments]);
+
+    // Toggle expansion d'un client
+    const toggleClientExpand = (clientName) => {
+        setExpandedClients(prev => ({
+            ...prev,
+            [clientName]: !prev[clientName]
+        }));
+    };
+
+    // Expand all clients
+    const expandAllClients = () => {
+        const all = {};
+        groupedByClient.forEach(group => {
+            all[group.name] = true;
+        });
+        setExpandedClients(all);
+    };
+
+    // Collapse all clients
+    const collapseAllClients = () => {
+        setExpandedClients({});
+    };
 
     // Ouvrir un template PDF
     const openTemplate = (template) => {
@@ -230,10 +319,57 @@ function CerfaManager() {
         }
     };
 
-    // Filtrer les documents
-    const filteredDocuments = documents.filter(doc =>
-        doc.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (doc.client_name && doc.client_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    // Rendu d'une carte document
+    const renderDocumentCard = (doc, compact = false) => (
+        <div key={doc.id} className={`cerfa-document-card ${compact ? 'compact' : ''}`}>
+            <div className="doc-icon">
+                <FileTextIcon size={compact ? 18 : 24} />
+            </div>
+            <div className="doc-info">
+                {editingNumero === doc.id ? (
+                    <input
+                        type="text"
+                        defaultValue={doc.numero}
+                        onBlur={(e) => updateNumero(doc.id, e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                updateNumero(doc.id, e.target.value);
+                            }
+                        }}
+                        autoFocus
+                        className="edit-numero-input"
+                    />
+                ) : (
+                    <h4 onClick={() => setEditingNumero(doc.id)}>
+                        {doc.numero}
+                        <EditIcon size={14} className="edit-icon" />
+                    </h4>
+                )}
+                {!compact && <p>{doc.client_name || 'Client non spécifié'}</p>}
+                <span className="doc-meta">
+                    <span className="doc-template">{doc.template_name || 'Non spécifié'}</span>
+                    <span className="doc-date">
+                        {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+                    </span>
+                </span>
+            </div>
+            <div className="doc-actions">
+                <button
+                    className="btn-icon"
+                    onClick={() => downloadDocument(doc)}
+                    title="Télécharger"
+                >
+                    <DownloadIcon size={18} />
+                </button>
+                <button
+                    className="btn-icon btn-danger"
+                    onClick={() => deleteDocument(doc)}
+                    title="Supprimer"
+                >
+                    <TrashIcon size={18} />
+                </button>
+            </div>
+        </div>
     );
 
     return (
@@ -261,7 +397,7 @@ function CerfaManager() {
                                 onClick={() => openTemplate(template)}
                             >
                                 <ExternalLinkIcon size={18} />
-                                Ouvrir le PDF
+                                Ouvrir le formulaire
                             </button>
                         </div>
                     ))}
@@ -285,17 +421,52 @@ function CerfaManager() {
             {/* Section Documents sauvegardés */}
             <section className="cerfa-section">
                 <div className="section-header">
-                    <h2>📁 Documents enregistrés</h2>
-                    <div className="search-box">
-                        <SearchIcon size={18} />
-                        <input
-                            type="text"
-                            placeholder="Rechercher..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    <h2>📁 Documents enregistrés ({filteredDocuments.length})</h2>
+                    <div className="header-actions">
+                        {/* Toggle vue */}
+                        <div className="view-toggle">
+                            <button
+                                className={`view-btn ${viewMode === 'clients' ? 'active' : ''}`}
+                                onClick={() => setViewMode('clients')}
+                                title="Par client"
+                            >
+                                <UsersIcon size={18} />
+                            </button>
+                            <button
+                                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                                onClick={() => setViewMode('list')}
+                                title="Liste"
+                            >
+                                <ListIcon size={18} />
+                            </button>
+                        </div>
+                        {/* Recherche */}
+                        <div className="search-box">
+                            <SearchIcon size={18} />
+                            <input
+                                type="text"
+                                placeholder="Rechercher..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
+
+                {/* Actions pour la vue par client */}
+                {viewMode === 'clients' && groupedByClient.length > 0 && (
+                    <div className="client-actions">
+                        <button className="btn-text" onClick={expandAllClients}>
+                            Tout déplier
+                        </button>
+                        <button className="btn-text" onClick={collapseAllClients}>
+                            Tout replier
+                        </button>
+                        <span className="client-count">
+                            {groupedByClient.length} client{groupedByClient.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="loading">Chargement...</div>
@@ -304,56 +475,48 @@ function CerfaManager() {
                         <FileTextIcon size={48} />
                         <p>Aucun document enregistré</p>
                     </div>
-                ) : (
-                    <div className="cerfa-documents-list">
-                        {filteredDocuments.map(doc => (
-                            <div key={doc.id} className="cerfa-document-card">
-                                <div className="doc-icon">
-                                    <FileTextIcon size={24} />
+                ) : viewMode === 'clients' ? (
+                    /* Vue par client */
+                    <div className="cerfa-clients-list">
+                        {groupedByClient.map(group => (
+                            <div key={group.name} className="client-group">
+                                <div
+                                    className={`client-header ${expandedClients[group.name] ? 'expanded' : ''}`}
+                                    onClick={() => toggleClientExpand(group.name)}
+                                >
+                                    <ChevronDownIcon
+                                        size={20}
+                                        className={`chevron ${expandedClients[group.name] ? 'rotated' : ''}`}
+                                    />
+                                    <div className="client-info">
+                                        <h3>{group.name}</h3>
+                                        <div className="client-meta">
+                                            <span className="doc-count">
+                                                {group.documents.length} document{group.documents.length > 1 ? 's' : ''}
+                                            </span>
+                                            <span className="templates-list">
+                                                {Array.from(group.templates).join(', ')}
+                                            </span>
+                                            {group.lastDate && (
+                                                <span className="last-date">
+                                                    Dernier: {group.lastDate.toLocaleDateString('fr-FR')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="doc-info">
-                                    {editingNumero === doc.id ? (
-                                        <input
-                                            type="text"
-                                            defaultValue={doc.numero}
-                                            onBlur={(e) => updateNumero(doc.id, e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    updateNumero(doc.id, e.target.value);
-                                                }
-                                            }}
-                                            autoFocus
-                                            className="edit-numero-input"
-                                        />
-                                    ) : (
-                                        <h4 onClick={() => setEditingNumero(doc.id)}>
-                                            {doc.numero}
-                                            <EditIcon size={14} className="edit-icon" />
-                                        </h4>
-                                    )}
-                                    <p>{doc.client_name || 'Client non spécifié'}</p>
-                                    <span className="doc-date">
-                                        {new Date(doc.created_at).toLocaleDateString('fr-FR')}
-                                    </span>
-                                </div>
-                                <div className="doc-actions">
-                                    <button
-                                        className="btn-icon"
-                                        onClick={() => downloadDocument(doc)}
-                                        title="Télécharger"
-                                    >
-                                        <DownloadIcon size={18} />
-                                    </button>
-                                    <button
-                                        className="btn-icon btn-danger"
-                                        onClick={() => deleteDocument(doc)}
-                                        title="Supprimer"
-                                    >
-                                        <TrashIcon size={18} />
-                                    </button>
-                                </div>
+                                {expandedClients[group.name] && (
+                                    <div className="client-documents">
+                                        {group.documents.map(doc => renderDocumentCard(doc, true))}
+                                    </div>
+                                )}
                             </div>
                         ))}
+                    </div>
+                ) : (
+                    /* Vue liste */
+                    <div className="cerfa-documents-list">
+                        {filteredDocuments.map(doc => renderDocumentCard(doc))}
                     </div>
                 )}
             </section>
