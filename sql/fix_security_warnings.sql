@@ -367,8 +367,10 @@ $$;
 -- =============================
 -- 11. Recréer les vues avec SECURITY INVOKER
 -- =============================
+-- NOTE: Ces vues sont optionnelles. Si elles n'existent pas ou si des colonnes manquent,
+-- vous pouvez ignorer les erreurs ou adapter selon votre schéma.
 
--- Supprimer et recréer la vue v_contracts_summary
+-- Supprimer et recréer la vue v_contracts_summary (version simplifiée)
 DROP VIEW IF EXISTS v_contracts_summary;
 CREATE VIEW v_contracts_summary
 WITH (security_invoker = true)
@@ -376,14 +378,11 @@ AS
 SELECT
     mc.*,
     p.display_name as created_by_name,
-    pt.display_name as preferred_technician_name,
     (mc.end_date - CURRENT_DATE) as days_until_expiry,
     (SELECT COUNT(*) FROM public.contract_visits cv WHERE cv.contract_id = mc.id) as total_visits,
-    (SELECT COUNT(*) FROM public.contract_visits cv WHERE cv.contract_id = mc.id AND cv.status = 'completed') as completed_visits,
-    (SELECT COUNT(*) FROM public.contract_equipment ce WHERE ce.contract_id = mc.id) as equipment_count
+    (SELECT COUNT(*) FROM public.contract_visits cv WHERE cv.contract_id = mc.id AND cv.status = 'completed') as completed_visits
 FROM public.maintenance_contracts mc
-LEFT JOIN public.profiles p ON p.id = mc.created_by
-LEFT JOIN public.profiles pt ON pt.id = mc.preferred_technician_id;
+LEFT JOIN public.profiles p ON p.id = mc.created_by;
 
 -- Supprimer et recréer la vue v_today_visits
 DROP VIEW IF EXISTS v_today_visits;
@@ -395,8 +394,6 @@ SELECT
     mc.client_name,
     mc.client_phone,
     mc.client_address,
-    mc.client_email,
-    mc.access_instructions,
     p.display_name as technician_name
 FROM public.contract_visits cv
 JOIN public.maintenance_contracts mc ON mc.id = cv.contract_id
