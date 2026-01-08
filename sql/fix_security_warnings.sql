@@ -98,14 +98,12 @@ DECLARE
     v_interval INTERVAL;
     v_count INTEGER := 0;
 BEGIN
-    -- Récupérer le contrat
     SELECT * INTO v_contract FROM public.maintenance_contracts WHERE id = p_contract_id;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Contrat non trouvé: %', p_contract_id;
     END IF;
 
-    -- Définir l'intervalle selon la fréquence
     CASE v_contract.frequency
         WHEN 'monthly' THEN v_interval := INTERVAL '1 month';
         WHEN 'bimonthly' THEN v_interval := INTERVAL '2 months';
@@ -115,27 +113,23 @@ BEGIN
         ELSE v_interval := INTERVAL '1 year';
     END CASE;
 
-    -- Supprimer les visites futures non complétées
     DELETE FROM public.contract_visits
     WHERE contract_id = p_contract_id
         AND status IN ('pending', 'scheduled')
         AND scheduled_date > CURRENT_DATE;
 
-    -- Générer les visites
     v_visit_date := GREATEST(v_contract.start_date, CURRENT_DATE);
 
     WHILE v_visit_date <= v_contract.end_date LOOP
         INSERT INTO public.contract_visits (
             contract_id,
             scheduled_date,
-            status,
-            assigned_technician_id
+            status
         )
         VALUES (
             p_contract_id,
             v_visit_date,
-            'pending',
-            v_contract.preferred_technician_id
+            'pending'
         )
         ON CONFLICT DO NOTHING;
         v_count := v_count + 1;
@@ -143,9 +137,8 @@ BEGIN
         v_visit_date := v_visit_date + v_interval;
     END LOOP;
 
-    -- Enregistrer dans l'historique
-    INSERT INTO public.contract_history (contract_id, action, notes, performed_by)
-    VALUES (p_contract_id, 'updated', v_count || ' visites générées', v_contract.created_by);
+    INSERT INTO public.contract_history (contract_id, action, notes)
+    VALUES (p_contract_id, 'updated', v_count || ' visites générées');
 
     RETURN v_count;
 END;
@@ -164,7 +157,6 @@ DECLARE
     v_count INTEGER := 0;
     v_contract RECORD;
 BEGIN
-    -- Marquer les contrats expirés
     FOR v_contract IN
         SELECT id, status FROM public.maintenance_contracts
         WHERE status = 'active' AND end_date < CURRENT_DATE
@@ -179,7 +171,6 @@ BEGIN
         v_count := v_count + 1;
     END LOOP;
 
-    -- Marquer pour renouvellement ceux qui expirent bientôt
     UPDATE public.maintenance_contracts
     SET status = 'pending_renewal'
     WHERE status = 'active'
@@ -311,7 +302,7 @@ SET search_path = ''
 AS $$
 BEGIN
     IF NEW.contract_number IS NULL THEN
-        NEW.contract_number := generate_contract_number();
+        NEW.contract_number := public.generate_contract_number();
     END IF;
     RETURN NEW;
 END;
@@ -329,7 +320,6 @@ AS $$
 DECLARE
     v_changes JSONB := '[]'::JSONB;
 BEGIN
-    -- Détecter les changements importants
     IF OLD.status IS DISTINCT FROM NEW.status THEN
         v_changes := v_changes || jsonb_build_object(
             'field', 'status',
@@ -354,7 +344,6 @@ BEGIN
         );
     END IF;
 
-    -- Enregistrer si des changements ont été détectés
     IF jsonb_array_length(v_changes) > 0 THEN
         INSERT INTO public.contract_history (contract_id, action, changes)
         VALUES (NEW.id, 'updated', v_changes);
@@ -365,54 +354,20 @@ END;
 $$;
 
 -- =============================
--- 11. Recréer les vues avec SECURITY INVOKER
+-- FIN DES CORRECTIONS FONCTIONS
 -- =============================
--- NOTE: Ces vues sont optionnelles. Si elles n'existent pas ou si des colonnes manquent,
--- vous pouvez ignorer les erreurs ou adapter selon votre schéma.
-
--- Supprimer et recréer la vue v_contracts_summary (version simplifiée)
-DROP VIEW IF EXISTS v_contracts_summary;
-CREATE VIEW v_contracts_summary
-WITH (security_invoker = true)
-AS
-SELECT
-    mc.*,
-    p.display_name as created_by_name,
-    (mc.end_date - CURRENT_DATE) as days_until_expiry,
-    (SELECT COUNT(*) FROM public.contract_visits cv WHERE cv.contract_id = mc.id) as total_visits,
-    (SELECT COUNT(*) FROM public.contract_visits cv WHERE cv.contract_id = mc.id AND cv.status = 'completed') as completed_visits
-FROM public.maintenance_contracts mc
-LEFT JOIN public.profiles p ON p.id = mc.created_by;
-
--- Supprimer et recréer la vue v_today_visits
-DROP VIEW IF EXISTS v_today_visits;
-CREATE VIEW v_today_visits
-WITH (security_invoker = true)
-AS
-SELECT
-    cv.*,
-    mc.client_name,
-    mc.client_phone,
-    mc.client_address,
-    p.display_name as technician_name
-FROM public.contract_visits cv
-JOIN public.maintenance_contracts mc ON mc.id = cv.contract_id
-LEFT JOIN public.profiles p ON p.id = cv.assigned_technician_id
-WHERE cv.scheduled_date = CURRENT_DATE
-ORDER BY cv.scheduled_time ASC NULLS LAST;
 
 -- =============================
--- VÉRIFICATION
+-- VÉRIFICATION (optionnel)
 -- =============================
 -- Exécutez cette requête pour vérifier que les fonctions sont correctement configurées:
-
+/*
 SELECT
     p.proname as function_name,
     CASE p.prosecdef
         WHEN true THEN 'SECURITY DEFINER'
         ELSE 'SECURITY INVOKER'
-    END as security_type,
-    pg_get_functiondef(p.oid) LIKE '%search_path%' as has_search_path
+    END as security_type
 FROM pg_proc p
 JOIN pg_namespace n ON p.pronamespace = n.oid
 WHERE n.nspname = 'public'
@@ -429,7 +384,4 @@ AND p.proname IN (
     'auto_generate_contract_number',
     'log_contract_changes'
 );
-
--- =============================
--- FIN DES CORRECTIONS
--- =============================
+*/
