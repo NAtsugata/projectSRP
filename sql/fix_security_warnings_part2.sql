@@ -126,55 +126,26 @@ $$;
 -- =============================
 -- 8. get_expense_global_stats
 -- =============================
-CREATE OR REPLACE FUNCTION get_expense_global_stats()
-RETURNS TABLE (
-    total_count BIGINT,
-    total_amount NUMERIC,
-    pending_count BIGINT,
-    pending_amount NUMERIC,
-    approved_count BIGINT,
-    approved_amount NUMERIC
-)
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = ''
-AS $$
+-- Récupérer la définition actuelle et la recréer avec security fix
+DO $$
 BEGIN
-    RETURN QUERY
-    SELECT
-        COUNT(*)::BIGINT as total_count,
-        COALESCE(SUM(e.amount), 0) as total_amount,
-        COUNT(*) FILTER (WHERE e.status = 'pending')::BIGINT as pending_count,
-        COALESCE(SUM(e.amount) FILTER (WHERE e.status = 'pending'), 0) as pending_amount,
-        COUNT(*) FILTER (WHERE e.status = 'approved')::BIGINT as approved_count,
-        COALESCE(SUM(e.amount) FILTER (WHERE e.status = 'approved'), 0) as approved_amount
-    FROM public.expenses e;
+    -- Ajouter search_path à la fonction existante via ALTER
+    EXECUTE 'ALTER FUNCTION public.get_expense_global_stats() SET search_path = ''''';
+    EXECUTE 'ALTER FUNCTION public.get_expense_global_stats() SECURITY INVOKER';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'get_expense_global_stats: %', SQLERRM;
 END;
 $$;
 
 -- =============================
 -- 9. get_expense_stats_by_user
 -- =============================
-CREATE OR REPLACE FUNCTION get_expense_stats_by_user(p_user_id UUID)
-RETURNS TABLE (
-    total_count BIGINT,
-    total_amount NUMERIC,
-    pending_count BIGINT,
-    pending_amount NUMERIC
-)
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = ''
-AS $$
+DO $$
 BEGIN
-    RETURN QUERY
-    SELECT
-        COUNT(*)::BIGINT as total_count,
-        COALESCE(SUM(e.amount), 0) as total_amount,
-        COUNT(*) FILTER (WHERE e.status = 'pending')::BIGINT as pending_count,
-        COALESCE(SUM(e.amount) FILTER (WHERE e.status = 'pending'), 0) as pending_amount
-    FROM public.expenses e
-    WHERE e.user_id = p_user_id;
+    EXECUTE 'ALTER FUNCTION public.get_expense_stats_by_user(UUID) SET search_path = ''''';
+    EXECUTE 'ALTER FUNCTION public.get_expense_stats_by_user(UUID) SECURITY INVOKER';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'get_expense_stats_by_user: %', SQLERRM;
 END;
 $$;
 
