@@ -5,15 +5,47 @@ import { supabase } from '../lib/supabaseClient';
 
 export const vaultService = {
   async getVaultDocuments() {
-    return await supabase.from('vault_documents').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('vault_documents')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return { data, error };
   },
 
-  async createVaultDocument(data) {
-    return await supabase.from('vault_documents').insert([data]);
+  async getVaultDocument(id) {
+    const { data, error } = await supabase
+      .from('vault_documents')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return { data, error };
+  },
+
+  async createVaultDocument(documentData) {
+    const { data, error } = await supabase
+      .from('vault_documents')
+      .insert([documentData])
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async updateVaultDocument(id, updates) {
+    const { data, error } = await supabase
+      .from('vault_documents')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
   },
 
   async deleteVaultDocument(id) {
-    return await supabase.from('vault_documents').delete().eq('id', id);
+    const { data, error } = await supabase
+      .from('vault_documents')
+      .delete()
+      .eq('id', id);
+    return { data, error };
   }
 };
 

@@ -17,10 +17,11 @@ export function useChecklists(userId = null) {
     } = useQuery({
         queryKey: ['checklists', userId],
         queryFn: async () => {
-            if (userId) {
-                return await checklistService.getUserChecklists(userId);
-            }
-            return await checklistService.getAllChecklists();
+            const result = userId
+                ? await checklistService.getUserChecklists(userId)
+                : await checklistService.getAllChecklists();
+            if (result.error) throw result.error;
+            return result.data || [];
         },
         staleTime: 5 * 60 * 1000,  // 5 minutes
         gcTime: 15 * 60 * 1000,

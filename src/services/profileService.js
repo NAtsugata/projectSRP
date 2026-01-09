@@ -5,15 +5,30 @@ import { supabase } from '../lib/supabaseClient';
 
 export const profileService = {
   async getProfile(userId) {
-    return await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    return { data, error };
   },
 
   async getAllProfiles() {
-    return await supabase.from('profiles').select('*').order('full_name');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('full_name');
+    return { data, error };
   },
 
   async updateProfile(userId, updates) {
-    return await supabase.from('profiles').update(updates).eq('id', userId);
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+    return { data, error };
   }
 };
 

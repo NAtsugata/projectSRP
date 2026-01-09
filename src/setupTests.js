@@ -4,11 +4,10 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// ✅ CORRIGÉ: Ajout de variables d'environnement factices pour les tests.
-// Cela permet à l'application de s'initialiser sans erreur pendant les tests,
-// car Jest n'a pas accès aux vraies clés du fichier .env.
-process.env.REACT_APP_SUPABASE_URL = 'https://hvswbkbwomvwhnqglmbe.supabase.co';
-process.env.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2c3dia2J3b212d2hucWdsbWJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzIzMjMsImV4cCI6MjA2ODQ0ODMyM30.kvACwanG8mglfxupz5_MaPaUACRywGLIjVPmWikAV0M';
+// ✅ Variables d'environnement FACTICES pour les tests uniquement
+// Ne JAMAIS utiliser de vraies clés ici - ces valeurs sont des placeholders
+process.env.REACT_APP_SUPABASE_URL = 'https://test-project.supabase.co';
+process.env.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QtcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE5MDAwMDAwMDB9.test-key-do-not-use-in-production';
 
 // ✅ NOUVEAU: Configuration globale pour les tests mobiles
 // Mock des APIs Web modernes qui peuvent ne pas être disponibles dans l'environnement de test

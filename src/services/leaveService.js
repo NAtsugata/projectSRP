@@ -9,19 +9,41 @@ export const leaveService = {
     if (userId) {
       query = query.eq('user_id', userId);
     }
-    return await query;
+    const { data, error } = await query;
+    return { data, error };
   },
 
   async createLeaveRequest(requestData) {
-    return await supabase.from('leave_requests').insert([requestData]);
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .insert([requestData])
+      .select()
+      .single();
+    return { data, error };
   },
 
+  // Méthode principale pour mise à jour (utilisée par le hook)
+  async updateLeaveRequest(id, updates) {
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  // Alias pour compatibilité - met à jour uniquement le status
   async updateRequestStatus(id, status) {
-    return await supabase.from('leave_requests').update({ status }).eq('id', id);
+    return this.updateLeaveRequest(id, { status });
   },
 
   async deleteLeaveRequest(id) {
-    return await supabase.from('leave_requests').delete().eq('id', id);
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .delete()
+      .eq('id', id);
+    return { data, error };
   }
 };
 
