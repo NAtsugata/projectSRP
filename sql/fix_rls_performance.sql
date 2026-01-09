@@ -120,26 +120,18 @@ DROP POLICY IF EXISTS "Admins can update all templates" ON public.intervention_t
 DROP POLICY IF EXISTS "Admins can delete all templates" ON public.intervention_templates;
 
 CREATE POLICY "View templates" ON public.intervention_templates
-FOR SELECT TO authenticated USING (
-    created_by = (select auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = (select auth.uid()) AND is_admin = true)
-);
+FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Create templates" ON public.intervention_templates
-FOR INSERT TO authenticated WITH CHECK (
-    created_by = (select auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = (select auth.uid()) AND is_admin = true)
-);
+FOR INSERT TO authenticated WITH CHECK (true);
 
 CREATE POLICY "Update templates" ON public.intervention_templates
 FOR UPDATE TO authenticated USING (
-    created_by = (select auth.uid()) OR
     EXISTS (SELECT 1 FROM public.profiles WHERE id = (select auth.uid()) AND is_admin = true)
 );
 
 CREATE POLICY "Delete templates" ON public.intervention_templates
 FOR DELETE TO authenticated USING (
-    created_by = (select auth.uid()) OR
     EXISTS (SELECT 1 FROM public.profiles WHERE id = (select auth.uid()) AND is_admin = true)
 );
 
