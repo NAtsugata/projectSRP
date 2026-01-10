@@ -28,12 +28,24 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: true,
+    chunkSizeWarningLimit: 1000, // Augmenter la limite à 1MB (certaines libs PDF sont grosses)
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          supabase: ['@supabase/supabase-js'],
-          pdf: ['jspdf', 'pdf-lib'],
+          // Frameworks
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+
+          // Supabase
+          'vendor-supabase': ['@supabase/supabase-js'],
+
+          // PDF & Documents (grosses librairies)
+          'vendor-pdf': ['pdf-lib'],
+          'vendor-jspdf': ['jspdf'],
+          'vendor-html2canvas': ['html2canvas'],
+
+          // Utilitaires
+          'vendor-utils': ['dompurify', 'zustand', '@tanstack/react-query'],
         },
       },
     },
