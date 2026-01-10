@@ -1,7 +1,7 @@
 // src/components/agenda/AbsenceManager.js
 // Gestionnaire d'absences et de congés des employés
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, LoadingSpinner } from '../ui';
 import { UserIcon, PlusIcon, XIcon, CalendarIcon } from '../SharedUI';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,12 +32,8 @@ const AbsenceManager = ({
     notes: ''
   });
 
-  // Charger les absences au montage
-  useEffect(() => {
-    loadAbsences();
-  }, []);
-
-  const loadAbsences = async () => {
+  // Fonction de chargement des absences (définie avant le useEffect)
+  const loadAbsences = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await absenceService.getAllAbsences();
@@ -64,7 +60,12 @@ const AbsenceManager = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onAbsencesChange, toast]);
+
+  // Charger les absences au montage
+  useEffect(() => {
+    loadAbsences();
+  }, [loadAbsences]);
 
   // Ajouter une absence
   const handleAddAbsence = async () => {

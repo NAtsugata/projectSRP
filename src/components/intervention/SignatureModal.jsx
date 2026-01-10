@@ -105,15 +105,15 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
     canvas.addEventListener('touchend', stopDrawing, { passive: false });
     canvas.addEventListener('touchmove', draw, { passive: false });
 
-    // Cleanup
+    // Cleanup - mêmes options que lors de l'ajout
     return () => {
       canvas.removeEventListener('mousedown', startDrawing);
       canvas.removeEventListener('mouseup', stopDrawing);
       canvas.removeEventListener('mousemove', draw);
       canvas.removeEventListener('mouseleave', stopDrawing);
-      canvas.removeEventListener('touchstart', startDrawing);
-      canvas.removeEventListener('touchend', stopDrawing);
-      canvas.removeEventListener('touchmove', draw);
+      canvas.removeEventListener('touchstart', startDrawing, { passive: false });
+      canvas.removeEventListener('touchend', stopDrawing, { passive: false });
+      canvas.removeEventListener('touchmove', draw, { passive: false });
     };
   }, [existingSignature]);
 

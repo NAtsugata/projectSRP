@@ -69,6 +69,15 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
 
   const currentImage = images[currentIndex];
 
+  // Définir les handlers de navigation AVANT le useEffect qui les utilise
+  const handlePrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
   // Bloquer le scroll du body
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -86,21 +95,12 @@ const Lightbox = ({ images, initialIndex, onClose }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, images.length]);
+  }, [onClose, handlePrevious, handleNext]);
 
   // Reset loading state à chaque changement d'image
   useEffect(() => {
     setImageLoaded(false);
   }, [currentIndex]);
-
-  const handlePrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  }, [images.length]);
-
-  const handleNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  }, [images.length]);
 
   // Swipe detection
   const minSwipeDistance = 50;
