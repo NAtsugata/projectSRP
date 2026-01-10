@@ -519,7 +519,7 @@ export const fillCerfa15497 = async (data) => {
         // Les signatures sont des images base64 dessinées sur le PDF
         const pages = pdfDoc.getPages();
         const page = pages[0]; // Le CERFA est sur une seule page
-        const { width, height } = page.getSize();
+        const { width } = page.getSize();
 
         // Helper pour intégrer une signature image
         const embedSignature = async (signatureDataUrl, x, y, maxWidth, maxHeight) => {

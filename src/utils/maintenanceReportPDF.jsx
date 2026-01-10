@@ -30,7 +30,7 @@ export function generateMaintenanceReportPDF(reportData, contract, equipment) {
         parts_replaced,
         observations,
         recommendations,
-        next_visit_notes,
+        // next_visit_notes - disponible mais non affiché dans le PDF actuel
         co_reading,
         co2_reading,
         combustion_efficiency,
