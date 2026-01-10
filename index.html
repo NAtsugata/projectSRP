@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#CD7F32" />
+    <meta name="description" content="Application de gestion d'interventions, notes de frais et planification pour SRP. Fonctionne hors ligne." />
+
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SRP">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SRP">
+
+    <!-- iOS Safari -->
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/logo192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo192.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/logo192.png" />
+
+    <!-- Android Chrome -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileColor" content="#CD7F32">
+    <meta name="msapplication-TileImage" content="/logo192.png">
+
+    <!-- Offline page -->
+    <link rel="offline" href="/offline.html">
+    <title>Portail SRP</title>
+
+    <!-- Librairies pour l'export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- OpenCV.js pour la détection de documents -->
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="console.log('OpenCV.js loaded successfully')" onerror="console.error('Failed to load OpenCV.js')"></script>
+  </head>
+  <body>
+    <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/index.jsx"></script>
+  </body>
+</html>
