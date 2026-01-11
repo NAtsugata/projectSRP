@@ -29,7 +29,7 @@ export function useUsers() {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => profileService.updateProfile(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['users']);
+            queryClient.invalidateQueries({ queryKey: ['users'] });
         },
     });
 

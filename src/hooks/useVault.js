@@ -43,7 +43,7 @@ export function useVault(userId = null) {
             return result;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['vault']);
+            queryClient.invalidateQueries({ queryKey: ['vault'] });
         },
     });
 
@@ -51,7 +51,7 @@ export function useVault(userId = null) {
     const deleteMutation = useMutation({
         mutationFn: (id) => vaultService.deleteVaultDocument(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['vault']);
+            queryClient.invalidateQueries({ queryKey: ['vault'] });
         },
     });
 

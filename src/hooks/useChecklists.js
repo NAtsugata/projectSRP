@@ -46,7 +46,7 @@ export function useChecklists(userId = null) {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => checklistService.updateChecklist(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['checklists']);
+            queryClient.invalidateQueries({ queryKey: ['checklists'] });
         },
     });
 
@@ -54,7 +54,7 @@ export function useChecklists(userId = null) {
     const createTemplateMutation = useMutation({
         mutationFn: (template) => checklistService.createTemplate(template),
         onSuccess: () => {
-            queryClient.invalidateQueries(['checklistTemplates']);
+            queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },
     });
 
@@ -62,7 +62,7 @@ export function useChecklists(userId = null) {
     const updateTemplateMutation = useMutation({
         mutationFn: ({ id, updates }) => checklistService.updateTemplate(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['checklistTemplates']);
+            queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },
     });
 
@@ -70,7 +70,7 @@ export function useChecklists(userId = null) {
     const deleteTemplateMutation = useMutation({
         mutationFn: (id) => checklistService.deleteTemplate(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['checklistTemplates']);
+            queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },
     });
 

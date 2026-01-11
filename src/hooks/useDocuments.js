@@ -31,7 +31,7 @@ export function useDocuments(userId) {
     const saveMutation = useMutation({
         mutationFn: (documents) => scannedDocumentsService.saveDocuments(documents),
         onSuccess: () => {
-            queryClient.invalidateQueries(['scannedDocuments']);
+            queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },
     });
 
@@ -39,7 +39,7 @@ export function useDocuments(userId) {
     const deleteMutation = useMutation({
         mutationFn: (id) => scannedDocumentsService.deleteDocument(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['scannedDocuments']);
+            queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },
     });
 
@@ -47,7 +47,7 @@ export function useDocuments(userId) {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => scannedDocumentsService.updateDocument(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['scannedDocuments']);
+            queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },
     });
 

@@ -54,7 +54,7 @@ const InterventionDetailViewContainer = () => {
             report: sanitizedReport
         });
         if (!error) {
-            queryClient.invalidateQueries(['intervention', id]);
+            queryClient.invalidateQueries({ queryKey: ['intervention', id] });
         }
         return { success: !error, error };
     };
@@ -73,8 +73,8 @@ const InterventionDetailViewContainer = () => {
             if (error) throw error;
 
             toast?.success(newStatus === 'Terminée' ? 'Rapport sauvegardé et intervention clôturée.' : 'Rapport sauvegardé.');
-            queryClient.invalidateQueries(['intervention', id]);
-            queryClient.invalidateQueries(['interventions']); // Refresh list too
+            queryClient.invalidateQueries({ queryKey: ['intervention', id] });
+            queryClient.invalidateQueries({ queryKey: ['interventions'] }); // Refresh list too
             navigate('/planning');
         } catch (error) {
             toast?.error('Erreur lors de la sauvegarde: ' + (error.message || 'Erreur inconnue'));

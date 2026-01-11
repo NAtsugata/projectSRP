@@ -30,7 +30,7 @@ export function useLeaveRequests(userId = null) {
     const createMutation = useMutation({
         mutationFn: (newLeaveRequest) => leaveService.createLeaveRequest(newLeaveRequest),
         onSuccess: () => {
-            queryClient.invalidateQueries(['leaveRequests']);
+            queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },
     });
 
@@ -38,7 +38,7 @@ export function useLeaveRequests(userId = null) {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => leaveService.updateLeaveRequest(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['leaveRequests']);
+            queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },
     });
 
@@ -46,7 +46,7 @@ export function useLeaveRequests(userId = null) {
     const deleteMutation = useMutation({
         mutationFn: (id) => leaveService.deleteLeaveRequest(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['leaveRequests']);
+            queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },
     });
 

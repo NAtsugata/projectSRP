@@ -36,7 +36,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const createMutation = useMutation({
         mutationFn: (newExpense) => expenseService.createExpense(newExpense),
         onSuccess: () => {
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
@@ -44,7 +44,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => expenseService.updateExpense(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
@@ -52,7 +52,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const deleteMutation = useMutation({
         mutationFn: (id) => expenseService.deleteExpense(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
@@ -69,7 +69,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                     );
                 });
             }
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
@@ -85,7 +85,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                     );
                 });
             }
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
@@ -101,7 +101,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                     );
                 });
             }
-            queryClient.invalidateQueries(['expenses']);
+            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 

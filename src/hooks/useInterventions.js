@@ -47,7 +47,7 @@ export function useInterventions(userId = null, isArchived = false) {
         },
         onSuccess: () => {
             // Invalider le cache pour recharger les données
-            queryClient.invalidateQueries(['interventions']);
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },
     });
 
@@ -55,7 +55,7 @@ export function useInterventions(userId = null, isArchived = false) {
     const updateMutation = useMutation({
         mutationFn: ({ id, updates }) => interventionService.updateIntervention(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['interventions']);
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },
     });
 
@@ -63,7 +63,7 @@ export function useInterventions(userId = null, isArchived = false) {
     const deleteMutation = useMutation({
         mutationFn: (id) => interventionService.deleteIntervention(id),
         onSuccess: () => {
-            queryClient.invalidateQueries(['interventions']);
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },
     });
 
