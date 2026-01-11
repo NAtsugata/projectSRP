@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LoaderIcon } from '../SharedUI';
 import { useDownload } from '../../hooks/useDownload';
+import logger from '../../utils/logger';
 import './ImageGallery.css';
 
 /**
@@ -287,7 +288,7 @@ const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
       }
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error('Erreur suppression image:', error);
+      logger.error('Erreur suppression image:', error);
       alert('Erreur lors de la suppression de l\'image');
     } finally {
       setIsDeleting(false);

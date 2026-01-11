@@ -2,6 +2,7 @@
 // Hook pour gérer les formulaires avec validation
 
 import { useState, useCallback } from 'react';
+import logger from '../utils/logger';
 
 /**
  * Hook pour gérer les formulaires
@@ -74,7 +75,7 @@ export const useForm = (initialValues = {}, onSubmit, validate) => {
         // reset();
       } catch (error) {
         // L'erreur de soumission peut être gérée par le composant parent
-        console.error('Form submission error:', error);
+        logger.error('Form submission error:', error);
       } finally {
         setIsSubmitting(false);
       }

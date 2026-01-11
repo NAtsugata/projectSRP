@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMobileNotifications, MobileNotificationContainer, useMobileModal, MobileModalContainer } from './MobileNotifications';
 import { BellIcon, BellOffIcon, CheckCircleIcon } from '../SharedUI';
+import logger from '../../utils/logger';
 import './NotificationPermissionPrompt.css';
 
 /**
@@ -13,18 +14,18 @@ export const NotificationPermissionBanner = ({ onEnable, onDismiss }) => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   const handleDismiss = () => {
-    console.log('🔔 [Banner] Bouton "Plus tard" cliqué');
+    logger.log('🔔 [Banner] Bouton "Plus tard" cliqué');
     setIsDismissed(true);
     if (onDismiss) onDismiss();
   };
 
   const handleEnable = () => {
-    console.log('🔔 [Banner] Bouton "Activer" cliqué');
-    console.log('🔔 [Banner] onEnable est:', typeof onEnable, onEnable);
+    logger.log('🔔 [Banner] Bouton "Activer" cliqué');
+    logger.log('🔔 [Banner] onEnable est:', typeof onEnable, onEnable);
     if (onEnable) {
       onEnable();
     } else {
-      console.error('❌ [Banner] onEnable n\'est pas défini !');
+      logger.error('❌ [Banner] onEnable n\'est pas défini !');
     }
   };
 
@@ -138,7 +139,7 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
 
   // Logs de débogage
   useEffect(() => {
-    console.log('🔔 NotificationPermissionManager - État:', {
+    logger.log('🔔 NotificationPermissionManager - État:', {
       userId,
       isSupported: pushNotifications?.isSupported,
       isEnabled: pushNotifications?.isEnabled,
@@ -149,10 +150,10 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
   }, [userId, pushNotifications]);
 
   const handleEnableNotifications = async () => {
-    console.log('🔔 Tentative d\'activation des notifications...');
+    logger.log('🔔 Tentative d\'activation des notifications...');
 
     if (!pushNotifications || !pushNotifications.requestPermission) {
-      console.error('❌ pushNotifications non disponible:', pushNotifications);
+      logger.error('❌ pushNotifications non disponible:', pushNotifications);
       notifications.error('Notifications non disponibles', {
         duration: 4000
       });
@@ -173,7 +174,7 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
         });
       }
     } catch (error) {
-      console.error('Erreur activation notifications:', error);
+      logger.error('Erreur activation notifications:', error);
       notifications.error('Erreur: ' + error.message, {
         duration: 5000
       });
@@ -181,7 +182,7 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
   };
 
   const handleExplainNotifications = async () => {
-    console.log('🔔 [1/4] handleExplainNotifications appelé - Affichage modal...');
+    logger.log('🔔 [1/4] handleExplainNotifications appelé - Affichage modal...');
 
     try {
       const confirmed = await modal.confirm(
@@ -189,16 +190,16 @@ export const NotificationPermissionManager = ({ userId, pushNotifications }) => 
         'Recevez des alertes sur votre téléphone quand une intervention vous est assignée ou modifiée.'
       );
 
-      console.log('🔔 [2/4] Réponse modal:', confirmed);
+      logger.log('🔔 [2/4] Réponse modal:', confirmed);
 
       if (confirmed) {
-        console.log('🔔 [3/4] Utilisateur a confirmé - Appel handleEnableNotifications...');
+        logger.log('🔔 [3/4] Utilisateur a confirmé - Appel handleEnableNotifications...');
         handleEnableNotifications();
       } else {
-        console.log('🔔 [3/4] Utilisateur a annulé');
+        logger.log('🔔 [3/4] Utilisateur a annulé');
       }
     } catch (error) {
-      console.error('❌ Erreur dans handleExplainNotifications:', error);
+      logger.error('❌ Erreur dans handleExplainNotifications:', error);
     }
   };
 

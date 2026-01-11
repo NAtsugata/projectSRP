@@ -2,6 +2,7 @@
 // Bouton pour assigner une checklist à une intervention (pour admin)
 import React, { useState } from 'react';
 import { CheckCircleIcon, PlusIcon } from '../SharedUI';
+import logger from '../../utils/logger';
 
 export default function AssignChecklistButton({ intervention, templates = [], onAssignChecklist }) {
   const [showModal, setShowModal] = useState(false);
@@ -18,7 +19,7 @@ export default function AssignChecklistButton({ intervention, templates = [], on
       setShowModal(false);
       setSelectedTemplate('');
     } catch (error) {
-      console.error('Erreur assignation checklist:', error);
+      logger.error('Erreur assignation checklist:', error);
       alert('Erreur lors de l\'assignation');
     }
   };

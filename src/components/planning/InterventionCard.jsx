@@ -6,6 +6,7 @@ import { Button } from '../ui';
 import { EditIcon, ArchiveIcon, TrashIcon } from '../SharedUI';
 import { getAssignedUsersNames } from '../../utils/helpers';
 import AssignChecklistButton from '../intervention/AssignChecklistButton';
+import logger from '../../utils/logger';
 import './InterventionCard.css';
 
 /**
@@ -174,7 +175,7 @@ const InterventionCard = ({
             icon={<TrashIcon width={18} height={18} />}
             onClick={(e) => {
               e.stopPropagation();
-              console.log('🗑️ Bouton suppression cliqué, intervention ID:', intervention.id);
+              logger.log('🗑️ Bouton suppression cliqué, intervention ID:', intervention.id);
               onDelete?.(intervention.id);
             }}
             title="Supprimer"

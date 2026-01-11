@@ -1,5 +1,6 @@
 // src/components/admin/AdminToolsPanel.js - Panneau d'outils avancés pour admin
 import React, { useState, useMemo } from 'react';
+import logger from '../../utils/logger';
 import {
   DownloadIcon,
   RefreshCwIcon as RefreshIcon,
@@ -53,7 +54,7 @@ export const AdminToolsPanel = ({ vaultDocuments = [], users = [], onRefresh }) 
       setCacheStats(stats);
       setShowStats(true);
     } catch (error) {
-      console.error('Erreur chargement stats cache:', error);
+      logger.error('Erreur chargement stats cache:', error);
     }
   };
 
@@ -66,7 +67,7 @@ export const AdminToolsPanel = ({ vaultDocuments = [], users = [], onRefresh }) 
       alert(`${count} upload(s) complété(s) supprimé(s)`);
       await loadCacheStats();
     } catch (error) {
-      console.error('Erreur nettoyage cache:', error);
+      logger.error('Erreur nettoyage cache:', error);
       alert('Erreur lors du nettoyage du cache');
     }
   };
@@ -80,7 +81,7 @@ export const AdminToolsPanel = ({ vaultDocuments = [], users = [], onRefresh }) 
       alert(`${count} upload(s) ancien(s) supprimé(s)`);
       await loadCacheStats();
     } catch (error) {
-      console.error('Erreur nettoyage anciens uploads:', error);
+      logger.error('Erreur nettoyage anciens uploads:', error);
       alert('Erreur lors du nettoyage');
     }
   };

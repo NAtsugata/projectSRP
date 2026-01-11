@@ -1,6 +1,7 @@
 // src/services/scannedDocumentsService.js - SERVICE DOCUMENTS SCANNÉS
 import { supabase, storageService } from '../lib/supabase';
 import { sanitizeFilename } from '../utils/sanitize';
+import logger from '../utils/logger';
 
 /**
  * Échappe les caractères spéciaux pour les requêtes SQL LIKE
@@ -48,7 +49,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('❌ Erreur getUserDocuments:', error);
+      logger.error('❌ Erreur getUserDocuments:', error);
       return { data: null, error };
     }
   },
@@ -66,7 +67,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('❌ Erreur getAllDocuments:', error);
+      logger.error('❌ Erreur getAllDocuments:', error);
       return { data: null, error };
     }
   },
@@ -116,7 +117,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur createDocument:', error);
+      logger.error('❌ Erreur createDocument:', error);
       return { data: null, error };
     }
   },
@@ -142,7 +143,7 @@ const scannedDocumentsService = {
         });
 
         if (result.error) {
-          console.error(`Erreur upload fichier ${i + 1}:`, result.error);
+          logger.error(`Erreur upload fichier ${i + 1}:`, result.error);
           continue;
         }
 
@@ -151,7 +152,7 @@ const scannedDocumentsService = {
 
       return { data: results, error: null };
     } catch (error) {
-      console.error('❌ Erreur createMultipleDocuments:', error);
+      logger.error('❌ Erreur createMultipleDocuments:', error);
       return { data: null, error };
     }
   },
@@ -171,7 +172,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur updateDocument:', error);
+      logger.error('❌ Erreur updateDocument:', error);
       return { data: null, error };
     }
   },
@@ -202,7 +203,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('❌ Erreur deleteDocument:', error);
+      logger.error('❌ Erreur deleteDocument:', error);
       return { error };
     }
   },
@@ -234,7 +235,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('❌ Erreur searchDocuments:', error);
+      logger.error('❌ Erreur searchDocuments:', error);
       return { data: null, error };
     }
   },
@@ -260,7 +261,7 @@ const scannedDocumentsService = {
       if (error) throw error;
       return { data: data || [], error: null };
     } catch (error) {
-      console.error('❌ Erreur getDocumentsByCategory:', error);
+      logger.error('❌ Erreur getDocumentsByCategory:', error);
       return { data: null, error };
     }
   }

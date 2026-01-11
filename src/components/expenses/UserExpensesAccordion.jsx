@@ -3,6 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
+import logger from '../../utils/logger';
 import {
   CheckCircleIcon,
   UserIcon,
@@ -188,7 +189,7 @@ const UserExpensesAccordion = ({
             yPos += finalHeight + 10;
 
           } catch (error) {
-            console.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
+            logger.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
             pdf.setFontSize(9);
             pdf.setTextColor(0, 0, 255);
             pdf.textWithLink(`[Lien vers l'image: ${receipt.name}]`, margin, yPos, { url: receipt.url });
@@ -207,7 +208,7 @@ const UserExpensesAccordion = ({
       pdf.save(`note-frais-${userName.replace(/\s+/g, '-')}-${expense.date}.pdf`);
 
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
+      logger.error('Erreur lors de la génération du PDF:', error);
       alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
     }
   };

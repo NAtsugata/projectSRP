@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { DownloadIcon, FileIcon } from '../SharedUI';
+import logger from '../../utils/logger';
 import './ExportMenu.css';
 
 /**
@@ -90,7 +91,7 @@ const ExportMenu = ({
 
       setIsOpen(false);
     } catch (error) {
-      console.error('Erreur lors de l\'export Excel:', error);
+      logger.error('Erreur lors de l\'export Excel:', error);
       alert('Erreur lors de l\'export. Veuillez réessayer.');
     } finally {
       setIsExporting(false);
@@ -274,7 +275,7 @@ const ExportMenu = ({
 
       setIsOpen(false);
     } catch (error) {
-      console.error('Erreur lors de l\'export PDF:', error);
+      logger.error('Erreur lors de l\'export PDF:', error);
       alert('Erreur lors de l\'export. Veuillez réessayer.');
     } finally {
       setIsExporting(false);

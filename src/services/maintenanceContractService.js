@@ -199,12 +199,12 @@ export const maintenanceContractService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('Historique non disponible:', error.message);
+        logger.warn('Historique non disponible:', error.message);
         return { data: [], error: null };
       }
       return { data: data || [], error: null };
     } catch (e) {
-      console.warn('Erreur récupération historique:', e);
+      logger.warn('Erreur récupération historique:', e);
       return { data: [], error: null };
     }
   },
@@ -220,12 +220,12 @@ export const maintenanceContractService = {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.warn('Équipements non disponibles:', error.message);
+        logger.warn('Équipements non disponibles:', error.message);
         return { data: [], error: null };
       }
       return { data: data || [], error: null };
     } catch (e) {
-      console.warn('Erreur récupération équipements:', e);
+      logger.warn('Erreur récupération équipements:', e);
       return { data: [], error: null };
     }
   },
@@ -238,7 +238,7 @@ export const maintenanceContractService = {
       .single();
 
     if (error) {
-      console.error('Error adding equipment:', error);
+      logger.error('Error adding equipment:', error);
       return { error };
     }
     return { data: equipment, error: null };
@@ -253,7 +253,7 @@ export const maintenanceContractService = {
       .single();
 
     if (error) {
-      console.error('Error updating equipment:', error);
+      logger.error('Error updating equipment:', error);
       return { error };
     }
     return { data, error: null };
@@ -266,7 +266,7 @@ export const maintenanceContractService = {
       .eq('id', equipmentId);
 
     if (error) {
-      console.error('Error deleting equipment:', error);
+      logger.error('Error deleting equipment:', error);
       return { error };
     }
     return { error: null };
@@ -282,7 +282,7 @@ export const maintenanceContractService = {
       .single();
 
     if (error) {
-      console.error('Error creating report:', error);
+      logger.error('Error creating report:', error);
       return { error };
     }
     return { data, error: null };
@@ -295,7 +295,7 @@ export const maintenanceContractService = {
       .eq('id', reportId);
 
     if (error) {
-      console.error('Error deleting report:', error);
+      logger.error('Error deleting report:', error);
       return { error };
     }
     return { error: null };
@@ -310,12 +310,12 @@ export const maintenanceContractService = {
         .order('intervention_date', { ascending: false });
 
       if (error) {
-        console.warn('Rapports non disponibles:', error.message);
+        logger.warn('Rapports non disponibles:', error.message);
         return { data: [], error: null };
       }
       return { data: data || [], error: null };
     } catch (e) {
-      console.warn('Erreur récupération rapports:', e);
+      logger.warn('Erreur récupération rapports:', e);
       return { data: [], error: null };
     }
   },
@@ -328,7 +328,7 @@ export const maintenanceContractService = {
       .single();
 
     if (error) {
-      console.error('Error fetching report:', error);
+      logger.error('Error fetching report:', error);
       return { error };
     }
     return { data, error: null };

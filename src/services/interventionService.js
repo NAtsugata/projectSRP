@@ -49,7 +49,7 @@ export const interventionService = {
       .single();
 
     if (error) {
-      console.error('❌ Erreur création intervention:', error);
+      logger.error('❌ Erreur création intervention:', error);
       return { error };
     }
 
@@ -80,10 +80,7 @@ export const interventionService = {
   async addBriefingDocuments(id, files) {
     // Placeholder
     return { error: null };
-  },
-
-  // Exposer supabase pour les hooks qui en ont besoin temporairement
-  supabase
+  }
 };
 
 export default interventionService;

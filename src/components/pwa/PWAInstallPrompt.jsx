@@ -1,6 +1,7 @@
 // src/components/pwa/PWAInstallPrompt.js
 // Composant pour faciliter l'installation de l'app et les mises à jour
 import React, { useState, useEffect, useCallback } from 'react';
+import logger from '../../utils/logger';
 import './PWAInstallPrompt.css';
 
 /**
@@ -23,7 +24,7 @@ export const usePWAInstall = () => {
             e.preventDefault();
             setDeferredPrompt(e);
             setIsInstallable(true);
-            console.log('📱 Installation PWA disponible');
+            logger.log('📱 Installation PWA disponible');
         };
 
         // Écouter l'installation réussie
@@ -31,7 +32,7 @@ export const usePWAInstall = () => {
             setIsInstalled(true);
             setIsInstallable(false);
             setDeferredPrompt(null);
-            console.log('✅ PWA installée avec succès');
+            logger.log('✅ PWA installée avec succès');
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -49,11 +50,11 @@ export const usePWAInstall = () => {
         try {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            console.log(`📱 Installation ${outcome === 'accepted' ? 'acceptée' : 'refusée'}`);
+            logger.log(`📱 Installation ${outcome === 'accepted' ? 'acceptée' : 'refusée'}`);
             setDeferredPrompt(null);
             return outcome === 'accepted';
         } catch (error) {
-            console.error('Erreur installation:', error);
+            logger.error('Erreur installation:', error);
             return false;
         }
     }, [deferredPrompt]);
@@ -74,7 +75,7 @@ export const usePWAUpdate = () => {
             if (event.detail?.waiting) {
                 setWaitingWorker(event.detail.waiting);
                 setUpdateAvailable(true);
-                console.log('🔄 Mise à jour disponible');
+                logger.log('🔄 Mise à jour disponible');
             }
         };
 

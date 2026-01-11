@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 
 /**
  * Composant d'affichage de l'utilisation du cache
@@ -18,7 +19,7 @@ export const CacheIndicator = ({ showDetails = false }) => {
                     setQuota(estimate.quota || 0);
                 }
             } catch (error) {
-                console.error('Erreur estimation stockage:', error);
+                logger.error('Erreur estimation stockage:', error);
             } finally {
                 setLoading(false);
             }

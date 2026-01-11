@@ -66,7 +66,7 @@ export const usePushNotifications = (userId) => {
       setIsRegistering(false);
       return true;
     } catch (error) {
-      console.error('Erreur activation notifications:', error);
+      logger.error('Erreur activation notifications:', error);
       setIsRegistering(false);
       throw error;
     }
@@ -128,7 +128,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
               });
             }
           } catch (error) {
-            console.error('Erreur notification nouvelle assignation:', error);
+            logger.error('Erreur notification nouvelle assignation:', error);
           }
         }
       )
@@ -179,7 +179,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
               timestamp: new Date()
             });
           } catch (error) {
-            console.error('Erreur notification mise à jour intervention:', error);
+            logger.error('Erreur notification mise à jour intervention:', error);
           }
         }
       )
@@ -265,7 +265,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
           }
         }
       } catch (error) {
-        console.error('Erreur vérification rappels:', error);
+        logger.error('Erreur vérification rappels:', error);
       }
     };
 

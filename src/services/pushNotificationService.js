@@ -50,7 +50,7 @@ export const registerServiceWorker = async () => {
     logger.log('✅ Service Worker enregistré:', registration);
     return registration;
   } catch (error) {
-    console.error('❌ Erreur Service Worker:', error);
+    logger.error('❌ Erreur Service Worker:', error);
     throw error;
   }
 };
@@ -60,7 +60,7 @@ export const registerServiceWorker = async () => {
  */
 export const showLocalNotification = async (title, options = {}) => {
   if (!isNotificationEnabled()) {
-    console.warn('Notifications désactivées');
+    logger.warn('Notifications désactivées');
     return null;
   }
 
@@ -82,7 +82,7 @@ export const showLocalNotification = async (title, options = {}) => {
     await registration.showNotification(title, notificationOptions);
     logger.log('✅ Notification affichée:', title);
   } catch (error) {
-    console.error('❌ Erreur affichage notification:', error);
+    logger.error('❌ Erreur affichage notification:', error);
     throw error;
   }
 };
@@ -101,7 +101,7 @@ export const closeNotificationsByTag = async (tag) => {
       notification.close();
     });
   } catch (error) {
-    console.error('❌ Erreur fermeture notifications:', error);
+    logger.error('❌ Erreur fermeture notifications:', error);
   }
 };
 

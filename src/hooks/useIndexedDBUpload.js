@@ -40,7 +40,7 @@ export const useIndexedDBUpload = () => {
       const stats = await getCacheStats();
       setCacheStats(stats);
     } catch (error) {
-      console.error('Erreur chargement uploads:', error);
+      logger.error('Erreur chargement uploads:', error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export const useIndexedDBUpload = () => {
       logger.log(`✅ Fichier ${file.name} mis en cache (${uploadId})`);
       return uploadId;
     } catch (err) {
-      console.error('Failed to store file for later upload:', err);
+      logger.error('Failed to store file for later upload:', err);
       throw err;
     }
   }, [loadPendingUploads]);
@@ -110,10 +110,10 @@ export const useIndexedDBUpload = () => {
               retryCount: (item.retryCount || 0) + 1,
               lastError: result?.error?.message || 'Upload failed'
             });
-            console.error(`❌ Upload échoué: ${item.fileName}`);
+            logger.error(`❌ Upload échoué: ${item.fileName}`);
           }
         } catch (err) {
-          console.error('Failed to upload pending file:', err);
+          logger.error('Failed to upload pending file:', err);
           await updateUploadStatus(item.id, 'failed', {
             retryCount: (item.retryCount || 0) + 1,
             lastError: err.message
@@ -123,7 +123,7 @@ export const useIndexedDBUpload = () => {
 
       await loadPendingUploads();
     } catch (error) {
-      console.error('Erreur processPendingUploads:', error);
+      logger.error('Erreur processPendingUploads:', error);
     }
   }, [isOnline, loadPendingUploads]);
 
@@ -133,7 +133,7 @@ export const useIndexedDBUpload = () => {
       await updateUploadStatus(uploadId, 'pending');
       await loadPendingUploads();
     } catch (error) {
-      console.error('Erreur retryFailedUpload:', error);
+      logger.error('Erreur retryFailedUpload:', error);
     }
   }, [loadPendingUploads]);
 

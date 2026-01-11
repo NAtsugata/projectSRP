@@ -18,7 +18,7 @@ export const useAutoSync = (onSync) => {
             setPendingCount(pending.length);
             return pending;
         } catch (error) {
-            console.error('Erreur vérification uploads en attente:', error);
+            logger.error('Erreur vérification uploads en attente:', error);
             return [];
         }
     }, []);
@@ -37,7 +37,7 @@ export const useAutoSync = (onSync) => {
                 await checkPending(); // Rafraîchir le compte
             }
         } catch (error) {
-            console.error('Erreur synchronisation:', error);
+            logger.error('Erreur synchronisation:', error);
         } finally {
             setIsSyncing(false);
         }

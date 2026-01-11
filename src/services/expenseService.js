@@ -65,7 +65,7 @@ const expenseService = {
 
       return { data: parsedData, error: null, count };
     } catch (error) {
-      console.error('❌ Erreur getUserExpenses:', error);
+      logger.error('❌ Erreur getUserExpenses:', error);
       return { data: null, error, count: 0 };
     }
   },
@@ -113,7 +113,7 @@ const expenseService = {
 
       return { data: parsedData, error: null, count };
     } catch (error) {
-      console.error('❌ Erreur getAllExpenses:', error);
+      logger.error('❌ Erreur getAllExpenses:', error);
       return { data: null, error, count: 0 };
     }
   },
@@ -149,7 +149,7 @@ const expenseService = {
       logger.log('✅ Note de frais créée:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur createExpense:', error);
+      logger.error('❌ Erreur createExpense:', error);
       return { data: null, error };
     }
   },
@@ -179,7 +179,7 @@ const expenseService = {
       logger.log('✅ Note de frais approuvée:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur approveExpense:', error);
+      logger.error('❌ Erreur approveExpense:', error);
       return { data: null, error };
     }
   },
@@ -213,7 +213,7 @@ const expenseService = {
       logger.log('✅ Note de frais rejetée:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur rejectExpense:', error);
+      logger.error('❌ Erreur rejectExpense:', error);
       return { data: null, error };
     }
   },
@@ -245,7 +245,7 @@ const expenseService = {
       logger.log('✅ Note de frais supprimée:', expenseId);
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Erreur deleteExpense:', error);
+      logger.error('❌ Erreur deleteExpense:', error);
       return { data: null, error };
     }
   },
@@ -272,10 +272,10 @@ const expenseService = {
 
       if (deleteError) throw deleteError;
 
-      console.log('✅ Note de frais supprimée (admin):', expenseId);
+      logger.log('✅ Note de frais supprimée (admin):', expenseId);
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Erreur deleteExpenseAdmin:', error);
+      logger.error('❌ Erreur deleteExpenseAdmin:', error);
       return { data: null, error };
     }
   },
@@ -317,7 +317,7 @@ const expenseService = {
       logger.log('✅ Note de frais marquée comme payée:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur markAsPaid:', error);
+      logger.error('❌ Erreur markAsPaid:', error);
       return { data: null, error };
     }
   },
@@ -353,7 +353,7 @@ const expenseService = {
 
       return { data: stats, error: null };
     } catch (error) {
-      console.error('❌ Erreur getExpenseStats:', error);
+      logger.error('❌ Erreur getExpenseStats:', error);
       return { data: null, error };
     }
   }

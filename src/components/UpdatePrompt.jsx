@@ -2,6 +2,7 @@
 // Composant qui force la mise à jour de l'app quand une nouvelle version est disponible
 
 import React, { useState, useEffect } from 'react';
+import logger from '../utils/logger';
 import './UpdatePrompt.css';
 
 /**
@@ -49,7 +50,7 @@ const UpdatePrompt = ({ registration }) => {
                 await Promise.all(
                     cacheNames.map(cacheName => caches.delete(cacheName))
                 );
-                console.log('✅ Cache vidé');
+                logger.log('✅ Cache vidé');
             }
 
             // Attendre un peu puis recharger
@@ -58,7 +59,7 @@ const UpdatePrompt = ({ registration }) => {
             }, 500);
 
         } catch (error) {
-            console.error('Erreur mise à jour:', error);
+            logger.error('Erreur mise à jour:', error);
             // Forcer le rechargement quand même
             window.location.reload(true);
         }

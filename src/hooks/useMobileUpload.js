@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
 import { safeStorage } from '../utils/safeStorage';
+import logger from '../utils/logger';
 
 // ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE
 export const useDeviceCapabilities = () => {
@@ -174,7 +175,7 @@ export const useResilientUpload = () => {
         setIsUploading(false);
         return result;
       } catch (uploadError) {
-        console.error(`Upload attempt ${attempt} failed:`, uploadError);
+        logger.error(`Upload attempt ${attempt} failed:`, uploadError);
 
         if (attempt === maxRetries) {
           setError(uploadError.message || "Échec de l'upload après plusieurs tentatives");
@@ -254,7 +255,7 @@ export const useOfflineUpload = () => {
       setPendingUploads(updated);
       return uploadItem.id;
     } catch (err) {
-      console.error('Failed to store file for later upload:', err);
+      logger.error('Failed to store file for later upload:', err);
       throw err;
     }
   }, []);
@@ -284,7 +285,7 @@ export const useOfflineUpload = () => {
           continue;
         }
       } catch (err) {
-        console.error('Failed to upload pending file:', err);
+        logger.error('Failed to upload pending file:', err);
       }
 
       // Conserver en cas d'échec
@@ -397,7 +398,7 @@ export const useMobileUpload = (interventionId, options = {}) => {
       const { validFiles, invalidFiles } = prepareFiles(files, options);
 
       if (invalidFiles.length > 0) {
-        console.warn('Some files were rejected:', invalidFiles);
+        logger.warn('Some files were rejected:', invalidFiles);
       }
 
       const results = [];

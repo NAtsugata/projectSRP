@@ -3,6 +3,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '../ui';
+import logger from '../../utils/logger';
 import './SignatureModal.css';
 
 /**
@@ -41,7 +42,7 @@ const SignatureModal = ({ onSave, onCancel, existingSignature }) => {
         setCanvasReady(true);
       };
       img.onerror = () => {
-        console.error('Erreur chargement signature existante');
+        logger.error('Erreur chargement signature existante');
         setCanvasReady(true);
       };
       img.src = existingSignature;

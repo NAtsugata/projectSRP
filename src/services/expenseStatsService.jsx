@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 
 /**
  * Récupère les statistiques globales depuis la vue matérialisée
@@ -26,7 +27,7 @@ export const getGlobalStats = async () => {
     if (error) {
       // Si la fonction n'existe pas encore (code 42883 = function not found)
       if (error.code === '42883' || error.code === '42P01') {
-        console.warn('Vues matérialisées non disponibles, utilisation du fallback');
+        logger.warn('Vues matérialisées non disponibles, utilisation du fallback');
         return await getGlobalStatsFallback();
       }
       throw error;
@@ -59,7 +60,7 @@ export const getGlobalStats = async () => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Erreur lors de la récupération des stats globales:', error);
+    logger.error('Erreur lors de la récupération des stats globales:', error);
     return { data: null, error };
   }
 };
@@ -78,7 +79,7 @@ export const getUserStats = async (userId = null) => {
 
     if (error) {
       if (error.code === '42883' || error.code === '42P01') {
-        console.warn('Vues matérialisées non disponibles, utilisation du fallback');
+        logger.warn('Vues matérialisées non disponibles, utilisation du fallback');
         return await getUserStatsFallback(userId);
       }
       throw error;
@@ -123,7 +124,7 @@ export const getUserStats = async (userId = null) => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Erreur lors de la récupération des stats utilisateur:', error);
+    logger.error('Erreur lors de la récupération des stats utilisateur:', error);
     return { data: null, error };
   }
 };
@@ -143,7 +144,7 @@ export const getMonthlyStats = async () => {
 
     if (error) {
       if (error.code === '42P01') {
-        console.warn('Vue mensuelle non disponible');
+        logger.warn('Vue mensuelle non disponible');
         return { data: [], error: null };
       }
       throw error;
@@ -151,7 +152,7 @@ export const getMonthlyStats = async () => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Erreur lors de la récupération des stats mensuelles:', error);
+    logger.error('Erreur lors de la récupération des stats mensuelles:', error);
     return { data: [], error };
   }
 };
@@ -170,7 +171,7 @@ export const getExpensesToPay = async () => {
 
     if (error) {
       if (error.code === '42P01') {
-        console.warn('Vue expenses_to_pay non disponible');
+        logger.warn('Vue expenses_to_pay non disponible');
         return await getExpensesToPayFallback();
       }
       throw error;
@@ -178,7 +179,7 @@ export const getExpensesToPay = async () => {
 
     return { data: data || [], error: null };
   } catch (error) {
-    console.error('Erreur lors de la récupération des expenses à payer:', error);
+    logger.error('Erreur lors de la récupération des expenses à payer:', error);
     return { data: [], error };
   }
 };
@@ -197,7 +198,7 @@ export const refreshRealtimeStats = async () => {
     if (error) {
       // Si la fonction n'existe pas, ne pas échouer
       if (error.code === '42883') {
-        console.warn('Fonction de rafraîchissement non disponible');
+        logger.warn('Fonction de rafraîchissement non disponible');
         return { success: true, error: null };
       }
       throw error;
@@ -205,7 +206,7 @@ export const refreshRealtimeStats = async () => {
 
     return { success: true, error: null };
   } catch (error) {
-    console.error('Erreur lors du rafraîchissement des stats:', error);
+    logger.error('Erreur lors du rafraîchissement des stats:', error);
     return { success: false, error };
   }
 };
@@ -223,7 +224,7 @@ export const refreshAllStats = async () => {
 
     if (error) {
       if (error.code === '42883') {
-        console.warn('Fonction de rafraîchissement non disponible');
+        logger.warn('Fonction de rafraîchissement non disponible');
         return { success: true, error: null };
       }
       throw error;
@@ -231,7 +232,7 @@ export const refreshAllStats = async () => {
 
     return { success: true, error: null };
   } catch (error) {
-    console.error('Erreur lors du rafraîchissement de toutes les stats:', error);
+    logger.error('Erreur lors du rafraîchissement de toutes les stats:', error);
     return { success: false, error };
   }
 };
@@ -281,7 +282,7 @@ const getGlobalStatsFallback = async () => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Erreur fallback stats globales:', error);
+    logger.error('Erreur fallback stats globales:', error);
     return { data: null, error };
   }
 };
@@ -341,7 +342,7 @@ const getUserStatsFallback = async (userId) => {
 
     return { data: stats, error: null };
   } catch (error) {
-    console.error('Erreur fallback stats utilisateur:', error);
+    logger.error('Erreur fallback stats utilisateur:', error);
     return { data: null, error };
   }
 };
@@ -392,7 +393,7 @@ const getExpensesToPayFallback = async () => {
 
     return { data: Array.from(userMap.values()), error: null };
   } catch (error) {
-    console.error('Erreur fallback expenses à payer:', error);
+    logger.error('Erreur fallback expenses à payer:', error);
     return { data: [], error };
   }
 };

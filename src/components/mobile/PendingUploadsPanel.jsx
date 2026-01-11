@@ -1,5 +1,6 @@
 // src/components/mobile/PendingUploadsPanel.js - Panneau uploads en attente (mobile)
 import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import {
   UploadIcon,
   RefreshCwIcon as RefreshIcon,
@@ -82,7 +83,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
 
       await loadPendingUploads();
     } catch (error) {
-      console.error('Erreur upload:', error);
+      logger.error('Erreur upload:', error);
       alert(`❌ Erreur: ${error.message}`);
       await loadPendingUploads();
     } finally {
@@ -119,7 +120,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
       await loadPendingUploads();
       alert('✅ Upload supprimé');
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      logger.error('Erreur suppression:', error);
       alert('❌ Erreur suppression');
     }
   };
@@ -131,7 +132,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
       await loadPendingUploads();
       alert(`✅ ${count} upload(s) complété(s) supprimé(s)`);
     } catch (error) {
-      console.error('Erreur nettoyage:', error);
+      logger.error('Erreur nettoyage:', error);
       alert('❌ Erreur nettoyage');
     }
   };
@@ -145,7 +146,7 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
         await handleUploadFile(upload);
       }
     } catch (error) {
-      console.error('Erreur retry:', error);
+      logger.error('Erreur retry:', error);
     }
   };
 

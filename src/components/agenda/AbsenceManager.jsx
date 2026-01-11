@@ -6,6 +6,7 @@ import { Button, LoadingSpinner } from '../ui';
 import { UserIcon, PlusIcon, XIcon, CalendarIcon } from '../SharedUI';
 import { useToast } from '../../contexts/ToastContext';
 import * as absenceService from '../../lib/absenceService';
+import logger from '../../utils/logger';
 import './AbsenceManager.css';
 
 /**
@@ -55,7 +56,7 @@ const AbsenceManager = ({
         onAbsencesChange(formattedAbsences);
       }
     } catch (error) {
-      console.error('Erreur chargement absences:', error);
+      logger.error('Erreur chargement absences:', error);
       toast.error('Impossible de charger les absences');
     } finally {
       setLoading(false);
@@ -99,7 +100,7 @@ const AbsenceManager = ({
       // Reload absences
       await loadAbsences();
     } catch (error) {
-      console.error('Erreur ajout absence:', error);
+      logger.error('Erreur ajout absence:', error);
       toast.error('Impossible d\'enregistrer l\'absence');
     } finally {
       setLoading(false);
@@ -120,7 +121,7 @@ const AbsenceManager = ({
       // Reload absences
       await loadAbsences();
     } catch (error) {
-      console.error('Erreur suppression absence:', error);
+      logger.error('Erreur suppression absence:', error);
       toast.error('Impossible de supprimer l\'absence');
     } finally {
       setLoading(false);

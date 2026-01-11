@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { storageService } from '../lib/supabase';
+import logger from '../utils/logger';
 
 /**
  * Hook principal pour gérer l'upload de fichiers (photos et documents) dans
@@ -238,13 +239,13 @@ export const useMobileFileManager = (interventionId) => {
             onComplete(fileInfos, invalidFiles);
           }
         } catch (error) {
-          console.error('❌ Erreur upload global:', error);
+          logger.error('❌ Erreur upload global:', error);
           setUploadState((prev) => ({ ...prev, isUploading: false, errors: [{ error: error.message }], globalProgress: 0 }));
         }
       }, 100); // Délai de 100ms pour garantir le rendu initial
 
     } catch (error) {
-      console.error('❌ Erreur préparation upload:', error);
+      logger.error('❌ Erreur préparation upload:', error);
       setUploadState((prev) => ({ ...prev, isUploading: false, errors: [{ error: error.message }], globalProgress: 0 }));
     }
   }, [compressFile, uploadSingleFile, deviceInfo]);

@@ -199,10 +199,10 @@ export const CustomFileInput = ({ onChange, accept, multiple, disabled, children
           logger.log('🔄 Input reset');
         }, 100);
       } else {
-        console.error('❌ onChange callback manquant');
+        logger.error('❌ onChange callback manquant');
       }
     } else {
-      console.warn('⚠️ Aucun fichier sélectionné (possiblement annulé par l\'utilisateur)');
+      logger.warn('⚠️ Aucun fichier sélectionné (possiblement annulé par l\'utilisateur)');
       // Toujours reset même si annulé
       event.target.value = '';
     }

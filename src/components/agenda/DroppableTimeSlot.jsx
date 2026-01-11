@@ -2,6 +2,7 @@
 // Zone de drop pour recevoir les interventions déplacées
 
 import React, { useState } from 'react';
+import logger from '../../utils/logger';
 import './DroppableTimeSlot.css';
 
 /**
@@ -134,7 +135,7 @@ const DroppableTimeSlot = ({
         });
       }
     } catch (err) {
-      console.error('Erreur lors du drop:', err);
+      logger.error('Erreur lors du drop:', err);
     }
   };
 

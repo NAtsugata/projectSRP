@@ -40,8 +40,8 @@ export const useDocumentDetection = (options = {}) => {
           setYoloModelLoaded(true);
           logger.log('Modèle YOLO chargé avec succès');
         } catch (error) {
-          console.error('Erreur chargement modèle YOLO:', error);
-          console.warn('Retour au mode OpenCV');
+          logger.error('Erreur chargement modèle YOLO:', error);
+          logger.warn('Retour au mode OpenCV');
           setDetectorType('opencv');
         }
       }
@@ -202,7 +202,7 @@ export const useDocumentDetection = (options = {}) => {
           overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
       } catch (error) {
-        console.error('[LIVE DETECTION] Error:', error);
+        logger.error('[LIVE DETECTION] Error:', error);
         detectionHistoryRef.current.push({
           detected: false,
           contour: null,

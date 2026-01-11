@@ -2,6 +2,7 @@
 // Boutons d'appel ultra-visibles pour contact rapide
 
 import React from 'react';
+import logger from '../../utils/logger';
 import './CallButtons.css';
 
 /**
@@ -15,7 +16,7 @@ const CallButtons = ({ intervention, onCall }) => {
     if (phone) {
       window.location.href = `tel:${phone}`;
       onCall?.(label);
-      console.log(`📞 Appel lancé vers ${label}:`, phone);
+      logger.log(`📞 Appel lancé vers ${label}:`, phone);
     }
   };
 
@@ -23,7 +24,7 @@ const CallButtons = ({ intervention, onCall }) => {
     if (phone) {
       const message = encodeURIComponent(`Bonjour, je suis en route pour votre intervention.`);
       window.location.href = `sms:${phone}?body=${message}`;
-      console.log(`💬 SMS lancé vers:`, phone);
+      logger.log(`💬 SMS lancé vers:`, phone);
     }
   };
 

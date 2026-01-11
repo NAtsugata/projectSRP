@@ -26,7 +26,7 @@ const checklistService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur getAllTemplates:', error);
+      logger.error('❌ Erreur getAllTemplates:', error);
       return { data: null, error };
     }
   },
@@ -56,7 +56,7 @@ const checklistService = {
       logger.log('✅ Template créé:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur createTemplate:', error);
+      logger.error('❌ Erreur createTemplate:', error);
       return { data: null, error };
     }
   },
@@ -86,7 +86,7 @@ const checklistService = {
       logger.log('✅ Template mis à jour:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur updateTemplate:', error);
+      logger.error('❌ Erreur updateTemplate:', error);
       return { data: null, error };
     }
   },
@@ -106,7 +106,7 @@ const checklistService = {
       logger.log('✅ Template supprimé:', templateId);
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Erreur deleteTemplate:', error);
+      logger.error('❌ Erreur deleteTemplate:', error);
       return { data: null, error };
     }
   },
@@ -153,7 +153,7 @@ const checklistService = {
       logger.log('✅ Checklists assignées:', data.length);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur assignChecklistToIntervention:', error);
+      logger.error('❌ Erreur assignChecklistToIntervention:', error);
       return { data: null, error };
     }
   },
@@ -171,7 +171,7 @@ const checklistService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur getAllChecklists:', error);
+      logger.error('❌ Erreur getAllChecklists:', error);
       return { data: null, error };
     }
   },
@@ -190,7 +190,7 @@ const checklistService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur getUserChecklists:', error);
+      logger.error('❌ Erreur getUserChecklists:', error);
       return { data: null, error };
     }
   },
@@ -208,7 +208,7 @@ const checklistService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur getInterventionChecklists:', error);
+      logger.error('❌ Erreur getInterventionChecklists:', error);
       return { data: null, error };
     }
   },
@@ -242,7 +242,7 @@ const checklistService = {
       logger.log('✅ Checklist mise à jour:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Erreur updateChecklist:', error);
+      logger.error('❌ Erreur updateChecklist:', error);
       return { data: null, error };
     }
   },
@@ -262,7 +262,7 @@ const checklistService = {
       logger.log('✅ Checklist supprimée:', checklistId);
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Erreur deleteChecklist:', error);
+      logger.error('❌ Erreur deleteChecklist:', error);
       return { data: null, error };
     }
   },
@@ -290,7 +290,7 @@ const checklistService = {
 
       return { data: stats, error: null };
     } catch (error) {
-      console.error('❌ Erreur getChecklistStats:', error);
+      logger.error('❌ Erreur getChecklistStats:', error);
       return { data: null, error };
     }
   }

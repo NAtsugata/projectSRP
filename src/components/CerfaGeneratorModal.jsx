@@ -5,6 +5,7 @@
 // =============================
 
 import React, { useState, useEffect, useCallback } from 'react';
+import logger from '../utils/logger';
 import {
     fillCerfa15497,
     downloadCerfa,
@@ -73,15 +74,15 @@ function CerfaGeneratorModal({
         setIsGenerating(true);
 
         // Debug: Log form data before generation
-        console.log('[CERFA Modal] === formData avant génération ===');
-        console.log('[CERFA Modal] fluide:', formData.fluide);
-        console.log('[CERFA Modal] denominationFluide:', formData.denominationFluide);
-        console.log('[CERFA Modal] charge:', formData.charge);
-        console.log('[CERFA Modal] technicianName:', formData.technicianName);
-        console.log('[CERFA Modal] clientName:', formData.clientName);
-        console.log('[CERFA Modal] clientSignatureName:', formData.clientSignatureName);
-        console.log('[CERFA Modal] date:', formData.date);
-        console.log('[CERFA Modal] Full formData:', JSON.stringify(formData, null, 2));
+        logger.log('[CERFA Modal] === formData avant génération ===');
+        logger.log('[CERFA Modal] fluide:', formData.fluide);
+        logger.log('[CERFA Modal] denominationFluide:', formData.denominationFluide);
+        logger.log('[CERFA Modal] charge:', formData.charge);
+        logger.log('[CERFA Modal] technicianName:', formData.technicianName);
+        logger.log('[CERFA Modal] clientName:', formData.clientName);
+        logger.log('[CERFA Modal] clientSignatureName:', formData.clientSignatureName);
+        logger.log('[CERFA Modal] date:', formData.date);
+        logger.log('[CERFA Modal] Full formData:', JSON.stringify(formData, null, 2));
 
         try {
             if (saveEquipment && sourceId) {
@@ -114,7 +115,7 @@ function CerfaGeneratorModal({
             showToast?.('CERFA généré avec succès !', 'success');
             onClose();
         } catch (error) {
-            console.error('Erreur génération CERFA:', error);
+            logger.error('Erreur génération CERFA:', error);
             showToast?.(`Erreur: ${error.message}`, 'error');
         } finally {
             setIsGenerating(false);

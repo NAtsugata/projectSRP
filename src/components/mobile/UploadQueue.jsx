@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UploadIcon, XIcon } from '../SharedUI';
 import { getUploadStats, getPendingUploads } from '../../utils/indexedDBCache';
+import logger from '../../utils/logger';
 
 /**
  * Composant d'affichage de la queue d'upload
@@ -23,7 +24,7 @@ export const UploadQueue = ({ onClearCache }) => {
                     setUploads(pendingUploads);
                 }
             } catch (error) {
-                console.error('Erreur chargement stats upload:', error);
+                logger.error('Erreur chargement stats upload:', error);
             }
         };
 
