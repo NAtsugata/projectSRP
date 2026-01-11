@@ -109,17 +109,26 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
     }
   };
 
+  const handleKeyDown = (event, action) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      scrollToSection(action);
+    }
+  };
+
   return (
-    <div className="smart-alerts">
+    <div className="smart-alerts" role="region" aria-label="Alertes intervention" aria-live="polite">
       {alerts.map((alert, index) => (
         <div
           key={index}
           className={`smart-alert alert-${alert.type}`}
           onClick={() => scrollToSection(alert.action)}
-          role={alert.action ? 'button' : undefined}
+          onKeyDown={(e) => handleKeyDown(e, alert.action)}
+          role={alert.action ? 'button' : 'status'}
           tabIndex={alert.action ? 0 : undefined}
+          aria-label={`${alert.title}: ${alert.message}`}
         >
-          <div className="alert-icon">{alert.icon}</div>
+          <div className="alert-icon" aria-hidden="true">{alert.icon}</div>
           <div className="alert-content">
             <div className="alert-title">{alert.title}</div>
             <div className="alert-message">{alert.message}</div>
@@ -133,6 +142,7 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
+              aria-hidden="true"
             >
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>

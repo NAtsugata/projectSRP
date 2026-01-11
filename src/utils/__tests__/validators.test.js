@@ -1,6 +1,7 @@
 // src/utils/__tests__/validators.test.js
 // Tests unitaires pour validators
 
+import { describe, test, expect } from 'vitest';
 import { isValidEmail, isValidPhone, validatePassword, validateFileSize } from '../validators';
 
 describe('validators', () => {
@@ -41,15 +42,39 @@ describe('validators', () => {
 
   describe('validatePassword', () => {
     test('accepte les mots de passe valides', () => {
-      const result = validatePassword('password123');
+      const result = validatePassword('Password1');
       expect(result.isValid).toBe(true);
       expect(result.message).toBe('');
+      expect(result.errors).toEqual([]);
+    });
+
+    test('accepte les mots de passe complexes', () => {
+      const result = validatePassword('MySecureP4ss!');
+      expect(result.isValid).toBe(true);
     });
 
     test('rejette les mots de passe trop courts', () => {
-      const result = validatePassword('12345');
+      const result = validatePassword('Pass1');
       expect(result.isValid).toBe(false);
-      expect(result.message).toContain('au moins 6 caractères');
+      expect(result.errors).toContain('Au moins 8 caractères');
+    });
+
+    test('rejette les mots de passe sans majuscule', () => {
+      const result = validatePassword('password1');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Au moins une lettre majuscule');
+    });
+
+    test('rejette les mots de passe sans minuscule', () => {
+      const result = validatePassword('PASSWORD1');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Au moins une lettre minuscule');
+    });
+
+    test('rejette les mots de passe sans chiffre', () => {
+      const result = validatePassword('PasswordABC');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Au moins un chiffre');
     });
 
     test('rejette les mots de passe vides', () => {

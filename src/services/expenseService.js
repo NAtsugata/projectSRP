@@ -324,6 +324,7 @@ const expenseService = {
 
   /**
    * Récupérer les statistiques des notes de frais
+   * Optimisé: single pass O(n) au lieu de 8 passes
    */
   async getExpenseStats(userId = null) {
     try {
@@ -338,18 +339,39 @@ const expenseService = {
       const { data, error } = await query;
       if (error) throw error;
 
-      const stats = {
-        total: data.length,
-        totalAmount: data.reduce((sum, e) => sum + (e.amount || 0), 0),
-        pending: data.filter(e => e.status === 'pending').length,
-        pendingAmount: data.filter(e => e.status === 'pending').reduce((sum, e) => sum + (e.amount || 0), 0),
-        approved: data.filter(e => e.status === 'approved' && !e.is_paid).length,
-        approvedAmount: data.filter(e => e.status === 'approved' && !e.is_paid).reduce((sum, e) => sum + (e.amount || 0), 0),
-        paid: data.filter(e => e.is_paid).length,
-        paidAmount: data.filter(e => e.is_paid).reduce((sum, e) => sum + (e.amount || 0), 0),
-        rejected: data.filter(e => e.status === 'rejected').length,
-        rejectedAmount: data.filter(e => e.status === 'rejected').reduce((sum, e) => sum + (e.amount || 0), 0)
-      };
+      // Single pass through data for all stats
+      const stats = data.reduce((acc, expense) => {
+        const amount = expense.amount || 0;
+        acc.total++;
+        acc.totalAmount += amount;
+
+        if (expense.is_paid) {
+          acc.paid++;
+          acc.paidAmount += amount;
+        } else if (expense.status === 'pending') {
+          acc.pending++;
+          acc.pendingAmount += amount;
+        } else if (expense.status === 'approved') {
+          acc.approved++;
+          acc.approvedAmount += amount;
+        } else if (expense.status === 'rejected') {
+          acc.rejected++;
+          acc.rejectedAmount += amount;
+        }
+
+        return acc;
+      }, {
+        total: 0,
+        totalAmount: 0,
+        pending: 0,
+        pendingAmount: 0,
+        approved: 0,
+        approvedAmount: 0,
+        paid: 0,
+        paidAmount: 0,
+        rejected: 0,
+        rejectedAmount: 0
+      });
 
       return { data: stats, error: null };
     } catch (error) {

@@ -28,20 +28,42 @@ export const isValidPhone = (phone) => {
 };
 
 /**
- * Valide un mot de passe
+ * Valide un mot de passe avec règles de sécurité renforcées
  * @param {string} password - Mot de passe à valider
- * @returns {{ isValid: boolean, message: string }}
+ * @returns {{ isValid: boolean, message: string, errors: string[] }}
  */
 export const validatePassword = (password) => {
+  const errors = [];
+
   if (!password || typeof password !== 'string') {
-    return { isValid: false, message: 'Le mot de passe est requis' };
+    return { isValid: false, message: 'Le mot de passe est requis', errors: ['Le mot de passe est requis'] };
   }
 
-  if (password.length < 6) {
-    return { isValid: false, message: 'Le mot de passe doit contenir au moins 6 caractères' };
+  if (password.length < 8) {
+    errors.push('Au moins 8 caractères');
   }
 
-  return { isValid: true, message: '' };
+  if (!/[a-z]/.test(password)) {
+    errors.push('Au moins une lettre minuscule');
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Au moins une lettre majuscule');
+  }
+
+  if (!/[0-9]/.test(password)) {
+    errors.push('Au moins un chiffre');
+  }
+
+  if (errors.length > 0) {
+    return {
+      isValid: false,
+      message: `Le mot de passe doit contenir: ${errors.join(', ')}`,
+      errors
+    };
+  }
+
+  return { isValid: true, message: '', errors: [] };
 };
 
 /**
