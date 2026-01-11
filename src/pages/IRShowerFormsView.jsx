@@ -1,10 +1,11 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 // Refactoré - Composants UI et hook Canvas extraits dans des modules séparés
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { storageService, supabase } from '../lib/supabase';
 import logger from '../utils/logger';
 import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../components/ir-shower';
 import { usePlanCanvas } from '../hooks/usePlanCanvas';
+import { useUndoRedo } from '../hooks/useUndoRedo';
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
@@ -66,7 +67,18 @@ export default function IRShowerFormsView({ profile }) {
   const canvasRef = useRef(null);
   const plan = usePlanCanvas(canvasRef, toCm, LABEL_OFFSET);
 
-  const [elements, setElements] = useState([]);
+  // Use undo/redo hook for elements with history
+  const {
+    elements,
+    setElements,
+    setElementsNoHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    resetHistory
+  } = useUndoRedo([]);
+
   const [preview, setPreview] = useState(null);
   const [tool, setTool] = useState("select");
   const [snap, setSnap] = useState(true);
@@ -276,14 +288,14 @@ export default function IRShowerFormsView({ profile }) {
     return () => clearInterval(saveTimer);
   }, [study, elements, photosAvant, photosApres, signatureClient, signatureInstaller]);
 
-  // Restauration au chargement
+  // Restauration au chargement (without adding to undo history)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('ir-shower-draft');
       if (saved) {
         const data = JSON.parse(saved);
         if (data.study) setStudy(data.study);
-        if (data.elements) setElements(data.elements);
+        if (data.elements) setElementsNoHistory(data.elements);
         if (data.photosAvant) setPhotosAvant(data.photosAvant);
         if (data.photosApres) setPhotosApres(data.photosApres);
         if (data.signatureClient) setSignatureClient(data.signatureClient);
@@ -292,7 +304,7 @@ export default function IRShowerFormsView({ profile }) {
     } catch (e) {
       console.error('Restauration échouée:', e);
     }
-  }, []);
+  }, [setElementsNoHistory]);
 
   const resetAll = () => {
     if (window.confirm('⚠️ Réinitialiser toute l\'étude ? Cette action est irréversible.')) {
@@ -310,7 +322,7 @@ export default function IRShowerFormsView({ profile }) {
         },
         travaux_autres: ""
       });
-      setElements([]);
+      resetHistory();
       setPhotosAvant([]);
       setPhotosApres([]);
       setSignatureClient(null);
@@ -592,9 +604,42 @@ export default function IRShowerFormsView({ profile }) {
     }
   };
 
-  const undo = () => { setElements((els) => els.slice(0, -1)); setSelectedId(null); };
+  // Undo with clear selection (from useUndoRedo hook)
+  const handleUndo = useCallback(() => {
+    undo();
+    setSelectedId(null);
+  }, [undo]);
+
+  // Redo with clear selection
+  const handleRedo = useCallback(() => {
+    redo();
+    setSelectedId(null);
+  }, [redo]);
+
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
-  const resetPlan = () => { setElements([]); setPreview(null); setSelectedId(null); };
+  const resetPlan = () => { resetHistory(); setPreview(null); setSelectedId(null); };
+
+  // Keyboard shortcuts for undo/redo (Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle when plan tab is active and not in text input
+      if (tab !== 'plan') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          handleUndo();
+        } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tab, handleUndo, handleRedo]);
 
   /* ---------- Export PDF ---------- */
   const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
@@ -1148,7 +1193,8 @@ export default function IRShowerFormsView({ profile }) {
               <button onClick={()=>setTool("text")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="text"?"#e2e8f0":"#fff" }}>Texte</button>
               <button onClick={()=>setSnap(s=>!s)}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
               <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
-              <button onClick={undo}                   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff" }}>Undo</button>
+              <button onClick={handleUndo} disabled={!canUndo} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", opacity: canUndo ? 1 : 0.5, cursor: canUndo ? 'pointer' : 'not-allowed' }} title="Ctrl+Z">Undo</button>
+              <button onClick={handleRedo} disabled={!canRedo} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", opacity: canRedo ? 1 : 0.5, cursor: canRedo ? 'pointer' : 'not-allowed' }} title="Ctrl+Y">Redo</button>
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
             </div>
             <Small>Zones bleues = murs. Double-clic pour éditer un texte. Le siège se plaque au mur. Barre de maintien = trait entre 2 points.</Small>
