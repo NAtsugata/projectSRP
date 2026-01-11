@@ -83,6 +83,37 @@ export const storageService = {
     return await supabase.storage
       .from(bucket)
       .remove([path]);
+  },
+
+  // Upload pour les formulaires IR Douche et notes de frais
+  async uploadExpenseFile(file, userId, onProgress) {
+    const safeName = sanitizeFilename(file.name);
+    const fileExt = safeName.split('.').pop().toLowerCase();
+    const fileName = `${userId}/ir-shower/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = fileName;
+
+    logger.log('📦 storageService: uploadExpenseFile started', { userId, fileName: safeName });
+
+    const { error: uploadError } = await supabase.storage
+      .from('intervention-files')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      logger.log('📦 storageService: upload error', uploadError);
+      return { publicURL: null, error: uploadError };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('intervention-files')
+      .getPublicUrl(filePath);
+
+    if (onProgress) onProgress(100);
+
+    logger.log('📦 storageService: upload success', { publicUrl });
+    return { publicURL: publicUrl, filePath, error: null };
   }
 };
 
