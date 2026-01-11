@@ -510,6 +510,35 @@ export default function IRShowerFormsView({ profile }) {
       return;
     }
 
+    // New symbols with rotation support
+    if (tool === "wc") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "wc", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "sink") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "sink", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "towelrack") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "towelrack", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
+      setSelectedId(id);
+      return;
+    }
+
+    if (tool === "drain") {
+      const id = newId();
+      setElements((els) => [...els, { id, type: "symbol", kind: "drain", x: p.x, y: clampYOutOfBanner(p.y) }]);
+      setSelectedId(id);
+      return;
+    }
+
     setStartPt({ x: p.x, y: clampYOutOfBanner(p.y) }); // bar / dim / rect
   };
 
@@ -619,6 +648,35 @@ export default function IRShowerFormsView({ profile }) {
 
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { resetHistory(); setPreview(null); setSelectedId(null); };
+
+  // Rotate selected element by 90 degrees
+  const rotateSelected = useCallback(() => {
+    if (!selectedId) return;
+    setElements((els) => els.map((el) => {
+      if (el.id !== selectedId) return el;
+      // Only rotate symbols that support rotation
+      if (el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower'].includes(el.kind)) {
+        const currentRotation = el.rotation || 0;
+        return { ...el, rotation: (currentRotation + 90) % 360 };
+      }
+      // Rotate seat orientation
+      if (el.type === 'symbol' && el.kind === 'seat') {
+        const orientations = ['top', 'right', 'left'];
+        const currentIndex = orientations.indexOf(el.orient || 'top');
+        const nextOrient = orientations[(currentIndex + 1) % orientations.length];
+        return { ...el, orient: nextOrient };
+      }
+      return el;
+    }));
+  }, [selectedId, setElements]);
+
+  // Check if selected element can be rotated
+  const canRotate = useCallback(() => {
+    if (!selectedId) return false;
+    const el = elements.find((e) => e.id === selectedId);
+    if (!el) return false;
+    return el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower', 'seat'].includes(el.kind);
+  }, [selectedId, elements]);
 
   // Load a template into the canvas
   const loadTemplate = useCallback((templateId) => {
@@ -1243,11 +1301,16 @@ export default function IRShowerFormsView({ profile }) {
               <button onClick={()=>setTool("shower")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="shower"?"#e2e8f0":"#fff" }}>Ciel pluie</button>
               <button onClick={()=>setTool("door")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="door"?"#e2e8f0":"#fff" }}>Porte</button>
               <button onClick={()=>setTool("window")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="window"?"#e2e8f0":"#fff" }}>Fenêtre</button>
+              <button onClick={()=>setTool("wc")}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="wc"?"#e2e8f0":"#fff" }}>WC</button>
+              <button onClick={()=>setTool("sink")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="sink"?"#e2e8f0":"#fff" }}>Lavabo</button>
+              <button onClick={()=>setTool("towelrack")} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="towelrack"?"#e2e8f0":"#fff" }}>Porte-serv.</button>
+              <button onClick={()=>setTool("drain")}  style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="drain"?"#e2e8f0":"#fff" }}>Évacuation</button>
               <button onClick={()=>setTool("text")}   style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: tool==="text"?"#e2e8f0":"#fff" }}>Texte</button>
               <button onClick={()=>setSnap(s=>!s)}     style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: snap?"#e2e8f0":"#fff" }}>{snap?"Snap ✓":"Snap ✗"}</button>
               <button onClick={()=>setOrtho(o=>!o)}    style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background: ortho?"#e2e8f0":"#fff" }}>{ortho?"Ortho ✓":"Ortho ✗"}</button>
               <button onClick={handleUndo} disabled={!canUndo} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", opacity: canUndo ? 1 : 0.5, cursor: canUndo ? 'pointer' : 'not-allowed' }} title="Ctrl+Z">Undo</button>
               <button onClick={handleRedo} disabled={!canRedo} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", opacity: canRedo ? 1 : 0.5, cursor: canRedo ? 'pointer' : 'not-allowed' }} title="Ctrl+Y">Redo</button>
+              <button onClick={rotateSelected} disabled={!canRotate()} style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #0ea5a5", color:"#0ea5a5", background:"#fff", opacity: canRotate() ? 1 : 0.5, cursor: canRotate() ? 'pointer' : 'not-allowed' }} title="Rotate 90°">Pivoter</button>
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
             </div>
             <Small>Zones bleues = murs. Double-clic pour éditer un texte. Le siège se plaque au mur. Barre de maintien = trait entre 2 points.</Small>

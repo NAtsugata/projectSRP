@@ -244,6 +244,137 @@ export const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
         ctx.restore();
       };
 
+      // NEW: WC symbol
+      const drawWC = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // Cuvette (oval)
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15, 20, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Réservoir (rectangle)
+        ctx.strokeRect(-12, -35, 24, 15);
+        // Siège
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 12, 16, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // NEW: Sink/Lavabo symbol
+      const drawSink = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // Vasque (rounded rectangle)
+        ctx.beginPath();
+        ctx.roundRect(-20, -15, 40, 30, 8);
+        ctx.stroke();
+        // Robinet
+        ctx.beginPath();
+        ctx.arc(0, -10, 4, 0, Math.PI * 2);
+        ctx.stroke();
+        // Évacuation
+        ctx.beginPath();
+        ctx.arc(0, 5, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // NEW: Towel rack symbol
+      const drawTowelRack = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // Barre horizontale
+        ctx.beginPath();
+        ctx.moveTo(-25, 0);
+        ctx.lineTo(25, 0);
+        ctx.stroke();
+        // Supports
+        ctx.beginPath();
+        ctx.arc(-25, 0, 3, 0, Math.PI * 2);
+        ctx.arc(25, 0, 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // NEW: Drain symbol
+      const drawDrain = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 2;
+        // Cercle extérieur
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        // Grille (croix)
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.moveTo(0, -8);
+        ctx.lineTo(0, 8);
+        ctx.moveTo(-6, -6);
+        ctx.lineTo(6, 6);
+        ctx.moveTo(-6, 6);
+        ctx.lineTo(6, -6);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // NEW: Rotatable door
+      const drawDoorRotatable = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        const w = 60;
+        // Arc d'ouverture
+        ctx.beginPath();
+        ctx.arc(0, 0, w, 0, Math.PI / 2);
+        ctx.stroke();
+        // Ligne de la porte
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(w, 0);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // NEW: Rotatable shower
+      const drawShowerRotatable = (el) => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.lineWidth = 2;
+        // Ligne d'alimentation
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(40, 0);
+        ctx.stroke();
+        // Pomme de douche
+        ctx.beginPath();
+        ctx.arc(40, 0, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
       for (const el of all) {
         if (el.type === "dim") drawDim(el);
         else if (el.type === "rect") drawRect(el);
@@ -252,9 +383,22 @@ export const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
           if (el.kind === "mixer") drawMixer(el);
           else if (el.kind === "seat") drawSeat(el);
           else if (el.kind === "bar") drawBar(el);
-          else if (el.kind === "shower") drawShower(el);
-          else if (el.kind === "door") drawDoor(el);
+          else if (el.kind === "shower") {
+            // Use rotatable version if rotation is set
+            if (el.rotation !== undefined) drawShowerRotatable(el);
+            else drawShower(el);
+          }
+          else if (el.kind === "door") {
+            // Use rotatable version if rotation is set
+            if (el.rotation !== undefined) drawDoorRotatable(el);
+            else drawDoor(el);
+          }
           else if (el.kind === "window") drawWindow(el);
+          // New symbols
+          else if (el.kind === "wc") drawWC(el);
+          else if (el.kind === "sink") drawSink(el);
+          else if (el.kind === "towelrack") drawTowelRack(el);
+          else if (el.kind === "drain") drawDrain(el);
         }
       }
     },
