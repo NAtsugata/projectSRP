@@ -351,6 +351,73 @@ export default function IRShowerFormsView({ profile }) {
     return true;
   };
 
+  // Plan validation - check if plan has required elements
+  const validatePlan = useCallback(() => {
+    const validation = {
+      isValid: true,
+      errors: [],
+      warnings: [],
+      score: 0,
+      maxScore: 100
+    };
+
+    // Check for room walls (at least one rect)
+    const hasRoomWalls = elements.some(el => el.type === 'rect');
+    if (!hasRoomWalls) {
+      validation.errors.push('Aucun mur/pièce défini (utilisez l\'outil Rectangle)');
+    } else {
+      validation.score += 20;
+    }
+
+    // Check for shower area (shower symbol or specific rect)
+    const hasShower = elements.some(el => el.type === 'symbol' && el.kind === 'shower');
+    if (!hasShower) {
+      validation.errors.push('Pas de ciel de pluie/douche positionné');
+    } else {
+      validation.score += 20;
+    }
+
+    // Check for mixer
+    const hasMixer = elements.some(el => el.type === 'symbol' && el.kind === 'mixer');
+    if (!hasMixer) {
+      validation.warnings.push('Pas de mitigeur positionné');
+    } else {
+      validation.score += 15;
+    }
+
+    // Check for dimensions (at least 2)
+    const dimensionCount = elements.filter(el => el.type === 'dim').length;
+    if (dimensionCount < 2) {
+      validation.warnings.push('Moins de 2 cotes de dimension (recommandé: au moins 2)');
+    } else {
+      validation.score += 20;
+    }
+
+    // Check for door
+    const hasDoor = elements.some(el => el.type === 'symbol' && el.kind === 'door');
+    if (!hasDoor) {
+      validation.warnings.push('Pas de porte positionnée');
+    } else {
+      validation.score += 10;
+    }
+
+    // Check for grab bars (recommended for accessibility)
+    const hasBar = elements.some(el => el.type === 'symbol' && el.kind === 'bar');
+    if (!hasBar) {
+      validation.warnings.push('Pas de barre de maintien (recommandé pour accessibilité)');
+    } else {
+      validation.score += 15;
+    }
+
+    // Plan is valid if no critical errors
+    validation.isValid = validation.errors.length === 0;
+
+    return validation;
+  }, [elements]);
+
+  // Get current validation state
+  const planValidation = validatePlan();
+
   // Refs PDF
   const etudeRef = useRef(null);
   const planExportRef = useRef(null);
@@ -1314,6 +1381,73 @@ export default function IRShowerFormsView({ profile }) {
               <button onClick={delSelected}            style={{ padding:"6px 10px", borderRadius:8, border:"1px solid #ef4444", color:"#ef4444", background:"#fff" }} disabled={!selectedId}>Supprimer sélection</button>
             </div>
             <Small>Zones bleues = murs. Double-clic pour éditer un texte. Le siège se plaque au mur. Barre de maintien = trait entre 2 points.</Small>
+          </Section>
+
+          {/* VALIDATION STATUS */}
+          <Section title="Validation du plan">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              {/* Progress bar */}
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Complétion</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444' }}>
+                    {planValidation.score}%
+                  </span>
+                </div>
+                <div style={{ height: 8, borderRadius: 4, background: '#e2e8f0', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${planValidation.score}%`,
+                      borderRadius: 4,
+                      background: planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444',
+                      transition: 'width 0.3s ease'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Status badge */}
+              <div style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                background: planValidation.isValid ? '#dcfce7' : '#fee2e2',
+                color: planValidation.isValid ? '#166534' : '#991b1b',
+                fontSize: 12,
+                fontWeight: 600
+              }}>
+                {planValidation.isValid ? 'Plan valide' : 'Éléments manquants'}
+              </div>
+            </div>
+
+            {/* Errors */}
+            {planValidation.errors.length > 0 && (
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: '#fee2e2', border: '1px solid #fecaca' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>Éléments requis manquants :</div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#991b1b' }}>
+                  {planValidation.errors.map((err, i) => <li key={i}>{err}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {planValidation.warnings.length > 0 && (
+              <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: '#fef3c7', border: '1px solid #fde68a' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Recommandations :</div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#92400e' }}>
+                  {planValidation.warnings.map((warn, i) => <li key={i}>{warn}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Success message */}
+            {planValidation.isValid && planValidation.warnings.length === 0 && (
+              <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: '#dcfce7', border: '1px solid #bbf7d0' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#166534' }}>
+                  Excellent ! Votre plan est complet et contient tous les éléments recommandés.
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* ZONE EXPORTABLE */}
