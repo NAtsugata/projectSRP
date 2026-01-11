@@ -6,6 +6,7 @@ import logger from '../utils/logger';
 import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../components/ir-shower';
 import { usePlanCanvas } from '../hooks/usePlanCanvas';
 import { useUndoRedo } from '../hooks/useUndoRedo';
+import { PLAN_TEMPLATES, getTemplateElements } from '../data/planTemplates';
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
@@ -619,6 +620,20 @@ export default function IRShowerFormsView({ profile }) {
   const delSelected = () => { if (!selectedId) return; setElements((els) => els.filter((x) => x.id !== selectedId)); setSelectedId(null); };
   const resetPlan = () => { resetHistory(); setPreview(null); setSelectedId(null); };
 
+  // Load a template into the canvas
+  const loadTemplate = useCallback((templateId) => {
+    if (elements.length > 0) {
+      if (!window.confirm('Charger ce template effacera le plan actuel. Continuer ?')) {
+        return;
+      }
+    }
+    const templateElements = getTemplateElements(templateId);
+    setElementsNoHistory(templateElements);
+    setSelectedId(null);
+    setPreview(null);
+    setTool('select');
+  }, [elements.length, setElementsNoHistory]);
+
   // Keyboard shortcuts for undo/redo (Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1176,6 +1191,44 @@ export default function IRShowerFormsView({ profile }) {
               <div style={{ minWidth: 220 }}><Label>PRÉNOM :</Label><Input placeholder="........................................................" /></div>
             </div>
             <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>Exemplaire à destination du client</div>
+          </Section>
+
+          {/* TEMPLATES */}
+          <Section title="Templates de plan">
+            <Small style={{ marginBottom: 8, display: 'block' }}>Cliquez sur un template pour charger une configuration prédéfinie</Small>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {PLAN_TEMPLATES.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => loadTemplate(template.id)}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    border: '2px solid #e2e8f0',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    minWidth: 150,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = '#0ea5a5';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(14,165,165,0.2)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b', marginBottom: 4 }}>
+                    {template.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                    {template.description}
+                  </div>
+                </button>
+              ))}
+            </div>
           </Section>
 
           {/* OUTILS */}
