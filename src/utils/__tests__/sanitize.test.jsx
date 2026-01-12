@@ -1,6 +1,7 @@
 // src/utils/__tests__/sanitize.test.js
 // Tests unitaires pour les fonctions de sanitisation - Version améliorée
 
+import { describe, test, expect, beforeEach } from 'vitest';
 import {
   sanitizeHTML,
   sanitizeText,

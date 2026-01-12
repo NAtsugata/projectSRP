@@ -1,6 +1,7 @@
 // src/config/__tests__/fileConfig.test.js
 // Tests unitaires pour fileConfig
 
+import { describe, test, expect } from 'vitest';
 import { FILE_SIZE, ACCEPTED_TYPES, fileUtils } from '../fileConfig';
 
 describe('fileConfig', () => {

@@ -1,6 +1,7 @@
 // src/utils/__tests__/safeStorage.test.js
 // Tests unitaires pour safeStorage
 
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { safeStorage } from '../safeStorage';
 
 describe('safeStorage', () => {
