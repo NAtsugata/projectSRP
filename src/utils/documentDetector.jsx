@@ -3,8 +3,65 @@
  *
  * This utility detects document edges in an image and provides
  * automatic cropping and perspective correction.
+ *
+ * Enhanced with multi-strategy detection for better accuracy.
  */
 import logger from './logger';
+
+/**
+ * Detection strategies with different parameters
+ * Each strategy is optimized for different document/lighting conditions
+ */
+const DETECTION_STRATEGIES = [
+  {
+    name: 'standard',
+    cannyLow: 30,
+    cannyHigh: 100,
+    blurSize: 5,
+    dilateSize: 3,
+    useClosing: true,
+    useBilateral: false,
+    claheClip: 2.0
+  },
+  {
+    name: 'low_contrast',
+    cannyLow: 10,
+    cannyHigh: 50,
+    blurSize: 5,
+    dilateSize: 5,
+    useClosing: true,
+    useBilateral: false,
+    claheClip: 3.0
+  },
+  {
+    name: 'high_contrast',
+    cannyLow: 50,
+    cannyHigh: 150,
+    blurSize: 3,
+    dilateSize: 3,
+    useClosing: false,
+    useBilateral: true,
+    claheClip: 2.0
+  },
+  {
+    name: 'adaptive_threshold',
+    useAdaptive: true,
+    adaptiveBlockSize: 11,
+    adaptiveC: 2,
+    dilateSize: 5,
+    useClosing: true
+  },
+  {
+    name: 'aggressive',
+    cannyLow: 5,
+    cannyHigh: 30,
+    blurSize: 7,
+    dilateSize: 7,
+    useClosing: true,
+    useBilateral: false,
+    claheClip: 4.0
+  }
+];
 
 /**
  * Wait for OpenCV.js to be loaded
@@ -80,6 +137,211 @@ const orderPointsToQuad = (points) => {
  */
 const getContourPerimeter = (contour) => {
   return window.cv.arcLength(contour, true);
+};
+
+/**
+ * Score a contour based on how likely it is to be a document
+ * Higher score = more likely to be a document
+ * @param {Array} corners - 4 corner points
+ * @param {number} imageWidth - Image width
+ * @param {number} imageHeight - Image height
+ * @returns {number} Score between 0 and 100
+ */
+const scoreContour = (corners, imageWidth, imageHeight) => {
+  if (!corners || corners.length !== 4) return 0;
+
+  let score = 0;
+  const imageArea = imageWidth * imageHeight;
+
+  // 1. Area score (larger = better, but not too large)
+  const contourArea = Math.abs(
+    (corners[0].x * corners[1].y - corners[1].x * corners[0].y) +
+    (corners[1].x * corners[2].y - corners[2].x * corners[1].y) +
+    (corners[2].x * corners[3].y - corners[3].x * corners[2].y) +
+    (corners[3].x * corners[0].y - corners[0].x * corners[3].y)
+  ) / 2;
+
+  const areaRatio = contourArea / imageArea;
+  if (areaRatio >= 0.1 && areaRatio <= 0.95) {
+    score += 25 * Math.min(areaRatio * 2, 1); // Max 25 points
+  }
+
+  // 2. Aspect ratio score (documents are usually rectangular)
+  const width1 = Math.sqrt(Math.pow(corners[1].x - corners[0].x, 2) + Math.pow(corners[1].y - corners[0].y, 2));
+  const width2 = Math.sqrt(Math.pow(corners[2].x - corners[3].x, 2) + Math.pow(corners[2].y - corners[3].y, 2));
+  const height1 = Math.sqrt(Math.pow(corners[3].x - corners[0].x, 2) + Math.pow(corners[3].y - corners[0].y, 2));
+  const height2 = Math.sqrt(Math.pow(corners[2].x - corners[1].x, 2) + Math.pow(corners[2].y - corners[1].y, 2));
+
+  const avgWidth = (width1 + width2) / 2;
+  const avgHeight = (height1 + height2) / 2;
+  const aspectRatio = Math.max(avgWidth, avgHeight) / Math.min(avgWidth, avgHeight);
+
+  // Common document ratios: A4 (1.41), Letter (1.29), Square (1.0)
+  if (aspectRatio >= 1.0 && aspectRatio <= 2.0) {
+    score += 25; // Good aspect ratio
+  } else if (aspectRatio < 3.0) {
+    score += 15; // Acceptable
+  }
+
+  // 3. Parallelism score (opposite sides should be similar length)
+  const widthDiff = Math.abs(width1 - width2) / Math.max(width1, width2);
+  const heightDiff = Math.abs(height1 - height2) / Math.max(height1, height2);
+  const parallelScore = (1 - widthDiff) * 12.5 + (1 - heightDiff) * 12.5;
+  score += parallelScore;
+
+  // 4. Right angles score (corners should be close to 90 degrees)
+  const angles = [];
+  for (let i = 0; i < 4; i++) {
+    const p1 = corners[i];
+    const p2 = corners[(i + 1) % 4];
+    const p3 = corners[(i + 2) % 4];
+
+    const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+    const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+    const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+    if (mag1 > 0 && mag2 > 0) {
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI);
+      angles.push(Math.abs(90 - angle));
+    }
+  }
+
+  if (angles.length === 4) {
+    const avgAngleDeviation = angles.reduce((a, b) => a + b, 0) / 4;
+    // Less deviation from 90 degrees = higher score
+    const angleScore = Math.max(0, 25 - avgAngleDeviation);
+    score += angleScore;
+  }
+
+  return Math.min(100, Math.max(0, score));
+};
+
+/**
+ * Try detection with a specific strategy
+ * @param {Object} src - OpenCV Mat source image
+ * @param {Object} strategy - Detection strategy parameters
+ * @param {number} imageArea - Total image area
+ * @param {number} minArea - Minimum area threshold
+ * @returns {Object|null} Detection result with corners and score
+ */
+const tryDetectionStrategy = (src, strategy, imageArea, minArea) => {
+  const gray = new window.cv.Mat();
+  const processed = new window.cv.Mat();
+  const edges = new window.cv.Mat();
+  const morphed = new window.cv.Mat();
+
+  try {
+    // Convert to grayscale
+    window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
+
+    // Apply CLAHE if specified
+    if (strategy.claheClip) {
+      const clahe = new window.cv.CLAHE(strategy.claheClip, new window.cv.Size(8, 8));
+      clahe.apply(gray, processed);
+      clahe.delete();
+    } else {
+      gray.copyTo(processed);
+    }
+
+    // Apply blur (bilateral or gaussian)
+    const blurred = new window.cv.Mat();
+    if (strategy.useBilateral) {
+      // Bilateral filter preserves edges better
+      window.cv.bilateralFilter(processed, blurred, 9, 75, 75);
+    } else if (strategy.blurSize) {
+      const ksize = new window.cv.Size(strategy.blurSize, strategy.blurSize);
+      window.cv.GaussianBlur(processed, blurred, ksize, 0);
+    } else {
+      processed.copyTo(blurred);
+    }
+
+    // Edge detection
+    if (strategy.useAdaptive) {
+      // Adaptive thresholding for uneven lighting
+      window.cv.adaptiveThreshold(
+        blurred,
+        edges,
+        255,
+        window.cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+        window.cv.THRESH_BINARY_INV,
+        strategy.adaptiveBlockSize || 11,
+        strategy.adaptiveC || 2
+      );
+    } else {
+      // Canny edge detection
+      window.cv.Canny(blurred, edges, strategy.cannyLow, strategy.cannyHigh);
+    }
+
+    blurred.delete();
+
+    // Morphological operations
+    const kernel = window.cv.getStructuringElement(
+      window.cv.MORPH_RECT,
+      new window.cv.Size(strategy.dilateSize || 3, strategy.dilateSize || 3)
+    );
+
+    if (strategy.useClosing) {
+      // Closing = dilation followed by erosion (closes gaps in contours)
+      window.cv.morphologyEx(edges, morphed, window.cv.MORPH_CLOSE, kernel);
+    } else {
+      // Just dilation
+      window.cv.dilate(edges, morphed, kernel);
+    }
+
+    kernel.delete();
+
+    // Find contours
+    const contours = new window.cv.MatVector();
+    const hierarchy = new window.cv.Mat();
+    window.cv.findContours(
+      morphed,
+      contours,
+      hierarchy,
+      window.cv.RETR_EXTERNAL,
+      window.cv.CHAIN_APPROX_SIMPLE
+    );
+
+    // Find best document contour
+    const documentContour = findDocumentContour(contours, imageArea, minArea);
+
+    let result = null;
+
+    if (documentContour && documentContour.rows === 4) {
+      const corners = [];
+      for (let i = 0; i < 4; i++) {
+        corners.push({
+          x: documentContour.data32S[i * 2],
+          y: documentContour.data32S[i * 2 + 1]
+        });
+      }
+
+      const score = scoreContour(corners, src.cols, src.rows);
+
+      result = {
+        corners,
+        score,
+        strategy: strategy.name
+      };
+
+      documentContour.delete();
+    }
+
+    // Cleanup
+    contours.delete();
+    hierarchy.delete();
+
+    return result;
+
+  } finally {
+    // Always cleanup
+    gray.delete();
+    processed.delete();
+    edges.delete();
+    morphed.delete();
+  }
 };
 
 /**
@@ -284,85 +546,55 @@ export const detectDocument = async (input, options = {}) => {
       corners = manualCorners;
       result.contour = corners;
     } else {
-      // Otherwise, detect automatically with OpenCV
-      const gray = new window.cv.Mat();
-      const blurred = new window.cv.Mat();
-      const edges = new window.cv.Mat();
-      const dilated = new window.cv.Mat();
-
-      // Convert to grayscale
-      window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
-
-      // Améliorer le contraste avec CLAHE (Contrast Limited Adaptive Histogram Equalization)
-      const clahe = new window.cv.CLAHE(2.0, new window.cv.Size(8, 8));
-      clahe.apply(gray, gray);
-
-      // Apply Gaussian blur pour réduire le bruit
-      const ksize = new window.cv.Size(5, 5);
-      window.cv.GaussianBlur(gray, blurred, ksize, 0);
-
-      // Detect edges using Canny avec des seuils TRES bas pour capter le moindre bord
-      // 30/100 était trop strict. 10/50 permet de voir des bords faibles.
-      window.cv.Canny(blurred, edges, 10, 50);
-
-      // Dilater les bords pour mieux connecter les contours (plus agressif)
-      const kernel = window.cv.getStructuringElement(
-        window.cv.MORPH_RECT,
-        new window.cv.Size(5, 5) // 3x3 -> 5x5 pour mieux fermer les trous
-      );
-      window.cv.dilate(edges, dilated, kernel);
-
-      // Find contours
-      const contours = new window.cv.MatVector();
-      const hierarchy = new window.cv.Mat();
-      window.cv.findContours(
-        dilated,
-        contours,
-        hierarchy,
-        window.cv.RETR_EXTERNAL,
-        window.cv.CHAIN_APPROX_SIMPLE
-      );
-
-      // Find document contour
+      // Multi-strategy detection: try all strategies and pick the best result
       const imageArea = src.rows * src.cols;
-      // Réduire minArea à 5% (0.05) au lieu de 10%
       const effectiveMinArea = minArea < 0.1 ? minArea : 0.05;
-      logger.log(`[Scanner Debug] Image area: ${imageArea}, Min area: ${imageArea * effectiveMinArea} (${effectiveMinArea * 100}%)`);
-      logger.log(`[Scanner Debug] Total contours found: ${contours.size()}`);
 
-      const documentContour = findDocumentContour(contours, imageArea, effectiveMinArea);
+      logger.log(`[Scanner] Starting multi-strategy detection (${DETECTION_STRATEGIES.length} strategies)`);
+      logger.log(`[Scanner] Image: ${src.cols}x${src.rows}, Min area: ${(effectiveMinArea * 100).toFixed(1)}%`);
 
-      if (documentContour) {
-        logger.log(`[Scanner Debug] Best contour found with ${documentContour.rows} points`);
-      } else {
-        logger.log('[Scanner Debug] No valid document contour found');
-      }
+      let bestResult = null;
 
-      if (documentContour && documentContour.rows === 4) {
-        result.detected = true;
+      for (const strategy of DETECTION_STRATEGIES) {
+        try {
+          const strategyResult = tryDetectionStrategy(src, strategy, imageArea, effectiveMinArea);
 
-        // Extract corner points
-        corners = [];
-        for (let i = 0; i < 4; i++) {
-          corners.push({
-            x: documentContour.data32S[i * 2],
-            y: documentContour.data32S[i * 2 + 1]
-          });
+          if (strategyResult) {
+            logger.log(`[Scanner] Strategy "${strategy.name}": score=${strategyResult.score.toFixed(1)}`);
+
+            if (!bestResult || strategyResult.score > bestResult.score) {
+              bestResult = strategyResult;
+            }
+          } else {
+            logger.log(`[Scanner] Strategy "${strategy.name}": no detection`);
+          }
+        } catch (strategyError) {
+          logger.warn(`[Scanner] Strategy "${strategy.name}" failed:`, strategyError.message);
         }
-        result.contour = corners;
-
-        // Cleanup
-        documentContour.delete();
       }
 
-      // Cleanup
-      gray.delete();
-      blurred.delete();
-      edges.delete();
-      dilated.delete();
-      kernel.delete();
-      contours.delete();
-      hierarchy.delete();
+      // Accept result if score is above threshold (40 = reasonable confidence)
+      if (bestResult && bestResult.score >= 40) {
+        result.detected = true;
+        corners = bestResult.corners;
+        result.contour = corners;
+        result.confidence = bestResult.score;
+        result.strategy = bestResult.strategy;
+
+        logger.log(`[Scanner] Best result: strategy="${bestResult.strategy}", score=${bestResult.score.toFixed(1)}`);
+      } else if (bestResult) {
+        // Low confidence - still return but mark as uncertain
+        result.detected = true;
+        corners = bestResult.corners;
+        result.contour = corners;
+        result.confidence = bestResult.score;
+        result.strategy = bestResult.strategy;
+        result.lowConfidence = true;
+
+        logger.log(`[Scanner] Low confidence result: strategy="${bestResult.strategy}", score=${bestResult.score.toFixed(1)}`);
+      } else {
+        logger.log('[Scanner] No valid document detected with any strategy');
+      }
     }
 
     if (result.detected && corners) {
