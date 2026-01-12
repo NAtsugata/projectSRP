@@ -1,5 +1,6 @@
 // src/hooks/useDocumentDetection.js
 // Hook pour la détection de documents avec OpenCV ou YOLO
+// Enhanced with hybrid detection and fallback mechanism
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import documentDetectorUtils from '../utils/documentDetector';
@@ -10,21 +11,29 @@ const DEFAULT_YOLO_MODEL_PATH = '/models/document_detector.onnx';
 
 /**
  * Hook pour gérer la détection de documents
+ * Enhanced with:
+ * - Multi-strategy OpenCV detection
+ * - YOLO with scoring
+ * - Hybrid mode: YOLO for initial detection, OpenCV for refinement
+ * - Automatic fallback between detectors
+ *
  * @param {Object} options - Options de configuration
- * @param {string} options.initialDetector - Détecteur initial ('opencv' ou 'yolo')
+ * @param {string} options.initialDetector - Détecteur initial ('opencv', 'yolo', 'hybrid')
  * @param {string} options.yoloModelPath - Chemin vers le modèle YOLO
  * @returns {Object} - API de détection et état
  */
 export const useDocumentDetection = (options = {}) => {
   const {
     initialDetector = 'opencv',
-    yoloModelPath = DEFAULT_YOLO_MODEL_PATH
+    yoloModelPath = DEFAULT_YOLO_MODEL_PATH,
+    enableFallback = true // Try other detector if first fails
   } = options;
 
   const [detectorType, setDetectorType] = useState(initialDetector);
   const [yoloModelLoaded, setYoloModelLoaded] = useState(false);
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
+  const [lastDetectionMethod, setLastDetectionMethod] = useState(null);
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
@@ -50,44 +59,107 @@ export const useDocumentDetection = (options = {}) => {
     loadYOLOModel();
   }, [detectorType, yoloModelLoaded, yoloModelPath]);
 
-  // Détecter un document avec le détecteur actuel
-  const detectDocument = useCallback(async (file, extraOptions = {}) => {
-    if (detectorType === 'yolo' && yoloModelLoaded) {
-      const detector = getYOLODetector();
-      const result = await detector.detectDocument(file, {
-        confidenceThreshold: 0.5,
-        ...extraOptions
-      });
+  // Détection OpenCV
+  const detectWithOpenCV = useCallback(async (file, extraOptions = {}) => {
+    const result = await documentDetectorUtils.detectDocument(file, {
+      minArea: 0.05,
+      autoTransform: false,
+      drawContours: false,
+      ...extraOptions
+    });
 
-      if (result.detected && result.detections.length > 0) {
-        const bestDetection = result.detections.reduce((best, det) =>
-          det.confidence > best.confidence ? det : best
-        );
+    return {
+      ...result,
+      method: 'opencv',
+      score: result.confidence || 0
+    };
+  }, []);
 
-        const corners = detector.bboxToCorners(
-          bestDetection.bbox,
-          result.originalSize.width,
-          result.originalSize.height
-        );
-
-        return {
-          detected: true,
-          contour: corners,
-          confidence: bestDetection.confidence,
-          method: 'yolo'
-        };
-      }
-
-      return { detected: false, contour: null, method: 'yolo' };
-    } else {
-      return await documentDetectorUtils.detectDocument(file, {
-        minArea: 0.05,
-        autoTransform: false,
-        drawContours: false,
-        ...extraOptions
-      });
+  // Détection YOLO
+  const detectWithYOLO = useCallback(async (file, extraOptions = {}) => {
+    if (!yoloModelLoaded) {
+      return { detected: false, contour: null, method: 'yolo', score: 0 };
     }
-  }, [detectorType, yoloModelLoaded]);
+
+    const detector = getYOLODetector();
+    const result = await detector.detectDocument(file, {
+      confidenceThreshold: 0.3,
+      minScore: 40,
+      ...extraOptions
+    });
+
+    if (result.detected && result.detections.length > 0) {
+      const bestDetection = result.detections[0]; // Already sorted by score
+
+      const corners = detector.bboxToCorners(
+        bestDetection.bbox,
+        result.originalSize.width,
+        result.originalSize.height
+      );
+
+      return {
+        detected: true,
+        contour: corners,
+        confidence: bestDetection.confidence,
+        score: bestDetection.score,
+        method: 'yolo',
+        lowConfidence: result.lowConfidence
+      };
+    }
+
+    return { detected: false, contour: null, method: 'yolo', score: 0 };
+  }, [yoloModelLoaded]);
+
+  // Détecter un document avec le détecteur actuel (avec fallback)
+  const detectDocument = useCallback(async (file, extraOptions = {}) => {
+    let result = null;
+    let fallbackResult = null;
+
+    // Primary detection based on selected type
+    if (detectorType === 'yolo' || detectorType === 'hybrid') {
+      result = await detectWithYOLO(file, extraOptions);
+
+      // Fallback to OpenCV if YOLO fails or has low confidence
+      if (enableFallback && (!result.detected || result.lowConfidence)) {
+        logger.log('[Detection] YOLO failed or low confidence, trying OpenCV...');
+        fallbackResult = await detectWithOpenCV(file, extraOptions);
+
+        // Use fallback if it's better
+        if (fallbackResult.detected && (!result.detected || fallbackResult.score > result.score)) {
+          result = fallbackResult;
+        }
+      }
+    } else {
+      // OpenCV primary
+      result = await detectWithOpenCV(file, extraOptions);
+
+      // Fallback to YOLO if OpenCV fails and YOLO is available
+      if (enableFallback && !result.detected && yoloModelLoaded) {
+        logger.log('[Detection] OpenCV failed, trying YOLO...');
+        fallbackResult = await detectWithYOLO(file, extraOptions);
+
+        if (fallbackResult.detected) {
+          result = fallbackResult;
+        }
+      }
+    }
+
+    // Hybrid mode: If we have YOLO bbox, try to refine corners with OpenCV
+    if (detectorType === 'hybrid' && result.detected && result.method === 'yolo') {
+      logger.log('[Detection] Hybrid mode: refining YOLO result with OpenCV...');
+      const refinedResult = await detectWithOpenCV(file, extraOptions);
+
+      // Use OpenCV result if it has better score
+      if (refinedResult.detected && refinedResult.score > result.score) {
+        result = { ...refinedResult, method: 'hybrid' };
+      } else {
+        result.method = 'hybrid';
+      }
+    }
+
+    setLastDetectionMethod(result.method);
+    return result;
+  }, [detectorType, yoloModelLoaded, enableFallback, detectWithOpenCV, detectWithYOLO]);
 
   // Démarrer la détection en temps réel sur un flux vidéo
   const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 600) => {
@@ -248,10 +320,13 @@ export const useDocumentDetection = (options = {}) => {
     yoloModelLoaded,
     liveCorners,
     detectionConfidence,
+    lastDetectionMethod,
 
     // Actions
     setDetectorType,
     detectDocument,
+    detectWithOpenCV,
+    detectWithYOLO,
     startLiveDetection,
     stopLiveDetection,
     resetDetection
