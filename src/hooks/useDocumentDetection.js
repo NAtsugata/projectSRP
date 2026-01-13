@@ -1,9 +1,9 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents - Pure JavaScript
-// Aucune dépendance externe, fonctionne hors ligne
+// Hook pour la détection de documents avec jscanify + OpenCV.js
+// Fonctionne entièrement dans le navigateur
 
-import { useState, useCallback, useRef } from 'react';
-import { detectDocument, isOpenCVLoaded } from '../utils/jscanifyDetector';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { detectDocument, preloadOpenCV, isOpenCVLoaded } from '../utils/jscanifyDetector';
 import logger from '../utils/logger';
 
 /**
@@ -15,16 +15,43 @@ import logger from '../utils/logger';
 export const useDocumentDetection = (options = {}) => {
   const {
     outputWidth = 595,
-    outputHeight = 842
+    outputHeight = 842,
+    preload = true
   } = options;
 
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [lastDetectionMethod] = useState('pure-js');
-  const [isReady] = useState(true); // Always ready - no loading needed
+  const [lastDetectionMethod] = useState('jscanify');
+  const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
+
+  // Précharger OpenCV au montage
+  useEffect(() => {
+    if (preload && !isReady && !isLoading) {
+      setIsLoading(true);
+      setLoadError(null);
+
+      preloadOpenCV()
+        .then((success) => {
+          setIsReady(success);
+          setIsLoading(false);
+          if (success) {
+            logger.log('[useDocumentDetection] OpenCV.js ready');
+          } else {
+            setLoadError('Échec du chargement d\'OpenCV.js');
+          }
+        })
+        .catch((error) => {
+          setIsLoading(false);
+          setLoadError(error.message);
+          logger.error('[useDocumentDetection] Load error:', error);
+        });
+    }
+  }, [preload, isReady, isLoading]);
 
   // Détection de document
   const detectDocumentMethod = useCallback(async (file, extraOptions = {}) => {
@@ -221,6 +248,8 @@ export const useDocumentDetection = (options = {}) => {
     // État
     detectorType: 'jscanify',
     isReady,
+    isLoading,
+    loadError,
     liveCorners,
     detectionConfidence,
     lastDetectionMethod,
@@ -229,7 +258,8 @@ export const useDocumentDetection = (options = {}) => {
     detectDocument: detectDocumentMethod,
     startLiveDetection,
     stopLiveDetection,
-    resetDetection
+    resetDetection,
+    preloadOpenCV
   };
 };
 
