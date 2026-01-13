@@ -1,79 +1,77 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents avec Scanic uniquement
-// Scanic: lightweight (~100KB), fast, WASM-based
+// Hook pour la détection de documents avec jscanify + OpenCV.js
+// Fonctionne entièrement dans le navigateur
 
-import { useState, useCallback, useRef } from 'react';
-import { detectWithScanic, cornersToPercent } from '../utils/scanicDetector';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { detectDocument, preloadOpenCV, isOpenCVLoaded } from '../utils/jscanifyDetector';
 import logger from '../utils/logger';
 
 /**
- * Hook pour gérer la détection de documents avec Scanic
+ * Hook pour gérer la détection de documents
  *
  * @param {Object} options - Options de configuration
  * @returns {Object} - API de détection et état
  */
 export const useDocumentDetection = (options = {}) => {
   const {
-    maxProcessingDimension = 800
+    outputWidth = 595,
+    outputHeight = 842,
+    preload = true
   } = options;
 
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [lastDetectionMethod] = useState('scanic');
+  const [lastDetectionMethod] = useState('jscanify');
+  const [isReady, setIsReady] = useState(false);
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
 
-  // Détection Scanic
-  const detectWithScanicMethod = useCallback(async (file, extraOptions = {}) => {
+  // Précharger OpenCV au montage
+  useEffect(() => {
+    if (preload) {
+      preloadOpenCV().then((success) => {
+        setIsReady(success);
+        if (success) {
+          logger.log('[useDocumentDetection] OpenCV.js ready');
+        }
+      });
+    }
+  }, [preload]);
+
+  // Détection de document
+  const detectDocumentMethod = useCallback(async (file, extraOptions = {}) => {
     try {
-      const result = await detectWithScanic(file, {
-        mode: 'detect',
-        maxProcessingDimension,
+      const result = await detectDocument(file, {
+        outputWidth,
+        outputHeight,
         ...extraOptions
       });
 
-      if (result.detected && result.corners) {
-        // Convert to percentage for consistent handling
-        const percentCorners = cornersToPercent(
-          result.corners,
-          result.originalWidth,
-          result.originalHeight
-        );
-
-        return {
-          detected: true,
-          contour: percentCorners,
-          confidence: result.confidence || 85,
-          score: result.confidence || 85,
-          method: 'scanic',
-          processingTime: result.processingTime
-        };
-      }
-
       return {
-        detected: false,
-        contour: null,
-        method: 'scanic',
-        score: 0
+        detected: result.detected,
+        contour: result.corners,
+        corners: result.corners,
+        original: result.original,
+        preview: result.preview,
+        transformed: result.transformed,
+        confidence: result.confidence || 0,
+        score: result.confidence || 0,
+        method: 'jscanify',
+        processingTime: result.processingTime
       };
     } catch (error) {
-      logger.error('[Detection] Scanic error:', error);
+      logger.error('[Detection] jscanify error:', error);
       return {
         detected: false,
         contour: null,
-        method: 'scanic',
+        corners: null,
+        method: 'jscanify',
         score: 0,
         error: error.message
       };
     }
-  }, [maxProcessingDimension]);
-
-  // Détecter un document
-  const detectDocument = useCallback(async (file, extraOptions = {}) => {
-    const result = await detectWithScanicMethod(file, extraOptions);
-    return result;
-  }, [detectWithScanicMethod]);
+  }, [outputWidth, outputHeight]);
 
   // Démarrer la détection en temps réel sur un flux vidéo
   const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 600) => {
@@ -88,6 +86,10 @@ export const useDocumentDetection = (options = {}) => {
       const overlayCanvas = overlayCanvasRef.current;
 
       if (!video || !overlayCanvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        return;
+      }
+
+      if (!isOpenCVLoaded()) {
         return;
       }
 
@@ -108,7 +110,7 @@ export const useDocumentDetection = (options = {}) => {
         });
 
         const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
-        const result = await detectDocument(file);
+        const result = await detectDocumentMethod(file);
 
         // Ajouter à l'historique
         detectionHistoryRef.current.push({
@@ -208,7 +210,7 @@ export const useDocumentDetection = (options = {}) => {
         detectionIntervalRef.current = null;
       }
     };
-  }, [detectDocument]);
+  }, [detectDocumentMethod]);
 
   // Arrêter la détection en temps réel
   const stopLiveDetection = useCallback(() => {
@@ -230,17 +232,18 @@ export const useDocumentDetection = (options = {}) => {
 
   return {
     // État
-    detectorType: 'scanic',
+    detectorType: 'jscanify',
+    isReady,
     liveCorners,
     detectionConfidence,
     lastDetectionMethod,
 
     // Actions
-    detectDocument,
-    detectWithScanic: detectWithScanicMethod,
+    detectDocument: detectDocumentMethod,
     startLiveDetection,
     stopLiveDetection,
-    resetDetection
+    resetDetection,
+    preloadOpenCV
   };
 };
 

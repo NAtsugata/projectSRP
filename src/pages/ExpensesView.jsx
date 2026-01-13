@@ -14,7 +14,7 @@ import {
 } from '../components/SharedUI';
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { ReceiptsModal } from '../components/expenses';
-import { detectWithScanic } from '../utils/scanicDetector';
+import { detectDocument } from '../utils/jscanifyDetector';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
 import '../components/expenses/ExpensesStyles.css';
@@ -174,28 +174,23 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     setCurrentPhotoFile(file);
 
     try {
-      // Lire l'image originale comme data URL
-      const originalDataUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-
-      const result = await detectWithScanic(file, {
-        mode: 'detect',
-        maxProcessingDimension: 800
+      // Détecter le document avec jscanify + OpenCV.js
+      const result = await detectDocument(file, {
+        outputWidth: 595,
+        outputHeight: 842
       });
 
       setDocumentDetectionResult({
         detected: result.detected,
-        original: originalDataUrl,
-        preview: originalDataUrl, // Preview is the original with corners overlay (handled by component)
-        transformed: result.output || null,
+        original: result.original,
+        preview: result.preview || result.original,
+        transformed: result.transformed || null,
         corners: result.corners || null,
         confidence: result.confidence || 0
       });
     } catch (error) {
       logger.error('Erreur détection document:', error);
+      // Fallback: lire l'image originale
       const reader = new FileReader();
       reader.onload = (e) => {
         setDocumentDetectionResult({
