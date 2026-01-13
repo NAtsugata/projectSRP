@@ -1,9 +1,9 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents avec jscanify + OpenCV.js
-// Fonctionne entièrement dans le navigateur
+// Hook pour la détection de documents - Pure JavaScript
+// Aucune dépendance externe, fonctionne hors ligne
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { detectDocument, preloadOpenCV, isOpenCVLoaded } from '../utils/jscanifyDetector';
+import { useState, useCallback, useRef } from 'react';
+import { detectDocument, isOpenCVLoaded } from '../utils/jscanifyDetector';
 import logger from '../utils/logger';
 
 /**
@@ -15,29 +15,16 @@ import logger from '../utils/logger';
 export const useDocumentDetection = (options = {}) => {
   const {
     outputWidth = 595,
-    outputHeight = 842,
-    preload = true
+    outputHeight = 842
   } = options;
 
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [lastDetectionMethod] = useState('jscanify');
-  const [isReady, setIsReady] = useState(false);
+  const [lastDetectionMethod] = useState('pure-js');
+  const [isReady] = useState(true); // Always ready - no loading needed
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
-
-  // Précharger OpenCV au montage
-  useEffect(() => {
-    if (preload) {
-      preloadOpenCV().then((success) => {
-        setIsReady(success);
-        if (success) {
-          logger.log('[useDocumentDetection] OpenCV.js ready');
-        }
-      });
-    }
-  }, [preload]);
 
   // Détection de document
   const detectDocumentMethod = useCallback(async (file, extraOptions = {}) => {
@@ -242,8 +229,7 @@ export const useDocumentDetection = (options = {}) => {
     detectDocument: detectDocumentMethod,
     startLiveDetection,
     stopLiveDetection,
-    resetDetection,
-    preloadOpenCV
+    resetDetection
   };
 };
 
