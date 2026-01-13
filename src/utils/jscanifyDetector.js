@@ -1,199 +1,150 @@
 // src/utils/jscanifyDetector.js
-// Document detection using jscanify + OpenCV.js
-// Runs entirely in browser, no native dependencies
-
 import logger from './logger';
 
-let opencvLoaded = false;
-let opencvLoading = null;
-let jscanifyInstance = null;
-
-const OPENCV_CDN = 'https://docs.opencv.org/4.7.0/opencv.js';
+// Utilisation d'un CDN rapide (jsdelivr) au lieu de docs.opencv.org
+const OPENCV_CDN = 'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.2/dist/opencv.min.js';
 const OPENCV_SCRIPT_ID = 'opencv-js-script';
 
+let opencvLoadingPromise = null;
+let jscanifyInstance = null;
+
 /**
- * Check if OpenCV is already loaded and ready
+ * Vérifie si OpenCV est chargé et prêt à l'emploi
  */
-const isOpenCVReady = () => {
+export const isOpenCVLoaded = () => {
   return !!(window.cv && window.cv.Mat && typeof window.cv.Mat === 'function');
 };
 
 /**
- * Load OpenCV.js dynamically (singleton pattern)
+ * Charge OpenCV.js de manière robuste
  */
-const loadOpenCV = () => {
-  // Already loaded and ready
-  if (isOpenCVReady()) {
-    opencvLoaded = true;
-    logger.log('[OpenCV] Already loaded and ready');
-    return Promise.resolve(window.cv);
+export const preloadOpenCV = () => {
+  // 1. Si déjà chargé, on renvoie true immédiatement
+  if (isOpenCVLoaded()) {
+    return Promise.resolve(true);
   }
 
-  // Already loading - return existing promise
-  if (opencvLoading) {
-    logger.log('[OpenCV] Loading in progress, waiting...');
-    return opencvLoading;
+  // 2. Si un chargement est déjà en cours, on renvoie la promesse existante
+  if (opencvLoadingPromise) {
+    return opencvLoadingPromise;
   }
 
-  // Check if script already exists in DOM (by ID or src)
-  const existingScript = document.getElementById(OPENCV_SCRIPT_ID) ||
-                         document.querySelector(`script[src*="opencv.js"]`);
+  // 3. Sinon, on lance le chargement
+  opencvLoadingPromise = new Promise((resolve, reject) => {
+    logger.log('[OpenCV] Initialisation du chargement...');
 
-  if (existingScript) {
-    logger.log('[OpenCV] Script exists, waiting for initialization...');
-    opencvLoading = waitForOpenCV();
-    return opencvLoading;
-  }
+    // Timeout de sécurité (20 secondes)
+    const timeoutId = setTimeout(() => {
+      logger.error('[OpenCV] Timeout du chargement');
+      reject(new Error('OpenCV load timeout'));
+    }, 20000);
 
-  // Load fresh
-  logger.log('[OpenCV] Loading from CDN...');
+    // Préparation de l'objet Module AVANT de charger le script
+    window.Module = {
+      onRuntimeInitialized: () => {
+        clearTimeout(timeoutId);
+        logger.log('[OpenCV] Runtime Initialized !');
+        resolve(true);
+      },
+      onAbort: (err) => {
+        clearTimeout(timeoutId);
+        logger.error('[OpenCV] Module Abort:', err);
+        reject(err);
+      }
+    };
 
-  opencvLoading = new Promise((resolve, reject) => {
-    // Set up Module before loading script
-    if (!window.Module) {
-      window.Module = {};
+    // Vérification si le script existe déjà (cas de rechargement rapide)
+    let script = document.getElementById(OPENCV_SCRIPT_ID);
+
+    if (!script) {
+      script = document.createElement('script');
+      script.id = OPENCV_SCRIPT_ID;
+      script.src = OPENCV_CDN;
+      script.async = true;
+
+      script.onerror = (e) => {
+        clearTimeout(timeoutId);
+        logger.error('[OpenCV] Script Load Error', e);
+        reject(new Error('Failed to load OpenCV script'));
+      };
+
+      document.body.appendChild(script);
+    } else {
+      // Si le script est déjà là mais que cv n'est pas prêt,
+      // on attend juste que onRuntimeInitialized se déclenche via window.Module
+      logger.log('[OpenCV] Script déjà présent dans le DOM');
     }
-
-    // OpenCV.js calls this when ready
-    const originalOnInit = window.Module.onRuntimeInitialized;
-    window.Module.onRuntimeInitialized = () => {
-      if (originalOnInit) originalOnInit();
-      logger.log('[OpenCV] Runtime initialized via callback');
-    };
-
-    const script = document.createElement('script');
-    script.src = OPENCV_CDN;
-    script.async = true;
-    script.id = OPENCV_SCRIPT_ID;
-
-    script.onload = () => {
-      logger.log('[OpenCV] Script loaded, waiting for initialization...');
-      waitForOpenCV()
-        .then(resolve)
-        .catch(reject);
-    };
-
-    script.onerror = (e) => {
-      logger.error('[OpenCV] Failed to load script:', e);
-      opencvLoading = null;
-      reject(new Error('Failed to load OpenCV.js from CDN'));
-    };
-
-    document.head.appendChild(script);
   });
 
-  return opencvLoading;
+  return opencvLoadingPromise;
 };
 
 /**
- * Wait for OpenCV to be ready
- */
-const waitForOpenCV = () => {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const timeout = 30000; // 30 seconds
-
-    const check = () => {
-      if (isOpenCVReady()) {
-        opencvLoaded = true;
-        logger.log(`[OpenCV] Ready after ${Date.now() - startTime}ms`);
-        resolve(window.cv);
-        return;
-      }
-
-      if (Date.now() - startTime > timeout) {
-        opencvLoading = null;
-        reject(new Error(`OpenCV.js initialization timeout after ${timeout}ms`));
-        return;
-      }
-
-      // Check again in 100ms
-      setTimeout(check, 100);
-    };
-
-    check();
-  });
-};
-
-/**
- * jscanify Scanner class (inline implementation)
+ * Classe Scanner interne
  */
 class Scanner {
   constructor() {
     this.cv = window.cv;
   }
 
-  /**
-   * Find document contour in image
-   */
   findPaperContour(img) {
     const cv = this.cv;
-
-    // Convert to grayscale
     const gray = new cv.Mat();
-    cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
 
-    // Apply Gaussian blur
-    const blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+    try {
+      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
 
-    // Apply Canny edge detection
-    const edges = new cv.Mat();
-    cv.Canny(blurred, edges, 75, 200);
+      const blurred = new cv.Mat();
+      const kSize = new cv.Size(5, 5);
+      cv.GaussianBlur(gray, blurred, kSize, 0);
 
-    // Dilate to close gaps
-    const kernel = cv.Mat.ones(5, 5, cv.CV_8U);
-    const dilated = new cv.Mat();
-    cv.dilate(edges, dilated, kernel);
+      const edges = new cv.Mat();
+      cv.Canny(blurred, edges, 75, 200);
 
-    // Find contours
-    const contours = new cv.MatVector();
-    const hierarchy = new cv.Mat();
-    cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
 
-    // Find the largest 4-corner contour
-    let maxArea = 0;
-    let bestContour = null;
+      cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    for (let i = 0; i < contours.size(); i++) {
-      const contour = contours.get(i);
-      const area = cv.contourArea(contour);
+      let maxArea = 0;
+      let bestContour = null;
 
-      if (area > maxArea) {
-        const peri = cv.arcLength(contour, true);
-        const approx = new cv.Mat();
-        cv.approxPolyDP(contour, approx, 0.02 * peri, true);
+      for (let i = 0; i < contours.size(); i++) {
+        const contour = contours.get(i);
+        const area = cv.contourArea(contour);
 
-        if (approx.rows === 4) {
-          maxArea = area;
-          if (bestContour) bestContour.delete();
-          bestContour = approx.clone();
+        // Filtre de taille minimale (pour éviter le bruit)
+        if (area > 1000) {
+          const peri = cv.arcLength(contour, true);
+          const approx = new cv.Mat();
+          cv.approxPolyDP(contour, approx, 0.02 * peri, true);
+
+          if (area > maxArea && approx.rows === 4) {
+            maxArea = area;
+            if (bestContour) bestContour.delete();
+            bestContour = approx.clone();
+          }
+          approx.delete();
         }
-        approx.delete();
       }
-    }
 
-    // Cleanup
-    gray.delete();
-    blurred.delete();
-    edges.delete();
-    kernel.delete();
-    dilated.delete();
-    hierarchy.delete();
-    for (let i = 0; i < contours.size(); i++) {
-      contours.get(i).delete();
-    }
-    contours.delete();
+      // Nettoyage
+      blurred.delete();
+      edges.delete();
+      contours.delete();
+      hierarchy.delete();
 
-    return bestContour;
+      return bestContour;
+    } catch (e) {
+      logger.error('Error finding contour', e);
+      return null;
+    } finally {
+      gray.delete();
+    }
   }
 
-  /**
-   * Get corner points from contour
-   */
   getCornerPoints(contour) {
-    if (!contour || contour.rows !== 4) return null;
-
+    if (!contour) return null;
     const points = [];
     for (let i = 0; i < 4; i++) {
       points.push({
@@ -201,316 +152,189 @@ class Scanner {
         y: contour.data32S[i * 2 + 1]
       });
     }
-
-    // Sort points: top-left, top-right, bottom-right, bottom-left
-    const sorted = this.orderPoints(points);
-    return sorted;
+    return points;
   }
 
-  /**
-   * Order points clockwise starting from top-left
-   */
-  orderPoints(points) {
-    // Find center
-    const centerX = points.reduce((sum, p) => sum + p.x, 0) / 4;
-    const centerY = points.reduce((sum, p) => sum + p.y, 0) / 4;
-
-    // Separate into top and bottom
-    const top = points.filter(p => p.y < centerY).sort((a, b) => a.x - b.x);
-    const bottom = points.filter(p => p.y >= centerY).sort((a, b) => b.x - a.x);
-
-    // If not exactly 2 in each, use angle-based sorting
-    if (top.length !== 2 || bottom.length !== 2) {
-      return points.sort((a, b) => {
-        const angleA = Math.atan2(a.y - centerY, a.x - centerX);
-        const angleB = Math.atan2(b.y - centerY, b.x - centerX);
-        return angleA - angleB;
-      });
-    }
-
-    // TL, TR, BR, BL
-    return [top[0], top[1], bottom[0], bottom[1]];
-  }
-
-  /**
-   * Extract and correct perspective of document
-   */
   extractPaper(img, resultWidth, resultHeight) {
     const cv = this.cv;
     const contour = this.findPaperContour(img);
 
-    if (!contour) {
-      return null;
-    }
+    if (!contour) return null;
 
     const corners = this.getCornerPoints(contour);
-    contour.delete();
+    const orderedCorners = orderCorners(corners);
 
-    if (!corners || corners.length !== 4) {
-      return null;
-    }
+    const srcCoords = [
+      orderedCorners[0].x, orderedCorners[0].y,
+      orderedCorners[1].x, orderedCorners[1].y,
+      orderedCorners[2].x, orderedCorners[2].y,
+      orderedCorners[3].x, orderedCorners[3].y
+    ];
 
-    // Source points
-    const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-      corners[0].x, corners[0].y,
-      corners[1].x, corners[1].y,
-      corners[2].x, corners[2].y,
-      corners[3].x, corners[3].y
-    ]);
-
-    // Destination points
-    const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    const dstCoords = [
       0, 0,
       resultWidth, 0,
       resultWidth, resultHeight,
       0, resultHeight
-    ]);
+    ];
 
-    // Get perspective transform
-    const M = cv.getPerspectiveTransform(srcPoints, dstPoints);
+    const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcCoords);
+    const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstCoords);
 
-    // Apply transform
+    const M = cv.getPerspectiveTransform(srcTri, dstTri);
     const result = new cv.Mat();
     const dsize = new cv.Size(resultWidth, resultHeight);
+
     cv.warpPerspective(img, result, M, dsize);
 
-    // Cleanup
-    srcPoints.delete();
-    dstPoints.delete();
+    // Nettoyage
+    srcTri.delete();
+    dstTri.delete();
     M.delete();
-
-    return { result, corners };
-  }
-
-  /**
-   * Highlight paper in image (draw contour)
-   */
-  highlightPaper(img) {
-    const cv = this.cv;
-    const contour = this.findPaperContour(img);
-
-    if (!contour) {
-      return { canvas: null, corners: null, detected: false };
-    }
-
-    const corners = this.getCornerPoints(contour);
-
-    // Draw on canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = img.cols;
-    canvas.height = img.rows;
-
-    // Copy original image
-    const output = img.clone();
-
-    // Draw contour
-    const contourVec = new cv.MatVector();
-    contourVec.push_back(contour);
-    cv.drawContours(output, contourVec, 0, new cv.Scalar(0, 255, 0, 255), 3);
-
-    // Draw corner points
-    for (const corner of corners) {
-      cv.circle(output, new cv.Point(corner.x, corner.y), 10, new cv.Scalar(255, 0, 0, 255), -1);
-    }
-
-    cv.imshow(canvas, output);
-
-    // Cleanup
     contour.delete();
-    contourVec.delete();
-    output.delete();
 
-    return { canvas, corners, detected: true };
+    return { result, corners: orderedCorners };
   }
 }
 
 /**
- * Get or create scanner instance
- */
-const getScanner = async () => {
-  await loadOpenCV();
-
-  if (!jscanifyInstance) {
-    jscanifyInstance = new Scanner();
-  }
-
-  return jscanifyInstance;
-};
-
-/**
- * Detect document in image
+ * Fonction principale de détection
  */
 export const detectDocument = async (input, options = {}) => {
   const {
-    outputWidth = 595,  // A4 width at 72 DPI
-    outputHeight = 842  // A4 height at 72 DPI
+    outputWidth = 595,
+    outputHeight = 842
   } = options;
 
   try {
-    const scanner = await getScanner();
-    const cv = window.cv;
-
-    // Load image
-    let img;
-    if (input instanceof HTMLImageElement) {
-      img = cv.imread(input);
-    } else if (input instanceof HTMLCanvasElement) {
-      img = cv.imread(input);
-    } else if (input instanceof File || input instanceof Blob) {
-      // Convert to image element
-      const imageEl = await loadImageFromBlob(input);
-      img = cv.imread(imageEl);
-    } else if (typeof input === 'string') {
-      const imageEl = await loadImageFromUrl(input);
-      img = cv.imread(imageEl);
-    } else {
-      throw new Error('Unsupported input type');
+    // 1. S'assurer qu'OpenCV est chargé
+    if (!isOpenCVLoaded()) {
+      await preloadOpenCV();
     }
 
-    logger.log('[jscanify] Detecting document...');
+    if (!jscanifyInstance) {
+      jscanifyInstance = new Scanner();
+    }
+
+    const cv = window.cv;
+    let imgMat;
+
+    // Chargement de l'image en Matrice OpenCV
+    if (input instanceof HTMLImageElement || input instanceof HTMLCanvasElement) {
+      imgMat = cv.imread(input);
+    } else if (input instanceof File || input instanceof Blob) {
+      const bmp = await createImageBitmap(input);
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = bmp.width;
+      tempCanvas.height = bmp.height;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(bmp, 0, 0);
+      imgMat = cv.imread(tempCanvas);
+    } else {
+      throw new Error("Format d'entrée non supporté");
+    }
+
     const startTime = performance.now();
 
-    // Try to find and extract paper
-    const extraction = scanner.extractPaper(img, outputWidth, outputHeight);
+    // 2. Extraction
+    const extraction = jscanifyInstance.extractPaper(imgMat, outputWidth, outputHeight);
 
     const elapsed = performance.now() - startTime;
-    logger.log(`[jscanify] Detection completed in ${elapsed.toFixed(2)}ms`);
 
-    if (extraction && extraction.corners) {
-      // Create canvas for extracted image
-      const extractedCanvas = document.createElement('canvas');
-      extractedCanvas.width = outputWidth;
-      extractedCanvas.height = outputHeight;
-      cv.imshow(extractedCanvas, extraction.result);
+    // 3. Préparation du résultat
+    if (extraction) {
+      const resultCanvas = document.createElement('canvas');
+      cv.imshow(resultCanvas, extraction.result);
 
-      // Create preview canvas with highlighted contour
-      const previewCanvas = document.createElement('canvas');
-      previewCanvas.width = img.cols;
-      previewCanvas.height = img.rows;
-
-      const previewImg = img.clone();
-      const contourPoints = cv.matFromArray(4, 1, cv.CV_32SC2, [
-        extraction.corners[0].x, extraction.corners[0].y,
-        extraction.corners[1].x, extraction.corners[1].y,
-        extraction.corners[2].x, extraction.corners[2].y,
-        extraction.corners[3].x, extraction.corners[3].y
-      ]);
-
-      const contourVec = new cv.MatVector();
-      contourVec.push_back(contourPoints);
-      cv.drawContours(previewImg, contourVec, 0, new cv.Scalar(0, 255, 0, 255), 4);
-
-      // Draw corners
-      for (const corner of extraction.corners) {
-        cv.circle(previewImg, new cv.Point(corner.x, corner.y), 12, new cv.Scalar(16, 185, 129, 255), -1);
-        cv.circle(previewImg, new cv.Point(corner.x, corner.y), 12, new cv.Scalar(255, 255, 255, 255), 3);
-      }
-
-      cv.imshow(previewCanvas, previewImg);
-
-      // Get original as data URL
       const originalCanvas = document.createElement('canvas');
-      originalCanvas.width = img.cols;
-      originalCanvas.height = img.rows;
-      cv.imshow(originalCanvas, img);
+      cv.imshow(originalCanvas, imgMat);
 
-      // Cleanup
-      extraction.result.delete();
-      previewImg.delete();
-      contourPoints.delete();
-      contourVec.delete();
-      img.delete();
+      // Création preview avec contours
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = imgMat.cols;
+      previewCanvas.height = imgMat.rows;
+      cv.imshow(previewCanvas, imgMat);
+      const ctx = previewCanvas.getContext('2d');
+      drawCornersOnContext(ctx, extraction.corners);
 
-      return {
+      const result = {
         detected: true,
         corners: extraction.corners,
-        original: originalCanvas.toDataURL('image/jpeg', 0.9),
-        preview: previewCanvas.toDataURL('image/jpeg', 0.9),
-        transformed: extractedCanvas.toDataURL('image/jpeg', 0.9),
-        confidence: 85,
+        original: originalCanvas.toDataURL('image/jpeg', 0.8),
+        preview: previewCanvas.toDataURL('image/jpeg', 0.8),
+        transformed: resultCanvas.toDataURL('image/jpeg', 0.8),
+        confidence: 90,
         processingTime: elapsed,
-        method: 'jscanify'
+        method: 'opencv-wasm'
+      };
+
+      // Nettoyage final des matrices
+      extraction.result.delete();
+      imgMat.delete();
+
+      return result;
+    } else {
+      // Pas de document trouvé
+      const originalCanvas = document.createElement('canvas');
+      cv.imshow(originalCanvas, imgMat);
+      imgMat.delete();
+
+      return {
+        detected: false,
+        original: originalCanvas.toDataURL('image/jpeg', 0.8),
+        preview: null,
+        transformed: null,
+        corners: null,
+        confidence: 0,
+        processingTime: elapsed,
+        method: 'opencv-wasm'
       };
     }
 
-    // No document found - return original
-    const originalCanvas = document.createElement('canvas');
-    originalCanvas.width = img.cols;
-    originalCanvas.height = img.rows;
-    cv.imshow(originalCanvas, img);
-    const originalDataUrl = originalCanvas.toDataURL('image/jpeg', 0.9);
-
-    img.delete();
-
-    return {
-      detected: false,
-      corners: null,
-      original: originalDataUrl,
-      preview: null,
-      transformed: null,
-      confidence: 0,
-      processingTime: elapsed,
-      method: 'jscanify'
-    };
-
   } catch (error) {
-    logger.error('[jscanify] Detection error:', error);
+    logger.error('Erreur detection:', error);
     throw error;
   }
 };
 
-/**
- * Check if OpenCV is loaded
- */
-export const isOpenCVLoaded = () => opencvLoaded || isOpenCVReady();
+// --- Utilitaires ---
 
-/**
- * Preload OpenCV (call early to speed up first detection)
- */
-export const preloadOpenCV = async () => {
-  try {
-    await loadOpenCV();
-    return true;
-  } catch (error) {
-    logger.error('[jscanify] Preload failed:', error);
-    return false;
-  }
-};
+const orderCorners = (corners) => {
+  const cx = corners.reduce((sum, c) => sum + c.x, 0) / 4;
+  const cy = corners.reduce((sum, c) => sum + c.y, 0) / 4;
 
-/**
- * Load image from Blob/File
- */
-const loadImageFromBlob = (blob) => {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = (e) => {
-      URL.revokeObjectURL(url);
-      reject(e);
-    };
-    img.src = url;
+  return corners.slice().sort((a, b) => {
+    return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
   });
 };
 
-/**
- * Load image from URL
- */
-const loadImageFromUrl = (url) => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
+const drawCornersOnContext = (ctx, corners) => {
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 5;
+  ctx.shadowColor = '#10b981';
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  ctx.lineTo(corners[1].x, corners[1].y);
+  ctx.lineTo(corners[2].x, corners[2].y);
+  ctx.lineTo(corners[3].x, corners[3].y);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.fillStyle = '#10b981';
+  corners.forEach(c => {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 12, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
   });
 };
 
 export default {
   detectDocument,
-  isOpenCVLoaded,
-  preloadOpenCV
+  preloadOpenCV,
+  isOpenCVLoaded
 };
