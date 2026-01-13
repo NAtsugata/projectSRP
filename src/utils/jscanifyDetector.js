@@ -5,68 +5,95 @@
 import logger from './logger';
 
 let opencvLoaded = false;
-let opencvLoading = false;
+let opencvLoading = null; // Store the promise instead of boolean
 let jscanifyInstance = null;
 
 const OPENCV_CDN = 'https://docs.opencv.org/4.7.0/opencv.js';
 
 /**
- * Load OpenCV.js dynamically
+ * Check if OpenCV is already loaded and ready
+ */
+const isOpenCVReady = () => {
+  return window.cv && window.cv.Mat && typeof window.cv.Mat === 'function';
+};
+
+/**
+ * Load OpenCV.js dynamically (singleton pattern)
  */
 const loadOpenCV = () => {
-  return new Promise((resolve, reject) => {
-    if (opencvLoaded && window.cv) {
-      resolve(window.cv);
-      return;
-    }
+  // Already loaded and ready
+  if (isOpenCVReady()) {
+    opencvLoaded = true;
+    return Promise.resolve(window.cv);
+  }
 
-    if (opencvLoading) {
-      // Wait for existing load
-      const checkInterval = setInterval(() => {
-        if (opencvLoaded && window.cv) {
-          clearInterval(checkInterval);
+  // Already loading - return existing promise
+  if (opencvLoading) {
+    return opencvLoading;
+  }
+
+  // Check if script already exists in DOM
+  const existingScript = document.querySelector(`script[src="${OPENCV_CDN}"]`);
+  if (existingScript) {
+    // Script exists, wait for it to be ready
+    opencvLoading = new Promise((resolve, reject) => {
+      const checkReady = setInterval(() => {
+        if (isOpenCVReady()) {
+          clearInterval(checkReady);
+          opencvLoaded = true;
+          logger.log('[jscanify] OpenCV.js already loaded');
           resolve(window.cv);
         }
       }, 100);
-      return;
-    }
 
-    opencvLoading = true;
-    logger.log('[jscanify] Loading OpenCV.js...');
+      setTimeout(() => {
+        clearInterval(checkReady);
+        if (!isOpenCVReady()) {
+          opencvLoading = null;
+          reject(new Error('OpenCV.js initialization timeout'));
+        }
+      }, 15000);
+    });
+    return opencvLoading;
+  }
 
+  // Load fresh
+  logger.log('[jscanify] Loading OpenCV.js from CDN...');
+
+  opencvLoading = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = OPENCV_CDN;
     script.async = true;
+    script.id = 'opencv-js';
 
     script.onload = () => {
-      // OpenCV.js needs time to initialize
       const checkReady = setInterval(() => {
-        if (window.cv && window.cv.Mat) {
+        if (isOpenCVReady()) {
           clearInterval(checkReady);
           opencvLoaded = true;
-          opencvLoading = false;
           logger.log('[jscanify] OpenCV.js loaded successfully');
           resolve(window.cv);
         }
       }, 50);
 
-      // Timeout after 10 seconds
       setTimeout(() => {
         clearInterval(checkReady);
-        if (!opencvLoaded) {
-          opencvLoading = false;
+        if (!isOpenCVReady()) {
+          opencvLoading = null;
           reject(new Error('OpenCV.js initialization timeout'));
         }
-      }, 10000);
+      }, 15000);
     };
 
     script.onerror = () => {
-      opencvLoading = false;
+      opencvLoading = null;
       reject(new Error('Failed to load OpenCV.js'));
     };
 
     document.head.appendChild(script);
   });
+
+  return opencvLoading;
 };
 
 /**
@@ -416,7 +443,7 @@ export const detectDocument = async (input, options = {}) => {
 /**
  * Check if OpenCV is loaded
  */
-export const isOpenCVLoaded = () => opencvLoaded;
+export const isOpenCVLoaded = () => opencvLoaded || isOpenCVReady();
 
 /**
  * Preload OpenCV (call early to speed up first detection)
