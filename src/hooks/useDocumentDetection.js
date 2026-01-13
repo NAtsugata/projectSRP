@@ -1,71 +1,35 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents avec Scanic, OpenCV ou YOLO
-// Enhanced with Scanic as primary detector (lightweight & fast)
+// Hook pour la détection de documents avec Scanic uniquement
+// Scanic: lightweight (~100KB), fast, WASM-based
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import documentDetectorUtils from '../utils/documentDetector';
+import { useState, useCallback, useRef } from 'react';
 import { detectWithScanic, cornersToPercent } from '../utils/scanicDetector';
-import { getYOLODetector } from '../utils/yoloDetector';
 import logger from '../utils/logger';
 
-const DEFAULT_YOLO_MODEL_PATH = '/models/document_detector.onnx';
-
 /**
- * Hook pour gérer la détection de documents
- * Enhanced with:
- * - Scanic as primary detector (lightweight ~100KB, fast)
- * - Multi-strategy OpenCV detection as fallback
- * - YOLO with scoring
- * - Automatic fallback between detectors
+ * Hook pour gérer la détection de documents avec Scanic
  *
  * @param {Object} options - Options de configuration
- * @param {string} options.initialDetector - Détecteur initial ('scanic', 'opencv', 'yolo', 'hybrid')
- * @param {string} options.yoloModelPath - Chemin vers le modèle YOLO
  * @returns {Object} - API de détection et état
  */
 export const useDocumentDetection = (options = {}) => {
   const {
-    initialDetector = 'scanic', // Scanic is now default
-    yoloModelPath = DEFAULT_YOLO_MODEL_PATH,
-    enableFallback = true // Try other detector if first fails
+    maxProcessingDimension = 800
   } = options;
 
-  const [detectorType, setDetectorType] = useState(initialDetector);
-  const [yoloModelLoaded, setYoloModelLoaded] = useState(false);
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [lastDetectionMethod, setLastDetectionMethod] = useState(null);
+  const [lastDetectionMethod] = useState('scanic');
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
 
-  // Charger le modèle YOLO quand sélectionné
-  useEffect(() => {
-    const loadYOLOModel = async () => {
-      if (detectorType === 'yolo' && !yoloModelLoaded) {
-        try {
-          logger.log('Chargement du modèle YOLO...');
-          const detector = getYOLODetector();
-          await detector.loadModel(yoloModelPath);
-          setYoloModelLoaded(true);
-          logger.log('Modèle YOLO chargé avec succès');
-        } catch (error) {
-          logger.error('Erreur chargement modèle YOLO:', error);
-          logger.warn('Retour au mode OpenCV');
-          setDetectorType('opencv');
-        }
-      }
-    };
-
-    loadYOLOModel();
-  }, [detectorType, yoloModelLoaded, yoloModelPath]);
-
-  // Détection Scanic (recommandé - rapide et léger)
+  // Détection Scanic
   const detectWithScanicMethod = useCallback(async (file, extraOptions = {}) => {
     try {
       const result = await detectWithScanic(file, {
         mode: 'detect',
-        maxProcessingDimension: 800,
+        maxProcessingDimension,
         ...extraOptions
       });
 
@@ -103,129 +67,13 @@ export const useDocumentDetection = (options = {}) => {
         error: error.message
       };
     }
-  }, []);
+  }, [maxProcessingDimension]);
 
-  // Détection OpenCV (fallback)
-  const detectWithOpenCV = useCallback(async (file, extraOptions = {}) => {
-    const result = await documentDetectorUtils.detectDocument(file, {
-      minArea: 0.05,
-      autoTransform: false,
-      drawContours: false,
-      ...extraOptions
-    });
-
-    return {
-      ...result,
-      method: 'opencv',
-      score: result.confidence || 0
-    };
-  }, []);
-
-  // Détection YOLO
-  const detectWithYOLO = useCallback(async (file, extraOptions = {}) => {
-    if (!yoloModelLoaded) {
-      return { detected: false, contour: null, method: 'yolo', score: 0 };
-    }
-
-    const detector = getYOLODetector();
-    const result = await detector.detectDocument(file, {
-      confidenceThreshold: 0.3,
-      minScore: 40,
-      ...extraOptions
-    });
-
-    if (result.detected && result.detections.length > 0) {
-      const bestDetection = result.detections[0]; // Already sorted by score
-
-      const corners = detector.bboxToCorners(
-        bestDetection.bbox,
-        result.originalSize.width,
-        result.originalSize.height
-      );
-
-      return {
-        detected: true,
-        contour: corners,
-        confidence: bestDetection.confidence,
-        score: bestDetection.score,
-        method: 'yolo',
-        lowConfidence: result.lowConfidence
-      };
-    }
-
-    return { detected: false, contour: null, method: 'yolo', score: 0 };
-  }, [yoloModelLoaded]);
-
-  // Détecter un document avec le détecteur actuel (avec fallback)
+  // Détecter un document
   const detectDocument = useCallback(async (file, extraOptions = {}) => {
-    let result = null;
-    let fallbackResult = null;
-
-    // Primary detection based on selected type
-    if (detectorType === 'scanic') {
-      // Scanic primary (recommended)
-      result = await detectWithScanicMethod(file, extraOptions);
-
-      // Fallback to OpenCV if Scanic fails
-      if (enableFallback && !result.detected) {
-        logger.log('[Detection] Scanic failed, trying OpenCV...');
-        fallbackResult = await detectWithOpenCV(file, extraOptions);
-
-        if (fallbackResult.detected) {
-          result = fallbackResult;
-        }
-      }
-    } else if (detectorType === 'yolo' || detectorType === 'hybrid') {
-      result = await detectWithYOLO(file, extraOptions);
-
-      // Fallback to Scanic if YOLO fails
-      if (enableFallback && (!result.detected || result.lowConfidence)) {
-        logger.log('[Detection] YOLO failed or low confidence, trying Scanic...');
-        fallbackResult = await detectWithScanicMethod(file, extraOptions);
-
-        if (fallbackResult.detected && (!result.detected || fallbackResult.score > result.score)) {
-          result = fallbackResult;
-        }
-      }
-
-      // If still no result, try OpenCV
-      if (enableFallback && !result.detected) {
-        logger.log('[Detection] Trying OpenCV as final fallback...');
-        fallbackResult = await detectWithOpenCV(file, extraOptions);
-        if (fallbackResult.detected) {
-          result = fallbackResult;
-        }
-      }
-    } else {
-      // OpenCV primary
-      result = await detectWithOpenCV(file, extraOptions);
-
-      // Fallback to Scanic if OpenCV fails
-      if (enableFallback && !result.detected) {
-        logger.log('[Detection] OpenCV failed, trying Scanic...');
-        fallbackResult = await detectWithScanicMethod(file, extraOptions);
-
-        if (fallbackResult.detected) {
-          result = fallbackResult;
-        }
-      }
-    }
-
-    // Hybrid mode: If we have YOLO bbox, try to refine corners with Scanic
-    if (detectorType === 'hybrid' && result.detected && result.method === 'yolo') {
-      logger.log('[Detection] Hybrid mode: refining YOLO result with Scanic...');
-      const refinedResult = await detectWithScanicMethod(file, extraOptions);
-
-      if (refinedResult.detected && refinedResult.score > result.score) {
-        result = { ...refinedResult, method: 'hybrid' };
-      } else {
-        result.method = 'hybrid';
-      }
-    }
-
-    setLastDetectionMethod(result?.method || null);
+    const result = await detectWithScanicMethod(file, extraOptions);
     return result;
-  }, [detectorType, yoloModelLoaded, enableFallback, detectWithScanicMethod, detectWithOpenCV, detectWithYOLO]);
+  }, [detectWithScanicMethod]);
 
   // Démarrer la détection en temps réel sur un flux vidéo
   const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 600) => {
@@ -382,18 +230,14 @@ export const useDocumentDetection = (options = {}) => {
 
   return {
     // État
-    detectorType,
-    yoloModelLoaded,
+    detectorType: 'scanic',
     liveCorners,
     detectionConfidence,
     lastDetectionMethod,
 
     // Actions
-    setDetectorType,
     detectDocument,
     detectWithScanic: detectWithScanicMethod,
-    detectWithOpenCV,
-    detectWithYOLO,
     startLiveDetection,
     stopLiveDetection,
     resetDetection
