@@ -12,6 +12,11 @@ export const isOpenCvReady = () => {
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
  * Retourne les 4 coins du document détecté ou null
+ *
+ * Version améliorée avec:
+ * - Downscaling pour réduire le bruit et améliorer les performances
+ * - Morphologie (Close) pour stabiliser les contours
+ * - RETR_EXTERNAL pour ne garder que les contours extérieurs
  */
 export function detectDocumentEdges(imageData) {
   if (!isOpenCvReady()) {
@@ -21,36 +26,60 @@ export function detectDocumentEdges(imageData) {
 
   const cv = window.cv;
   let src = null;
+  let smallSrc = null;
   let gray = null;
   let blurred = null;
   let edges = null;
+  let closed = null;
   let contours = null;
   let hierarchy = null;
+  let kernel = null;
 
   try {
     // 1. Conversion ImageData -> cv.Mat
     src = cv.matFromImageData(imageData);
 
-    // 2. Prétraitement
+    // 2. Downscale (CRUCIAL pour la performance et pour réduire le bruit)
+    // Travailler sur une image trop grande rend la détection instable
+    const maxDim = Math.max(src.cols, src.rows);
+    const targetDim = 500; // Redimensionner max dim à 500px
+    const scale = targetDim / maxDim;
+
+    smallSrc = new cv.Mat();
+    if (scale < 1) {
+      const dsize = new cv.Size(Math.round(src.cols * scale), Math.round(src.rows * scale));
+      cv.resize(src, smallSrc, dsize, 0, 0, cv.INTER_AREA);
+    } else {
+      src.copyTo(smallSrc);
+    }
+
+    // 3. Prétraitement
     gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+    cv.cvtColor(smallSrc, gray, cv.COLOR_RGBA2GRAY, 0);
 
     blurred = new cv.Mat();
     cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-    // 3. Détection de bords (Canny)
+    // 4. Détection de bords (Canny)
     edges = new cv.Mat();
     cv.Canny(blurred, edges, 75, 200);
 
-    // 4. Trouver les contours
+    // 5. MORPHOLOGIE (Le secret de la stabilité)
+    // On "ferme" les trous. Si le contour du papier est interrompu, ça le reconnecte.
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    closed = new cv.Mat();
+    cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
+
+    // 6. Trouver les contours sur l'image 'closed'
+    // RETR_EXTERNAL: on veut seulement les contours extérieurs
     contours = new cv.MatVector();
     hierarchy = new cv.Mat();
-    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+    cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    // 5. Trouver le plus grand quadrilatère
+    // 7. Trouver le plus grand quadrilatère
     let maxArea = 0;
     let bestContour = null;
-    const minArea = (src.cols * src.rows) * 0.1; // Au moins 10% de l'image
+    const minArea = (smallSrc.cols * smallSrc.rows) * 0.1; // Au moins 10% de l'image réduite
 
     for (let i = 0; i < contours.size(); ++i) {
       const cnt = contours.get(i);
@@ -73,11 +102,12 @@ export function detectDocumentEdges(imageData) {
 
     if (bestContour) {
       // Convertir en format {x, y} standard
+      // IMPORTANT: Remettre les coordonnées à l'échelle originale
       const points = [];
       for (let i = 0; i < 4; i++) {
         points.push({
-          x: bestContour.data32S[i * 2],
-          y: bestContour.data32S[i * 2 + 1]
+          x: Math.round(bestContour.data32S[i * 2] / scale),
+          y: Math.round(bestContour.data32S[i * 2 + 1] / scale)
         });
       }
       bestContour.delete();
@@ -92,11 +122,14 @@ export function detectDocumentEdges(imageData) {
   } finally {
     // Nettoyage mémoire CRITIQUE avec OpenCV.js
     if (src) src.delete();
+    if (smallSrc) smallSrc.delete();
     if (gray) gray.delete();
     if (blurred) blurred.delete();
     if (edges) edges.delete();
+    if (closed) closed.delete();
     if (contours) contours.delete();
     if (hierarchy) hierarchy.delete();
+    if (kernel) kernel.delete();
   }
 }
 
@@ -195,49 +228,75 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Améliore l'image - Mode "Magic" (Adaptive Threshold)
- * Idéal pour les documents texte (supprime les ombres, rend le fond blanc)
+ * REPLIQUE DU FILTRE "MAGIC" / "DOCS"
+ * Supprime les ombres et blanchit le fond tout en gardant le texte net (pas juste du noir pur)
+ * Utilise la technique de division par le fond (Shadow Removal)
  */
 export function enhanceBlackAndWhite(imageData) {
   if (!isOpenCvReady()) return imageData;
 
   const cv = window.cv;
-  let src = null;
-  let dst = null;
+  let src = null, gray = null, dilated = null, bg = null, diff = null, norm = null, kernel = null;
 
   try {
     src = cv.matFromImageData(imageData);
-    dst = new cv.Mat();
+    gray = new cv.Mat();
 
-    // 1. Convertir en gris
-    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+    // 1. Conversion en Gris
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    // 2. Adaptive Threshold (C'est la "Magie" de ClearScanner)
-    // ADAPTIVE_THRESH_GAUSSIAN_C est souvent meilleur que MEAN_C
-    // Block size 11 ou 15, C = 2 à 10
-    cv.adaptiveThreshold(src, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 10);
+    // 2. Estimation du fond (Background)
+    // On dilate l'image pour supprimer le texte (garder que le papier) puis on floute
+    dilated = new cv.Mat();
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+    cv.morphologyEx(gray, dilated, cv.MORPH_DILATE, kernel); // Dilater pour effacer le texte noir
 
-    // 3. Convertir en RGBA pour l'affichage
-    // (Bien que l'image soit N&B, le canvas attend du RGBA)
+    bg = new cv.Mat();
+    // Gros flou pour lisser le fond
+    cv.GaussianBlur(dilated, bg, new cv.Size(21, 21), 0, 0);
+
+    // 3. Division : (Image / Fond) * 255
+    // Cela "aplatit" l'éclairage. Les zones d'ombre disparaissent.
+    diff = new cv.Mat();
+    cv.divide(gray, bg, diff, 255.0, -1);
+
+    // 4. Augmenter le contraste final (Threshold intelligent)
+    // On ne fait pas un binaire pur, mais on force le gris clair vers le blanc
+    norm = new cv.Mat();
+    // Threshold avec dégradé (Style ClearScanner)
+    // Tout ce qui est gris foncé devient noir, tout ce qui est gris clair devient blanc
+    // mais on garde une transition pour l'antialiasing.
+    cv.threshold(diff, norm, 200, 255, cv.THRESH_TRUNC); // Coupe les blancs
+    cv.normalize(norm, norm, 0, 255, cv.NORM_MINMAX);
+
+    // Retour en RGBA
     const rgbaDst = new cv.Mat();
-    cv.cvtColor(dst, rgbaDst, cv.COLOR_GRAY2RGBA, 0);
+    cv.cvtColor(norm, rgbaDst, cv.COLOR_GRAY2RGBA);
 
-    // Créer un nouveau ImageData
-    const imgData = new ImageData(
+    const result = new ImageData(
       new Uint8ClampedArray(rgbaDst.data),
       rgbaDst.cols,
       rgbaDst.rows
     );
 
+    // Nettoyage intermédiaire
     rgbaDst.delete();
-    return imgData;
+    kernel.delete();
+    kernel = null; // Avoid double delete in finally
+
+    return result;
 
   } catch (err) {
-    console.error('Enhance BW error:', err);
+    console.error('Magic Filter Error:', err);
     return imageData;
   } finally {
     if (src) src.delete();
-    if (dst) dst.delete();
+    if (gray) gray.delete();
+    if (dilated) dilated.delete();
+    if (bg) bg.delete();
+    if (diff) diff.delete();
+    if (norm) norm.delete();
+    if (kernel) kernel.delete();
   }
 }
 

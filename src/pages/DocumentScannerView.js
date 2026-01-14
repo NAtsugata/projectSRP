@@ -1059,6 +1059,71 @@ export default function DocumentScannerView({ onSave, onClose }) {
           font-weight: 600;
           z-index: 5;
         }
+
+        .magnifier {
+          position: absolute;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          border: 4px solid #fff;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+          overflow: hidden;
+          z-index: 100;
+          background-color: #000;
+          pointer-events: none;
+        }
+
+        .magnifier-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+
+        .magnifier-image {
+          position: absolute;
+          width: 300%;
+          height: 300%;
+          object-fit: contain;
+          pointer-events: none;
+        }
+
+        .magnifier-crosshair {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 14px;
+          height: 14px;
+          border: 2px solid #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+        }
+
+        .magnifier-crosshair::before,
+        .magnifier-crosshair::after {
+          content: '';
+          position: absolute;
+          background: #10b981;
+        }
+
+        .magnifier-crosshair::before {
+          top: 50%;
+          left: -6px;
+          right: -6px;
+          height: 1px;
+          transform: translateY(-50%);
+        }
+
+        .magnifier-crosshair::after {
+          left: 50%;
+          top: -6px;
+          bottom: -6px;
+          width: 1px;
+          transform: translateX(-50%);
+        }
       `}</style>
 
       {/* Header */}
@@ -1309,8 +1374,32 @@ export default function DocumentScannerView({ onSave, onClose }) {
               />
             ))}
 
+            {/* Loupe (Magnifier) - visible lors du drag d'un coin */}
+            {draggedCorner !== null && (
+              <div className="magnifier">
+                <div className="magnifier-inner">
+                  <img
+                    src={originalImage}
+                    alt=""
+                    className="magnifier-image"
+                    style={{
+                      // Centrer l'image sur le coin sélectionné
+                      // Les corners sont en %, l'image fait 300% de la loupe
+                      // Pour centrer: on décale de -corners.x% * 3 + 50% (centre de la loupe)
+                      left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
+                      top: `calc(50% - ${corners[draggedCorner].y * 3}%)`
+                    }}
+                  />
+                  {/* Croix centrale de la loupe */}
+                  <div className="magnifier-crosshair" />
+                </div>
+              </div>
+            )}
+
             <div className="adjust-hint">
-              ✋ Déplacez les coins pour ajuster la zone
+              {draggedCorner !== null
+                ? '🔍 Loupe active - relâchez pour confirmer'
+                : '✋ Déplacez les coins pour ajuster la zone'}
             </div>
           </div>
         )}
