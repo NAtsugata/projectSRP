@@ -1,5 +1,5 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents avec jscanify + OpenCV.js
+// Hook pour la détection de documents avec OpenCV.js
 // Fonctionne entièrement dans le navigateur
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -21,13 +21,14 @@ export const useDocumentDetection = (options = {}) => {
 
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [lastDetectionMethod] = useState('jscanify');
+  const [detectorType, setDetectorType] = useState('opencv');
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
+  const isDetectingRef = useRef(false);
 
   // Précharger OpenCV au montage
   useEffect(() => {
@@ -71,16 +72,16 @@ export const useDocumentDetection = (options = {}) => {
         transformed: result.transformed,
         confidence: result.confidence || 0,
         score: result.confidence || 0,
-        method: 'jscanify',
+        method: 'opencv',
         processingTime: result.processingTime
       };
     } catch (error) {
-      logger.error('[Detection] jscanify error:', error);
+      logger.error('[Detection] error:', error);
       return {
         detected: false,
         contour: null,
         corners: null,
-        method: 'jscanify',
+        method: 'opencv',
         score: 0,
         error: error.message
       };
@@ -88,7 +89,7 @@ export const useDocumentDetection = (options = {}) => {
   }, [outputWidth, outputHeight]);
 
   // Démarrer la détection en temps réel sur un flux vidéo
-  const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 600) => {
+  const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 500) => {
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
     }
@@ -96,6 +97,9 @@ export const useDocumentDetection = (options = {}) => {
     detectionHistoryRef.current = [];
 
     const detectLive = async () => {
+      // Éviter les détections simultanées
+      if (isDetectingRef.current) return;
+
       const video = videoRef.current;
       const overlayCanvas = overlayCanvasRef.current;
 
@@ -107,11 +111,13 @@ export const useDocumentDetection = (options = {}) => {
         return;
       }
 
+      isDetectingRef.current = true;
+
       try {
-        // Réduire la résolution pour la performance
-        const detectionWidth = 640;
+        // Réduire la résolution pour la performance (480px = plus rapide)
+        const detectionWidth = 480;
         const scaleFactor = video.videoWidth / detectionWidth;
-        const detectionHeight = video.videoHeight / scaleFactor;
+        const detectionHeight = Math.round(video.videoHeight / scaleFactor);
 
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = detectionWidth;
@@ -120,7 +126,7 @@ export const useDocumentDetection = (options = {}) => {
         ctx.drawImage(video, 0, 0, detectionWidth, detectionHeight);
 
         const blob = await new Promise(resolve => {
-          tempCanvas.toBlob(resolve, 'image/jpeg', 0.8);
+          tempCanvas.toBlob(resolve, 'image/jpeg', 0.7);
         });
 
         const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
@@ -133,7 +139,7 @@ export const useDocumentDetection = (options = {}) => {
           timestamp: Date.now()
         });
 
-        if (detectionHistoryRef.current.length > 4) {
+        if (detectionHistoryRef.current.length > 3) {
           detectionHistoryRef.current.shift();
         }
 
@@ -142,7 +148,7 @@ export const useDocumentDetection = (options = {}) => {
         const successCount = recentDetections.filter(d => d.detected && d.contour?.length === 4).length;
         const successRate = successCount / recentDetections.length;
 
-        if (successRate >= 0.75 && result.detected && result.contour?.length === 4) {
+        if (successRate >= 0.66 && result.detected && result.contour?.length === 4) {
           const successfulDetections = recentDetections.filter(d => d.detected && d.contour?.length === 4);
           const smoothedCorners = [];
 
@@ -174,9 +180,9 @@ export const useDocumentDetection = (options = {}) => {
 
           // Polygone vert
           overlayCtx.strokeStyle = '#10b981';
-          overlayCtx.lineWidth = 5;
+          overlayCtx.lineWidth = 4;
           overlayCtx.shadowColor = '#10b981';
-          overlayCtx.shadowBlur = 20;
+          overlayCtx.shadowBlur = 15;
           overlayCtx.beginPath();
           overlayCtx.moveTo(cornersInPixels[0].x, cornersInPixels[0].y);
           for (let i = 1; i < cornersInPixels.length; i++) {
@@ -188,31 +194,26 @@ export const useDocumentDetection = (options = {}) => {
           // Points aux coins
           cornersInPixels.forEach(corner => {
             overlayCtx.fillStyle = '#10b981';
-            overlayCtx.shadowColor = '#10b981';
-            overlayCtx.shadowBlur = 15;
+            overlayCtx.shadowBlur = 10;
             overlayCtx.beginPath();
-            overlayCtx.arc(corner.x, corner.y, 12, 0, Math.PI * 2);
+            overlayCtx.arc(corner.x, corner.y, 10, 0, Math.PI * 2);
             overlayCtx.fill();
             overlayCtx.strokeStyle = '#ffffff';
-            overlayCtx.lineWidth = 3;
+            overlayCtx.lineWidth = 2;
             overlayCtx.stroke();
           });
         } else {
           setLiveCorners(null);
           setDetectionConfidence(Math.round(successRate * 100));
-          const overlayCtx = overlayCanvas.getContext('2d');
-          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          if (overlayCanvas.getContext) {
+            const overlayCtx = overlayCanvas.getContext('2d');
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          }
         }
       } catch (error) {
         logger.error('[LIVE DETECTION] Error:', error);
-        detectionHistoryRef.current.push({
-          detected: false,
-          contour: null,
-          timestamp: Date.now()
-        });
-        if (detectionHistoryRef.current.length > 4) {
-          detectionHistoryRef.current.shift();
-        }
+      } finally {
+        isDetectingRef.current = false;
       }
     };
 
@@ -232,6 +233,7 @@ export const useDocumentDetection = (options = {}) => {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
     }
+    isDetectingRef.current = false;
     detectionHistoryRef.current = [];
     setLiveCorners(null);
     setDetectionConfidence(0);
@@ -239,22 +241,22 @@ export const useDocumentDetection = (options = {}) => {
 
   // Réinitialiser l'état
   const resetDetection = useCallback(() => {
-    detectionHistoryRef.current = [];
-    setLiveCorners(null);
-    setDetectionConfidence(0);
-  }, []);
+    stopLiveDetection();
+  }, [stopLiveDetection]);
 
   return {
     // État
-    detectorType: 'jscanify',
+    detectorType,
+    yoloModelLoaded: false, // Compatibilité - toujours false maintenant
     isReady,
     isLoading,
     loadError,
     liveCorners,
     detectionConfidence,
-    lastDetectionMethod,
+    lastDetectionMethod: 'opencv',
 
     // Actions
+    setDetectorType, // Compatibilité - garde juste l'état
     detectDocument: detectDocumentMethod,
     startLiveDetection,
     stopLiveDetection,

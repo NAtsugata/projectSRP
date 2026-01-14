@@ -28,10 +28,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "prebuild": "node scripts/download-yolo-model.cjs",
     "build": "vite build",
-    "preview": "vite preview",
-    "postinstall": "node scripts/download-yolo-model.cjs"
+    "preview": "vite preview"
   },
   "browserslist": {
     "production": [

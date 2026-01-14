@@ -122,13 +122,17 @@ function sortCorners(points) {
  * Applique une transformation de perspective pour redresser le document
  */
 export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = null, outputHeight = null) {
-  if (!isOpenCvReady()) return canvas;
+  if (!isOpenCvReady()) {
+    console.error('OpenCV not ready for perspective transform');
+    return canvas;
+  }
 
   const cv = window.cv;
   let src = null;
   let dst = null;
   let M = null;
-  let dsize = null;
+  let srcTri = null;
+  let dstTri = null;
 
   try {
     const ctx = canvas.getContext('2d');
@@ -142,12 +146,18 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
       const heightLeft = Math.hypot(sourceCorners[3].x - sourceCorners[0].x, sourceCorners[3].y - sourceCorners[0].y);
       const heightRight = Math.hypot(sourceCorners[2].x - sourceCorners[1].x, sourceCorners[2].y - sourceCorners[1].y);
 
-      outputWidth = Math.max(widthTop, widthBottom);
-      outputHeight = Math.max(heightLeft, heightRight);
+      outputWidth = Math.round(Math.max(widthTop, widthBottom));
+      outputHeight = Math.round(Math.max(heightLeft, heightRight));
+    }
+
+    // Validation des dimensions
+    if (outputWidth <= 0 || outputHeight <= 0 || !isFinite(outputWidth) || !isFinite(outputHeight)) {
+      console.error('Invalid output dimensions:', outputWidth, outputHeight);
+      return canvas;
     }
 
     // Points source (format OpenCV)
-    const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
       sourceCorners[0].x, sourceCorners[0].y,
       sourceCorners[1].x, sourceCorners[1].y,
       sourceCorners[2].x, sourceCorners[2].y,
@@ -155,7 +165,7 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
     ]);
 
     // Points destination (Rectangle parfait)
-    const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
       0, 0,
       outputWidth, 0,
       outputWidth, outputHeight,
@@ -167,8 +177,8 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 
     // Appliquer la transformation
     dst = new cv.Mat();
-    dsize = new cv.Size(outputWidth, outputHeight);
-    cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+    const dsize = new cv.Size(outputWidth, outputHeight);
+    cv.warpPerspective(src, dst, M, dsize);
 
     // Créer le canvas de sortie
     const outputCanvas = document.createElement('canvas');
@@ -177,10 +187,6 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 
     // Afficher le résultat sur le canvas
     cv.imshow(outputCanvas, dst);
-
-    // Nettoyage intermédiaire
-    srcTri.delete();
-    dstTri.delete();
 
     return outputCanvas;
 
@@ -191,6 +197,8 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
     if (src) src.delete();
     if (dst) dst.delete();
     if (M) M.delete();
+    if (srcTri) srcTri.delete();
+    if (dstTri) dstTri.delete();
   }
 }
 

@@ -84,9 +84,35 @@ export default function DocumentScannerView({ onSave, onClose }) {
       return;
     }
 
-    logger.log('[LIVE DETECTION] Starting real-time detection loop');
-    const cleanup = startLiveDetection(videoRef, overlayCanvasRef, 600);
-    return cleanup;
+    // Attendre que la vidéo soit prête avant de démarrer la détection
+    const video = videoRef.current;
+    let cleanup = null;
+    let cancelled = false;
+
+    const startDetectionWhenReady = () => {
+      if (cancelled) return;
+
+      if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+        logger.log('[LIVE DETECTION] Video ready, starting detection');
+        cleanup = startLiveDetection(videoRef, overlayCanvasRef, 600);
+      } else {
+        // Attendre que la vidéo soit prête
+        video.addEventListener('loadeddata', () => {
+          if (!cancelled) {
+            logger.log('[LIVE DETECTION] Video loaded, starting detection');
+            cleanup = startLiveDetection(videoRef, overlayCanvasRef, 600);
+          }
+        }, { once: true });
+      }
+    };
+
+    startDetectionWhenReady();
+
+    return () => {
+      cancelled = true;
+      if (cleanup) cleanup();
+      stopLiveDetection();
+    };
   }, [mode, stream, startLiveDetection, stopLiveDetection]);
 
   // Démarrer la caméra
@@ -301,11 +327,19 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Annuler l'ajustement
   const cancelAdjustment = useCallback(() => {
-    setMode('capture');
+    // Arrêter d'abord la détection pour éviter les conflits
+    stopLiveDetection();
+
+    // Nettoyer l'état avant de redémarrer
     setCorners(null);
     setOriginalImage(null);
+
+    // Changer le mode en dernier pour éviter les re-renders intermédiaires
+    setMode('capture');
+
+    // Démarrer la caméra de manière asynchrone
     startCamera();
-  }, [startCamera]);
+  }, [startCamera, stopLiveDetection]);
 
   // Rotation de l'image
   const rotateImage = useCallback(() => {
@@ -598,9 +632,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
           <button
             className="scanner-btn danger"
             onClick={() => {
+              stopLiveDetection();
               setCurrentDoc(null);
-              setMode('capture');
               setEnhanceMode('original');
+              setMode('capture');
               startCamera();
             }}
           >
