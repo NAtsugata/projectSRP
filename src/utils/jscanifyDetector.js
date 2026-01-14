@@ -80,66 +80,212 @@ export const preloadOpenCV = () => {
 };
 
 /**
- * Classe Scanner interne
+ * Classe Scanner interne - Détection améliorée
  */
 class Scanner {
   constructor() {
     this.cv = window.cv;
   }
 
+  /**
+   * Trouve le contour du document avec plusieurs stratégies
+   */
   findPaperContour(img) {
     const cv = this.cv;
+    const imgArea = img.rows * img.cols;
+    const minAreaThreshold = imgArea * 0.05; // Au moins 5% de l'image
+
+    // Stratégie 1: Canny avec prétraitement amélioré
+    let contour = this.findContourWithCanny(img, minAreaThreshold);
+    if (contour) return contour;
+
+    // Stratégie 2: Adaptive threshold (meilleur pour faible contraste)
+    contour = this.findContourWithAdaptive(img, minAreaThreshold);
+    if (contour) return contour;
+
+    // Stratégie 3: Morphological gradient
+    contour = this.findContourWithMorphology(img, minAreaThreshold);
+    return contour;
+  }
+
+  /**
+   * Détection avec Canny - plusieurs seuils
+   */
+  findContourWithCanny(img, minArea) {
+    const cv = this.cv;
     const gray = new cv.Mat();
+    const enhanced = new cv.Mat();
+    const blurred = new cv.Mat();
+    const edges = new cv.Mat();
 
     try {
       cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
 
-      const blurred = new cv.Mat();
-      const kSize = new cv.Size(5, 5);
-      cv.GaussianBlur(gray, blurred, kSize, 0);
+      // Amélioration du contraste avec CLAHE
+      const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+      clahe.apply(gray, enhanced);
+      clahe.delete();
 
-      const edges = new cv.Mat();
-      cv.Canny(blurred, edges, 75, 200);
+      // Flou gaussien pour réduire le bruit
+      cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
 
-      const contours = new cv.MatVector();
-      const hierarchy = new cv.Mat();
+      // Essayer plusieurs seuils Canny
+      const thresholds = [
+        [30, 100],  // Sensible (détecte plus de bords)
+        [50, 150],  // Moyen
+        [75, 200],  // Standard
+        [100, 250]  // Strict (moins de bruit)
+      ];
 
-      cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      for (const [low, high] of thresholds) {
+        cv.Canny(blurred, edges, low, high);
+
+        // Dilatation pour connecter les bords proches
+        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+        cv.dilate(edges, edges, kernel);
+        kernel.delete();
+
+        const contour = this.findBestQuadContour(edges, minArea);
+        if (contour) {
+          gray.delete();
+          enhanced.delete();
+          blurred.delete();
+          edges.delete();
+          return contour;
+        }
+      }
+
+      gray.delete();
+      enhanced.delete();
+      blurred.delete();
+      edges.delete();
+      return null;
+    } catch (e) {
+      logger.error('Canny detection error', e);
+      gray.delete();
+      enhanced.delete();
+      blurred.delete();
+      edges.delete();
+      return null;
+    }
+  }
+
+  /**
+   * Détection avec seuil adaptatif - bon pour éclairage inégal
+   */
+  findContourWithAdaptive(img, minArea) {
+    const cv = this.cv;
+    const gray = new cv.Mat();
+    const binary = new cv.Mat();
+
+    try {
+      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+
+      // Seuil adaptatif
+      cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+
+      // Opérations morphologiques pour nettoyer
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      cv.morphologyEx(binary, binary, cv.MORPH_CLOSE, kernel);
+      kernel.delete();
+
+      const contour = this.findBestQuadContour(binary, minArea);
+
+      gray.delete();
+      binary.delete();
+      return contour;
+    } catch (e) {
+      logger.error('Adaptive detection error', e);
+      gray.delete();
+      binary.delete();
+      return null;
+    }
+  }
+
+  /**
+   * Détection avec gradient morphologique
+   */
+  findContourWithMorphology(img, minArea) {
+    const cv = this.cv;
+    const gray = new cv.Mat();
+    const gradient = new cv.Mat();
+
+    try {
+      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
+
+      // Gradient morphologique = dilatation - érosion
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      cv.morphologyEx(gray, gradient, cv.MORPH_GRADIENT, kernel);
+      kernel.delete();
+
+      // Binarisation
+      cv.threshold(gradient, gradient, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
+
+      const contour = this.findBestQuadContour(gradient, minArea);
+
+      gray.delete();
+      gradient.delete();
+      return contour;
+    } catch (e) {
+      logger.error('Morphology detection error', e);
+      gray.delete();
+      gradient.delete();
+      return null;
+    }
+  }
+
+  /**
+   * Trouve le meilleur contour quadrilatère
+   */
+  findBestQuadContour(edges, minArea) {
+    const cv = this.cv;
+    const contours = new cv.MatVector();
+    const hierarchy = new cv.Mat();
+
+    try {
+      cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
       let maxArea = 0;
       let bestContour = null;
+
+      // Essayer différents epsilon pour approxPolyDP
+      const epsilonFactors = [0.015, 0.02, 0.025, 0.03, 0.04];
 
       for (let i = 0; i < contours.size(); i++) {
         const contour = contours.get(i);
         const area = cv.contourArea(contour);
 
-        // Filtre de taille minimale (pour éviter le bruit)
-        if (area > 1000) {
-          const peri = cv.arcLength(contour, true);
-          const approx = new cv.Mat();
-          cv.approxPolyDP(contour, approx, 0.02 * peri, true);
+        if (area < minArea) continue;
 
-          if (area > maxArea && approx.rows === 4) {
-            maxArea = area;
-            if (bestContour) bestContour.delete();
-            bestContour = approx.clone();
+        const peri = cv.arcLength(contour, true);
+
+        for (const epsFactor of epsilonFactors) {
+          const approx = new cv.Mat();
+          cv.approxPolyDP(contour, approx, epsFactor * peri, true);
+
+          if (approx.rows === 4 && area > maxArea) {
+            // Vérifier que c'est convexe
+            if (cv.isContourConvex(approx)) {
+              maxArea = area;
+              if (bestContour) bestContour.delete();
+              bestContour = approx.clone();
+            }
           }
           approx.delete();
+
+          if (bestContour && maxArea === area) break;
         }
       }
 
-      // Nettoyage
-      blurred.delete();
-      edges.delete();
       contours.delete();
       hierarchy.delete();
-
       return bestContour;
     } catch (e) {
-      logger.error('Error finding contour', e);
+      logger.error('Find quad contour error', e);
+      contours.delete();
+      hierarchy.delete();
       return null;
-    } finally {
-      gray.delete();
     }
   }
 
@@ -299,13 +445,40 @@ export const detectDocument = async (input, options = {}) => {
 
 // --- Utilitaires ---
 
+/**
+ * Ordonne les coins: Top-Left, Top-Right, Bottom-Right, Bottom-Left
+ */
 const orderCorners = (corners) => {
+  if (!corners || corners.length !== 4) return corners;
+
+  // Trouver le centre
   const cx = corners.reduce((sum, c) => sum + c.x, 0) / 4;
   const cy = corners.reduce((sum, c) => sum + c.y, 0) / 4;
 
-  return corners.slice().sort((a, b) => {
-    return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
-  });
+  // Séparer en haut/bas basé sur Y par rapport au centre
+  const top = corners.filter(c => c.y < cy);
+  const bottom = corners.filter(c => c.y >= cy);
+
+  // S'assurer qu'on a 2 points en haut et 2 en bas
+  if (top.length !== 2 || bottom.length !== 2) {
+    // Fallback: utiliser l'angle depuis le centre
+    return corners.slice().sort((a, b) => {
+      const angleA = Math.atan2(a.y - cy, a.x - cx);
+      const angleB = Math.atan2(b.y - cy, b.x - cx);
+      return angleA - angleB;
+    });
+  }
+
+  // Trier par X
+  top.sort((a, b) => a.x - b.x);
+  bottom.sort((a, b) => b.x - a.x); // Inverse pour avoir BR puis BL
+
+  return [
+    top[0],     // Top-Left
+    top[1],     // Top-Right
+    bottom[0],  // Bottom-Right
+    bottom[1]   // Bottom-Left
+  ];
 };
 
 const drawCornersOnContext = (ctx, corners) => {
