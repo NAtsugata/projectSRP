@@ -80,7 +80,7 @@ export const preloadOpenCV = () => {
 };
 
 /**
- * Classe Scanner interne - Détection améliorée
+ * Classe Scanner interne - Détection stable avec Downscale + Morphologie
  */
 class Scanner {
   constructor() {
@@ -88,175 +88,63 @@ class Scanner {
   }
 
   /**
-   * Trouve le contour du document avec plusieurs stratégies
+   * Trouve le contour du document - Version stable avec downscale
    */
   findPaperContour(img) {
     const cv = this.cv;
-    const imgArea = img.rows * img.cols;
-    const minAreaThreshold = imgArea * 0.05; // Au moins 5% de l'image
 
-    // Stratégie 1: Canny avec prétraitement amélioré
-    let contour = this.findContourWithCanny(img, minAreaThreshold);
-    if (contour) return contour;
-
-    // Stratégie 2: Adaptive threshold (meilleur pour faible contraste)
-    contour = this.findContourWithAdaptive(img, minAreaThreshold);
-    if (contour) return contour;
-
-    // Stratégie 3: Morphological gradient
-    contour = this.findContourWithMorphology(img, minAreaThreshold);
-    return contour;
-  }
-
-  /**
-   * Détection avec Canny - plusieurs seuils
-   */
-  findContourWithCanny(img, minArea) {
-    const cv = this.cv;
-    const gray = new cv.Mat();
-    const enhanced = new cv.Mat();
-    const blurred = new cv.Mat();
-    const edges = new cv.Mat();
+    // Variables pour cleanup
+    let smallImg = null, gray = null, blurred = null, edges = null, closed = null;
+    let kernel = null, contours = null, hierarchy = null;
 
     try {
-      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
+      // 1. DOWNSCALE - Crucial pour la stabilité et la performance
+      const maxDim = Math.max(img.cols, img.rows);
+      const targetSize = 500;
+      const scale = maxDim > targetSize ? targetSize / maxDim : 1;
 
-      // Amélioration du contraste avec CLAHE
-      const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
-      clahe.apply(gray, enhanced);
-      clahe.delete();
-
-      // Flou gaussien pour réduire le bruit
-      cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
-
-      // Essayer plusieurs seuils Canny
-      const thresholds = [
-        [30, 100],  // Sensible (détecte plus de bords)
-        [50, 150],  // Moyen
-        [75, 200],  // Standard
-        [100, 250]  // Strict (moins de bruit)
-      ];
-
-      for (const [low, high] of thresholds) {
-        cv.Canny(blurred, edges, low, high);
-
-        // Dilatation pour connecter les bords proches
-        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-        cv.dilate(edges, edges, kernel);
-        kernel.delete();
-
-        const contour = this.findBestQuadContour(edges, minArea);
-        if (contour) {
-          gray.delete();
-          enhanced.delete();
-          blurred.delete();
-          edges.delete();
-          return contour;
-        }
+      smallImg = new cv.Mat();
+      if (scale < 1) {
+        cv.resize(img, smallImg, new cv.Size(0, 0), scale, scale, cv.INTER_AREA);
+      } else {
+        img.copyTo(smallImg);
       }
 
-      gray.delete();
-      enhanced.delete();
-      blurred.delete();
-      edges.delete();
-      return null;
-    } catch (e) {
-      logger.error('Canny detection error', e);
-      gray.delete();
-      enhanced.delete();
-      blurred.delete();
-      edges.delete();
-      return null;
-    }
-  }
+      const smallArea = smallImg.rows * smallImg.cols;
+      const minAreaThreshold = smallArea * 0.08; // Au moins 8% de l'image réduite
 
-  /**
-   * Détection avec seuil adaptatif - bon pour éclairage inégal
-   */
-  findContourWithAdaptive(img, minArea) {
-    const cv = this.cv;
-    const gray = new cv.Mat();
-    const binary = new cv.Mat();
+      // 2. Pré-traitement
+      gray = new cv.Mat();
+      cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
-    try {
-      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
-      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+      blurred = new cv.Mat();
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-      // Seuil adaptatif
-      cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+      // 3. Canny Edge Detection
+      edges = new cv.Mat();
+      cv.Canny(blurred, edges, 75, 200);
 
-      // Opérations morphologiques pour nettoyer
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-      cv.morphologyEx(binary, binary, cv.MORPH_CLOSE, kernel);
-      kernel.delete();
+      // 4. MORPHOLOGIE - Le secret de la stabilité !
+      // Fermeture pour reconnecter les bords interrompus
+      kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+      closed = new cv.Mat();
+      cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
 
-      const contour = this.findBestQuadContour(binary, minArea);
+      // 5. Trouver les contours - RETR_EXTERNAL seulement
+      contours = new cv.MatVector();
+      hierarchy = new cv.Mat();
+      cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-      gray.delete();
-      binary.delete();
-      return contour;
-    } catch (e) {
-      logger.error('Adaptive detection error', e);
-      gray.delete();
-      binary.delete();
-      return null;
-    }
-  }
-
-  /**
-   * Détection avec gradient morphologique
-   */
-  findContourWithMorphology(img, minArea) {
-    const cv = this.cv;
-    const gray = new cv.Mat();
-    const gradient = new cv.Mat();
-
-    try {
-      cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
-
-      // Gradient morphologique = dilatation - érosion
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-      cv.morphologyEx(gray, gradient, cv.MORPH_GRADIENT, kernel);
-      kernel.delete();
-
-      // Binarisation
-      cv.threshold(gradient, gradient, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
-
-      const contour = this.findBestQuadContour(gradient, minArea);
-
-      gray.delete();
-      gradient.delete();
-      return contour;
-    } catch (e) {
-      logger.error('Morphology detection error', e);
-      gray.delete();
-      gradient.delete();
-      return null;
-    }
-  }
-
-  /**
-   * Trouve le meilleur contour quadrilatère
-   */
-  findBestQuadContour(edges, minArea) {
-    const cv = this.cv;
-    const contours = new cv.MatVector();
-    const hierarchy = new cv.Mat();
-
-    try {
-      cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-
+      // 6. Trouver le meilleur quadrilatère
       let maxArea = 0;
       let bestContour = null;
-
-      // Essayer différents epsilon pour approxPolyDP
-      const epsilonFactors = [0.015, 0.02, 0.025, 0.03, 0.04];
+      const epsilonFactors = [0.02, 0.03, 0.04];
 
       for (let i = 0; i < contours.size(); i++) {
         const contour = contours.get(i);
         const area = cv.contourArea(contour);
 
-        if (area < minArea) continue;
+        if (area < minAreaThreshold) continue;
 
         const peri = cv.arcLength(contour, true);
 
@@ -264,13 +152,11 @@ class Scanner {
           const approx = new cv.Mat();
           cv.approxPolyDP(contour, approx, epsFactor * peri, true);
 
-          if (approx.rows === 4 && area > maxArea) {
-            // Vérifier que c'est convexe
-            if (cv.isContourConvex(approx)) {
-              maxArea = area;
-              if (bestContour) bestContour.delete();
-              bestContour = approx.clone();
-            }
+          if (approx.rows === 4 && area > maxArea && cv.isContourConvex(approx)) {
+            maxArea = area;
+            if (bestContour) bestContour.delete();
+            // IMPORTANT: Remettre à l'échelle originale
+            bestContour = this.scaleContour(approx, 1 / scale);
           }
           approx.delete();
 
@@ -278,15 +164,49 @@ class Scanner {
         }
       }
 
+      // Cleanup
+      smallImg.delete();
+      gray.delete();
+      blurred.delete();
+      edges.delete();
+      closed.delete();
+      kernel.delete();
       contours.delete();
       hierarchy.delete();
+
       return bestContour;
+
     } catch (e) {
-      logger.error('Find quad contour error', e);
-      contours.delete();
-      hierarchy.delete();
+      logger.error('Detection error:', e);
+      // Cleanup on error
+      if (smallImg) smallImg.delete();
+      if (gray) gray.delete();
+      if (blurred) blurred.delete();
+      if (edges) edges.delete();
+      if (closed) closed.delete();
+      if (kernel) kernel.delete();
+      if (contours) contours.delete();
+      if (hierarchy) hierarchy.delete();
       return null;
     }
+  }
+
+  /**
+   * Remet le contour à l'échelle originale
+   */
+  scaleContour(contour, scaleFactor) {
+    const cv = this.cv;
+    const scaled = new cv.Mat(4, 1, cv.CV_32SC2);
+
+    for (let i = 0; i < 4; i++) {
+      const x = Math.round(contour.data32S[i * 2] * scaleFactor);
+      const y = Math.round(contour.data32S[i * 2 + 1] * scaleFactor);
+      scaled.data32S[i * 2] = x;
+      scaled.data32S[i * 2 + 1] = y;
+    }
+
+    contour.delete();
+    return scaled;
   }
 
   getCornerPoints(contour) {

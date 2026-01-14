@@ -51,6 +51,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   } = useDocumentDetection({ initialDetector: 'opencv' });
 
   const {
+    draggedCorner,
     handleCornerMouseDown,
     handleCornerTouchStart,
     handleMouseMove,
@@ -627,6 +628,76 @@ export default function DocumentScannerView({ onSave, onClose }) {
           onTouchStart={(e) => handleCornerTouchStart(index, e)}
         />
       ))}
+
+      {/* Loupe - affichée uniquement lors du drag */}
+      {draggedCorner !== null && corners && originalImage && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '120px',
+          height: '120px',
+          borderRadius: '50%',
+          border: '4px solid #fff',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+          overflow: 'hidden',
+          zIndex: 100,
+          backgroundColor: '#000',
+          pointerEvents: 'none'
+        }}>
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden'
+          }}>
+            <img
+              src={originalImage}
+              alt=""
+              style={{
+                position: 'absolute',
+                width: '300%',
+                height: '300%',
+                left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
+                top: `calc(50% - ${corners[draggedCorner].y * 3}%)`,
+                objectFit: 'cover',
+                pointerEvents: 'none'
+              }}
+            />
+            {/* Croix centrale */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '20px',
+              height: '20px',
+              border: '2px solid #10b981',
+              borderRadius: '50%',
+              boxShadow: '0 0 5px #10b981'
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '2px',
+              height: '12px',
+              backgroundColor: '#10b981'
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '12px',
+              height: '2px',
+              backgroundColor: '#10b981'
+            }} />
+          </div>
+        </div>
+      )}
 
       <div className="adjust-hint">✋ Déplacez les coins pour ajuster la zone</div>
     </div>

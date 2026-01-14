@@ -203,49 +203,68 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Améliore l'image - Mode "Magic" (Adaptive Threshold)
- * Idéal pour les documents texte (supprime les ombres, rend le fond blanc)
+ * FILTRE "MAGIC" / "DOCS" - Style ClearScanner
+ * Supprime les ombres et blanchit le fond tout en gardant le texte net (antialiasing)
  */
 export function enhanceBlackAndWhite(imageData) {
   if (!isOpenCvReady()) return imageData;
 
   const cv = window.cv;
-  let src = null;
-  let dst = null;
+  let src = null, gray = null, dilated = null, bg = null, diff = null, norm = null, kernel = null;
 
   try {
     src = cv.matFromImageData(imageData);
-    dst = new cv.Mat();
+    gray = new cv.Mat();
 
-    // 1. Convertir en gris
-    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+    // 1. Conversion en Gris
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    // 2. Adaptive Threshold (C'est la "Magie" de ClearScanner)
-    // ADAPTIVE_THRESH_GAUSSIAN_C est souvent meilleur que MEAN_C
-    // Block size 11 ou 15, C = 2 à 10
-    cv.adaptiveThreshold(src, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 10);
+    // 2. Estimation du fond (Background)
+    // On dilate l'image pour supprimer le texte (garder que le papier) puis on floute
+    dilated = new cv.Mat();
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+    cv.morphologyEx(gray, dilated, cv.MORPH_DILATE, kernel);
 
-    // 3. Convertir en RGBA pour l'affichage
-    // (Bien que l'image soit N&B, le canvas attend du RGBA)
+    bg = new cv.Mat();
+    // Gros flou pour lisser le fond
+    cv.GaussianBlur(dilated, bg, new cv.Size(21, 21), 0, 0);
+
+    // 3. Division : (Image / Fond) * 255
+    // Cela "aplatit" l'éclairage. Les zones d'ombre disparaissent.
+    diff = new cv.Mat();
+    cv.divide(gray, bg, diff, 255.0, -1);
+
+    // 4. Augmenter le contraste final
+    // On ne fait pas un binaire pur, on garde une transition pour l'antialiasing
+    norm = new cv.Mat();
+    cv.threshold(diff, norm, 200, 255, cv.THRESH_TRUNC);
+    cv.normalize(norm, norm, 0, 255, cv.NORM_MINMAX);
+
+    // Retour en RGBA
     const rgbaDst = new cv.Mat();
-    cv.cvtColor(dst, rgbaDst, cv.COLOR_GRAY2RGBA, 0);
+    cv.cvtColor(norm, rgbaDst, cv.COLOR_GRAY2RGBA);
 
-    // Créer un nouveau ImageData
-    const imgData = new ImageData(
+    const result = new ImageData(
       new Uint8ClampedArray(rgbaDst.data),
       rgbaDst.cols,
       rgbaDst.rows
     );
 
     rgbaDst.delete();
-    return imgData;
+
+    return result;
 
   } catch (err) {
-    console.error('Enhance BW error:', err);
+    console.error('Magic Filter Error:', err);
     return imageData;
   } finally {
     if (src) src.delete();
-    if (dst) dst.delete();
+    if (gray) gray.delete();
+    if (dilated) dilated.delete();
+    if (bg) bg.delete();
+    if (diff) diff.delete();
+    if (norm) norm.delete();
+    if (kernel) kernel.delete();
   }
 }
 
