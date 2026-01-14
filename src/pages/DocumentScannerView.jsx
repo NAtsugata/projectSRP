@@ -31,6 +31,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [corners, setCorners] = useState(null);
   const [originalImage, setOriginalImage] = useState(null);
   const [stream, setStream] = useState(null);
+  const [cvReady, setCvReady] = useState(false); // Nouvel état pour OpenCV
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -78,43 +79,49 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [originalImage]);
 
+  // Vérifier le chargement d'OpenCV
+  useEffect(() => {
+    const checkCv = setInterval(() => {
+      if (isOpenCvReady()) {
+        setCvReady(true);
+        logger.log('[OpenCV] Prêt !');
+        clearInterval(checkCv);
+      }
+    }, 500);
+    return () => clearInterval(checkCv);
+  }, []);
+
   // Détection en temps réel
   useEffect(() => {
-    if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current) {
+    // Ne rien faire si : pas en mode capture, pas de stream, ou OpenCV pas prêt
+    if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current || !cvReady) {
       stopLiveDetection();
       return;
     }
 
-    // Attendre que la vidéo soit prête avant de démarrer la détection
     const video = videoRef.current;
-    let cleanup = null;
-    let cancelled = false;
 
-    const startDetectionWhenReady = () => {
-      if (cancelled) return;
-
-      if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-        logger.log('[LIVE DETECTION] Video ready, starting detection');
-        cleanup = startLiveDetection(videoRef, overlayCanvasRef, 600);
-      } else {
-        // Attendre que la vidéo soit prête
-        video.addEventListener('loadeddata', () => {
-          if (!cancelled) {
-            logger.log('[LIVE DETECTION] Video loaded, starting detection');
-            cleanup = startLiveDetection(videoRef, overlayCanvasRef, 600);
-          }
-        }, { once: true });
+    const start = () => {
+      if (video.readyState >= 2) {
+        // S'assurer que le canvas overlay a la même taille que la vidéo
+        if (overlayCanvasRef.current) {
+          overlayCanvasRef.current.width = video.videoWidth;
+          overlayCanvasRef.current.height = video.videoHeight;
+        }
+        logger.log('[LIVE DETECTION] Démarrage détection (interval: 150ms)');
+        startLiveDetection(videoRef, overlayCanvasRef, 150);
       }
     };
 
-    startDetectionWhenReady();
+    video.addEventListener('loadeddata', start);
+    // Cas où la vidéo est déjà chargée
+    if (video.readyState >= 2) start();
 
     return () => {
-      cancelled = true;
-      if (cleanup) cleanup();
+      video.removeEventListener('loadeddata', start);
       stopLiveDetection();
     };
-  }, [mode, stream, startLiveDetection, stopLiveDetection]);
+  }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
   // Démarrer la caméra
   const startCamera = useCallback(async () => {

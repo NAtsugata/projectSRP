@@ -1,233 +1,179 @@
 // src/hooks/useDocumentDetection.js
-// Hook pour la détection de documents avec OpenCV.js
-// Fonctionne entièrement dans le navigateur
-
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { detectDocument, preloadOpenCV, isOpenCVLoaded } from '../utils/jscanifyDetector';
+// Hook corrigé - utilise ImageData directement au lieu de File (plus rapide)
+import { useState, useCallback, useRef } from 'react';
+import { detectDocumentEdges, isOpenCvReady } from '../utils/documentScanner';
 import logger from '../utils/logger';
 
-/**
- * Hook pour gérer la détection de documents
- *
- * @param {Object} options - Options de configuration
- * @returns {Object} - API de détection et état
- */
 export const useDocumentDetection = (options = {}) => {
-  const {
-    outputWidth = 595,
-    outputHeight = 842,
-    preload = true
-  } = options;
-
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
   const [detectorType, setDetectorType] = useState('opencv');
-  const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState(null);
 
+  // Historique pour lisser les mouvements (évite le sautillement du cadre vert)
   const detectionHistoryRef = useRef([]);
   const detectionIntervalRef = useRef(null);
   const isDetectingRef = useRef(false);
 
-  // Précharger OpenCV au montage
-  useEffect(() => {
-    if (preload && !isReady && !isLoading) {
-      setIsLoading(true);
-      setLoadError(null);
+  // Détection sur un fichier (utilisé pour la capture finale)
+  const detectDocument = useCallback(async (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      preloadOpenCV()
-        .then((success) => {
-          setIsReady(success);
-          setIsLoading(false);
-          if (success) {
-            logger.log('[useDocumentDetection] OpenCV.js ready');
-          } else {
-            setLoadError('Échec du chargement d\'OpenCV.js');
-          }
-        })
-        .catch((error) => {
-          setIsLoading(false);
-          setLoadError(error.message);
-          logger.error('[useDocumentDetection] Load error:', error);
+        // Appel direct à l'utilitaire OpenCV
+        const corners = detectDocumentEdges(imageData);
+
+        URL.revokeObjectURL(img.src);
+        resolve({
+          detected: corners !== null,
+          contour: corners,
+          corners: corners
         });
-    }
-  }, [preload, isReady, isLoading]);
-
-  // Détection de document
-  const detectDocumentMethod = useCallback(async (file, extraOptions = {}) => {
-    try {
-      const result = await detectDocument(file, {
-        outputWidth,
-        outputHeight,
-        ...extraOptions
-      });
-
-      return {
-        detected: result.detected,
-        contour: result.corners,
-        corners: result.corners,
-        original: result.original,
-        preview: result.preview,
-        transformed: result.transformed,
-        confidence: result.confidence || 0,
-        score: result.confidence || 0,
-        method: 'opencv',
-        processingTime: result.processingTime
       };
-    } catch (error) {
-      logger.error('[Detection] error:', error);
-      return {
-        detected: false,
-        contour: null,
-        corners: null,
-        method: 'opencv',
-        score: 0,
-        error: error.message
+      img.onerror = () => {
+        resolve({ detected: false, contour: null, corners: null });
       };
-    }
-  }, [outputWidth, outputHeight]);
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
 
-  // Démarrer la détection en temps réel sur un flux vidéo
-  const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 500) => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-    }
-
+  // Démarrer la détection en temps réel (Flux Vidéo)
+  const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 150) => {
+    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     detectionHistoryRef.current = [];
 
-    const detectLive = async () => {
-      // Éviter les détections simultanées
+    const detectLive = () => {
+      // 1. Vérifications de sécurité
       if (isDetectingRef.current) return;
-
       const video = videoRef.current;
       const overlayCanvas = overlayCanvasRef.current;
 
-      if (!video || !overlayCanvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
-        return;
-      }
-
-      if (!isOpenCVLoaded()) {
+      if (!video || !overlayCanvas || video.readyState < 2 || !isOpenCvReady()) {
         return;
       }
 
       isDetectingRef.current = true;
 
       try {
-        // Réduire la résolution pour la performance (480px = plus rapide)
-        const detectionWidth = 480;
-        const scaleFactor = video.videoWidth / detectionWidth;
-        const detectionHeight = Math.round(video.videoHeight / scaleFactor);
+        // 2. Configuration dimensionnelle
+        // On travaille sur une image réduite (max 500px) pour la performance
+        const processWidth = 500;
+        const scale = video.videoWidth / processWidth;
+        const processHeight = Math.round(video.videoHeight / scale);
 
+        // 3. Extraction des pixels (ImageData) - DIRECT, pas de File
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = detectionWidth;
-        tempCanvas.height = detectionHeight;
+        tempCanvas.width = processWidth;
+        tempCanvas.height = processHeight;
         const ctx = tempCanvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, detectionWidth, detectionHeight);
+        ctx.drawImage(video, 0, 0, processWidth, processHeight);
 
-        const blob = await new Promise(resolve => {
-          tempCanvas.toBlob(resolve, 'image/jpeg', 0.7);
-        });
+        const imageData = ctx.getImageData(0, 0, processWidth, processHeight);
 
-        const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
-        const result = await detectDocumentMethod(file);
+        // 4. Détection OpenCV (appel synchrone direct)
+        const rawCorners = detectDocumentEdges(imageData);
 
-        // Ajouter à l'historique
-        detectionHistoryRef.current.push({
-          detected: result.detected,
-          contour: result.contour,
-          timestamp: Date.now()
-        });
-
-        if (detectionHistoryRef.current.length > 3) {
-          detectionHistoryRef.current.shift();
-        }
-
-        // Calculer le taux de succès
-        const recentDetections = detectionHistoryRef.current;
-        const successCount = recentDetections.filter(d => d.detected && d.contour?.length === 4).length;
-        const successRate = successCount / recentDetections.length;
-
-        if (successRate >= 0.66 && result.detected && result.contour?.length === 4) {
-          const successfulDetections = recentDetections.filter(d => d.detected && d.contour?.length === 4);
-          const smoothedCorners = [];
-
-          for (let i = 0; i < 4; i++) {
-            let sumX = 0, sumY = 0;
-            successfulDetections.forEach(detection => {
-              sumX += detection.contour[i].x;
-              sumY += detection.contour[i].y;
-            });
-            smoothedCorners.push({
-              x: (sumX / successfulDetections.length) / detectionWidth * 100,
-              y: (sumY / successfulDetections.length) / detectionHeight * 100
-            });
-          }
-
-          setLiveCorners(smoothedCorners);
-          setDetectionConfidence(100);
-
-          // Dessiner l'overlay
+        if (!rawCorners || rawCorners.length !== 4) {
+          // Pas de document détecté
+          setLiveCorners(null);
+          setDetectionConfidence(0);
+          // Clear overlay
           overlayCanvas.width = video.videoWidth;
           overlayCanvas.height = video.videoHeight;
-          const overlayCtx = overlayCanvas.getContext('2d');
-          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-          const cornersInPixels = smoothedCorners.map(corner => ({
-            x: (corner.x / 100) * video.videoWidth,
-            y: (corner.y / 100) * video.videoHeight
-          }));
-
-          // Polygone vert
-          overlayCtx.strokeStyle = '#10b981';
-          overlayCtx.lineWidth = 4;
-          overlayCtx.shadowColor = '#10b981';
-          overlayCtx.shadowBlur = 15;
-          overlayCtx.beginPath();
-          overlayCtx.moveTo(cornersInPixels[0].x, cornersInPixels[0].y);
-          for (let i = 1; i < cornersInPixels.length; i++) {
-            overlayCtx.lineTo(cornersInPixels[i].x, cornersInPixels[i].y);
-          }
-          overlayCtx.closePath();
-          overlayCtx.stroke();
-
-          // Points aux coins
-          cornersInPixels.forEach(corner => {
-            overlayCtx.fillStyle = '#10b981';
-            overlayCtx.shadowBlur = 10;
-            overlayCtx.beginPath();
-            overlayCtx.arc(corner.x, corner.y, 10, 0, Math.PI * 2);
-            overlayCtx.fill();
-            overlayCtx.strokeStyle = '#ffffff';
-            overlayCtx.lineWidth = 2;
-            overlayCtx.stroke();
-          });
-        } else {
-          setLiveCorners(null);
-          setDetectionConfidence(Math.round(successRate * 100));
-          if (overlayCanvas.getContext) {
-            const overlayCtx = overlayCanvas.getContext('2d');
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-          }
+          overlayCanvas.getContext('2d').clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          return;
         }
-      } catch (error) {
-        logger.error('[LIVE DETECTION] Error:', error);
+
+        // 5. Normalisation des coins (en pourcentage 0-100)
+        const normalizedCorners = rawCorners.map(p => ({
+          x: (p.x / processWidth) * 100,
+          y: (p.y / processHeight) * 100
+        }));
+
+        // 6. Logique de lissage - ajouter à l'historique
+        detectionHistoryRef.current.push(normalizedCorners);
+        if (detectionHistoryRef.current.length > 4) detectionHistoryRef.current.shift();
+
+        // Calculer la moyenne pour lisser
+        const smoothedCorners = [];
+        for (let i = 0; i < 4; i++) {
+          let sumX = 0, sumY = 0;
+          detectionHistoryRef.current.forEach(corners => {
+            sumX += corners[i].x;
+            sumY += corners[i].y;
+          });
+          smoothedCorners.push({
+            x: sumX / detectionHistoryRef.current.length,
+            y: sumY / detectionHistoryRef.current.length
+          });
+        }
+
+        setLiveCorners(smoothedCorners);
+        setDetectionConfidence(80);
+
+        // 7. Dessin de l'overlay (Cadre Vert)
+        overlayCanvas.width = video.videoWidth;
+        overlayCanvas.height = video.videoHeight;
+        const overlayCtx = overlayCanvas.getContext('2d');
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        // Conversion % -> Pixels réels pour l'affichage
+        const displayCorners = smoothedCorners.map(p => ({
+          x: (p.x / 100) * overlayCanvas.width,
+          y: (p.y / 100) * overlayCanvas.height
+        }));
+
+        // Dessiner le polygone
+        overlayCtx.beginPath();
+        overlayCtx.strokeStyle = '#10b981';
+        overlayCtx.lineWidth = 4;
+        overlayCtx.shadowColor = '#10b981';
+        overlayCtx.shadowBlur = 10;
+        overlayCtx.moveTo(displayCorners[0].x, displayCorners[0].y);
+        for (let i = 1; i < 4; i++) {
+          overlayCtx.lineTo(displayCorners[i].x, displayCorners[i].y);
+        }
+        overlayCtx.closePath();
+        overlayCtx.stroke();
+
+        // Dessiner les coins
+        overlayCtx.fillStyle = '#10b981';
+        displayCorners.forEach(p => {
+          overlayCtx.beginPath();
+          overlayCtx.arc(p.x, p.y, 10, 0, 2 * Math.PI);
+          overlayCtx.fill();
+          overlayCtx.strokeStyle = '#ffffff';
+          overlayCtx.lineWidth = 2;
+          overlayCtx.shadowBlur = 0;
+          overlayCtx.stroke();
+        });
+
+      } catch (err) {
+        logger.error("Erreur détection live:", err);
       } finally {
         isDetectingRef.current = false;
       }
     };
 
+    // Lancer la boucle
     detectionIntervalRef.current = setInterval(detectLive, interval);
 
+    // Fonction de nettoyage
     return () => {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
+      setLiveCorners(null);
     };
-  }, [detectDocumentMethod]);
+  }, []);
 
-  // Arrêter la détection en temps réel
   const stopLiveDetection = useCallback(() => {
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
@@ -239,29 +185,15 @@ export const useDocumentDetection = (options = {}) => {
     setDetectionConfidence(0);
   }, []);
 
-  // Réinitialiser l'état
-  const resetDetection = useCallback(() => {
-    stopLiveDetection();
-  }, [stopLiveDetection]);
-
   return {
-    // État
     detectorType,
-    yoloModelLoaded: false, // Compatibilité - toujours false maintenant
-    isReady,
-    isLoading,
-    loadError,
+    yoloModelLoaded: true, // Compatibilité UI
     liveCorners,
     detectionConfidence,
-    lastDetectionMethod: 'opencv',
-
-    // Actions
-    setDetectorType, // Compatibilité - garde juste l'état
-    detectDocument: detectDocumentMethod,
+    setDetectorType,
+    detectDocument,
     startLiveDetection,
-    stopLiveDetection,
-    resetDetection,
-    preloadOpenCV
+    stopLiveDetection
   };
 };
 
