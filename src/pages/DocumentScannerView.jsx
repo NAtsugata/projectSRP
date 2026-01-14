@@ -16,6 +16,7 @@ import {
   isOpenCvReady,
   applyPerspectiveTransform
 } from '../utils/documentScanner';
+import { preloadOpenCV } from '../utils/jscanifyDetector'; // AJOUT: Import preloadOpenCV
 import { useDocumentDetection } from '../hooks/useDocumentDetection';
 import { useCornerDrag } from '../hooks/useCornerDrag';
 import logger from '../utils/logger';
@@ -79,15 +80,29 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [originalImage]);
 
-  // Vérifier le chargement d'OpenCV
+  // Charger et vérifier OpenCV
   useEffect(() => {
+    logger.log('[OpenCV] Lancement du préchargement...');
+
+    // Lancer le chargement d'OpenCV
+    preloadOpenCV()
+      .then(() => {
+        logger.log('[OpenCV] Chargé avec succès !');
+        setCvReady(true);
+      })
+      .catch((err) => {
+        logger.error('[OpenCV] Erreur de chargement:', err);
+      });
+
+    // Vérification de backup au cas où
     const checkCv = setInterval(() => {
       if (isOpenCvReady()) {
         setCvReady(true);
-        logger.log('[OpenCV] Prêt !');
+        logger.log('[OpenCV] Détecté via polling');
         clearInterval(checkCv);
       }
-    }, 500);
+    }, 1000);
+
     return () => clearInterval(checkCv);
   }, []);
 
