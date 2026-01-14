@@ -3,10 +3,10 @@
 // Implémente la détection de contours, la correction de perspective et les filtres "Magic"
 
 /**
- * Vérifie si OpenCV est chargé
+ * Vérifie si OpenCV est chargé et prêt
  */
 export const isOpenCvReady = () => {
-  return !!(window.cv && window.cv.Mat);
+  return !!(window.cv && window.cv.Mat && typeof window.cv.Mat === 'function');
 };
 
 /**

@@ -276,33 +276,93 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Valider l'ajustement
   const validateAdjustment = useCallback(async () => {
-    if (!corners || !originalImage || !canvasRef.current) return;
+    if (!corners || !originalImage) {
+      console.error('Validation impossible: corners ou originalImage manquant');
+      return;
+    }
 
     setIsProcessing(true);
+    logger.log('[VALIDATE] Début de la validation...');
 
     try {
+      // 1. Charger l'image avec timeout
       const img = new Image();
-      await new Promise((resolve) => {
-        img.onload = resolve;
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Image load timeout')), 10000);
+        img.onload = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.onerror = (e) => {
+          clearTimeout(timeout);
+          reject(new Error('Image load error'));
+        };
         img.src = originalImage;
       });
 
+      logger.log('[VALIDATE] Image chargée:', img.width, 'x', img.height);
+
+      // 2. Créer le canvas temporaire
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
       const ctx = tempCanvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
 
+      // 3. Convertir les coins en pixels absolus
       const absoluteCorners = corners.map(corner => ({
         x: (corner.x / 100) * img.width,
         y: (corner.y / 100) * img.height
       }));
 
+      logger.log('[VALIDATE] Coins absolus:', absoluteCorners);
+
+      // 4. Vérifier si OpenCV est prêt
+      if (!isOpenCvReady()) {
+        logger.log('[VALIDATE] OpenCV pas prêt, attente...');
+        await new Promise(r => setTimeout(r, 1000));
+        if (!isOpenCvReady()) {
+          throw new Error('OpenCV non disponible');
+        }
+      }
+
+      // 5. Appliquer la transformation
       const outputCanvas = applyPerspectiveTransform(tempCanvas, absoluteCorners);
 
-      const transformedBlob = await new Promise(resolve => outputCanvas.toBlob(resolve, 'image/jpeg', 0.95));
-      const url = URL.createObjectURL(transformedBlob);
+      if (!outputCanvas || outputCanvas.width === 0 || outputCanvas.height === 0) {
+        throw new Error('Canvas de sortie invalide');
+      }
 
+      logger.log('[VALIDATE] Transformation appliquée:', outputCanvas.width, 'x', outputCanvas.height);
+
+      // 6. Convertir en blob avec timeout
+      const transformedBlob = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('toBlob timeout')), 10000);
+        try {
+          outputCanvas.toBlob(
+            (blob) => {
+              clearTimeout(timeout);
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Blob création échouée'));
+              }
+            },
+            'image/jpeg',
+            0.95
+          );
+        } catch (e) {
+          clearTimeout(timeout);
+          reject(e);
+        }
+      });
+
+      const url = URL.createObjectURL(transformedBlob);
+      logger.log('[VALIDATE] Blob créé, URL:', url);
+
+      // 7. Mettre à jour l'état
       setCurrentDoc({
         id: Date.now(),
         url,
@@ -317,9 +377,12 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setCorners(null);
       setOriginalImage(null);
 
+      logger.log('[VALIDATE] Validation terminée avec succès');
+
     } catch (error) {
       console.error('Erreur transformation:', error);
-      alert('Erreur lors de la transformation du document');
+      logger.error('[VALIDATE] Erreur:', error.message);
+      alert('Erreur: ' + error.message);
     } finally {
       setIsProcessing(false);
     }
