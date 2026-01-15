@@ -11,7 +11,7 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Version V3 - Multi-stratégies avec fallbacks robustes
+ * Version V4 - Détection stricte avec validation géométrique
  * Retourne les 4 coins du document détecté ou null si non trouvé
  */
 export function detectDocumentEdges(imageData) {
@@ -30,9 +30,9 @@ export function detectDocumentEdges(imageData) {
     // 1. Conversion ImageData -> cv.Mat
     src = cv.matFromImageData(imageData);
 
-    // 2. DOWNSCALE pour performance (max 600px pour garder plus de détails)
+    // 2. DOWNSCALE pour performance (max 500px)
     const maxDim = Math.max(src.cols, src.rows);
-    const targetSize = 600;
+    const targetSize = 500;
     const scale = maxDim > targetSize ? targetSize / maxDim : 1;
 
     smallImg = new cv.Mat();
@@ -43,61 +43,40 @@ export function detectDocumentEdges(imageData) {
     }
 
     const smallArea = smallImg.rows * smallImg.cols;
-    // Seuil très bas (2%) pour détecter même les petits documents
-    const minAreaThreshold = smallArea * 0.02;
+    // Seuil minimum: 8% de l'image (évite les petits faux positifs)
+    const minAreaThreshold = smallArea * 0.08;
 
-    // 3. Prétraitement de base
+    // 3. Prétraitement
     gray = new cv.Mat();
     cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
     blurred = new cv.Mat();
     cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-    let bestPoints = null;
-    let maxArea = 0;
+    let bestResult = null;
 
-    // ===== STRATÉGIE 1: Canny avec multiples seuils =====
+    // ===== Détection Canny avec plusieurs seuils =====
     const cannyConfigs = [
-      { low: 30, high: 100, kernelSize: 7 },   // Très sensible, gros kernel
       { low: 50, high: 150, kernelSize: 5 },   // Standard
-      { low: 20, high: 80, kernelSize: 9 },    // Ultra sensible
-      { low: 75, high: 200, kernelSize: 5 },   // Pour documents à fort contraste
+      { low: 75, high: 200, kernelSize: 5 },   // Fort contraste
+      { low: 30, high: 100, kernelSize: 7 },   // Sensible
     ];
 
     for (const config of cannyConfigs) {
-      if (bestPoints && maxArea > smallArea * 0.15) break; // Bon résultat trouvé
+      // Si on a déjà un bon résultat (>20% de l'image), on arrête
+      if (bestResult && bestResult.area > smallArea * 0.20) break;
 
-      const result = tryCannyDetection(cv, blurred, config, minAreaThreshold, scale);
-      if (result && result.area > maxArea) {
-        maxArea = result.area;
-        bestPoints = result.points;
+      const result = detectWithCanny(cv, blurred, config, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
+      if (result && (!bestResult || result.area > bestResult.area)) {
+        bestResult = result;
       }
     }
 
-    // ===== STRATÉGIE 2: Seuillage adaptatif (si Canny échoue) =====
-    if (!bestPoints || maxArea < smallArea * 0.1) {
-      const adaptiveResult = tryAdaptiveThreshold(cv, gray, minAreaThreshold, scale);
-      if (adaptiveResult && adaptiveResult.area > maxArea) {
-        maxArea = adaptiveResult.area;
-        bestPoints = adaptiveResult.points;
-      }
+    if (bestResult) {
+      console.log('[DETECT] Document trouvé, area:', (bestResult.area / smallArea * 100).toFixed(1) + '%');
+      return sortCorners(bestResult.points);
     }
 
-    // ===== STRATÉGIE 3: Détection par couleur/saturation (document blanc) =====
-    if (!bestPoints || maxArea < smallArea * 0.1) {
-      const colorResult = tryColorBasedDetection(cv, smallImg, minAreaThreshold, scale);
-      if (colorResult && colorResult.area > maxArea) {
-        maxArea = colorResult.area;
-        bestPoints = colorResult.points;
-      }
-    }
-
-    if (bestPoints) {
-      console.log('[DETECT] Document trouvé, area:', (maxArea / smallArea * 100).toFixed(1) + '%');
-      return sortCorners(bestPoints);
-    }
-
-    console.log('[DETECT] Aucun document détecté');
     return null;
 
   } catch (err) {
@@ -112,22 +91,75 @@ export function detectDocumentEdges(imageData) {
 }
 
 /**
- * Stratégie 1: Détection par Canny + Morphologie
+ * Détection par Canny + Morphologie avec validation stricte
  */
-function tryCannyDetection(cv, blurred, config, minArea, scale) {
+function detectWithCanny(cv, blurred, config, minArea, scale, imgWidth, imgHeight) {
   let edges = null, closed = null, kernel = null, contours = null, hierarchy = null;
 
   try {
+    // 1. Canny edge detection
     edges = new cv.Mat();
     cv.Canny(blurred, edges, config.low, config.high);
 
-    // Morphologie avec kernel adaptatif
+    // 2. Morphologie pour fermer les gaps
     kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(config.kernelSize, config.kernelSize));
     closed = new cv.Mat();
     cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
     cv.dilate(closed, closed, kernel);
 
-    return findBestQuadrilateral(cv, closed, minArea, scale);
+    // 3. Trouver les contours
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    let bestResult = null;
+
+    // Facteurs d'approximation (du plus précis au plus tolérant)
+    const epsilonFactors = [0.02, 0.03, 0.04, 0.05];
+
+    for (let i = 0; i < contours.size(); i++) {
+      const contour = contours.get(i);
+      const area = cv.contourArea(contour);
+
+      // Filtre par aire minimum
+      if (area < minArea) continue;
+      if (bestResult && area <= bestResult.area) continue;
+
+      const peri = cv.arcLength(contour, true);
+
+      for (const epsFactor of epsilonFactors) {
+        const approx = new cv.Mat();
+        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
+
+        // Doit être exactement 4 points et convexe
+        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+          // Extraire les points
+          const points = [];
+          for (let j = 0; j < 4; j++) {
+            points.push({
+              x: approx.data32S[j * 2],
+              y: approx.data32S[j * 2 + 1]
+            });
+          }
+
+          // Validation géométrique stricte
+          if (isValidDocumentShape(points, imgWidth, imgHeight)) {
+            bestResult = {
+              area: area,
+              points: points.map(p => ({
+                x: Math.round(p.x / scale),
+                y: Math.round(p.y / scale)
+              }))
+            };
+          }
+        }
+        approx.delete();
+
+        if (bestResult && bestResult.area === area) break;
+      }
+    }
+
+    return bestResult;
 
   } finally {
     if (edges) edges.delete();
@@ -139,145 +171,94 @@ function tryCannyDetection(cv, blurred, config, minArea, scale) {
 }
 
 /**
- * Stratégie 2: Seuillage adaptatif
+ * Valide qu'une forme est bien un document (pas un faux positif)
  */
-function tryAdaptiveThreshold(cv, gray, minArea, scale) {
-  let thresh = null, kernel = null, morphed = null;
+function isValidDocumentShape(points, imgWidth, imgHeight) {
+  if (points.length !== 4) return false;
 
-  try {
-    thresh = new cv.Mat();
-    // Seuillage adaptatif - bon pour les documents avec éclairage inégal
-    cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+  // 1. Calculer le bounding box
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
 
-    // Nettoyage morphologique
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-    morphed = new cv.Mat();
-    cv.morphologyEx(thresh, morphed, cv.MORPH_CLOSE, kernel);
+  const bboxWidth = maxX - minX;
+  const bboxHeight = maxY - minY;
 
-    // Kernel plus gros pour fermer les gaps
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    return findBestQuadrilateral(cv, morphed, minArea, scale);
-
-  } finally {
-    if (thresh) thresh.delete();
-    if (kernel) kernel.delete();
-    if (morphed) morphed.delete();
+  // 2. Vérifier le ratio d'aspect (entre 0.3 et 3.0 - documents standards)
+  const aspectRatio = bboxWidth / bboxHeight;
+  if (aspectRatio < 0.3 || aspectRatio > 3.0) {
+    return false;
   }
-}
 
-/**
- * Stratégie 3: Détection basée sur la couleur (documents blancs)
- */
-function tryColorBasedDetection(cv, img, minArea, scale) {
-  let hsv = null, mask = null, kernel = null, morphed = null;
+  // 3. Vérifier que ce n'est pas trop près des bords (probable faux positif)
+  const margin = Math.min(imgWidth, imgHeight) * 0.02;
+  const tooCloseToEdge = points.some(p =>
+    p.x < margin || p.x > imgWidth - margin ||
+    p.y < margin || p.y > imgHeight - margin
+  );
 
-  try {
-    hsv = new cv.Mat();
-    cv.cvtColor(img, hsv, cv.COLOR_RGBA2RGB);
-    const rgb = hsv.clone();
-    cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
-    rgb.delete();
-
-    // Masque pour les zones claires (papier blanc/beige)
-    mask = new cv.Mat();
-    const lowWhite = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [0, 0, 180, 0]);
-    const highWhite = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [180, 50, 255, 255]);
-    cv.inRange(hsv, lowWhite, highWhite, mask);
-    lowWhite.delete();
-    highWhite.delete();
-
-    // Nettoyage morphologique agressif
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-    morphed = new cv.Mat();
-    cv.morphologyEx(mask, morphed, cv.MORPH_OPEN, kernel);  // Supprimer le bruit
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);  // Fermer les trous
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(11, 11));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    return findBestQuadrilateral(cv, morphed, minArea, scale);
-
-  } finally {
-    if (hsv) hsv.delete();
-    if (mask) mask.delete();
-    if (kernel) kernel.delete();
-    if (morphed) morphed.delete();
+  // Si TOUS les points sont au bord, c'est un faux positif (détection de l'image entière)
+  const allAtEdge = points.every(p =>
+    p.x < margin * 2 || p.x > imgWidth - margin * 2 ||
+    p.y < margin * 2 || p.y > imgHeight - margin * 2
+  );
+  if (allAtEdge) {
+    return false;
   }
-}
 
-/**
- * Trouve le meilleur quadrilatère dans une image binaire
- */
-function findBestQuadrilateral(cv, binaryImg, minArea, scale) {
-  let contours = null, hierarchy = null;
+  // 4. Vérifier les angles (pas trop aigus - min 30°)
+  const angles = [];
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[(i + 3) % 4];
+    const p2 = points[i];
+    const p3 = points[(i + 1) % 4];
 
-  try {
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(binaryImg, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    const angle = calculateAngle(p1, p2, p3);
+    angles.push(angle);
 
-    let bestPoints = null;
-    let maxArea = 0;
-
-    // Facteurs d'approximation - du plus précis au plus tolérant
-    const epsilonFactors = [0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06];
-
-    for (let i = 0; i < contours.size(); i++) {
-      const contour = contours.get(i);
-      const area = cv.contourArea(contour);
-
-      if (area < minArea) continue;
-      if (area <= maxArea) continue; // On veut le plus grand
-
-      const peri = cv.arcLength(contour, true);
-
-      for (const epsFactor of epsilonFactors) {
-        const approx = new cv.Mat();
-        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
-
-        // Accepter 4 points (ou 5 si presque quadrilatère)
-        if (approx.rows >= 4 && approx.rows <= 5) {
-          // Vérifier si c'est raisonnablement convexe (tolérance pour documents pliés)
-          const isValid = approx.rows === 4 ||
-            (approx.rows === 5 && tryReduceTo4Points(cv, approx));
-
-          if (isValid && approx.rows === 4) {
-            // Vérification de convexité optionnelle (accepter même si pas parfaitement convexe)
-            maxArea = area;
-            bestPoints = [];
-            for (let j = 0; j < 4; j++) {
-              bestPoints.push({
-                x: Math.round(approx.data32S[j * 2] / scale),
-                y: Math.round(approx.data32S[j * 2 + 1] / scale)
-              });
-            }
-          }
-        }
-        approx.delete();
-
-        if (bestPoints && maxArea === area) break;
-      }
+    // Angle trop aigu = probablement pas un document
+    if (angle < 30 || angle > 150) {
+      return false;
     }
-
-    return bestPoints ? { points: bestPoints, area: maxArea } : null;
-
-  } finally {
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
   }
+
+  // 5. Vérifier que les côtés opposés ont des longueurs similaires
+  const sides = [];
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % 4];
+    sides.push(Math.hypot(p2.x - p1.x, p2.y - p1.y));
+  }
+
+  // Ratio entre côtés opposés (tolérance de 3x max)
+  const ratio1 = Math.max(sides[0], sides[2]) / Math.min(sides[0], sides[2]);
+  const ratio2 = Math.max(sides[1], sides[3]) / Math.min(sides[1], sides[3]);
+
+  if (ratio1 > 3 || ratio2 > 3) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
- * Tente de réduire un polygone à 5 points en 4 points
+ * Calcule l'angle au point p2 (en degrés)
  */
-function tryReduceTo4Points(cv, approx) {
-  // Si on a 5 points, trouver le plus petit angle et fusionner
-  // Pour l'instant, on rejette simplement
-  return false;
+function calculateAngle(p1, p2, p3) {
+  const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+  const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag1 = Math.hypot(v1.x, v1.y);
+  const mag2 = Math.hypot(v2.x, v2.y);
+
+  if (mag1 === 0 || mag2 === 0) return 0;
+
+  const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
+  return Math.acos(cosAngle) * (180 / Math.PI);
 }
 
 /**
