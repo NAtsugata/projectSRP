@@ -11,7 +11,8 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Retourne les 4 coins du document détecté ou null
+ * Version améliorée avec Downscale + Morphologie pour stabilité
+ * Retourne les 4 coins du document détecté ou les coins par défaut
  */
 export function detectDocumentEdges(imageData) {
   if (!isOpenCvReady()) {
@@ -21,9 +22,12 @@ export function detectDocumentEdges(imageData) {
 
   const cv = window.cv;
   let src = null;
+  let smallImg = null;
   let gray = null;
   let blurred = null;
   let edges = null;
+  let closed = null;
+  let kernel = null;
   let contours = null;
   let hierarchy = null;
 
@@ -31,57 +35,78 @@ export function detectDocumentEdges(imageData) {
     // 1. Conversion ImageData -> cv.Mat
     src = cv.matFromImageData(imageData);
 
-    // 2. Prétraitement
+    // 2. DOWNSCALE - Crucial pour la stabilité et la performance
+    const maxDim = Math.max(src.cols, src.rows);
+    const targetSize = 500;
+    const scale = maxDim > targetSize ? targetSize / maxDim : 1;
+
+    smallImg = new cv.Mat();
+    if (scale < 1) {
+      cv.resize(src, smallImg, new cv.Size(0, 0), scale, scale, cv.INTER_AREA);
+    } else {
+      src.copyTo(smallImg);
+    }
+
+    const smallArea = smallImg.rows * smallImg.cols;
+    const minAreaThreshold = smallArea * 0.08; // Au moins 8% de l'image
+
+    // 3. Prétraitement
     gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+    cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
     blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-    // 3. Détection de bords (Canny)
+    // 4. Détection de bords (Canny)
     edges = new cv.Mat();
     cv.Canny(blurred, edges, 75, 200);
 
-    // 4. Trouver les contours
+    // 5. MORPHOLOGIE - Fermeture pour reconnecter les bords interrompus
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    closed = new cv.Mat();
+    cv.morphologyEx(edges, closed, cv.MORPH_CLOSE, kernel);
+
+    // 6. Trouver les contours - RETR_EXTERNAL seulement
     contours = new cv.MatVector();
     hierarchy = new cv.Mat();
-    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+    cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    // 5. Trouver le plus grand quadrilatère
+    // 7. Trouver le meilleur quadrilatère
     let maxArea = 0;
-    let bestContour = null;
-    const minArea = (src.cols * src.rows) * 0.1; // Au moins 10% de l'image
+    let bestPoints = null;
+    const epsilonFactors = [0.02, 0.03, 0.04];
 
-    for (let i = 0; i < contours.size(); ++i) {
-      const cnt = contours.get(i);
-      const area = cv.contourArea(cnt);
+    for (let i = 0; i < contours.size(); i++) {
+      const contour = contours.get(i);
+      const area = cv.contourArea(contour);
 
-      if (area > minArea) {
-        const peri = cv.arcLength(cnt, true);
+      if (area < minAreaThreshold) continue;
+
+      const peri = cv.arcLength(contour, true);
+
+      for (const epsFactor of epsilonFactors) {
         const approx = new cv.Mat();
-        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
 
-        if (approx.rows === 4 && area > maxArea) {
+        if (approx.rows === 4 && area > maxArea && cv.isContourConvex(approx)) {
           maxArea = area;
-          // Copier le contour car approx sera supprimé
-          if (bestContour) bestContour.delete();
-          bestContour = approx.clone();
+          // Extraire les points et remettre à l'échelle originale
+          bestPoints = [];
+          for (let j = 0; j < 4; j++) {
+            bestPoints.push({
+              x: Math.round(approx.data32S[j * 2] / scale),
+              y: Math.round(approx.data32S[j * 2 + 1] / scale)
+            });
+          }
         }
         approx.delete();
+
+        if (bestPoints && maxArea === area) break;
       }
     }
 
-    if (bestContour) {
-      // Convertir en format {x, y} standard
-      const points = [];
-      for (let i = 0; i < 4; i++) {
-        points.push({
-          x: bestContour.data32S[i * 2],
-          y: bestContour.data32S[i * 2 + 1]
-        });
-      }
-      bestContour.delete();
-      return sortCorners(points);
+    if (bestPoints) {
+      return sortCorners(bestPoints);
     }
 
     return getDefaultCorners(imageData.width, imageData.height);
@@ -92,9 +117,12 @@ export function detectDocumentEdges(imageData) {
   } finally {
     // Nettoyage mémoire CRITIQUE avec OpenCV.js
     if (src) src.delete();
+    if (smallImg) smallImg.delete();
     if (gray) gray.delete();
     if (blurred) blurred.delete();
     if (edges) edges.delete();
+    if (closed) closed.delete();
+    if (kernel) kernel.delete();
     if (contours) contours.delete();
     if (hierarchy) hierarchy.delete();
   }
