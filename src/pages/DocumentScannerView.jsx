@@ -175,6 +175,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
+    // Sauvegarder les liveCorners AVANT d'arrêter la caméra
+    const savedLiveCorners = liveCorners && liveCorners.length === 4 ? [...liveCorners] : null;
+
     setMode('scanning');
     setScanProgress(0);
     stopCamera();
@@ -195,13 +198,24 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setIsProcessing(true);
 
     try {
+      const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
+      setOriginalImage(imgUrl);
+
+      // Utiliser les liveCorners s'ils existent (déjà détectés pendant la preview)
+      if (savedLiveCorners && savedLiveCorners.length === 4) {
+        logger.log('[CAPTURE] Utilisation des liveCorners détectés');
+        setCorners(savedLiveCorners);
+        setMode('adjust');
+        return;
+      }
+
+      // Sinon, faire une nouvelle détection
+      logger.log('[CAPTURE] Nouvelle détection requise');
+
       if (!isOpenCvReady()) {
         logger.log('Waiting for OpenCV...');
         await new Promise(r => setTimeout(r, 500));
       }
-
-      const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
-      setOriginalImage(imgUrl);
 
       // Détection sur image réduite
       const detectionWidth = 800;
@@ -247,7 +261,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocument]);
+  }, [stopCamera, detectDocument, liveCorners]);
 
   // Appliquer un mode d'amélioration
   const applyEnhanceMode = useCallback((targetMode) => {
