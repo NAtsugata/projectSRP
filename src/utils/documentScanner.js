@@ -156,7 +156,6 @@ function detectWhiteRegion(cv, img, minArea, scale, imgWidth, imgHeight) {
     cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
     let bestResult = null;
-    const epsilonFactors = [0.02, 0.03, 0.04, 0.05];
 
     for (let i = 0; i < contours.size(); i++) {
       const contour = contours.get(i);
@@ -165,33 +164,17 @@ function detectWhiteRegion(cv, img, minArea, scale, imgWidth, imgHeight) {
       if (area < minArea) continue;
       if (bestResult && area <= bestResult.area) continue;
 
-      const peri = cv.arcLength(contour, true);
+      // Utiliser l'extraction de quadrilatère améliorée
+      const points = extractQuadrilateral(cv, contour);
 
-      for (const epsFactor of epsilonFactors) {
-        const approx = new cv.Mat();
-        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
-
-        if (approx.rows === 4 && cv.isContourConvex(approx)) {
-          const points = [];
-          for (let j = 0; j < 4; j++) {
-            points.push({
-              x: approx.data32S[j * 2],
-              y: approx.data32S[j * 2 + 1]
-            });
-          }
-
-          if (isValidDocumentShape(points, imgWidth, imgHeight)) {
-            bestResult = {
-              area: area,
-              points: points.map(p => ({
-                x: Math.round(p.x / scale),
-                y: Math.round(p.y / scale)
-              }))
-            };
-          }
-        }
-        approx.delete();
-        if (bestResult && bestResult.area === area) break;
+      if (points && isValidDocumentShape(points, imgWidth, imgHeight)) {
+        bestResult = {
+          area: area,
+          points: points.map(p => ({
+            x: Math.round(p.x / scale),
+            y: Math.round(p.y / scale)
+          }))
+        };
       }
     }
 
@@ -235,48 +218,24 @@ function detectWithCanny(cv, blurred, config, minArea, scale, imgWidth, imgHeigh
 
     let bestResult = null;
 
-    // Facteurs d'approximation (du plus précis au plus tolérant)
-    const epsilonFactors = [0.02, 0.03, 0.04, 0.05];
-
     for (let i = 0; i < contours.size(); i++) {
       const contour = contours.get(i);
       const area = cv.contourArea(contour);
 
-      // Filtre par aire minimum
       if (area < minArea) continue;
       if (bestResult && area <= bestResult.area) continue;
 
-      const peri = cv.arcLength(contour, true);
+      // Essayer d'obtenir un quadrilatère
+      const points = extractQuadrilateral(cv, contour);
 
-      for (const epsFactor of epsilonFactors) {
-        const approx = new cv.Mat();
-        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
-
-        // Doit être exactement 4 points et convexe
-        if (approx.rows === 4 && cv.isContourConvex(approx)) {
-          // Extraire les points
-          const points = [];
-          for (let j = 0; j < 4; j++) {
-            points.push({
-              x: approx.data32S[j * 2],
-              y: approx.data32S[j * 2 + 1]
-            });
-          }
-
-          // Validation géométrique stricte
-          if (isValidDocumentShape(points, imgWidth, imgHeight)) {
-            bestResult = {
-              area: area,
-              points: points.map(p => ({
-                x: Math.round(p.x / scale),
-                y: Math.round(p.y / scale)
-              }))
-            };
-          }
-        }
-        approx.delete();
-
-        if (bestResult && bestResult.area === area) break;
+      if (points && isValidDocumentShape(points, imgWidth, imgHeight)) {
+        bestResult = {
+          area: area,
+          points: points.map(p => ({
+            x: Math.round(p.x / scale),
+            y: Math.round(p.y / scale)
+          }))
+        };
       }
     }
 
@@ -289,6 +248,180 @@ function detectWithCanny(cv, blurred, config, minArea, scale, imgWidth, imgHeigh
     if (contours) contours.delete();
     if (hierarchy) hierarchy.delete();
   }
+}
+
+/**
+ * Extrait un quadrilatère (4 points) d'un contour
+ * Utilise plusieurs stratégies: approxPolyDP, convex hull, coins extrêmes
+ */
+function extractQuadrilateral(cv, contour) {
+  const peri = cv.arcLength(contour, true);
+
+  // Stratégie 1: approxPolyDP avec différents epsilon
+  const epsilonFactors = [0.02, 0.03, 0.04, 0.05, 0.06];
+
+  for (const epsFactor of epsilonFactors) {
+    const approx = new cv.Mat();
+    cv.approxPolyDP(contour, approx, epsFactor * peri, true);
+
+    if (approx.rows === 4) {
+      const points = matToPoints(approx);
+      approx.delete();
+      if (isConvexQuad(points)) {
+        return points;
+      }
+    } else if (approx.rows > 4 && approx.rows <= 8) {
+      // Si on a plus de 4 points, trouver les 4 meilleurs coins
+      const allPoints = matToPoints(approx);
+      approx.delete();
+      const best4 = findBest4Corners(allPoints);
+      if (best4 && isConvexQuad(best4)) {
+        return best4;
+      }
+    } else {
+      approx.delete();
+    }
+  }
+
+  // Stratégie 2: Convex Hull + réduction à 4 points
+  const hull = new cv.Mat();
+  cv.convexHull(contour, hull);
+
+  if (hull.rows >= 4) {
+    const hullPoints = matToPoints(hull);
+    hull.delete();
+
+    if (hullPoints.length === 4) {
+      return hullPoints;
+    } else if (hullPoints.length > 4) {
+      const best4 = findBest4Corners(hullPoints);
+      if (best4 && isConvexQuad(best4)) {
+        return best4;
+      }
+    }
+  } else {
+    hull.delete();
+  }
+
+  // Stratégie 3: Points extrêmes (min/max X et Y)
+  const extremePoints = findExtremePoints(contour);
+  if (extremePoints && isConvexQuad(extremePoints)) {
+    return extremePoints;
+  }
+
+  return null;
+}
+
+/**
+ * Convertit un cv.Mat en tableau de points
+ */
+function matToPoints(mat) {
+  const points = [];
+  for (let i = 0; i < mat.rows; i++) {
+    points.push({
+      x: mat.data32S[i * 2],
+      y: mat.data32S[i * 2 + 1]
+    });
+  }
+  return points;
+}
+
+/**
+ * Vérifie si 4 points forment un quadrilatère convexe
+ */
+function isConvexQuad(points) {
+  if (points.length !== 4) return false;
+
+  // Vérifier que tous les produits vectoriels ont le même signe
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % 4];
+    const p3 = points[(i + 2) % 4];
+
+    const cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
+
+    if (cross !== 0) {
+      if (sign === 0) {
+        sign = cross > 0 ? 1 : -1;
+      } else if ((cross > 0 ? 1 : -1) !== sign) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Trouve les 4 meilleurs coins parmi N points (N > 4)
+ * Utilise l'angle au sommet pour identifier les vrais coins
+ */
+function findBest4Corners(points) {
+  if (points.length < 4) return null;
+  if (points.length === 4) return points;
+
+  // Calculer l'angle à chaque point
+  const angles = [];
+  const n = points.length;
+
+  for (let i = 0; i < n; i++) {
+    const prev = points[(i - 1 + n) % n];
+    const curr = points[i];
+    const next = points[(i + 1) % n];
+
+    const angle = calculateCornerAngle(prev, curr, next);
+    angles.push({ index: i, angle: angle, point: curr });
+  }
+
+  // Trier par angle (les plus petits angles = coins les plus marqués)
+  angles.sort((a, b) => a.angle - b.angle);
+
+  // Prendre les 4 coins avec les angles les plus aigus
+  const best4Indices = angles.slice(0, 4).map(a => a.index).sort((a, b) => a - b);
+  const best4 = best4Indices.map(i => points[i]);
+
+  return best4;
+}
+
+/**
+ * Calcule l'angle au coin (en degrés)
+ */
+function calculateCornerAngle(p1, p2, p3) {
+  const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+  const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag1 = Math.hypot(v1.x, v1.y);
+  const mag2 = Math.hypot(v2.x, v2.y);
+
+  if (mag1 === 0 || mag2 === 0) return 180;
+
+  const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
+  return Math.acos(cosAngle) * (180 / Math.PI);
+}
+
+/**
+ * Trouve les 4 points extrêmes d'un contour (topmost, rightmost, bottommost, leftmost)
+ */
+function findExtremePoints(contour) {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let topPoint, rightPoint, bottomPoint, leftPoint;
+
+  for (let i = 0; i < contour.rows; i++) {
+    const x = contour.data32S[i * 2];
+    const y = contour.data32S[i * 2 + 1];
+
+    if (y < minY) { minY = y; topPoint = { x, y }; }
+    if (x > maxX) { maxX = x; rightPoint = { x, y }; }
+    if (y > maxY) { maxY = y; bottomPoint = { x, y }; }
+    if (x < minX) { minX = x; leftPoint = { x, y }; }
+  }
+
+  if (!topPoint || !rightPoint || !bottomPoint || !leftPoint) return null;
+
+  // Ordonner: TL, TR, BR, BL (approximation)
+  return [topPoint, rightPoint, bottomPoint, leftPoint];
 }
 
 /**
