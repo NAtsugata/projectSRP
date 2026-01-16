@@ -11,7 +11,7 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Version V6 - Ajout détection des zones blanches (papier)
+ * Version V7 - Scoring multi-critères + seuils adaptatifs
  * Retourne les 4 coins du document détecté ou null si non trouvé
  */
 export function detectDocumentEdges(imageData) {
@@ -24,7 +24,6 @@ export function detectDocumentEdges(imageData) {
   let src = null;
   let smallImg = null;
   let gray = null;
-  let enhanced = null;
   let blurred = null;
 
   try {
@@ -43,51 +42,47 @@ export function detectDocumentEdges(imageData) {
       src.copyTo(smallImg);
     }
 
-    const smallArea = smallImg.rows * smallImg.cols;
+    const imgWidth = smallImg.cols;
+    const imgHeight = smallImg.rows;
+    const smallArea = imgWidth * imgHeight;
     const minAreaThreshold = smallArea * 0.05;
 
     // 3. Conversion en niveaux de gris
     gray = new cv.Mat();
     cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
-    // 4. CLAHE - Amélioration du contraste
-    enhanced = new cv.Mat();
-    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
-    clahe.apply(gray, enhanced);
-    clahe.delete();
-
-    // 5. Flou gaussien
+    // 4. Flou gaussien léger
     blurred = new cv.Mat();
-    cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-    let bestResult = null;
+    // Collecter tous les candidats
+    const candidates = [];
 
-    // ===== STRATÉGIE 1: Détection des zones BLANCHES (papier) =====
-    const whiteResult = detectWhiteRegion(cv, smallImg, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
-    if (whiteResult && whiteResult.area > minAreaThreshold) {
-      bestResult = whiteResult;
-    }
+    // ===== MÉTHODE 1: Otsu (seuillage automatique) =====
+    const otsuResult = detectWithOtsu(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
+    if (otsuResult) candidates.push(otsuResult);
 
-    // ===== STRATÉGIE 2: Canny si blanc insuffisant =====
-    if (!bestResult || bestResult.area < smallArea * 0.15) {
-      const cannyConfigs = [
-        { low: 40, high: 120, kernelSize: 5 },
-        { low: 60, high: 180, kernelSize: 5 },
-        { low: 25, high: 75, kernelSize: 7 },
-      ];
+    // ===== MÉTHODE 2: Canny adaptatif =====
+    const cannyResult = detectWithAdaptiveCanny(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
+    if (cannyResult) candidates.push(cannyResult);
 
-      for (const config of cannyConfigs) {
-        if (bestResult && bestResult.area > smallArea * 0.25) break;
+    // ===== MÉTHODE 3: Blanc (papier) =====
+    const whiteResult = detectWhiteRegion(cv, smallImg, minAreaThreshold, scale, imgWidth, imgHeight);
+    if (whiteResult) candidates.push(whiteResult);
 
-        const result = detectWithCanny(cv, blurred, config, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
-        if (result && (!bestResult || result.area > bestResult.area)) {
-          bestResult = result;
-        }
-      }
-    }
+    if (candidates.length === 0) return null;
 
-    if (bestResult) {
-      return sortCorners(bestResult.points);
+    // Calculer le score pour chaque candidat
+    candidates.forEach(c => {
+      c.score = calculateDocumentScore(c.points, c.area, smallArea, imgWidth, imgHeight);
+    });
+
+    // Trier par score décroissant et prendre le meilleur
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+
+    if (best.score > 0.25) {
+      return sortCorners(best.points);
     }
 
     return null;
@@ -99,9 +94,168 @@ export function detectDocumentEdges(imageData) {
     if (src) src.delete();
     if (smallImg) smallImg.delete();
     if (gray) gray.delete();
-    if (enhanced) enhanced.delete();
     if (blurred) blurred.delete();
   }
+}
+
+/**
+ * Score de qualité pour un candidat document (0-1)
+ */
+function calculateDocumentScore(points, area, totalArea, imgWidth, imgHeight) {
+  if (!points || points.length !== 4) return 0;
+
+  let score = 0;
+
+  // 1. Score de taille (10-90% de l'image)
+  const areaRatio = area / totalArea;
+  if (areaRatio >= 0.1 && areaRatio <= 0.9) {
+    score += 0.25 * Math.min(areaRatio * 2, 1);
+  }
+
+  // 2. Score de rectangularité (côtés opposés similaires)
+  const sides = [];
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % 4];
+    sides.push(Math.hypot(p2.x - p1.x, p2.y - p1.y));
+  }
+  const ratio1 = Math.min(sides[0], sides[2]) / Math.max(sides[0], sides[2]);
+  const ratio2 = Math.min(sides[1], sides[3]) / Math.max(sides[1], sides[3]);
+  score += 0.25 * ((ratio1 + ratio2) / 2);
+
+  // 3. Score d'angles (proches de 90°)
+  let angleScore = 0;
+  for (let i = 0; i < 4; i++) {
+    const p1 = points[(i + 3) % 4];
+    const p2 = points[i];
+    const p3 = points[(i + 1) % 4];
+    const angle = calculateCornerAngle(p1, p2, p3);
+    const deviation = Math.abs(90 - angle);
+    angleScore += Math.max(0, 1 - deviation / 60);
+  }
+  score += 0.3 * (angleScore / 4);
+
+  // 4. Score de position (pas collé aux bords)
+  const margin = Math.min(imgWidth, imgHeight) * 0.03;
+  let edgeCount = 0;
+  for (const p of points) {
+    if (p.x < margin || p.x > imgWidth - margin ||
+        p.y < margin || p.y > imgHeight - margin) {
+      edgeCount++;
+    }
+  }
+  score += 0.2 * (1 - edgeCount / 4);
+
+  return Math.max(0, Math.min(1, score));
+}
+
+/**
+ * Détection Otsu (seuillage automatique)
+ */
+function detectWithOtsu(cv, gray, minArea, scale, imgWidth, imgHeight) {
+  let thresh = null, morphed = null, kernel = null;
+  let contours = null, hierarchy = null;
+
+  try {
+    thresh = new cv.Mat();
+    cv.threshold(gray, thresh, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+    morphed = new cv.Mat();
+    cv.morphologyEx(thresh, morphed, cv.MORPH_CLOSE, kernel);
+
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    return findBestContour(cv, contours, minArea, scale, imgWidth, imgHeight);
+
+  } finally {
+    if (thresh) thresh.delete();
+    if (morphed) morphed.delete();
+    if (kernel) kernel.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
+  }
+}
+
+/**
+ * Détection Canny avec seuils adaptatifs
+ */
+function detectWithAdaptiveCanny(cv, gray, minArea, scale, imgWidth, imgHeight) {
+  let edges = null, morphed = null, kernel = null;
+  let contours = null, hierarchy = null;
+
+  try {
+    // Calculer médiane pour seuils adaptatifs
+    const median = estimateMedian(gray);
+    const low = Math.max(0, Math.round(median * 0.4));
+    const high = Math.min(255, Math.round(median * 1.3));
+
+    edges = new cv.Mat();
+    cv.Canny(gray, edges, low, high);
+
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    morphed = new cv.Mat();
+    cv.morphologyEx(edges, morphed, cv.MORPH_CLOSE, kernel);
+    cv.dilate(morphed, morphed, kernel);
+
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    return findBestContour(cv, contours, minArea, scale, imgWidth, imgHeight);
+
+  } finally {
+    if (edges) edges.delete();
+    if (morphed) morphed.delete();
+    if (kernel) kernel.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
+  }
+}
+
+/**
+ * Estime la médiane d'une image
+ */
+function estimateMedian(gray) {
+  const data = gray.data;
+  const step = Math.max(1, Math.floor(data.length / 500));
+  const samples = [];
+  for (let i = 0; i < data.length; i += step) {
+    samples.push(data[i]);
+  }
+  samples.sort((a, b) => a - b);
+  return samples[Math.floor(samples.length / 2)];
+}
+
+/**
+ * Trouve le meilleur contour
+ */
+function findBestContour(cv, contours, minArea, scale, imgWidth, imgHeight) {
+  let bestResult = null;
+
+  for (let i = 0; i < contours.size(); i++) {
+    const contour = contours.get(i);
+    const area = cv.contourArea(contour);
+
+    if (area < minArea) continue;
+
+    const points = extractQuadrilateral(cv, contour);
+    if (points && isValidDocumentShape(points, imgWidth, imgHeight)) {
+      if (!bestResult || area > bestResult.area) {
+        bestResult = {
+          area: area,
+          points: points.map(p => ({
+            x: Math.round(p.x / scale),
+            y: Math.round(p.y / scale)
+          }))
+        };
+      }
+    }
+  }
+
+  return bestResult;
 }
 
 /**
