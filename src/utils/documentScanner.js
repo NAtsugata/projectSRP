@@ -11,7 +11,7 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Version V5 - Détection améliorée avec CLAHE et meilleure tolérance
+ * Version V6 - Ajout détection des zones blanches (papier)
  * Retourne les 4 coins du document détecté ou null si non trouvé
  */
 export function detectDocumentEdges(imageData) {
@@ -44,40 +44,45 @@ export function detectDocumentEdges(imageData) {
     }
 
     const smallArea = smallImg.rows * smallImg.cols;
-    // Seuil minimum: 5% de l'image
     const minAreaThreshold = smallArea * 0.05;
 
     // 3. Conversion en niveaux de gris
     gray = new cv.Mat();
     cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
-    // 4. CLAHE - Amélioration du contraste adaptatif (crucial pour les documents)
+    // 4. CLAHE - Amélioration du contraste
     enhanced = new cv.Mat();
     const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
     clahe.apply(gray, enhanced);
     clahe.delete();
 
-    // 5. Flou gaussien pour réduire le bruit
+    // 5. Flou gaussien
     blurred = new cv.Mat();
     cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
 
     let bestResult = null;
 
-    // ===== Détection Canny avec plusieurs configurations =====
-    const cannyConfigs = [
-      { low: 40, high: 120, kernelSize: 5 },   // Sensible (CLAHE amplifie les edges)
-      { low: 60, high: 180, kernelSize: 5 },   // Standard
-      { low: 25, high: 75, kernelSize: 7 },    // Très sensible avec gros kernel
-      { low: 80, high: 240, kernelSize: 3 },   // Fort contraste, petit kernel
-    ];
+    // ===== STRATÉGIE 1: Détection des zones BLANCHES (papier) =====
+    const whiteResult = detectWhiteRegion(cv, smallImg, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
+    if (whiteResult && whiteResult.area > minAreaThreshold) {
+      bestResult = whiteResult;
+    }
 
-    for (const config of cannyConfigs) {
-      // Si on a déjà un bon résultat (>25% de l'image), on arrête
-      if (bestResult && bestResult.area > smallArea * 0.25) break;
+    // ===== STRATÉGIE 2: Canny si blanc insuffisant =====
+    if (!bestResult || bestResult.area < smallArea * 0.15) {
+      const cannyConfigs = [
+        { low: 40, high: 120, kernelSize: 5 },
+        { low: 60, high: 180, kernelSize: 5 },
+        { low: 25, high: 75, kernelSize: 7 },
+      ];
 
-      const result = detectWithCanny(cv, blurred, config, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
-      if (result && (!bestResult || result.area > bestResult.area)) {
-        bestResult = result;
+      for (const config of cannyConfigs) {
+        if (bestResult && bestResult.area > smallArea * 0.25) break;
+
+        const result = detectWithCanny(cv, blurred, config, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
+        if (result && (!bestResult || result.area > bestResult.area)) {
+          bestResult = result;
+        }
       }
     }
 
@@ -96,6 +101,113 @@ export function detectDocumentEdges(imageData) {
     if (gray) gray.delete();
     if (enhanced) enhanced.delete();
     if (blurred) blurred.delete();
+  }
+}
+
+/**
+ * Détecte les zones blanches/claires (papier) dans l'image
+ */
+function detectWhiteRegion(cv, img, minArea, scale, imgWidth, imgHeight) {
+  let hsv = null, lab = null, mask = null, kernel = null, morphed = null;
+  let contours = null, hierarchy = null;
+
+  try {
+    // Convertir en LAB (meilleur pour détecter la luminosité)
+    const rgb = new cv.Mat();
+    cv.cvtColor(img, rgb, cv.COLOR_RGBA2RGB);
+
+    lab = new cv.Mat();
+    cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
+    rgb.delete();
+
+    // Séparer les canaux L, a, b
+    const labChannels = new cv.MatVector();
+    cv.split(lab, labChannels);
+    const L = labChannels.get(0); // Canal de luminosité
+
+    // Seuillage sur la luminosité (papier blanc = haute luminosité)
+    // L va de 0 à 255, papier blanc > 180
+    mask = new cv.Mat();
+    cv.threshold(L, mask, 170, 255, cv.THRESH_BINARY);
+
+    // Cleanup
+    labChannels.get(1).delete();
+    labChannels.get(2).delete();
+    L.delete();
+    labChannels.delete();
+
+    // Morphologie pour nettoyer le masque
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    morphed = new cv.Mat();
+
+    // Ouverture pour supprimer le bruit
+    cv.morphologyEx(mask, morphed, cv.MORPH_OPEN, kernel);
+    // Fermeture pour combler les trous
+    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
+
+    // Kernel plus gros pour mieux connecter
+    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
+    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
+    bigKernel.delete();
+
+    // Trouver les contours
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    let bestResult = null;
+    const epsilonFactors = [0.02, 0.03, 0.04, 0.05];
+
+    for (let i = 0; i < contours.size(); i++) {
+      const contour = contours.get(i);
+      const area = cv.contourArea(contour);
+
+      if (area < minArea) continue;
+      if (bestResult && area <= bestResult.area) continue;
+
+      const peri = cv.arcLength(contour, true);
+
+      for (const epsFactor of epsilonFactors) {
+        const approx = new cv.Mat();
+        cv.approxPolyDP(contour, approx, epsFactor * peri, true);
+
+        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+          const points = [];
+          for (let j = 0; j < 4; j++) {
+            points.push({
+              x: approx.data32S[j * 2],
+              y: approx.data32S[j * 2 + 1]
+            });
+          }
+
+          if (isValidDocumentShape(points, imgWidth, imgHeight)) {
+            bestResult = {
+              area: area,
+              points: points.map(p => ({
+                x: Math.round(p.x / scale),
+                y: Math.round(p.y / scale)
+              }))
+            };
+          }
+        }
+        approx.delete();
+        if (bestResult && bestResult.area === area) break;
+      }
+    }
+
+    return bestResult;
+
+  } catch (err) {
+    console.error('[WHITE DETECT] Error:', err);
+    return null;
+  } finally {
+    if (hsv) hsv.delete();
+    if (lab) lab.delete();
+    if (mask) mask.delete();
+    if (kernel) kernel.delete();
+    if (morphed) morphed.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
   }
 }
 
