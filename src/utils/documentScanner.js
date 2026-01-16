@@ -11,7 +11,7 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Version V4 - Détection stricte avec validation géométrique
+ * Version V5 - Détection améliorée avec CLAHE et meilleure tolérance
  * Retourne les 4 coins du document détecté ou null si non trouvé
  */
 export function detectDocumentEdges(imageData) {
@@ -24,6 +24,7 @@ export function detectDocumentEdges(imageData) {
   let src = null;
   let smallImg = null;
   let gray = null;
+  let enhanced = null;
   let blurred = null;
 
   try {
@@ -43,28 +44,36 @@ export function detectDocumentEdges(imageData) {
     }
 
     const smallArea = smallImg.rows * smallImg.cols;
-    // Seuil minimum: 8% de l'image (évite les petits faux positifs)
-    const minAreaThreshold = smallArea * 0.08;
+    // Seuil minimum: 5% de l'image
+    const minAreaThreshold = smallArea * 0.05;
 
-    // 3. Prétraitement
+    // 3. Conversion en niveaux de gris
     gray = new cv.Mat();
     cv.cvtColor(smallImg, gray, cv.COLOR_RGBA2GRAY);
 
+    // 4. CLAHE - Amélioration du contraste adaptatif (crucial pour les documents)
+    enhanced = new cv.Mat();
+    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+    clahe.apply(gray, enhanced);
+    clahe.delete();
+
+    // 5. Flou gaussien pour réduire le bruit
     blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+    cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
 
     let bestResult = null;
 
-    // ===== Détection Canny avec plusieurs seuils =====
+    // ===== Détection Canny avec plusieurs configurations =====
     const cannyConfigs = [
-      { low: 50, high: 150, kernelSize: 5 },   // Standard
-      { low: 75, high: 200, kernelSize: 5 },   // Fort contraste
-      { low: 30, high: 100, kernelSize: 7 },   // Sensible
+      { low: 40, high: 120, kernelSize: 5 },   // Sensible (CLAHE amplifie les edges)
+      { low: 60, high: 180, kernelSize: 5 },   // Standard
+      { low: 25, high: 75, kernelSize: 7 },    // Très sensible avec gros kernel
+      { low: 80, high: 240, kernelSize: 3 },   // Fort contraste, petit kernel
     ];
 
     for (const config of cannyConfigs) {
-      // Si on a déjà un bon résultat (>20% de l'image), on arrête
-      if (bestResult && bestResult.area > smallArea * 0.20) break;
+      // Si on a déjà un bon résultat (>25% de l'image), on arrête
+      if (bestResult && bestResult.area > smallArea * 0.25) break;
 
       const result = detectWithCanny(cv, blurred, config, minAreaThreshold, scale, smallImg.cols, smallImg.rows);
       if (result && (!bestResult || result.area > bestResult.area)) {
@@ -73,7 +82,6 @@ export function detectDocumentEdges(imageData) {
     }
 
     if (bestResult) {
-      console.log('[DETECT] Document trouvé, area:', (bestResult.area / smallArea * 100).toFixed(1) + '%');
       return sortCorners(bestResult.points);
     }
 
@@ -86,6 +94,7 @@ export function detectDocumentEdges(imageData) {
     if (src) src.delete();
     if (smallImg) smallImg.delete();
     if (gray) gray.delete();
+    if (enhanced) enhanced.delete();
     if (blurred) blurred.delete();
   }
 }
@@ -172,6 +181,7 @@ function detectWithCanny(cv, blurred, config, minArea, scale, imgWidth, imgHeigh
 
 /**
  * Valide qu'une forme est bien un document (pas un faux positif)
+ * Version améliorée avec tolérance pour documents en perspective
  */
 function isValidDocumentShape(points, imgWidth, imgHeight) {
   if (points.length !== 4) return false;
@@ -187,45 +197,47 @@ function isValidDocumentShape(points, imgWidth, imgHeight) {
   const bboxWidth = maxX - minX;
   const bboxHeight = maxY - minY;
 
-  // 2. Vérifier le ratio d'aspect (entre 0.3 et 3.0 - documents standards)
+  // 2. Vérifier le ratio d'aspect (entre 0.2 et 5.0 - plus tolérant pour perspective)
   const aspectRatio = bboxWidth / bboxHeight;
-  if (aspectRatio < 0.3 || aspectRatio > 3.0) {
+  if (aspectRatio < 0.2 || aspectRatio > 5.0) {
     return false;
   }
 
-  // 3. Vérifier que ce n'est pas trop près des bords (probable faux positif)
-  const margin = Math.min(imgWidth, imgHeight) * 0.02;
-  const tooCloseToEdge = points.some(p =>
-    p.x < margin || p.x > imgWidth - margin ||
-    p.y < margin || p.y > imgHeight - margin
-  );
+  // 3. Rejeter si c'est l'image entière (tous les coins près des bords)
+  const margin = Math.min(imgWidth, imgHeight) * 0.03;
+  let cornersAtEdge = 0;
 
-  // Si TOUS les points sont au bord, c'est un faux positif (détection de l'image entière)
-  const allAtEdge = points.every(p =>
-    p.x < margin * 2 || p.x > imgWidth - margin * 2 ||
-    p.y < margin * 2 || p.y > imgHeight - margin * 2
-  );
-  if (allAtEdge) {
+  for (const p of points) {
+    const atLeft = p.x < margin;
+    const atRight = p.x > imgWidth - margin;
+    const atTop = p.y < margin;
+    const atBottom = p.y > imgHeight - margin;
+
+    if ((atLeft || atRight) && (atTop || atBottom)) {
+      cornersAtEdge++;
+    }
+  }
+
+  // Si 4 coins sont dans les coins de l'image = faux positif
+  if (cornersAtEdge >= 4) {
     return false;
   }
 
-  // 4. Vérifier les angles (pas trop aigus - min 30°)
-  const angles = [];
+  // 4. Vérifier les angles (plus tolérant: 20° à 160° pour perspective)
   for (let i = 0; i < 4; i++) {
     const p1 = points[(i + 3) % 4];
     const p2 = points[i];
     const p3 = points[(i + 1) % 4];
 
     const angle = calculateAngle(p1, p2, p3);
-    angles.push(angle);
 
-    // Angle trop aigu = probablement pas un document
-    if (angle < 30 || angle > 150) {
+    // Angle trop aigu ou trop obtus = probablement pas un document
+    if (angle < 20 || angle > 160) {
       return false;
     }
   }
 
-  // 5. Vérifier que les côtés opposés ont des longueurs similaires
+  // 5. Vérifier que les côtés opposés ont des longueurs raisonnables
   const sides = [];
   for (let i = 0; i < 4; i++) {
     const p1 = points[i];
@@ -233,15 +245,39 @@ function isValidDocumentShape(points, imgWidth, imgHeight) {
     sides.push(Math.hypot(p2.x - p1.x, p2.y - p1.y));
   }
 
-  // Ratio entre côtés opposés (tolérance de 3x max)
+  // Ratio entre côtés opposés (tolérance de 4x pour perspective forte)
   const ratio1 = Math.max(sides[0], sides[2]) / Math.min(sides[0], sides[2]);
   const ratio2 = Math.max(sides[1], sides[3]) / Math.min(sides[1], sides[3]);
 
-  if (ratio1 > 3 || ratio2 > 3) {
+  if (ratio1 > 4 || ratio2 > 4) {
+    return false;
+  }
+
+  // 6. Vérifier que l'aire du quadrilatère est significative par rapport au bbox
+  const quadArea = calculateQuadArea(points);
+  const bboxArea = bboxWidth * bboxHeight;
+  const fillRatio = quadArea / bboxArea;
+
+  // Un vrai document remplit au moins 50% de son bounding box
+  if (fillRatio < 0.5) {
     return false;
   }
 
   return true;
+}
+
+/**
+ * Calcule l'aire d'un quadrilatère (formule du lacet)
+ */
+function calculateQuadArea(points) {
+  let area = 0;
+  const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += points[i].x * points[j].y;
+    area -= points[j].x * points[i].y;
+  }
+  return Math.abs(area) / 2;
 }
 
 /**
