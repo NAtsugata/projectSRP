@@ -107,7 +107,10 @@ export const useDocumentDetection = (options = {}) => {
           // Garder les coins stables pendant quelques frames
           if (noDetectionCountRef.current < NO_DETECTION_LIMIT && stableCornerRef.current) {
             // Continuer à afficher les derniers coins stables
+            // IMPORTANT: Mettre à jour le state aussi pour la capture
+            setLiveCorners(stableCornerRef.current);
             drawOverlay(overlayCanvas, video, stableCornerRef.current);
+            isDetectingRef.current = false;
             return;
           }
 
@@ -117,6 +120,7 @@ export const useDocumentDetection = (options = {}) => {
           stableCornerRef.current = null;
           detectionHistoryRef.current = [];
           overlayCanvas.getContext('2d').clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          isDetectingRef.current = false;
           return;
         }
 
@@ -158,6 +162,9 @@ export const useDocumentDetection = (options = {}) => {
 
         if (movement < STABILITY_THRESHOLD && stableCornerRef.current) {
           // Mouvement minime - garder les coins stables (évite le tremblement)
+          // Toujours mettre à jour le state pour la capture
+          setLiveCorners(stableCornerRef.current);
+          setDetectionConfidence(90);
           drawOverlay(overlayCanvas, video, stableCornerRef.current);
         } else {
           // Mouvement significatif - mettre à jour
