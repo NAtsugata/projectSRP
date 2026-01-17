@@ -1773,74 +1773,7 @@ export default function IRShowerFormsView({ profile }) {
             )}
           </Section>
 
-          {/* VALIDATION STATUS */}
-          <Section title="Validation du plan">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              {/* Progress bar */}
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Complétion</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444' }}>
-                    {planValidation.score}%
-                  </span>
-                </div>
-                <div style={{ height: 8, borderRadius: 4, background: '#e2e8f0', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${planValidation.score}%`,
-                      borderRadius: 4,
-                      background: planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444',
-                      transition: 'width 0.3s ease'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Status badge */}
-              <div style={{
-                padding: '6px 12px',
-                borderRadius: 8,
-                background: planValidation.isValid ? '#dcfce7' : '#fee2e2',
-                color: planValidation.isValid ? '#166534' : '#991b1b',
-                fontSize: 12,
-                fontWeight: 600
-              }}>
-                {planValidation.isValid ? 'Plan valide' : 'Éléments manquants'}
-              </div>
-            </div>
-
-            {/* Errors */}
-            {planValidation.errors.length > 0 && (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: '#fee2e2', border: '1px solid #fecaca' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>Éléments requis manquants :</div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#991b1b' }}>
-                  {planValidation.errors.map((err, i) => <li key={i}>{err}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {/* Warnings */}
-            {planValidation.warnings.length > 0 && (
-              <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: '#fef3c7', border: '1px solid #fde68a' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Recommandations :</div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#92400e' }}>
-                  {planValidation.warnings.map((warn, i) => <li key={i}>{warn}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {/* Success message */}
-            {planValidation.isValid && planValidation.warnings.length === 0 && (
-              <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: '#dcfce7', border: '1px solid #bbf7d0' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#166534' }}>
-                  Excellent ! Votre plan est complet et contient tous les éléments recommandés.
-                </div>
-              </div>
-            )}
-          </Section>
-
-          {/* ZONE EXPORTABLE */}
+          {/* ZONE EXPORTABLE - Canvas en premier pour mobile */}
           <div ref={planExportRef}>
             <div style={{ border: "1px solid #94a3b8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
               <div className="ir-canvas-wrap">
@@ -1906,10 +1839,69 @@ export default function IRShowerFormsView({ profile }) {
             </Section>
           </div>
 
-          {/* Actions locales */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
-            <button onClick={resetPlan} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #cbd5e1", background:"#fff" }}>
-              Réinitialiser le plan
+          {/* VALIDATION - Barre compacte en bas */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            marginTop: '12px',
+            background: planValidation.isValid ? '#dcfce7' : '#fef3c7',
+            borderRadius: '12px',
+            border: `2px solid ${planValidation.isValid ? '#86efac' : '#fde68a'}`
+          }}>
+            {/* Barre de progression circulaire */}
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: `conic-gradient(${planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444'} ${planValidation.score * 3.6}deg, #e2e8f0 0deg)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: '700',
+                color: planValidation.score >= 70 ? '#166534' : planValidation.score >= 40 ? '#92400e' : '#991b1b'
+              }}>
+                {planValidation.score}%
+              </div>
+            </div>
+
+            {/* Status */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: '600', fontSize: '14px', color: planValidation.isValid ? '#166534' : '#92400e' }}>
+                {planValidation.isValid ? '✅ Plan complet' : '⚠️ Éléments manquants'}
+              </div>
+              {!planValidation.isValid && planValidation.errors.length > 0 && (
+                <div style={{ fontSize: '12px', color: '#92400e', marginTop: '2px' }}>
+                  {planValidation.errors[0]}
+                </div>
+              )}
+            </div>
+
+            {/* Bouton reset */}
+            <button
+              onClick={resetPlan}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '2px solid #cbd5e1',
+                background: '#fff',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Reset
             </button>
           </div>
         </div>
