@@ -474,12 +474,25 @@ export default function DocumentScannerView({ onSave, onClose }) {
     img.src = currentDoc.url;
   }, [currentDoc]);
 
-  // Valider le document
+  // Valider le document et continuer (mode lot)
+  const confirmAndContinue = useCallback(() => {
+    if (!currentDoc) return;
+    setScannedDocs(prev => [...prev, currentDoc]);
+    setCurrentDoc(null);
+    setEnhanceMode('original');
+    setMode('capture');
+    // Redémarrer immédiatement la caméra pour le prochain scan
+    startCamera();
+  }, [currentDoc, startCamera]);
+
+  // Valider le document et terminer
   const confirmDocument = useCallback(() => {
     if (!currentDoc) return;
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
+    setEnhanceMode('original');
     setMode('capture');
+    // Ne pas redémarrer la caméra - afficher le bouton sauvegarder
   }, [currentDoc]);
 
   // Retirer un document
@@ -581,6 +594,53 @@ export default function DocumentScannerView({ onSave, onClose }) {
       <div className={`detector-badge ${detectorType === 'yolo' && yoloModelLoaded ? 'yolo' : 'opencv'}`}>
         {detectorType === 'yolo' && yoloModelLoaded ? '🤖 YOLO' : '📐 OpenCV'}
       </div>
+
+      {/* Mini-galerie du lot en haut à droite */}
+      {scannedDocs.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          background: 'rgba(0, 0, 0, 0.7)',
+          padding: '0.4rem 0.6rem',
+          borderRadius: '0.5rem',
+          zIndex: 20
+        }}>
+          {/* Miniatures des derniers docs (max 3) */}
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {scannedDocs.slice(-3).map((doc, idx) => (
+              <img
+                key={doc.id}
+                src={doc.url}
+                alt=""
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  objectFit: 'cover',
+                  borderRadius: '4px',
+                  border: '2px solid #10b981'
+                }}
+              />
+            ))}
+          </div>
+          {/* Badge compteur */}
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: '0.25rem 0.5rem',
+            borderRadius: '1rem',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            minWidth: '24px',
+            textAlign: 'center'
+          }}>
+            {scannedDocs.length}
+          </div>
+        </div>
+      )}
 
       {liveCorners && detectionConfidence > 0 && (
         <div className="detection-indicator">
@@ -769,9 +829,25 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const renderControlButtons = () => (
     <div className="control-buttons">
       {mode === 'capture' && stream && (
-        <button className="capture-button" onClick={capturePhoto} disabled={isProcessing}>
-          <CameraIcon style={{ width: '32px', height: '32px', color: '#667eea' }} />
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
+          {/* Bouton terminer le lot (si documents déjà scannés) */}
+          {scannedDocs.length > 0 && (
+            <button
+              className="scanner-btn success"
+              onClick={() => {
+                stopCamera();
+                // Le bouton sauvegarder apparaîtra automatiquement
+              }}
+              style={{ padding: '0.75rem 1.5rem' }}
+            >
+              <CheckCircleIcon /> Terminer ({scannedDocs.length})
+            </button>
+          )}
+          {/* Bouton capture principal */}
+          <button className="capture-button" onClick={capturePhoto} disabled={isProcessing}>
+            <CameraIcon style={{ width: '32px', height: '32px', color: '#667eea' }} />
+          </button>
+        </div>
       )}
 
       {mode === 'adjust' && corners && (
@@ -788,7 +864,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {mode === 'preview' && currentDoc && (
         <>
           <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
-            <RotateCwIcon /> Rotation
+            <RotateCwIcon />
           </button>
           <button
             className="scanner-btn danger"
@@ -799,11 +875,25 @@ export default function DocumentScannerView({ onSave, onClose }) {
               setMode('capture');
               startCamera();
             }}
+            style={{ flex: 0.8 }}
           >
-            <XCircleIcon /> Annuler
+            <XCircleIcon />
           </button>
-          <button className="scanner-btn success" onClick={confirmDocument}>
-            <CheckCircleIcon /> Valider
+          <button
+            className="scanner-btn primary"
+            onClick={confirmAndContinue}
+            style={{ flex: 1.2 }}
+            title="Valider et scanner un autre document"
+          >
+            <CameraIcon /> +1
+          </button>
+          <button
+            className="scanner-btn success"
+            onClick={confirmDocument}
+            style={{ flex: 1 }}
+            title="Valider et terminer"
+          >
+            <CheckCircleIcon /> Fin
           </button>
         </>
       )}
