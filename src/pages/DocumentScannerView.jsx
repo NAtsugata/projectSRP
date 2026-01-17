@@ -175,9 +175,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Sauvegarder les liveCorners AVANT d'arrêter la caméra
-    const savedLiveCorners = liveCorners && liveCorners.length === 4 ? [...liveCorners] : null;
-
     setMode('scanning');
     setScanProgress(0);
     stopCamera();
@@ -201,33 +198,26 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
       setOriginalImage(imgUrl);
 
-      // Utiliser les liveCorners s'ils existent (déjà détectés pendant la preview)
-      if (savedLiveCorners && savedLiveCorners.length === 4) {
-        logger.log('[CAPTURE] Utilisation des liveCorners détectés');
-        setCorners(savedLiveCorners);
-        setMode('adjust');
-        return;
-      }
-
-      // Sinon, faire une nouvelle détection
-      logger.log('[CAPTURE] Nouvelle détection requise');
+      // TOUJOURS relancer la détection sur l'image capturée
+      // (plus précis car haute résolution + pas de mouvement)
+      logger.log('[CAPTURE] Détection précise sur image HD...');
 
       if (!isOpenCvReady()) {
         logger.log('Waiting for OpenCV...');
         await new Promise(r => setTimeout(r, 500));
       }
 
-      // Détection sur image réduite
-      const detectionWidth = 800;
+      // Détection sur image plus grande (1000px) pour plus de précision
+      const detectionWidth = 1000;
       const scaleFactor = canvas.width / detectionWidth;
-      const detectionHeight = canvas.height / scaleFactor;
+      const detectionHeight = Math.round(canvas.height / scaleFactor);
 
       const detectionCanvas = document.createElement('canvas');
       detectionCanvas.width = detectionWidth;
       detectionCanvas.height = detectionHeight;
       detectionCanvas.getContext('2d').drawImage(canvas, 0, 0, detectionWidth, detectionHeight);
 
-      const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/jpeg', 0.8));
+      const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/jpeg', 0.9));
       const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
 
       const result = await detectDocument(file);
@@ -238,6 +228,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           x: (point.x / detectionWidth) * 100,
           y: (point.y / detectionHeight) * 100
         }));
+        logger.log('[CAPTURE] Coins détectés avec précision');
       }
 
       setCorners(cornersData || [
@@ -261,7 +252,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocument, liveCorners]);
+  }, [stopCamera, detectDocument]);
 
   // Appliquer un mode d'amélioration
   const applyEnhanceMode = useCallback((targetMode) => {
