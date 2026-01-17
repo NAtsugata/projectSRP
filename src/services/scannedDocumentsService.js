@@ -158,6 +158,81 @@ const scannedDocumentsService = {
   },
 
   /**
+   * Sauvegarder des documents scannés depuis le scanner
+   * Convertit les blobs en fichiers et les upload
+   * @param {Array} scannedDocs - Documents du scanner avec blob/url
+   * @param {Object} metadata - { title, category, user_id, tags, description }
+   */
+  async saveDocuments(scannedDocs, metadata = {}) {
+    try {
+      const { title = 'Document scanné', category = 'autre', user_id, tags = [], description = '' } = metadata;
+
+      if (!user_id) {
+        throw new Error('user_id est requis pour sauvegarder les documents');
+      }
+
+      if (!scannedDocs || scannedDocs.length === 0) {
+        throw new Error('Aucun document à sauvegarder');
+      }
+
+      const results = [];
+
+      for (let i = 0; i < scannedDocs.length; i++) {
+        const doc = scannedDocs[i];
+        const docTitle = scannedDocs.length > 1 ? `${title} (${i + 1}/${scannedDocs.length})` : title;
+
+        // Convertir le blob en File si nécessaire
+        let file;
+        if (doc.blob instanceof Blob) {
+          const fileName = `scan_${Date.now()}_${i + 1}.jpg`;
+          file = new File([doc.blob], fileName, { type: doc.blob.type || 'image/jpeg' });
+        } else if (doc.url && doc.url.startsWith('data:')) {
+          // Convertir dataURL en File
+          const response = await fetch(doc.url);
+          const blob = await response.blob();
+          const fileName = `scan_${Date.now()}_${i + 1}.jpg`;
+          file = new File([blob], fileName, { type: 'image/jpeg' });
+        } else {
+          logger.warn(`Document ${i + 1} n'a pas de blob valide, ignoré`);
+          continue;
+        }
+
+        const result = await this.createDocument({
+          userId: user_id,
+          title: docTitle,
+          description,
+          category,
+          tags,
+          file,
+          metadata: {
+            scannedAt: doc.timestamp || new Date().toISOString(),
+            enhanceMode: doc.enhanceMode || 'original',
+            rotation: doc.rotation || 0,
+            wasDetected: doc.wasDetected || false
+          }
+        });
+
+        if (result.error) {
+          logger.error(`Erreur sauvegarde document ${i + 1}:`, result.error);
+          continue;
+        }
+
+        results.push(result.data);
+      }
+
+      if (results.length === 0) {
+        throw new Error('Aucun document n\'a pu être sauvegardé');
+      }
+
+      logger.log(`✅ ${results.length}/${scannedDocs.length} documents sauvegardés`);
+      return { data: results, error: null };
+    } catch (error) {
+      logger.error('❌ Erreur saveDocuments:', error);
+      return { data: null, error };
+    }
+  },
+
+  /**
    * Mettre à jour un document
    */
   async updateDocument(documentId, updates) {

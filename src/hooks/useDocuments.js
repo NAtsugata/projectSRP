@@ -27,11 +27,14 @@ export function useDocuments(userId) {
         },
     });
 
-    // Mutation pour sauvegarder des documents
+    // Mutation pour sauvegarder des documents scannés
     const saveMutation = useMutation({
-        mutationFn: (documents) => scannedDocumentsService.saveDocuments(documents),
+        mutationFn: ({ documents, metadata }) => scannedDocumentsService.saveDocuments(documents, metadata),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
+        },
+        onError: (error) => {
+            console.error('Erreur sauvegarde documents:', error);
         },
     });
 
@@ -51,6 +54,11 @@ export function useDocuments(userId) {
         },
     });
 
+    // Wrapper pour saveDocuments qui accepte (documents, metadata) comme arguments séparés
+    const saveDocuments = (documents, metadata) => {
+        return saveMutation.mutateAsync({ documents, metadata });
+    };
+
     return {
         // Données
         scannedDocuments,
@@ -59,7 +67,7 @@ export function useDocuments(userId) {
 
         // Fonctions
         refetch,
-        saveDocuments: saveMutation.mutate,
+        saveDocuments,
         deleteDocument: deleteMutation.mutate,
         updateDocument: updateMutation.mutate,
 
