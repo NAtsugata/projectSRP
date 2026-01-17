@@ -7,8 +7,10 @@ import {
   XCircleIcon,
   ChevronLeftIcon,
   RotateCwIcon,
-  DownloadIcon
+  DownloadIcon,
+  FileIcon
 } from '../components/SharedUI';
+import { createAndDownloadPdf, downloadImagesAsZip } from '../utils/pdfGenerator';
 import {
   enhanceBlackAndWhite,
   enhanceColor,
@@ -25,14 +27,15 @@ import '../components/scanner/ScannerStyles.css';
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
   const [currentDoc, setCurrentDoc] = useState(null);
-  const [mode, setMode] = useState('capture');
+  const [mode, setMode] = useState('capture'); // capture, scanning, adjust, preview, export
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhanceMode, setEnhanceMode] = useState('original');
   const [scanProgress, setScanProgress] = useState(0);
   const [corners, setCorners] = useState(null);
   const [originalImage, setOriginalImage] = useState(null);
   const [stream, setStream] = useState(null);
-  const [cvReady, setCvReady] = useState(false); // Nouvel état pour OpenCV
+  const [cvReady, setCvReady] = useState(false);
+  const [exportFormat, setExportFormat] = useState('pdf'); // pdf, images, cloud
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -523,8 +526,55 @@ export default function DocumentScannerView({ onSave, onClose }) {
     });
   }, []);
 
-  // Sauvegarder tous les documents
-  const saveAllDocuments = useCallback(() => {
+  // Ouvrir le panneau d'export
+  const openExportPanel = useCallback(() => {
+    if (scannedDocs.length === 0) {
+      alert('Aucun document à exporter');
+      return;
+    }
+    setMode('export');
+  }, [scannedDocs]);
+
+  // Export en PDF (téléchargement local)
+  const exportAsPdf = useCallback(async () => {
+    if (scannedDocs.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      const filename = `scan_${new Date().toISOString().slice(0, 10)}`;
+      await createAndDownloadPdf(scannedDocs, filename, {
+        title: filename,
+        pageSize: 'a4',
+        orientation: 'portrait'
+      });
+      logger.log('[EXPORT] PDF téléchargé avec succès');
+    } catch (error) {
+      logger.error('[EXPORT] Erreur PDF:', error);
+      alert('Erreur lors de la création du PDF');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [scannedDocs]);
+
+  // Export en images individuelles
+  const exportAsImages = useCallback(async () => {
+    if (scannedDocs.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      const baseName = `scan_${new Date().toISOString().slice(0, 10)}`;
+      await downloadImagesAsZip(scannedDocs, baseName);
+      logger.log('[EXPORT] Images téléchargées avec succès');
+    } catch (error) {
+      logger.error('[EXPORT] Erreur images:', error);
+      alert('Erreur lors du téléchargement des images');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [scannedDocs]);
+
+  // Sauvegarder dans le cloud (comportement original)
+  const saveToCloud = useCallback(() => {
     if (scannedDocs.length === 0) {
       alert('Aucun document à sauvegarder');
       return;
@@ -533,6 +583,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
       onSave(scannedDocs);
     }
   }, [scannedDocs, onSave]);
+
+  // Fonction générique d'export selon le format sélectionné
+  const handleExport = useCallback(async () => {
+    switch (exportFormat) {
+      case 'pdf':
+        await exportAsPdf();
+        break;
+      case 'images':
+        await exportAsImages();
+        break;
+      case 'cloud':
+        saveToCloud();
+        break;
+      default:
+        await exportAsPdf();
+    }
+  }, [exportFormat, exportAsPdf, exportAsImages, saveToCloud]);
 
   // Rendu des différentes vues
   const renderCaptureStartView = () => (
@@ -805,6 +872,177 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </div>
   );
 
+  // Vue d'export avec options PDF/Images/Cloud
+  const renderExportView = () => (
+    <div className="export-view" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '2rem',
+      gap: '1.5rem',
+      height: '100%',
+      background: 'var(--bg-secondary, #f3f4f6)'
+    }}>
+      {/* Aperçu des documents */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        maxWidth: '100%',
+        padding: '1rem',
+        background: 'white',
+        borderRadius: '0.75rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        {scannedDocs.map((doc, idx) => (
+          <div key={doc.id} style={{ position: 'relative' }}>
+            <img
+              src={doc.url}
+              alt={`Page ${idx + 1}`}
+              style={{
+                width: '80px',
+                height: '100px',
+                objectFit: 'cover',
+                borderRadius: '0.5rem',
+                border: '2px solid #e5e7eb'
+              }}
+            />
+            <span style={{
+              position: 'absolute',
+              bottom: '4px',
+              right: '4px',
+              background: '#667eea',
+              color: 'white',
+              fontSize: '0.7rem',
+              padding: '2px 6px',
+              borderRadius: '0.25rem',
+              fontWeight: '600'
+            }}>
+              {idx + 1}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ margin: 0, color: 'var(--text-primary, #1f2937)' }}>
+        {scannedDocs.length} document{scannedDocs.length > 1 ? 's' : ''} prêt{scannedDocs.length > 1 ? 's' : ''}
+      </h3>
+
+      {/* Options d'export */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        width: '100%',
+        maxWidth: '320px'
+      }}>
+        {/* PDF */}
+        <button
+          className={`scanner-btn ${exportFormat === 'pdf' ? 'primary' : ''}`}
+          onClick={() => setExportFormat('pdf')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '1rem',
+            justifyContent: 'flex-start',
+            border: exportFormat === 'pdf' ? '2px solid #667eea' : '2px solid #e5e7eb',
+            background: exportFormat === 'pdf' ? 'rgba(102, 126, 234, 0.1)' : 'white'
+          }}
+        >
+          <span style={{ fontSize: '1.5rem' }}>📄</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontWeight: '600' }}>PDF</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Un seul fichier multi-pages</div>
+          </div>
+          {exportFormat === 'pdf' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#667eea' }} />}
+        </button>
+
+        {/* Images */}
+        <button
+          className={`scanner-btn ${exportFormat === 'images' ? 'primary' : ''}`}
+          onClick={() => setExportFormat('images')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '1rem',
+            justifyContent: 'flex-start',
+            border: exportFormat === 'images' ? '2px solid #667eea' : '2px solid #e5e7eb',
+            background: exportFormat === 'images' ? 'rgba(102, 126, 234, 0.1)' : 'white'
+          }}
+        >
+          <span style={{ fontSize: '1.5rem' }}>🖼️</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontWeight: '600' }}>Images JPG</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>{scannedDocs.length} fichier{scannedDocs.length > 1 ? 's' : ''} séparé{scannedDocs.length > 1 ? 's' : ''}</div>
+          </div>
+          {exportFormat === 'images' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#667eea' }} />}
+        </button>
+
+        {/* Cloud */}
+        {onSave && (
+          <button
+            className={`scanner-btn ${exportFormat === 'cloud' ? 'primary' : ''}`}
+            onClick={() => setExportFormat('cloud')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '1rem',
+              justifyContent: 'flex-start',
+              border: exportFormat === 'cloud' ? '2px solid #10b981' : '2px solid #e5e7eb',
+              background: exportFormat === 'cloud' ? 'rgba(16, 185, 129, 0.1)' : 'white'
+            }}
+          >
+            <span style={{ fontSize: '1.5rem' }}>☁️</span>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: '600' }}>Sauvegarder</div>
+              <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Dans vos documents</div>
+            </div>
+            {exportFormat === 'cloud' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#10b981' }} />}
+          </button>
+        )}
+      </div>
+
+      {/* Boutons d'action */}
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        width: '100%',
+        maxWidth: '320px',
+        marginTop: 'auto'
+      }}>
+        <button
+          className="scanner-btn"
+          onClick={() => {
+            setMode('capture');
+            startCamera();
+          }}
+          style={{ flex: 1 }}
+          disabled={isProcessing}
+        >
+          <CameraIcon /> + Ajouter
+        </button>
+        <button
+          className="scanner-btn success"
+          onClick={handleExport}
+          style={{ flex: 1.5 }}
+          disabled={isProcessing}
+        >
+          {isProcessing ? '⏳ Export...' : (
+            <>
+              {exportFormat === 'pdf' && '📄 Créer PDF'}
+              {exportFormat === 'images' && '🖼️ Télécharger'}
+              {exportFormat === 'cloud' && '☁️ Sauvegarder'}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   const renderEnhanceModeBar = () => (
     <div className="enhance-mode-bar">
       {[
@@ -901,10 +1139,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {mode === 'capture' && !stream && scannedDocs.length > 0 && (
         <button
           className="scanner-btn success"
-          onClick={saveAllDocuments}
+          onClick={openExportPanel}
           style={{ fontSize: '1rem', padding: '1rem 2rem', flex: 1 }}
         >
-          <CheckCircleIcon /> Sauvegarder ({scannedDocs.length})
+          <DownloadIcon /> Exporter ({scannedDocs.length})
         </button>
       )}
     </div>
@@ -934,16 +1172,19 @@ export default function DocumentScannerView({ onSave, onClose }) {
         {mode === 'scanning' && renderScanningView()}
         {mode === 'adjust' && originalImage && corners && renderAdjustView()}
         {mode === 'preview' && currentDoc && renderPreviewView()}
-        {isProcessing && <div className="processing-overlay">⚙️ Détection en cours...</div>}
+        {mode === 'export' && renderExportView()}
+        {isProcessing && mode !== 'export' && <div className="processing-overlay">⚙️ Détection en cours...</div>}
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
 
-      {/* Contrôles */}
-      <div className="scanner-controls">
-        {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'adjust' && mode !== 'scanning' && renderDocumentGallery()}
-        {mode === 'preview' && currentDoc && renderEnhanceModeBar()}
-        {renderControlButtons()}
-      </div>
+      {/* Contrôles (masqués en mode export) */}
+      {mode !== 'export' && (
+        <div className="scanner-controls">
+          {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'adjust' && mode !== 'scanning' && renderDocumentGallery()}
+          {mode === 'preview' && currentDoc && renderEnhanceModeBar()}
+          {renderControlButtons()}
+        </div>
+      )}
     </div>
   );
 }
