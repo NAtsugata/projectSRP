@@ -30,6 +30,7 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 /* ---------- Main ---------- */
 export default function IRShowerFormsView({ profile }) {
   const [tab, setTab] = useState("etude");
+  const [toolCategory, setToolCategory] = useState('draw'); // draw, symbols, options
 
   // Obtenir l'userId depuis profile ou session
   const [userId, setUserId] = useState(profile?.id || null);
@@ -968,8 +969,8 @@ export default function IRShowerFormsView({ profile }) {
         padding: 12px 16px; margin: -16px -16px 16px -16px;
         border-radius: 0;
       }
-      .ir-canvas-wrap { height: 560px; }
-      @media (max-width: 767px) { .ir-canvas-wrap { height: 460px; } }
+      .ir-canvas-wrap { height: 560px; position: relative; }
+      @media (max-width: 767px) { .ir-canvas-wrap { height: 400px; } }
       canvas.ir-grid { touch-action: none; display: block; width: 100%; height: 100%; }
       button, input, select, textarea { min-height: 44px; }
       button:active:not(:disabled) { transform: scale(0.97); opacity: 0.8; }
@@ -986,6 +987,116 @@ export default function IRShowerFormsView({ profile }) {
         -webkit-text-fill-color: transparent;
         background-clip: text;
       }
+
+      /* MOBILE TOOLBAR - Collapsible categories */
+      .tool-categories {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+      }
+      .tool-categories::-webkit-scrollbar { display: none; }
+      .tool-category-btn {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 2px solid #e2e8f0;
+        background: #fff;
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+        transition: all 0.2s;
+        min-height: 40px;
+      }
+      .tool-category-btn.active {
+        background: #0ea5a5;
+        color: white;
+        border-color: #0ea5a5;
+      }
+
+      /* Tool grid for mobile */
+      .tool-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 6px;
+      }
+      @media (min-width: 768px) {
+        .tool-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+      }
+      .tool-btn {
+        padding: 10px 8px;
+        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+        background: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.15s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-height: 56px;
+      }
+      .tool-btn.active {
+        background: #e0f2fe;
+        border-color: #0ea5a5;
+        color: #0ea5a5;
+      }
+      .tool-btn:active {
+        transform: scale(0.95);
+      }
+      .tool-btn .tool-icon {
+        font-size: 18px;
+      }
+      @media (min-width: 768px) {
+        .tool-btn {
+          flex-direction: row;
+          padding: 8px 14px;
+          min-height: 44px;
+        }
+        .tool-btn .tool-icon {
+          font-size: 14px;
+        }
+      }
+
+      /* Floating action buttons for mobile */
+      .mobile-fab-container {
+        position: fixed;
+        bottom: 80px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 100;
+      }
+      @media (min-width: 768px) {
+        .mobile-fab-container { display: none; }
+      }
+      .fab-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .fab-btn:active { transform: scale(0.9); }
+      .fab-btn.primary { background: #0ea5a5; color: white; }
+      .fab-btn.danger { background: #ef4444; color: white; }
+      .fab-btn.secondary { background: #fff; color: #475569; }
+
       .photo-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1013,14 +1124,14 @@ export default function IRShowerFormsView({ profile }) {
         color: white;
         border: none;
         border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        min-height: 28px;
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        font-size: 18px;
+        font-size: 20px;
         line-height: 1;
         padding: 0;
       }
@@ -1036,20 +1147,77 @@ export default function IRShowerFormsView({ profile }) {
         cursor: pointer;
         gap: 8px;
         transition: all 0.2s;
+        min-height: 100px;
       }
-      .photo-add-btn:hover {
+      .photo-add-btn:hover, .photo-add-btn:active {
         border-color: #0ea5a5;
         background: #e0f2fe;
       }
       .photo-add-btn svg {
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
         stroke: #64748b;
       }
       @media (max-width: 640px) {
         .photo-grid {
-          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          grid-template-columns: repeat(2, 1fr);
         }
+      }
+
+      /* Improved signature canvas for mobile */
+      .signature-canvas-wrap {
+        border: 2px solid #cbd5e1;
+        border-radius: 12px;
+        background: #fff;
+        position: relative;
+        overflow: hidden;
+      }
+      .signature-canvas-wrap canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 120px;
+        touch-action: none;
+      }
+      .signature-clear-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 2px solid #ef4444;
+        background: #fff;
+        color: #ef4444;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* Better tabs for mobile */
+      .tab-container {
+        display: flex;
+        gap: 0;
+        margin-bottom: 16px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 4px;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        font-weight: 600;
+        font-size: 14px;
+        color: #64748b;
+        transition: all 0.2s;
+        min-height: 48px;
+      }
+      .tab-btn.active {
+        background: #fff;
+        color: #0ea5a5;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       }
     `}</style>
   );
