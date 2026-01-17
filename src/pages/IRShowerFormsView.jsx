@@ -1528,136 +1528,249 @@ export default function IRShowerFormsView({ profile }) {
             </div>
           </Section>
 
-          {/* OUTILS */}
+          {/* OUTILS - Interface simplifiée mobile */}
           <Section title="Outils">
-            {/* Catégories d'outils (mobile-friendly) */}
-            <div className="tool-categories">
+            {/* Barre d'outils principale - 5 boutons essentiels */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
               <button
-                className={`tool-category-btn ${toolCategory === 'draw' ? 'active' : ''}`}
-                onClick={() => setToolCategory('draw')}
+                onClick={() => setTool('select')}
+                style={{
+                  padding: '14px 8px',
+                  borderRadius: '12px',
+                  border: tool === 'select' ? '3px solid #0ea5a5' : '2px solid #e2e8f0',
+                  background: tool === 'select' ? '#e0f2fe' : '#fff',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
               >
-                ✏️ Dessin
+                👆
               </button>
               <button
-                className={`tool-category-btn ${toolCategory === 'symbols' ? 'active' : ''}`}
-                onClick={() => setToolCategory('symbols')}
+                onClick={() => setTool('rect')}
+                style={{
+                  padding: '14px 8px',
+                  borderRadius: '12px',
+                  border: tool === 'rect' ? '3px solid #0ea5a5' : '2px solid #e2e8f0',
+                  background: tool === 'rect' ? '#e0f2fe' : '#fff',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
               >
-                🚿 Symboles
+                ⬜
               </button>
               <button
-                className={`tool-category-btn ${toolCategory === 'options' ? 'active' : ''}`}
-                onClick={() => setToolCategory('options')}
+                onClick={() => setTool('shower')}
+                style={{
+                  padding: '14px 8px',
+                  borderRadius: '12px',
+                  border: tool === 'shower' ? '3px solid #0ea5a5' : '2px solid #e2e8f0',
+                  background: tool === 'shower' ? '#e0f2fe' : '#fff',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
               >
-                ⚙️ Options
+                🚿
+              </button>
+              <button
+                onClick={() => setTool('dim')}
+                style={{
+                  padding: '14px 8px',
+                  borderRadius: '12px',
+                  border: tool === 'dim' ? '3px solid #0ea5a5' : '2px solid #e2e8f0',
+                  background: tool === 'dim' ? '#e0f2fe' : '#fff',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+              >
+                📏
+              </button>
+              <button
+                onClick={() => setToolCategory(toolCategory === 'more' ? 'hide' : 'more')}
+                style={{
+                  padding: '14px 8px',
+                  borderRadius: '12px',
+                  border: '2px solid #e2e8f0',
+                  background: toolCategory === 'more' ? '#fef3c7' : '#fff',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+              >
+                {toolCategory === 'more' ? '✕' : '＋'}
               </button>
             </div>
 
-            {/* Outils de dessin */}
-            {toolCategory === 'draw' && (
-              <div className="tool-grid">
-                <button className={`tool-btn ${tool === 'select' ? 'active' : ''}`} onClick={() => setTool('select')}>
-                  <span className="tool-icon">👆</span>
-                  <span>Sélection</span>
-                </button>
-                <button className={`tool-btn ${tool === 'rect' ? 'active' : ''}`} onClick={() => setTool('rect')}>
-                  <span className="tool-icon">⬜</span>
-                  <span>Mur</span>
-                </button>
-                <button className={`tool-btn ${tool === 'dim' ? 'active' : ''}`} onClick={() => setTool('dim')}>
-                  <span className="tool-icon">📏</span>
-                  <span>Cote</span>
-                </button>
-                <button className={`tool-btn ${tool === 'text' ? 'active' : ''}`} onClick={() => setTool('text')}>
-                  <span className="tool-icon">📝</span>
-                  <span>Texte</span>
-                </button>
-                <button className={`tool-btn ${tool === 'bar' ? 'active' : ''}`} onClick={() => setTool('bar')}>
-                  <span className="tool-icon">➖</span>
-                  <span>Barre</span>
-                </button>
+            {/* Panneau étendu */}
+            {toolCategory === 'more' && (
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                {/* Symboles en grille 5x2 */}
+                <div style={{ marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                  Symboles sanitaires
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '8px',
+                  marginBottom: '16px'
+                }}>
+                  {[
+                    { t: 'mixer', e: '🔵' },
+                    { t: 'seat', e: '💺' },
+                    { t: 'bar', e: '➖' },
+                    { t: 'door', e: '🚪' },
+                    { t: 'window', e: '🪟' },
+                    { t: 'wc', e: '🚽' },
+                    { t: 'sink', e: '🚰' },
+                    { t: 'drain', e: '⚫' },
+                    { t: 'towelrack', e: '🧴' },
+                    { t: 'text', e: '📝' }
+                  ].map(item => (
+                    <button
+                      key={item.t}
+                      onClick={() => setTool(item.t)}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: tool === item.t ? '3px solid #0ea5a5' : '2px solid #cbd5e1',
+                        background: tool === item.t ? '#e0f2fe' : '#fff',
+                        fontSize: '20px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {item.e}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Options snap/ortho + undo/redo */}
+                <div style={{ marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                  Options
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setSnap(s => !s)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      background: snap ? '#dcfce7' : '#fff',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🧲 {snap ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={() => setOrtho(o => !o)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      background: ortho ? '#dcfce7' : '#fff',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📐 {ortho ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={handleUndo}
+                    disabled={!canUndo}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      background: '#fff',
+                      fontSize: '18px',
+                      cursor: canUndo ? 'pointer' : 'not-allowed',
+                      opacity: canUndo ? 1 : 0.4
+                    }}
+                  >
+                    ↩️
+                  </button>
+                  <button
+                    onClick={handleRedo}
+                    disabled={!canRedo}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      background: '#fff',
+                      fontSize: '18px',
+                      cursor: canRedo ? 'pointer' : 'not-allowed',
+                      opacity: canRedo ? 1 : 0.4
+                    }}
+                  >
+                    ↪️
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Symboles sanitaires */}
-            {toolCategory === 'symbols' && (
-              <div className="tool-grid">
-                <button className={`tool-btn ${tool === 'shower' ? 'active' : ''}`} onClick={() => setTool('shower')}>
-                  <span className="tool-icon">🚿</span>
-                  <span>Douche</span>
-                </button>
-                <button className={`tool-btn ${tool === 'mixer' ? 'active' : ''}`} onClick={() => setTool('mixer')}>
-                  <span className="tool-icon">🔵</span>
-                  <span>Mitigeur</span>
-                </button>
-                <button className={`tool-btn ${tool === 'seat' ? 'active' : ''}`} onClick={() => setTool('seat')}>
-                  <span className="tool-icon">💺</span>
-                  <span>Siège</span>
-                </button>
-                <button className={`tool-btn ${tool === 'door' ? 'active' : ''}`} onClick={() => setTool('door')}>
-                  <span className="tool-icon">🚪</span>
-                  <span>Porte</span>
-                </button>
-                <button className={`tool-btn ${tool === 'window' ? 'active' : ''}`} onClick={() => setTool('window')}>
-                  <span className="tool-icon">🪟</span>
-                  <span>Fenêtre</span>
-                </button>
-                <button className={`tool-btn ${tool === 'wc' ? 'active' : ''}`} onClick={() => setTool('wc')}>
-                  <span className="tool-icon">🚽</span>
-                  <span>WC</span>
-                </button>
-                <button className={`tool-btn ${tool === 'sink' ? 'active' : ''}`} onClick={() => setTool('sink')}>
-                  <span className="tool-icon">🚰</span>
-                  <span>Lavabo</span>
-                </button>
-                <button className={`tool-btn ${tool === 'towelrack' ? 'active' : ''}`} onClick={() => setTool('towelrack')}>
-                  <span className="tool-icon">🧴</span>
-                  <span>Porte-serv.</span>
-                </button>
-                <button className={`tool-btn ${tool === 'drain' ? 'active' : ''}`} onClick={() => setTool('drain')}>
-                  <span className="tool-icon">⚫</span>
-                  <span>Évacuation</span>
-                </button>
+            {/* Barre d'actions sur sélection */}
+            {selectedId && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '12px',
+                border: '2px solid #f59e0b'
+              }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>
+                  ✓ Élément sélectionné
+                </span>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                  {canRotate() && (
+                    <button
+                      onClick={rotateSelected}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        border: '2px solid #0ea5a5',
+                        background: '#fff',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#0ea5a5',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔄 Pivoter
+                    </button>
+                  )}
+                  <button
+                    onClick={delSelected}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '2px solid #ef4444',
+                      background: '#fee2e2',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#dc2626',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Suppr.
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Options et actions */}
-            {toolCategory === 'options' && (
-              <div className="tool-grid">
-                <button className={`tool-btn ${snap ? 'active' : ''}`} onClick={() => setSnap(s => !s)}>
-                  <span className="tool-icon">🧲</span>
-                  <span>Snap {snap ? '✓' : '✗'}</span>
-                </button>
-                <button className={`tool-btn ${ortho ? 'active' : ''}`} onClick={() => setOrtho(o => !o)}>
-                  <span className="tool-icon">📐</span>
-                  <span>Ortho {ortho ? '✓' : '✗'}</span>
-                </button>
-                <button className="tool-btn" onClick={handleUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.5 }}>
-                  <span className="tool-icon">↩️</span>
-                  <span>Annuler</span>
-                </button>
-                <button className="tool-btn" onClick={handleRedo} disabled={!canRedo} style={{ opacity: canRedo ? 1 : 0.5 }}>
-                  <span className="tool-icon">↪️</span>
-                  <span>Rétablir</span>
-                </button>
-                <button className="tool-btn" onClick={rotateSelected} disabled={!canRotate()} style={{ opacity: canRotate() ? 1 : 0.5 }}>
-                  <span className="tool-icon">🔄</span>
-                  <span>Pivoter</span>
-                </button>
-                <button
-                  className="tool-btn"
-                  onClick={delSelected}
-                  disabled={!selectedId}
-                  style={{ opacity: selectedId ? 1 : 0.5, borderColor: selectedId ? '#ef4444' : undefined, color: selectedId ? '#ef4444' : undefined }}
-                >
-                  <span className="tool-icon">🗑️</span>
-                  <span>Supprimer</span>
-                </button>
-              </div>
-            )}
-
-            <Small style={{ marginTop: 12, display: 'block' }}>
-              💡 Astuce : Double-clic pour éditer un texte. Le siège se plaque au mur automatiquement.
-            </Small>
           </Section>
 
           {/* VALIDATION STATUS */}
