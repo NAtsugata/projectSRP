@@ -855,159 +855,218 @@ export default function IRShowerFormsView({ profile }) {
       const { jsPDF } = await import("jspdf");
 
       const prevTab = tab;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      let y = 0;
 
-      // Scroll to top and wait for render
-      window.scrollTo(0, 0);
-      await waitPaint(300);
+      // ========== PAGE 1: ÉTUDE TECHNIQUE (généré directement) ==========
+      // En-tête
+      pdf.setFillColor(14, 165, 165);
+      pdf.rect(0, 0, pageW, 18, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, "bold");
+      pdf.text("ÉTUDE TECHNIQUE - INSTALLATION DOUCHE", pageW / 2, 12, { align: "center" });
 
-      // Page Étude
-      setTab("etude");
-      await waitPaint(400); // Longer wait for mobile
+      y = 25;
+      pdf.setTextColor(0, 0, 0);
 
-      // Options html2canvas pour mobile - capture tout le contenu
-      const canvasOptions = {
-        scale: window.devicePixelRatio || 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        allowTaint: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight,
-        logging: false
+      // Helper pour ajouter une section
+      const addSection = (title) => {
+        if (y > pageH - 30) { pdf.addPage(); y = 15; }
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, y, pageW - margin * 2, 7, "F");
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, "bold");
+        pdf.setTextColor(14, 165, 165);
+        pdf.text(title, margin + 2, y + 5);
+        pdf.setTextColor(0, 0, 0);
+        y += 10;
       };
 
-      const c1 = await html2canvas(etudeRef.current, canvasOptions);
-      const img1 = c1.toDataURL("image/png");
+      // Helper pour ajouter une ligne de données
+      const addRow = (label, value, col = 0, totalCols = 2) => {
+        const colW = (pageW - margin * 2) / totalCols;
+        const x = margin + col * colW;
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, "bold");
+        pdf.text(label + ":", x, y);
+        pdf.setFont(undefined, "normal");
+        pdf.text(String(value || "-"), x + colW * 0.5, y);
+      };
 
-      // Page Plan
+      // ---- INFORMATIONS GÉNÉRALES ----
+      addSection("INFORMATIONS GÉNÉRALES");
+      addRow("Date visite", study.date_visite || "-", 0, 3);
+      addRow("Client", `${study.client_nom} ${study.client_prenom}`, 1, 3);
+      addRow("Adresse", study.client_adresse || "-", 2, 3);
+      y += 5;
+      addRow("Installateur", `${study.inst_nom} ${study.inst_prenom}`, 0, 2);
+      y += 8;
+
+      // ---- DIMENSIONS ----
+      addSection("DIMENSIONS");
+      addRow("Longueur receveur", `${study.longueur_receveur || "-"} mm`, 0, 3);
+      addRow("Largeur receveur", `${study.largeur_receveur || "-"} mm`, 1, 3);
+      addRow("Largeur accès", `${study.largeur_acces || "-"} mm`, 2, 3);
+      y += 5;
+      addRow("Hauteur plafond", `${study.hauteur_plafond || "-"} mm`, 0, 3);
+      addRow("Hauteur receveur", `${study.hauteur_estimee_receveur || "-"} mm`, 1, 3);
+      addRow("Dimensions SdB", `${study.largeur_sdb || "-"} x ${study.longueur_sdb || "-"} mm`, 2, 3);
+      y += 8;
+
+      // ---- ÉQUIPEMENTS ----
+      addSection("ÉQUIPEMENTS");
+      addRow("Robinetterie", study.robinetterie_type === "thermostatique" ? "Thermostatique" : "Mitigeur classique", 0, 3);
+      addRow("Vanne d'arrêt OK", study.vanne_ok === "oui" ? "✓ Oui" : "✗ Non", 1, 3);
+      addRow("Fenêtre", study.fenetre === "oui" ? "✓ Oui" : "✗ Non", 2, 3);
+      y += 5;
+      if (study.fenetre === "oui") {
+        addRow("Dim. fenêtre", `${study.h_fenetre || "-"} x ${study.l_fenetre || "-"} mm`, 0, 3);
+        addRow("Dist. gauche", `${study.dist_gauche || "-"} mm`, 1, 3);
+        addRow("Dist. droite", `${study.dist_droit || "-"} mm`, 2, 3);
+        y += 5;
+        addRow("Dist. plafond", `${study.dist_plafond || "-"} mm`, 0, 3);
+        addRow("Dist. sol", `${study.dist_sol || "-"} mm`, 1, 3);
+        y += 5;
+      }
+      y += 3;
+
+      // ---- TRAVAUX COMPLÉMENTAIRES ----
+      addSection("TRAVAUX COMPLÉMENTAIRES");
+      const travaux = [];
+      if (study.travaux.coffrage) travaux.push("Coffrage");
+      if (study.travaux.creation_entretoise) travaux.push("Création entretoise");
+      if (study.travaux.reprise_sol) travaux.push("Reprise sol");
+      if (study.travaux.saignee_sol) travaux.push("Saignée sol");
+      if (study.travaux.modif_plomberie) travaux.push("Modif. plomberie");
+      if (study.travaux.depose_wc_ou_meuble) travaux.push("Dépose WC/meuble");
+      if (study.travaux.depose_bidet) travaux.push("Dépose bidet");
+      if (study.travaux.depose_douche_suppl) travaux.push("Dépose douche suppl.");
+      if (study.travaux.depose_sanitaire) travaux.push("Dépose sanitaire");
+      if (study.travaux.depl_machine) travaux.push("Dépl. machine");
+      if (study.travaux.depl_prise) travaux.push("Dépl. prise");
+      if (study.travaux.pompe_relevage) travaux.push("Pompe relevage");
+      if (study.travaux.finition_haute) travaux.push("Finition haute");
+
+      pdf.setFontSize(9);
+      if (travaux.length > 0) {
+        const travauxText = travaux.join(" • ");
+        const lines = pdf.splitTextToSize(travauxText, pageW - margin * 2 - 4);
+        pdf.text(lines, margin + 2, y);
+        y += lines.length * 4 + 2;
+      } else {
+        pdf.setFont(undefined, "italic");
+        pdf.text("Aucun travail complémentaire", margin + 2, y);
+        y += 5;
+      }
+
+      if (study.travaux_autres && study.travaux_autres.trim()) {
+        y += 2;
+        pdf.setFont(undefined, "bold");
+        pdf.text("Autres:", margin + 2, y);
+        y += 4;
+        pdf.setFont(undefined, "normal");
+        const autresLines = pdf.splitTextToSize(study.travaux_autres, pageW - margin * 2 - 4);
+        pdf.text(autresLines, margin + 2, y);
+        y += autresLines.length * 4;
+      }
+      y += 5;
+
+      // ---- SIGNATURES ----
+      if (signatureClient || signatureInstaller) {
+        if (y > pageH - 60) { pdf.addPage(); y = 15; }
+        addSection("SIGNATURES");
+
+        const sigW = 70, sigH = 25;
+        if (signatureClient) {
+          pdf.setFontSize(8);
+          pdf.text("Client: " + study.client_nom + " " + study.client_prenom, margin, y);
+          y += 3;
+          pdf.addImage(signatureClient, "PNG", margin, y, sigW, sigH);
+          pdf.text("Date: " + new Date().toLocaleDateString('fr-FR'), margin, y + sigH + 3);
+        }
+        if (signatureInstaller) {
+          const sigX = signatureClient ? pageW / 2 : margin;
+          const sigY = signatureClient ? y - 3 : y;
+          pdf.setFontSize(8);
+          pdf.text("Installateur: " + study.inst_nom + " " + study.inst_prenom, sigX, sigY);
+          pdf.addImage(signatureInstaller, "PNG", sigX, sigY + 3, sigW, sigH);
+          pdf.text("Date: " + new Date().toLocaleDateString('fr-FR'), sigX, sigY + sigH + 6);
+        }
+        y += sigH + 15;
+      }
+
+      // Footer page 1
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFontSize(7);
+      pdf.text("Document généré automatiquement - Page 1", pageW / 2, pageH - 5, { align: "center" });
+
+      // ========== PAGE 2: PLAN TECHNIQUE ==========
+      pdf.addPage();
+
+      // Scroll and switch to plan tab
       setTab("plan");
-      await waitPaint(400);
       window.scrollTo(0, 0);
-      await waitPaint(200);
+      await waitPaint(500);
 
-      // Force canvas redraw before capture
+      // Force canvas redraw
       if (plan && plan.draw) {
         plan.draw(elements, preview, selectedId);
       }
       await waitPaint(300);
 
-      // Temporarily expand canvas for better capture on mobile
+      // Expand canvas for capture
       const canvasWrap = planExportRef.current?.querySelector('.ir-canvas-wrap');
       const originalHeight = canvasWrap?.style.height;
       if (canvasWrap) {
         canvasWrap.style.height = '560px';
       }
       await waitPaint(200);
-
-      // Force another redraw with expanded canvas
       if (plan && plan.draw) {
         plan.draw(elements, preview, selectedId);
       }
       await waitPaint(200);
 
+      const canvasOptions = {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: true,
+        logging: false
+      };
+
       const c2 = await html2canvas(planExportRef.current, canvasOptions);
       const img2 = c2.toDataURL("image/png");
 
-      // Restore original height
+      // Restore height
       if (canvasWrap && originalHeight !== undefined) {
         canvasWrap.style.height = originalHeight || '';
       }
 
-      // PDF
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-
-      // En-tête professionnel
+      // En-tête page 2
       pdf.setFillColor(14, 165, 165);
       pdf.rect(0, 0, pageW, 15, "F");
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
-      pdf.setFont(undefined, "bold");
-      pdf.text("ÉTUDE TECHNIQUE - INSTALLATION DOUCHE", pageW / 2, 10, { align: "center" });
-
-      // Info document
-      pdf.setTextColor(100, 100, 100);
-      pdf.setFontSize(8);
-      pdf.text(`Client: ${study.client_nom} ${study.client_prenom} | Date: ${study.date_visite || new Date().toLocaleDateString('fr-FR')}`, 10, 20);
-      pdf.text(`Installateur: ${study.inst_nom} ${study.inst_prenom}`, 10, 24);
-
-      // Calculate dimensions - fit width, scale height proportionally
-      const margin = 5;
-      const headerHeight = 28;
-      const footerHeight = 15;
-      const availableHeight = pageH - headerHeight - footerHeight;
-
-      // Page 1: Étude technique
-      const w1 = pageW - (margin * 2);
-      const h1 = (c1.height / c1.width) * w1;
-
-      // If content is taller than available space, we need to scale it down or paginate
-      if (h1 > availableHeight) {
-        // Scale to fit the page
-        const scaleFactor = availableHeight / h1;
-        const scaledW1 = w1 * scaleFactor;
-        const scaledH1 = availableHeight;
-        const xOffset = (pageW - scaledW1) / 2;
-        pdf.addImage(img1, "PNG", xOffset, headerHeight, scaledW1, scaledH1, undefined, "FAST");
-      } else {
-        pdf.addImage(img1, "PNG", margin, headerHeight, w1, h1, undefined, "FAST");
-      }
-
-      // Ajout signatures sur la première page si disponibles
-      if (signatureClient || signatureInstaller) {
-        const sigY = pageH - 55;
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(10, sigY - 5, pageW - 10, sigY - 5);
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(10);
-        pdf.text("SIGNATURES", pageW / 2, sigY, { align: "center" });
-
-        if (signatureClient) {
-          pdf.setFontSize(8);
-          pdf.text("Client:", 20, sigY + 8);
-          pdf.addImage(signatureClient, "PNG", 15, sigY + 10, 80, 30);
-          pdf.text(`${study.client_nom} ${study.client_prenom}`, 20, sigY + 42);
-          pdf.text(new Date().toLocaleDateString('fr-FR'), 20, sigY + 46);
-        }
-
-        if (signatureInstaller) {
-          pdf.setFontSize(8);
-          pdf.text("Installateur:", pageW - 95, sigY + 8);
-          pdf.addImage(signatureInstaller, "PNG", pageW - 95, sigY + 10, 80, 30);
-          pdf.text(`${study.inst_nom} ${study.inst_prenom}`, pageW - 95, sigY + 42);
-          pdf.text(new Date().toLocaleDateString('fr-FR'), pageW - 95, sigY + 46);
-        }
-      }
-
-      // Footer
-      pdf.setTextColor(150, 150, 150);
-      pdf.setFontSize(7);
-      pdf.text("Document généré automatiquement - Page 1", pageW / 2, pageH - 5, { align: "center" });
-
-      // Page 2: Plan technique
-      pdf.addPage();
-      pdf.setFillColor(14, 165, 165);
-      pdf.rect(0, 0, pageW, 15, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
+      pdf.setFontSize(14);
       pdf.setFont(undefined, "bold");
       pdf.text("PLAN TECHNIQUE INDICATIF", pageW / 2, 10, { align: "center" });
 
-      const planHeaderHeight = 18;
-      const planAvailableHeight = pageH - planHeaderHeight - footerHeight;
-      const w2 = pageW - (margin * 2);
-      const h2 = (c2.height / c2.width) * w2;
+      // Image du plan
+      const planY = 18;
+      const planW = pageW - margin * 2;
+      const planH = (c2.height / c2.width) * planW;
+      const maxPlanH = pageH - planY - 15;
 
-      if (h2 > planAvailableHeight) {
-        const scaleFactor = planAvailableHeight / h2;
-        const scaledW2 = w2 * scaleFactor;
-        const scaledH2 = planAvailableHeight;
-        const xOffset = (pageW - scaledW2) / 2;
-        pdf.addImage(img2, "PNG", xOffset, planHeaderHeight, scaledW2, scaledH2, undefined, "FAST");
+      if (planH > maxPlanH) {
+        const scale = maxPlanH / planH;
+        const scaledW = planW * scale;
+        const xOffset = (pageW - scaledW) / 2;
+        pdf.addImage(img2, "PNG", xOffset, planY, scaledW, maxPlanH, undefined, "FAST");
       } else {
-        pdf.addImage(img2, "PNG", margin, planHeaderHeight, w2, h2, undefined, "FAST");
+        pdf.addImage(img2, "PNG", margin, planY, planW, planH, undefined, "FAST");
       }
 
       // Footer page 2
@@ -1015,31 +1074,37 @@ export default function IRShowerFormsView({ profile }) {
       pdf.setFontSize(7);
       pdf.text("Document généré automatiquement - Page 2", pageW / 2, pageH - 5, { align: "center" });
 
-      // Pages photos si présentes
+      // ========== PAGES PHOTOS ==========
       let pageNum = 3;
+
+      // Photos AVANT
       if (photosAvant.length > 0) {
         pdf.addPage();
         pdf.setFillColor(14, 165, 233);
         pdf.rect(0, 0, pageW, 15, "F");
         pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(16);
+        pdf.setFontSize(14);
         pdf.setFont(undefined, "bold");
         pdf.text("PHOTOS AVANT TRAVAUX", pageW / 2, 10, { align: "center" });
-        pdf.setTextColor(0, 0, 0);
-        let y = 25;
+
+        let photoY = 20;
         for (const photo of photosAvant) {
-          if (y > pageH - 85) {
+          if (photoY > pageH - 80) {
             pdf.setTextColor(150, 150, 150);
             pdf.setFontSize(7);
             pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
             pdf.addPage();
             pageNum++;
-            y = 20;
+            photoY = 15;
           }
           const imgW = pageW - 40;
           const imgH = imgW * 0.75;
-          pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
-          y += imgH + 10;
+          try {
+            pdf.addImage(photo.url, "JPEG", 20, photoY, imgW, imgH);
+          } catch (e) {
+            console.warn("Could not add photo:", e);
+          }
+          photoY += imgH + 10;
         }
         pdf.setTextColor(150, 150, 150);
         pdf.setFontSize(7);
@@ -1047,36 +1112,43 @@ export default function IRShowerFormsView({ profile }) {
         pageNum++;
       }
 
+      // Photos APRÈS
       if (photosApres.length > 0) {
         pdf.addPage();
         pdf.setFillColor(34, 197, 94);
         pdf.rect(0, 0, pageW, 15, "F");
         pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(16);
+        pdf.setFontSize(14);
         pdf.setFont(undefined, "bold");
         pdf.text("PHOTOS APRÈS TRAVAUX", pageW / 2, 10, { align: "center" });
-        pdf.setTextColor(0, 0, 0);
-        let y = 25;
+
+        let photoY = 20;
         for (const photo of photosApres) {
-          if (y > pageH - 85) {
+          if (photoY > pageH - 80) {
             pdf.setTextColor(150, 150, 150);
             pdf.setFontSize(7);
             pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
             pdf.addPage();
             pageNum++;
-            y = 20;
+            photoY = 15;
           }
           const imgW = pageW - 40;
           const imgH = imgW * 0.75;
-          pdf.addImage(photo.url, "JPEG", 20, y, imgW, imgH);
-          y += imgH + 10;
+          try {
+            pdf.addImage(photo.url, "JPEG", 20, photoY, imgW, imgH);
+          } catch (e) {
+            console.warn("Could not add photo:", e);
+          }
+          photoY += imgH + 10;
         }
         pdf.setTextColor(150, 150, 150);
         pdf.setFontSize(7);
         pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
       }
 
-      pdf.save(`Etude_IR_${study.client_nom || 'Client'}_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Télécharger
+      const filename = `etude_${study.client_nom || 'client'}_${new Date().toISOString().slice(0,10)}.pdf`;
+      pdf.save(filename);
       setTab(prevTab);
     } catch (err) {
       alert("⚠️ L'export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
