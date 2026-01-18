@@ -1151,8 +1151,12 @@ export default function IRShowerFormsView({ profile }) {
       pdf.save(filename);
       setTab(prevTab);
     } catch (err) {
-      alert("⚠️ L'export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
-      console.error(err);
+      console.error("Erreur export PDF:", err);
+      if (err.message?.includes('module') || err.message?.includes('import')) {
+        alert("⚠️ L'export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
+      } else {
+        alert("❌ Erreur lors de l'export PDF:\n" + (err.message || err));
+      }
     }
   };
 
