@@ -845,7 +845,7 @@ export default function IRShowerFormsView({ profile }) {
 
   /* ---------- Export PDF ---------- */
   const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
-  const waitPaint = async (ms = 120) => { await raf(); await new Promise((r) => setTimeout(r, ms)); };
+  const waitPaint = async (ms = 200) => { await raf(); await new Promise((r) => setTimeout(r, ms)); };
 
   const exportPDF = async () => {
     if (!validateStudy()) return;
@@ -856,15 +856,63 @@ export default function IRShowerFormsView({ profile }) {
 
       const prevTab = tab;
 
+      // Scroll to top and wait for render
+      window.scrollTo(0, 0);
+      await waitPaint(300);
+
       // Page Étude
-      setTab("etude"); await waitPaint();
-      const c1 = await html2canvas(etudeRef.current, { scale: 2, backgroundColor: "#ffffff" });
+      setTab("etude");
+      await waitPaint(400); // Longer wait for mobile
+
+      // Options html2canvas pour mobile - capture tout le contenu
+      const canvasOptions = {
+        scale: window.devicePixelRatio || 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+        logging: false
+      };
+
+      const c1 = await html2canvas(etudeRef.current, canvasOptions);
       const img1 = c1.toDataURL("image/png");
 
       // Page Plan
-      setTab("plan"); await waitPaint();
-      const c2 = await html2canvas(planExportRef.current, { scale: 2, backgroundColor: "#ffffff" });
+      setTab("plan");
+      await waitPaint(400);
+      window.scrollTo(0, 0);
+      await waitPaint(200);
+
+      // Force canvas redraw before capture
+      if (plan && plan.draw) {
+        plan.draw(elements, preview, selectedId);
+      }
+      await waitPaint(300);
+
+      // Temporarily expand canvas for better capture on mobile
+      const canvasWrap = planExportRef.current?.querySelector('.ir-canvas-wrap');
+      const originalHeight = canvasWrap?.style.height;
+      if (canvasWrap) {
+        canvasWrap.style.height = '560px';
+      }
+      await waitPaint(200);
+
+      // Force another redraw with expanded canvas
+      if (plan && plan.draw) {
+        plan.draw(elements, preview, selectedId);
+      }
+      await waitPaint(200);
+
+      const c2 = await html2canvas(planExportRef.current, canvasOptions);
       const img2 = c2.toDataURL("image/png");
+
+      // Restore original height
+      if (canvasWrap && originalHeight !== undefined) {
+        canvasWrap.style.height = originalHeight || '';
+      }
 
       // PDF
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -885,12 +933,31 @@ export default function IRShowerFormsView({ profile }) {
       pdf.text(`Client: ${study.client_nom} ${study.client_prenom} | Date: ${study.date_visite || new Date().toLocaleDateString('fr-FR')}`, 10, 20);
       pdf.text(`Installateur: ${study.inst_nom} ${study.inst_prenom}`, 10, 24);
 
-      const w1 = pageW, h1 = (c1.height / c1.width) * w1;
-      pdf.addImage(img1, "PNG", 0, 28, w1, Math.min(h1, pageH - 80), undefined, "FAST");
+      // Calculate dimensions - fit width, scale height proportionally
+      const margin = 5;
+      const headerHeight = 28;
+      const footerHeight = 15;
+      const availableHeight = pageH - headerHeight - footerHeight;
+
+      // Page 1: Étude technique
+      const w1 = pageW - (margin * 2);
+      const h1 = (c1.height / c1.width) * w1;
+
+      // If content is taller than available space, we need to scale it down or paginate
+      if (h1 > availableHeight) {
+        // Scale to fit the page
+        const scaleFactor = availableHeight / h1;
+        const scaledW1 = w1 * scaleFactor;
+        const scaledH1 = availableHeight;
+        const xOffset = (pageW - scaledW1) / 2;
+        pdf.addImage(img1, "PNG", xOffset, headerHeight, scaledW1, scaledH1, undefined, "FAST");
+      } else {
+        pdf.addImage(img1, "PNG", margin, headerHeight, w1, h1, undefined, "FAST");
+      }
 
       // Ajout signatures sur la première page si disponibles
       if (signatureClient || signatureInstaller) {
-        const sigY = pageH - 50;
+        const sigY = pageH - 55;
         pdf.setDrawColor(200, 200, 200);
         pdf.line(10, sigY - 5, pageW - 10, sigY - 5);
         pdf.setTextColor(0, 0, 0);
@@ -919,16 +986,29 @@ export default function IRShowerFormsView({ profile }) {
       pdf.setFontSize(7);
       pdf.text("Document généré automatiquement - Page 1", pageW / 2, pageH - 5, { align: "center" });
 
+      // Page 2: Plan technique
       pdf.addPage();
-      // En-tête page 2
       pdf.setFillColor(14, 165, 165);
       pdf.rect(0, 0, pageW, 15, "F");
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(16);
       pdf.setFont(undefined, "bold");
       pdf.text("PLAN TECHNIQUE INDICATIF", pageW / 2, 10, { align: "center" });
-      const w2 = pageW, h2 = (c2.height / c2.width) * w2;
-      pdf.addImage(img2, "PNG", 0, 18, w2, Math.min(h2, pageH - 25), undefined, "FAST");
+
+      const planHeaderHeight = 18;
+      const planAvailableHeight = pageH - planHeaderHeight - footerHeight;
+      const w2 = pageW - (margin * 2);
+      const h2 = (c2.height / c2.width) * w2;
+
+      if (h2 > planAvailableHeight) {
+        const scaleFactor = planAvailableHeight / h2;
+        const scaledW2 = w2 * scaleFactor;
+        const scaledH2 = planAvailableHeight;
+        const xOffset = (pageW - scaledW2) / 2;
+        pdf.addImage(img2, "PNG", xOffset, planHeaderHeight, scaledW2, scaledH2, undefined, "FAST");
+      } else {
+        pdf.addImage(img2, "PNG", margin, planHeaderHeight, w2, h2, undefined, "FAST");
+      }
 
       // Footer page 2
       pdf.setTextColor(150, 150, 150);
