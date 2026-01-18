@@ -358,57 +358,80 @@ export default function IRShowerFormsView({ profile }) {
       isValid: true,
       errors: [],
       warnings: [],
+      tips: [],
       score: 0,
-      maxScore: 100
+      maxScore: 100,
+      elements: {
+        rect: elements.filter(el => el.type === 'rect').length,
+        dim: elements.filter(el => el.type === 'dim').length,
+        shower: elements.filter(el => el.type === 'symbol' && el.kind === 'shower').length,
+        mixer: elements.filter(el => el.type === 'symbol' && el.kind === 'mixer').length,
+        seat: elements.filter(el => el.type === 'symbol' && el.kind === 'seat').length,
+        bar: elements.filter(el => el.type === 'symbol' && el.kind === 'bar').length,
+        door: elements.filter(el => el.type === 'symbol' && el.kind === 'door').length,
+        drain: elements.filter(el => el.type === 'symbol' && el.kind === 'drain').length,
+      }
     };
 
-    // Check for room walls (at least one rect)
-    const hasRoomWalls = elements.some(el => el.type === 'rect');
-    if (!hasRoomWalls) {
-      validation.errors.push('Aucun mur/pièce défini (utilisez l\'outil Rectangle)');
+    const { rect, dim, shower, mixer, seat, bar, door, drain } = validation.elements;
+
+    // CRITICAL: Room definition (20 pts)
+    if (rect === 0) {
+      validation.errors.push('Tracez les contours de la pièce (Rectangle ⬜)');
     } else {
       validation.score += 20;
     }
 
-    // Check for shower area (shower symbol or specific rect)
-    const hasShower = elements.some(el => el.type === 'symbol' && el.kind === 'shower');
-    if (!hasShower) {
-      validation.errors.push('Pas de ciel de pluie/douche positionné');
+    // CRITICAL: Shower position (20 pts)
+    if (shower === 0) {
+      validation.errors.push('Placez le ciel de pluie 🚿');
     } else {
       validation.score += 20;
     }
 
-    // Check for mixer
-    const hasMixer = elements.some(el => el.type === 'symbol' && el.kind === 'mixer');
-    if (!hasMixer) {
-      validation.warnings.push('Pas de mitigeur positionné');
+    // IMPORTANT: Mixer (15 pts)
+    if (mixer === 0) {
+      validation.warnings.push('Ajoutez le mitigeur 🔵');
     } else {
       validation.score += 15;
     }
 
-    // Check for dimensions (at least 2)
-    const dimensionCount = elements.filter(el => el.type === 'dim').length;
-    if (dimensionCount < 2) {
-      validation.warnings.push('Moins de 2 cotes de dimension (recommandé: au moins 2)');
+    // IMPORTANT: Dimensions (15 pts)
+    if (dim < 2) {
+      validation.warnings.push(`Ajoutez des cotes (${dim}/2 min) 📏`);
+      validation.score += dim * 5;
     } else {
-      validation.score += 20;
+      validation.score += 15;
     }
 
-    // Check for door
-    const hasDoor = elements.some(el => el.type === 'symbol' && el.kind === 'door');
-    if (!hasDoor) {
-      validation.warnings.push('Pas de porte positionnée');
+    // RECOMMENDED: Door (10 pts)
+    if (door === 0) {
+      validation.tips.push('Indiquez la porte 🚪');
     } else {
       validation.score += 10;
     }
 
-    // Check for grab bars (recommended for accessibility)
-    const hasBar = elements.some(el => el.type === 'symbol' && el.kind === 'bar');
-    if (!hasBar) {
-      validation.warnings.push('Pas de barre de maintien (recommandé pour accessibilité)');
+    // RECOMMENDED: Grab bars (10 pts)
+    if (bar === 0) {
+      validation.tips.push('Barre de maintien recommandée ➖');
     } else {
-      validation.score += 15;
+      validation.score += 10;
     }
+
+    // RECOMMENDED: Drain position (5 pts)
+    if (drain === 0) {
+      validation.tips.push('Position évacuation ⚫');
+    } else {
+      validation.score += 5;
+    }
+
+    // BONUS: Seat for accessibility (5 pts)
+    if (seat > 0) {
+      validation.score += 5;
+    }
+
+    // Cap score at 100
+    validation.score = Math.min(100, validation.score);
 
     // Plan is valid if no critical errors
     validation.isValid = validation.errors.length === 0;
@@ -472,17 +495,47 @@ export default function IRShowerFormsView({ profile }) {
     return Math.abs(dx) > Math.abs(dy) ? { x2, y2: y1 } : { x2: x1, y2 };
   };
   const clampSeatToWall = (p) => {
-    const { w, midY } = getZones();
-    const topEdge = p.y < midY ? 0 : midY;
-    const distTop = Math.abs(p.y - topEdge);
+    const { w, h, midY } = getZones();
+    const pad = 8; // padding from wall
+
+    // Determine which zone we're in (top half or bottom half)
+    const inTopZone = p.y < midY;
+    const zoneTop = inTopZone ? BANNER_H : midY + BANNER_H;
+    const zoneBottom = inTopZone ? midY - pad : h - pad;
+
+    // Calculate distances to all 4 walls of the current zone
+    const distTop = Math.abs(p.y - zoneTop);
+    const distBottom = Math.abs(p.y - zoneBottom);
     const distLeft = Math.abs(p.x - 0);
-    const distRight = Math.abs(w - p.x);
-    const pad = 6;
+    const distRight = Math.abs(p.x - w);
+
+    // Find the closest wall
+    const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+
     let orient = "top", x = p.x, y = p.y;
-    if (distTop <= distLeft && distTop <= distRight) { y = topEdge + pad; orient = "top"; }
-    else if (distLeft <= distRight) { x = pad; orient = "left"; }
-    else { x = w - pad; orient = "right"; }
-    y = clampYOutOfBanner(y);
+
+    if (minDist === distTop) {
+      // Snap to top wall
+      y = zoneTop + pad;
+      x = Math.max(pad, Math.min(w - pad, p.x));
+      orient = "top";
+    } else if (minDist === distBottom) {
+      // Snap to bottom wall
+      y = zoneBottom - pad;
+      x = Math.max(pad, Math.min(w - pad, p.x));
+      orient = "bottom";
+    } else if (minDist === distLeft) {
+      // Snap to left wall
+      x = pad;
+      y = Math.max(zoneTop + pad, Math.min(zoneBottom - pad, p.y));
+      orient = "left";
+    } else {
+      // Snap to right wall
+      x = w - pad;
+      y = Math.max(zoneTop + pad, Math.min(zoneBottom - pad, p.y));
+      orient = "right";
+    }
+
     return { x, y, orient };
   };
 
@@ -513,9 +566,19 @@ export default function IRShowerFormsView({ profile }) {
         } else if (el.kind === "towelrack") {
           // Towel rack is horizontal line -25 to +25
           if (x >= el.x - 30 && x <= el.x + 30 && y >= el.y - 10 && y <= el.y + 10) return el;
+        } else if (el.kind === "seat") {
+          // Seat hitbox based on orientation (half-circle r=18)
+          const r = 20;
+          switch (el.orient) {
+            case "top":    if (x >= el.x - r && x <= el.x + r && y >= el.y && y <= el.y + r + HIT_PAD) return el; break;
+            case "bottom": if (x >= el.x - r && x <= el.x + r && y >= el.y - r - HIT_PAD && y <= el.y) return el; break;
+            case "left":   if (x >= el.x && x <= el.x + r + HIT_PAD && y >= el.y - r && y <= el.y + r) return el; break;
+            case "right":  if (x >= el.x - r - HIT_PAD && x <= el.x && y >= el.y - r && y <= el.y + r) return el; break;
+            default:       if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+          }
         } else {
-          // mixer (r=14), shower (r=48), seat (r=22), drain (r=12)
-          const r = el.kind === "mixer" ? 14 : (el.kind === "shower" ? 48 : (el.kind === "drain" ? 15 : 22));
+          // mixer (r=14), shower (r=48), drain (r=15)
+          const r = el.kind === "mixer" ? 16 : (el.kind === "shower" ? 50 : 15);
           if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
         }
       }
@@ -542,78 +605,66 @@ export default function IRShowerFormsView({ profile }) {
       return;
     }
 
-    if (tool === "mixer") {
+    // Helper to place symbol and auto-switch to select mode
+    const placeSymbol = (symbolData) => {
       const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "mixer", x: p.x, y: clampYOutOfBanner(p.y) }]);
+      setElements((els) => [...els, { id, ...symbolData }]);
       setSelectedId(id);
+      setTool('select'); // Auto-switch to select mode for easier mobile UX
+    };
+
+    if (tool === "mixer") {
+      placeSymbol({ type: "symbol", kind: "mixer", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "seat") {
       const seat = clampSeatToWall(p);
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "seat", x: seat.x, y: seat.y, orient: seat.orient }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "seat", x: seat.x, y: seat.y, orient: seat.orient });
       return;
     }
 
     if (tool === "text") {
       const t = window.prompt("Texte :");
       if (t && t.trim()) {
-        const id = newId();
-        setElements((els) => [...els, { id, type: "text", x: p.x, y: clampYOutOfBanner(p.y), text: t }]);
-        setSelectedId(id);
+        placeSymbol({ type: "text", x: p.x, y: clampYOutOfBanner(p.y), text: t });
       }
       return;
     }
 
     if (tool === "shower") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "shower", x: p.x, y: clampYOutOfBanner(p.y) }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "shower", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "door") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "door", x: p.x, y: clampYOutOfBanner(p.y) }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "door", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "window") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "window", x: p.x, y: clampYOutOfBanner(p.y), w: 60, h: 40 }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "window", x: p.x, y: clampYOutOfBanner(p.y), w: 60, h: 40 });
       return;
     }
 
     // New symbols with rotation support
     if (tool === "wc") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "wc", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "wc", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "sink") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "sink", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "sink", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "towelrack") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "towelrack", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "towelrack", x: p.x, y: clampYOutOfBanner(p.y), rotation: 0 });
       return;
     }
 
     if (tool === "drain") {
-      const id = newId();
-      setElements((els) => [...els, { id, type: "symbol", kind: "drain", x: p.x, y: clampYOutOfBanner(p.y) }]);
-      setSelectedId(id);
+      placeSymbol({ type: "symbol", kind: "drain", x: p.x, y: clampYOutOfBanner(p.y) });
       return;
     }
 
@@ -733,13 +784,13 @@ export default function IRShowerFormsView({ profile }) {
     setElements((els) => els.map((el) => {
       if (el.id !== selectedId) return el;
       // Only rotate symbols that support rotation
-      if (el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower'].includes(el.kind)) {
+      if (el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower', 'mixer'].includes(el.kind)) {
         const currentRotation = el.rotation || 0;
         return { ...el, rotation: (currentRotation + 90) % 360 };
       }
       // Rotate seat orientation
       if (el.type === 'symbol' && el.kind === 'seat') {
-        const orientations = ['top', 'right', 'left'];
+        const orientations = ['top', 'right', 'bottom', 'left'];
         const currentIndex = orientations.indexOf(el.orient || 'top');
         const nextOrient = orientations[(currentIndex + 1) % orientations.length];
         return { ...el, orient: nextOrient };
@@ -753,7 +804,7 @@ export default function IRShowerFormsView({ profile }) {
     if (!selectedId) return false;
     const el = elements.find((e) => e.id === selectedId);
     if (!el) return false;
-    return el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower', 'seat'].includes(el.kind);
+    return el.type === 'symbol' && ['wc', 'sink', 'towelrack', 'door', 'shower', 'seat', 'mixer'].includes(el.kind);
   }, [selectedId, elements]);
 
   // Load a template into the canvas
@@ -1849,68 +1900,100 @@ export default function IRShowerFormsView({ profile }) {
 
           {/* VALIDATION - Barre compacte en bas */}
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
             marginTop: '12px',
-            background: planValidation.isValid ? '#dcfce7' : '#fef3c7',
             borderRadius: '12px',
-            border: `2px solid ${planValidation.isValid ? '#86efac' : '#fde68a'}`
+            border: `2px solid ${planValidation.score >= 70 ? '#86efac' : planValidation.score >= 40 ? '#fde68a' : '#fecaca'}`,
+            overflow: 'hidden'
           }}>
-            {/* Barre de progression circulaire */}
             <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              background: `conic-gradient(${planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444'} ${planValidation.score * 3.6}deg, #e2e8f0 0deg)`,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              gap: '12px',
+              padding: '12px 16px',
+              background: planValidation.score >= 70 ? '#dcfce7' : planValidation.score >= 40 ? '#fef3c7' : '#fee2e2',
             }}>
+              {/* Barre de progression circulaire */}
               <div style={{
-                width: '36px',
-                height: '36px',
+                width: '48px',
+                height: '48px',
                 borderRadius: '50%',
-                background: 'white',
+                background: `conic-gradient(${planValidation.score >= 70 ? '#22c55e' : planValidation.score >= 40 ? '#f59e0b' : '#ef4444'} ${planValidation.score * 3.6}deg, #e2e8f0 0deg)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '12px',
-                fontWeight: '700',
-                color: planValidation.score >= 70 ? '#166534' : planValidation.score >= 40 ? '#92400e' : '#991b1b'
+                flexShrink: 0
               }}>
-                {planValidation.score}%
-              </div>
-            </div>
-
-            {/* Status */}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: '600', fontSize: '14px', color: planValidation.isValid ? '#166534' : '#92400e' }}>
-                {planValidation.isValid ? '✅ Plan complet' : '⚠️ Éléments manquants'}
-              </div>
-              {!planValidation.isValid && planValidation.errors.length > 0 && (
-                <div style={{ fontSize: '12px', color: '#92400e', marginTop: '2px' }}>
-                  {planValidation.errors[0]}
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: planValidation.score >= 70 ? '#166534' : planValidation.score >= 40 ? '#92400e' : '#991b1b'
+                }}>
+                  {planValidation.score}%
                 </div>
-              )}
+              </div>
+
+              {/* Status */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: '600', fontSize: '14px', color: planValidation.score >= 70 ? '#166534' : planValidation.score >= 40 ? '#92400e' : '#991b1b' }}>
+                  {planValidation.score >= 70 ? '✅ Plan complet' : planValidation.score >= 40 ? '⚠️ À compléter' : '❌ Éléments requis'}
+                </div>
+                {planValidation.errors.length > 0 && (
+                  <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '2px' }}>
+                    {planValidation.errors[0]}
+                  </div>
+                )}
+                {planValidation.errors.length === 0 && planValidation.warnings.length > 0 && (
+                  <div style={{ fontSize: '12px', color: '#92400e', marginTop: '2px' }}>
+                    {planValidation.warnings[0]}
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton reset */}
+              <button
+                onClick={resetPlan}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '2px solid #cbd5e1',
+                  background: '#fff',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                🔄
+              </button>
             </div>
 
-            {/* Bouton reset */}
-            <button
-              onClick={resetPlan}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '2px solid #cbd5e1',
-                background: '#fff',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              🔄 Reset
-            </button>
+            {/* Conseils supplémentaires (collapsible) */}
+            {(planValidation.warnings.length > 0 || planValidation.tips.length > 0) && planValidation.score < 100 && (
+              <div style={{
+                padding: '8px 16px',
+                background: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+                fontSize: '12px'
+              }}>
+                {planValidation.warnings.length > 0 && (
+                  <div style={{ color: '#92400e', marginBottom: planValidation.tips.length > 0 ? '4px' : 0 }}>
+                    <strong>Important:</strong> {planValidation.warnings.join(' • ')}
+                  </div>
+                )}
+                {planValidation.tips.length > 0 && (
+                  <div style={{ color: '#64748b' }}>
+                    <strong>Conseils:</strong> {planValidation.tips.join(' • ')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

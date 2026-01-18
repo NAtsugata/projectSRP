@@ -125,20 +125,29 @@ export const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       const drawMixer = (el) => {
         ctx.save();
         ctx.translate(el.x, el.y);
+        const rotation = el.rotation || 0;
+        ctx.rotate(rotation * Math.PI / 180);
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
         ctx.lineWidth = 2;
+        // Outer circle
         ctx.beginPath();
         ctx.arc(0, 0, 12, 0, Math.PI * 2);
         ctx.stroke();
+        // Cross
         ctx.beginPath();
-        ctx.moveTo(-10, 0);
-        ctx.lineTo(10, 0);
-        ctx.moveTo(0, -10);
-        ctx.lineTo(0, 10);
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.moveTo(0, -8);
+        ctx.lineTo(0, 8);
         ctx.stroke();
+        // Spout (pointing direction)
         ctx.beginPath();
-        ctx.moveTo(10, 0);
+        ctx.moveTo(12, 0);
+        ctx.lineTo(22, 0);
         ctx.lineTo(20, -3);
+        ctx.moveTo(22, 0);
+        ctx.lineTo(20, 3);
         ctx.stroke();
         ctx.restore();
       };
@@ -146,33 +155,65 @@ export const usePlanCanvas = (canvasRef, toCm, labelOffsetPx = 8) => {
       const drawSeat = (el) => {
         ctx.save();
         ctx.strokeStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.fillStyle = el.id === selectedId ? "rgba(239, 68, 68, 0.1)" : "rgba(15, 23, 42, 0.05)";
         ctx.lineWidth = 2;
         const r = 18;
+
         if (el.orient === "top") {
+          // Wall on top, seat opens downward
+          ctx.beginPath();
+          ctx.moveTo(el.x - r, el.y);
+          ctx.lineTo(el.x + r, el.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(el.x, el.y, r, 0, Math.PI, false);
+          ctx.fill();
+          ctx.stroke();
+        } else if (el.orient === "bottom") {
+          // Wall on bottom, seat opens upward
           ctx.beginPath();
           ctx.moveTo(el.x - r, el.y);
           ctx.lineTo(el.x + r, el.y);
           ctx.stroke();
           ctx.beginPath();
           ctx.arc(el.x, el.y, r, Math.PI, 0, false);
+          ctx.fill();
           ctx.stroke();
         } else if (el.orient === "left") {
+          // Wall on left, seat opens rightward
           ctx.beginPath();
           ctx.moveTo(el.x, el.y - r);
           ctx.lineTo(el.x, el.y + r);
           ctx.stroke();
           ctx.beginPath();
           ctx.arc(el.x, el.y, r, -Math.PI / 2, Math.PI / 2, false);
+          ctx.fill();
           ctx.stroke();
         } else if (el.orient === "right") {
+          // Wall on right, seat opens leftward
           ctx.beginPath();
           ctx.moveTo(el.x, el.y - r);
           ctx.lineTo(el.x, el.y + r);
           ctx.stroke();
           ctx.beginPath();
-          ctx.arc(el.x, el.y, r, -Math.PI / 2, Math.PI / 2, true);
+          ctx.arc(el.x, el.y, r, Math.PI / 2, -Math.PI / 2, false);
+          ctx.fill();
           ctx.stroke();
         }
+
+        // Draw "S" label for clarity
+        ctx.fillStyle = el.id === selectedId ? "#ef4444" : "#0f172a";
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const labelOffset = r * 0.5;
+        let lx = el.x, ly = el.y;
+        if (el.orient === "top") ly += labelOffset;
+        else if (el.orient === "bottom") ly -= labelOffset;
+        else if (el.orient === "left") lx += labelOffset;
+        else if (el.orient === "right") lx -= labelOffset;
+        ctx.fillText("S", lx, ly);
+
         ctx.restore();
       };
 
