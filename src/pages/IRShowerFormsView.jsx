@@ -504,8 +504,18 @@ export default function IRShowerFormsView({ profile }) {
         } else if (el.kind === "door") {
           const r = 60;
           if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
+        } else if (el.kind === "wc") {
+          // WC is larger - ellipse 15x20 + reservoir extends to y-35
+          if (x >= el.x - 20 && x <= el.x + 20 && y >= el.y - 40 && y <= el.y + 25) return el;
+        } else if (el.kind === "sink") {
+          // Sink is roundRect 40x30
+          if (x >= el.x - 25 && x <= el.x + 25 && y >= el.y - 20 && y <= el.y + 20) return el;
+        } else if (el.kind === "towelrack") {
+          // Towel rack is horizontal line -25 to +25
+          if (x >= el.x - 30 && x <= el.x + 30 && y >= el.y - 10 && y <= el.y + 10) return el;
         } else {
-          const r = el.kind === "mixer" ? 14 : (el.kind === "shower" ? 48 : 22);
+          // mixer (r=14), shower (r=48), seat (r=22), drain (r=12)
+          const r = el.kind === "mixer" ? 14 : (el.kind === "shower" ? 48 : (el.kind === "drain" ? 15 : 22));
           if ((x - el.x) ** 2 + (y - el.y) ** 2 <= (r + HIT_PAD) ** 2) return el;
         }
       }
@@ -1783,10 +1793,8 @@ export default function IRShowerFormsView({ profile }) {
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
+                  onPointerCancel={() => { setStartPt(null); setPreview(null); }}
                   onDoubleClick={onDoubleClick}
-                  onTouchStart={onPointerDown}
-                  onTouchMove={onPointerMove}
-                  onTouchEnd={onPointerUp}
                   style={{ cursor: tool==="select" ? "default" : (tool==="mixer"||tool==="seat"||tool==="text") ? "cell" : "crosshair" }}
                 />
               </div>
