@@ -105,6 +105,10 @@ export default function IRShowerFormsView({ profile }) {
   const [isDrawingSignature, setIsDrawingSignature] = useState({ client: false, installer: false });
   const [signaturePos, setSignaturePos] = useState({ client: null, installer: null });
 
+  /* PDF PREVIEW */
+  const [pdfPreview, setPdfPreview] = useState(null); // { blob: Blob, url: string, filename: string }
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   // Compression d'image optimisée
   const compressImage = async (file) => {
     if (!file.type.startsWith('image/')) return file;
@@ -851,7 +855,9 @@ export default function IRShowerFormsView({ profile }) {
 
   const exportPDF = async () => {
     if (!validateStudy()) return;
+    if (isGeneratingPdf) return;
 
+    setIsGeneratingPdf(true);
     try {
       const prevTab = tab;
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -1181,14 +1187,37 @@ export default function IRShowerFormsView({ profile }) {
         pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
       }
 
-      // Télécharger
+      // Générer blob pour prévisualisation
       const filename = `etude_${study.client_nom || 'client'}_${new Date().toISOString().slice(0,10)}.pdf`;
-      pdf.save(filename);
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      setPdfPreview({ blob: pdfBlob, url: pdfUrl, filename });
       setTab(prevTab);
     } catch (err) {
       console.error("Erreur export PDF:", err);
       alert("❌ Erreur lors de l'export PDF:\n" + (err.message || err));
+    } finally {
+      setIsGeneratingPdf(false);
     }
+  };
+
+  // Télécharger le PDF après prévisualisation
+  const downloadPdf = () => {
+    if (!pdfPreview) return;
+    const link = document.createElement('a');
+    link.href = pdfPreview.url;
+    link.download = pdfPreview.filename;
+    link.click();
+    closePdfPreview();
+  };
+
+  // Fermer la prévisualisation
+  const closePdfPreview = () => {
+    if (pdfPreview?.url) {
+      URL.revokeObjectURL(pdfPreview.url);
+    }
+    setPdfPreview(null);
   };
 
   /* ---------- Styles ---------- */
@@ -1467,6 +1496,105 @@ export default function IRShowerFormsView({ profile }) {
         color: #0ea5a5;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       }
+
+      /* PDF Preview Modal */
+      .pdf-preview-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+      }
+      .pdf-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #1e293b;
+        border-radius: 12px 12px 0 0;
+        color: white;
+      }
+      .pdf-preview-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .pdf-preview-content {
+        flex: 1;
+        background: #374151;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pdf-preview-content iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+      }
+      .pdf-preview-actions {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        background: #1e293b;
+        border-radius: 0 0 12px 12px;
+        justify-content: center;
+      }
+      .pdf-preview-btn {
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform 0.15s, opacity 0.15s;
+      }
+      .pdf-preview-btn:active {
+        transform: scale(0.96);
+      }
+      .pdf-preview-btn.primary {
+        background: #0ea5a5;
+        color: white;
+      }
+      .pdf-preview-btn.secondary {
+        background: #475569;
+        color: white;
+      }
+      .pdf-generating {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        gap: 16px;
+      }
+      .pdf-generating .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(255,255,255,0.3);
+        border-top-color: #0ea5a5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     `}</style>
   );
 
@@ -1482,8 +1610,12 @@ export default function IRShowerFormsView({ profile }) {
             <button onClick={resetAll} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:600 }}>
               Nouvelle étude
             </button>
-            <button onClick={exportPDF} style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #fff", background:"#fff", color:"#0ea5a5", fontWeight:600 }}>
-              Exporter PDF
+            <button
+              onClick={exportPDF}
+              disabled={isGeneratingPdf}
+              style={{ padding:"10px 14px", borderRadius: 10, border:"1px solid #fff", background: isGeneratingPdf ? "#94a3b8" : "#fff", color: isGeneratingPdf ? "#fff" : "#0ea5a5", fontWeight:600, opacity: isGeneratingPdf ? 0.7 : 1 }}
+            >
+              {isGeneratingPdf ? "Génération..." : "Exporter PDF"}
             </button>
           </div>
         </div>
@@ -2182,6 +2314,40 @@ export default function IRShowerFormsView({ profile }) {
             )}
           </div>
       </div>
+
+      {/* Loading indicator pendant la génération */}
+      {isGeneratingPdf && (
+        <div className="pdf-generating">
+          <div className="spinner"></div>
+          <div style={{ fontSize: 16, fontWeight: 500 }}>Génération du PDF en cours...</div>
+        </div>
+      )}
+
+      {/* Modal de prévisualisation PDF */}
+      {pdfPreview && (
+        <div className="pdf-preview-overlay">
+          <div className="pdf-preview-header">
+            <h3>Prévisualisation du PDF</h3>
+            <button
+              onClick={closePdfPreview}
+              style={{ background: 'none', border: 'none', color: 'white', fontSize: 24, cursor: 'pointer', padding: 4 }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="pdf-preview-content">
+            <iframe src={pdfPreview.url} title="Prévisualisation PDF" />
+          </div>
+          <div className="pdf-preview-actions">
+            <button className="pdf-preview-btn secondary" onClick={closePdfPreview}>
+              Annuler
+            </button>
+            <button className="pdf-preview-btn primary" onClick={downloadPdf}>
+              Télécharger
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
