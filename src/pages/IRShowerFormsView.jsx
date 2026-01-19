@@ -1009,7 +1009,19 @@ export default function IRShowerFormsView({ profile }) {
       // Scroll and switch to plan tab
       setTab("plan");
       window.scrollTo(0, 0);
-      await waitPaint(500);
+
+      // Wait for the plan tab to be rendered and ref to be available
+      let attempts = 0;
+      while (!planExportRef.current && attempts < 20) {
+        await waitPaint(100);
+        attempts++;
+      }
+
+      if (!planExportRef.current) {
+        throw new Error("Impossible de charger le plan. Réessayez.");
+      }
+
+      await waitPaint(300);
 
       // Force canvas redraw
       if (plan && plan.draw) {
