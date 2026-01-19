@@ -1041,13 +1041,20 @@ export default function IRShowerFormsView({ profile }) {
       let img2;
       let imgWidth, imgHeight;
 
-      if (planCanvas) {
+      if (planCanvas && planCanvas.width > 0 && planCanvas.height > 0) {
         // Direct canvas capture - most reliable
-        img2 = planCanvas.toDataURL("image/png");
-        imgWidth = planCanvas.width;
-        imgHeight = planCanvas.height;
-      } else {
-        // Fallback to html2canvas
+        try {
+          img2 = planCanvas.toDataURL("image/jpeg", 0.95);
+          imgWidth = planCanvas.width;
+          imgHeight = planCanvas.height;
+        } catch (canvasErr) {
+          console.error("Canvas toDataURL error:", canvasErr);
+          img2 = null;
+        }
+      }
+
+      // Fallback to html2canvas if direct capture failed
+      if (!img2 || !img2.startsWith('data:image')) {
         const canvasOptions = {
           scale: 2,
           backgroundColor: "#ffffff",
@@ -1056,7 +1063,7 @@ export default function IRShowerFormsView({ profile }) {
           logging: false
         };
         const c2 = await html2canvas(planExportRef.current, canvasOptions);
-        img2 = c2.toDataURL("image/png");
+        img2 = c2.toDataURL("image/jpeg", 0.95);
         imgWidth = c2.width;
         imgHeight = c2.height;
       }
@@ -1080,13 +1087,21 @@ export default function IRShowerFormsView({ profile }) {
       const planH = (imgHeight / imgWidth) * planW;
       const maxPlanH = pageH - planY - 15;
 
-      if (planH > maxPlanH) {
-        const scale = maxPlanH / planH;
-        const scaledW = planW * scale;
-        const xOffset = (pageW - scaledW) / 2;
-        pdf.addImage(img2, "PNG", xOffset, planY, scaledW, maxPlanH, undefined, "FAST");
+      // Add image only if valid
+      if (img2 && img2.startsWith('data:image') && imgWidth > 0 && imgHeight > 0) {
+        if (planH > maxPlanH) {
+          const scale = maxPlanH / planH;
+          const scaledW = planW * scale;
+          const xOffset = (pageW - scaledW) / 2;
+          pdf.addImage(img2, "JPEG", xOffset, planY, scaledW, maxPlanH, undefined, "FAST");
+        } else {
+          pdf.addImage(img2, "JPEG", margin, planY, planW, planH, undefined, "FAST");
+        }
       } else {
-        pdf.addImage(img2, "PNG", margin, planY, planW, planH, undefined, "FAST");
+        // If no image, add placeholder text
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFontSize(12);
+        pdf.text("Plan non disponible - veuillez réessayer", pageW / 2, pageH / 2, { align: "center" });
       }
 
       // Footer page 2
