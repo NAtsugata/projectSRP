@@ -7,6 +7,8 @@ import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../compone
 import { usePlanCanvas } from '../hooks/usePlanCanvas';
 import { useUndoRedo } from '../hooks/useUndoRedo';
 import { PLAN_TEMPLATES, getTemplateElements } from '../data/planTemplates';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
@@ -851,9 +853,6 @@ export default function IRShowerFormsView({ profile }) {
     if (!validateStudy()) return;
 
     try {
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
-
       const prevTab = tab;
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
@@ -1152,11 +1151,7 @@ export default function IRShowerFormsView({ profile }) {
       setTab(prevTab);
     } catch (err) {
       console.error("Erreur export PDF:", err);
-      if (err.message?.includes('module') || err.message?.includes('import')) {
-        alert("⚠️ L'export PDF nécessite 'html2canvas' et 'jspdf'. Installe-les :\n\nnpm i html2canvas jspdf");
-      } else {
-        alert("❌ Erreur lors de l'export PDF:\n" + (err.message || err));
-      }
+      alert("❌ Erreur lors de l'export PDF:\n" + (err.message || err));
     }
   };
 
