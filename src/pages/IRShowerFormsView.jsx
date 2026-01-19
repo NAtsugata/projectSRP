@@ -1688,7 +1688,7 @@ export default function IRShowerFormsView({ profile }) {
 
       {/* ======= PAGE 2 — PLAN ======= */}
       <div style={{ display: tab === "plan" ? "block" : "none" }}>
-          <Section className="header-card" style={{ paddingBottom: 8 }}>
+        <Section className="header-card" style={{ paddingBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
             <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
               Plan non contractuel. Nécessite une validation technique au préalable. <br />
@@ -2145,7 +2145,6 @@ export default function IRShowerFormsView({ profile }) {
               </div>
             )}
           </div>
-        </div>
       </div>
     </div>
   );
