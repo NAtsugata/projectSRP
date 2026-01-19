@@ -106,8 +106,9 @@ export default function IRShowerFormsView({ profile }) {
   const [signaturePos, setSignaturePos] = useState({ client: null, installer: null });
 
   /* PDF PREVIEW */
-  const [pdfPreview, setPdfPreview] = useState(null); // { blob: Blob, url: string, filename: string }
+  const [pdfPreview, setPdfPreview] = useState(null); // { blob: Blob, url: string, filename: string, pages: string[] }
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
 
   // Compression d'image optimisée
   const compressImage = async (file) => {
@@ -1187,12 +1188,15 @@ export default function IRShowerFormsView({ profile }) {
         pdf.text(`Document généré automatiquement - Page ${pageNum}`, pageW / 2, pageH - 5, { align: "center" });
       }
 
-      // Générer blob pour prévisualisation
+      // Générer blob et data URI pour prévisualisation
       const filename = `etude_${study.client_nom || 'client'}_${new Date().toISOString().slice(0,10)}.pdf`;
       const pdfBlob = pdf.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
+      const pdfDataUri = pdf.output('datauristring');
+      const totalPages = pdf.internal.getNumberOfPages();
 
-      setPdfPreview({ blob: pdfBlob, url: pdfUrl, filename });
+      setPdfPreview({ blob: pdfBlob, url: pdfUrl, dataUri: pdfDataUri, filename, totalPages });
+      setPreviewPage(0);
       setTab(prevTab);
     } catch (err) {
       console.error("Erreur export PDF:", err);
@@ -2327,7 +2331,7 @@ export default function IRShowerFormsView({ profile }) {
       {pdfPreview && (
         <div className="pdf-preview-overlay">
           <div className="pdf-preview-header">
-            <h3>Prévisualisation du PDF</h3>
+            <h3>PDF Prêt</h3>
             <button
               onClick={closePdfPreview}
               style={{ background: 'none', border: 'none', color: 'white', fontSize: 24, cursor: 'pointer', padding: 4 }}
@@ -2336,14 +2340,54 @@ export default function IRShowerFormsView({ profile }) {
             </button>
           </div>
           <div className="pdf-preview-content">
-            <iframe src={pdfPreview.url} title="Prévisualisation PDF" />
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              {/* Icône PDF */}
+              <div style={{
+                width: 100,
+                height: 120,
+                margin: '0 auto 24px',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+              }}>
+                <span style={{ color: 'white', fontSize: 28, fontWeight: 800 }}>PDF</span>
+              </div>
+              {/* Nom du fichier */}
+              <div style={{ color: 'white', fontSize: 16, fontWeight: 600, marginBottom: 8, wordBreak: 'break-all' }}>
+                {pdfPreview.filename}
+              </div>
+              {/* Nombre de pages */}
+              <div style={{ color: '#94a3b8', fontSize: 14 }}>
+                {pdfPreview.totalPages} page{pdfPreview.totalPages > 1 ? 's' : ''}
+              </div>
+              {/* Check icon */}
+              <div style={{
+                marginTop: 24,
+                width: 64,
+                height: 64,
+                margin: '24px auto 0',
+                background: '#22c55e',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{ color: 'white', fontSize: 32 }}>✓</span>
+              </div>
+              <div style={{ color: '#22c55e', fontSize: 14, marginTop: 12, fontWeight: 500 }}>
+                Document généré avec succès
+              </div>
+            </div>
           </div>
           <div className="pdf-preview-actions">
             <button className="pdf-preview-btn secondary" onClick={closePdfPreview}>
               Annuler
             </button>
             <button className="pdf-preview-btn primary" onClick={downloadPdf}>
-              Télécharger
+              Télécharger le PDF
             </button>
           </div>
         </div>
