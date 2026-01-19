@@ -1011,6 +1011,13 @@ export default function IRShowerFormsView({ profile }) {
       window.scrollTo(0, 0);
       await waitPaint(300);
 
+      // Ensure plan section is visible for html2canvas
+      const planSection = planExportRef.current?.parentElement;
+      if (planSection) {
+        planSection.style.display = 'block';
+      }
+      await waitPaint(200);
+
       // Force canvas redraw
       if (plan && plan.draw) {
         plan.draw(elements, preview, selectedId);
@@ -1029,16 +1036,30 @@ export default function IRShowerFormsView({ profile }) {
       }
       await waitPaint(200);
 
-      const canvasOptions = {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        allowTaint: true,
-        logging: false
-      };
+      // Capture directly from canvas element (more reliable on mobile)
+      const planCanvas = canvasRef.current;
+      let img2;
+      let imgWidth, imgHeight;
 
-      const c2 = await html2canvas(planExportRef.current, canvasOptions);
-      const img2 = c2.toDataURL("image/png");
+      if (planCanvas) {
+        // Direct canvas capture - most reliable
+        img2 = planCanvas.toDataURL("image/png");
+        imgWidth = planCanvas.width;
+        imgHeight = planCanvas.height;
+      } else {
+        // Fallback to html2canvas
+        const canvasOptions = {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          allowTaint: true,
+          logging: false
+        };
+        const c2 = await html2canvas(planExportRef.current, canvasOptions);
+        img2 = c2.toDataURL("image/png");
+        imgWidth = c2.width;
+        imgHeight = c2.height;
+      }
 
       // Restore height
       if (canvasWrap && originalHeight !== undefined) {
@@ -1056,7 +1077,7 @@ export default function IRShowerFormsView({ profile }) {
       // Image du plan
       const planY = 18;
       const planW = pageW - margin * 2;
-      const planH = (c2.height / c2.width) * planW;
+      const planH = (imgHeight / imgWidth) * planW;
       const maxPlanH = pageH - planY - 15;
 
       if (planH > maxPlanH) {
