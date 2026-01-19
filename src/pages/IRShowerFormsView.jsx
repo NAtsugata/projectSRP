@@ -1006,21 +1006,9 @@ export default function IRShowerFormsView({ profile }) {
       // ========== PAGE 2: PLAN TECHNIQUE ==========
       pdf.addPage();
 
-      // Scroll and switch to plan tab
+      // Switch to plan tab for visual feedback
       setTab("plan");
       window.scrollTo(0, 0);
-
-      // Wait for the plan tab to be rendered and ref to be available
-      let attempts = 0;
-      while (!planExportRef.current && attempts < 20) {
-        await waitPaint(100);
-        attempts++;
-      }
-
-      if (!planExportRef.current) {
-        throw new Error("Impossible de charger le plan. Réessayez.");
-      }
-
       await waitPaint(300);
 
       // Force canvas redraw
@@ -1699,8 +1687,7 @@ export default function IRShowerFormsView({ profile }) {
       </div>
 
       {/* ======= PAGE 2 — PLAN ======= */}
-      {tab === "plan" && (
-        <div>
+      <div style={{ display: tab === "plan" ? "block" : "none" }}>
           <Section className="header-card" style={{ paddingBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>PLAN TECHNIQUE INDICATIF DOUCHE</h2>
             <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
@@ -2159,7 +2146,7 @@ export default function IRShowerFormsView({ profile }) {
             )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
