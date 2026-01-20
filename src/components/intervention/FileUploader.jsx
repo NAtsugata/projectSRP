@@ -20,7 +20,9 @@ const withCacheBust = (url) => {
  * Composant FileUploader
  * @param {string} interventionId - ID de l'intervention
  * @param {string} folder - Dossier de destination ('report', 'briefing', 'voice')
- * @param {Function} onUploadComplete - Callback avec array des fichiers uploadés
+ * @param {Function} onUploadComplete - Callback avec array des fichiers uploadés (URLs cloud)
+ * @param {Function} onLocalPreview - Callback immédiat avec preview local { id, localUrl, name, status, progress }
+ * @param {Function} onUploadProgress - Callback pour mise à jour progression { id, progress, status }
  * @param {Function} onBeginCritical - Callback avant ouverture picker (scroll lock)
  * @param {Function} onEndCritical - Callback après fermeture picker
  * @param {string} accept - Types de fichiers acceptés
@@ -31,6 +33,8 @@ const FileUploader = ({
   interventionId,
   folder = 'report',
   onUploadComplete,
+  onLocalPreview,
+  onUploadProgress,
   onBeginCritical,
   onEndCritical,
   accept = 'image/*,application/pdf,audio/webm',
@@ -124,6 +128,20 @@ const FileUploader = ({
     });
   }, []);
 
+  // Créer une preview locale (data URL) pour un fichier
+  const createLocalPreview = useCallback((file) => {
+    return new Promise((resolve) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      } else {
+        resolve(null); // Pas de preview pour les non-images
+      }
+    });
+  }, []);
+
   // Gestion de la sélection de fichiers
   const handleFileChange = useCallback(
     async (e) => {
@@ -152,22 +170,40 @@ const FileUploader = ({
       // Reset input
       if (inputRef.current) inputRef.current.value = '';
 
-      // Initialisation de la queue
-      const queue = files.map((f, i) => ({
-        id: `${f.name}-${Date.now()}-${i}`,
-        name: f.name,
-        size: f.size,
-        status: 'pending',
-        progress: 0,
-        error: null
-      }));
+      // Créer les previews locales IMMÉDIATEMENT
+      const previews = await Promise.all(
+        files.map(async (f, i) => {
+          const id = `${f.name}-${Date.now()}-${i}`;
+          const localUrl = await createLocalPreview(f);
+          return {
+            id,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            localUrl,
+            status: 'uploading',
+            progress: 0,
+            error: null
+          };
+        })
+      );
 
-      setState({ uploading: true, queue, error: null });
+      // Envoyer les previews locales au parent IMMÉDIATEMENT
+      if (onLocalPreview) {
+        previews.forEach((preview) => {
+          onLocalPreview(preview);
+        });
+      }
+
+      // Initialisation de la queue
+      setState({ uploading: true, queue: previews, error: null });
 
       const uploaded = [];
 
       // Upload séquentiel
       for (let i = 0; i < files.length; i++) {
+        const fileId = previews[i].id;
+
         try {
           // Compression si image
           const fileToUpload = await compressImage(files[i]);
@@ -180,12 +216,14 @@ const FileUploader = ({
             (progress) => {
               setState((s) => ({
                 ...s,
-                queue: s.queue.map((item, idx) =>
-                  idx === i
+                queue: s.queue.map((item) =>
+                  item.id === fileId
                     ? { ...item, status: 'uploading', progress }
                     : item
                 )
               }));
+              // Notifier le parent de la progression
+              onUploadProgress?.({ id: fileId, progress, status: 'uploading' });
             }
           );
 
@@ -199,6 +237,7 @@ const FileUploader = ({
           const publicUrl = withCacheBust(publicUrlRaw);
 
           uploaded.push({
+            id: fileId,
             name: files[i].name,
             url: publicUrl,
             type: files[i].type
@@ -206,15 +245,18 @@ const FileUploader = ({
 
           setState((s) => ({
             ...s,
-            queue: s.queue.map((item, idx) =>
-              idx === i ? { ...item, status: 'completed', progress: 100 } : item
+            queue: s.queue.map((item) =>
+              item.id === fileId ? { ...item, status: 'completed', progress: 100 } : item
             )
           }));
+
+          // Notifier le parent que l'upload est terminé
+          onUploadProgress?.({ id: fileId, progress: 100, status: 'completed', url: publicUrl });
         } catch (err) {
           setState((s) => ({
             ...s,
-            queue: s.queue.map((item, idx) =>
-              idx === i
+            queue: s.queue.map((item) =>
+              item.id === fileId
                 ? {
                     ...item,
                     status: 'error',
@@ -223,11 +265,13 @@ const FileUploader = ({
                 : item
             )
           }));
+          // Notifier le parent de l'erreur
+          onUploadProgress?.({ id: fileId, progress: 0, status: 'error', error: String(err.message || err) });
         }
       }
 
       // Callback avec fichiers uploadés
-      if (uploaded.length) {
+      if (uploaded.length && onUploadComplete) {
         try {
           await onUploadComplete(uploaded);
         } catch (err) {
@@ -243,9 +287,12 @@ const FileUploader = ({
     },
     [
       compressImage,
+      createLocalPreview,
       interventionId,
       folder,
       onUploadComplete,
+      onLocalPreview,
+      onUploadProgress,
       onEndCritical,
       clearCriticalFallback,
       maxFiles

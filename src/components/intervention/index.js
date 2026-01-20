@@ -7,6 +7,7 @@ export { default as FileUploader } from './FileUploader';
 export { default as VoiceRecorder } from './VoiceRecorder';
 export { default as ImageGallery } from './ImageGallery';
 export { default as ImageGalleryOptimized } from './ImageGalleryOptimized';
+export { default as ImageWithProgress } from './ImageWithProgress';
 export { default as InterventionHeader } from './InterventionHeader';
 export { default as TimeDisplay } from './TimeDisplay';
 export { default as QuickActionsBar } from './QuickActionsBar';
