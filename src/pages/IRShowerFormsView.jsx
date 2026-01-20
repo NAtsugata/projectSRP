@@ -9,6 +9,10 @@ import { useUndoRedo } from '../hooks/useUndoRedo';
 import { PLAN_TEMPLATES, getTemplateElements } from '../data/planTemplates';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const GRID_SIZE = 20;
 const HIT_PAD = 10;
