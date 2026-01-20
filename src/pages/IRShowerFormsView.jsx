@@ -119,12 +119,19 @@ export default function IRShowerFormsView({ profile }) {
   const renderPdfPages = async (pdfBlob) => {
     try {
       const arrayBuffer = await pdfBlob.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+
+      // Timeout de 10 secondes
+      const pdf = await Promise.race([
+        loadingTask.promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+      ]);
+
       const pageImages = [];
+      const scale = window.innerWidth < 768 ? 1.2 : 1.5; // Plus petit sur mobile
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const scale = 1.5;
         const viewport = page.getViewport({ scale });
 
         const canvas = document.createElement('canvas');
@@ -133,13 +140,13 @@ export default function IRShowerFormsView({ profile }) {
         canvas.height = viewport.height;
 
         await page.render({ canvasContext: context, viewport }).promise;
-        pageImages.push(canvas.toDataURL('image/jpeg', 0.85));
+        pageImages.push(canvas.toDataURL('image/jpeg', 0.8));
       }
 
       return pageImages;
     } catch (err) {
       console.error('Erreur rendu PDF:', err);
-      return [];
+      return null; // null = erreur, [] = pas de pages
     }
   };
 
@@ -2380,7 +2387,7 @@ export default function IRShowerFormsView({ profile }) {
             </div>
           </div>
           <div className="pdf-preview-content" style={{ position: 'relative' }}>
-            {/* Image de la page */}
+            {/* Image de la page ou fallback */}
             {pdfPreview.pageImages && pdfPreview.pageImages.length > 0 ? (
               <img
                 src={pdfPreview.pageImages[previewPage]}
@@ -2392,14 +2399,32 @@ export default function IRShowerFormsView({ profile }) {
                   borderRadius: 4
                 }}
               />
+            ) : pdfPreview.pageImages === null ? (
+              /* Fallback si erreur de rendu */
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <div style={{
+                  width: 80, height: 100, margin: '0 auto 20px',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <span style={{ color: 'white', fontSize: 24, fontWeight: 800 }}>PDF</span>
+                </div>
+                <div style={{ color: 'white', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+                  {pdfPreview.filename}
+                </div>
+                <div style={{ color: '#22c55e', fontSize: 14 }}>
+                  {pdfPreview.totalPages} page{pdfPreview.totalPages > 1 ? 's'  : ''} - Prêt à télécharger
+                </div>
+              </div>
             ) : (
               <div style={{ color: '#94a3b8', textAlign: 'center', padding: 40 }}>
-                Chargement de la prévisualisation...
+                <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+                Préparation de la prévisualisation...
               </div>
             )}
 
             {/* Boutons navigation */}
-            {pdfPreview.totalPages > 1 && (
+            {pdfPreview.pageImages && pdfPreview.pageImages.length > 1 && (
               <>
                 <button
                   onClick={() => setPreviewPage(p => Math.max(0, p - 1))}
