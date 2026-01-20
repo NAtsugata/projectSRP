@@ -15,6 +15,7 @@ import {
 import { storageService } from '../lib/supabase';
 import {
   ImageGalleryOptimized,
+  ImageWithProgress,
   InterventionHeader,
   QuickActionsBar,
   SmartAlerts,
@@ -78,6 +79,36 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   useEffect(() => {
     logger.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
   }, [uploadQueue]);
+
+  // Handler pour les previews locales - affichage IMMÉDIAT
+  const handleLocalPreview = useCallback((preview) => {
+    logger.log('🖼️ Preview locale reçue:', preview.name, preview.localUrl?.slice(0, 50));
+    setUploadQueue(prev => [...prev, {
+      ...preview,
+      preview: preview.localUrl  // Map localUrl → preview pour ImageGalleryOptimized
+    }]);
+  }, []);
+
+  // Handler pour la mise à jour de progression d'upload
+  const handleUploadProgress = useCallback(({ id, progress, status, url, error }) => {
+    logger.log('📤 Progression upload:', id, progress + '%', status);
+    setUploadQueue(prev => {
+      const updated = prev.map(item =>
+        item.id === id
+          ? { ...item, progress, status, url: url || item.url, error }
+          : item
+      );
+
+      // Si terminé (completed ou error), nettoyer après un délai
+      if (status === 'completed' || status === 'error') {
+        setTimeout(() => {
+          setUploadQueue(q => q.filter(item => item.id !== id));
+        }, 2000);
+      }
+
+      return updated;
+    });
+  }, []);
 
   // === Scroll locks + restauration ===
   const { lock, unlock } = useBodyScrollLock();
@@ -767,6 +798,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <FileUploader
             interventionId={interventionId}
             folder="report"
+            onLocalPreview={handleLocalPreview}
+            onUploadProgress={handleUploadProgress}
             onUploadComplete={handleUploadComplete}
             onBeginCritical={beginCriticalPicker}
             onEndCritical={unlock}

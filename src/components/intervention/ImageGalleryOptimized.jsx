@@ -9,8 +9,9 @@ import './ImageGallery.css';
 
 /**
  * ImageThumbnail - Miniature optimisée avec IntersectionObserver
+ * Affiche preview locale avec progression d'upload
  */
-const ImageThumbnail = ({ src, alt, onClick, isLoading, status, index }) => {
+const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, index }) => {
   const [loadState, setLoadState] = useState('idle');
   const imgRef = useRef(null);
   const observerRef = useRef(null);
@@ -48,14 +49,80 @@ const ImageThumbnail = ({ src, alt, onClick, isLoading, status, index }) => {
     };
   }, [src, loadState, isLoading]);
 
-  // Upload en cours
+  // Upload en cours - afficher la preview locale avec progression
   if (isLoading || status === 'uploading' || status === 'pending') {
+    const progressPercent = Math.round(progress || 0);
+    const isCompleted = status === 'completed';
+    const isError = status === 'error';
+
     return (
-      <div className="image-thumbnail loading" onClick={onClick}>
-        <LoaderIcon className="animate-spin" />
-        {status === 'uploading' && (
-          <div className="upload-badge">⬆️</div>
+      <div
+        className="image-thumbnail"
+        onClick={onClick}
+        style={{ position: 'relative', overflow: 'hidden' }}
+      >
+        {/* Afficher la preview locale en arrière-plan */}
+        {src && (
+          <img
+            src={src}
+            alt={alt || 'Uploading...'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.6
+            }}
+          />
         )}
+
+        {/* Overlay avec progression */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4
+          }}
+        >
+          {/* Cercle de progression */}
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: `conic-gradient(#0ea5a5 ${progressPercent * 3.6}deg, rgba(255,255,255,0.3) 0deg)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: 11,
+                fontWeight: 600
+              }}
+            >
+              {progressPercent}%
+            </div>
+          </div>
+
+          {/* Texte */}
+          <div style={{ color: 'white', fontSize: 10, fontWeight: 500 }}>
+            Envoi...
+          </div>
+        </div>
       </div>
     );
   }
@@ -178,6 +245,7 @@ const ImageGalleryOptimized = ({
             alt={item.name}
             isLoading={item.isUploading}
             status={item.status}
+            progress={item.progress}
             index={startIndex + index}
             onClick={() => !item.isUploading && openLightbox(index)}
           />
