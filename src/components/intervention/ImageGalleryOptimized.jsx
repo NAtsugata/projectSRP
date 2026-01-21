@@ -52,17 +52,15 @@ const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, in
   // Upload en cours - afficher la preview locale avec progression
   if (isLoading || status === 'uploading' || status === 'pending') {
     const progressPercent = Math.round(progress || 0);
-    const isCompleted = status === 'completed';
-    const isError = status === 'error';
 
     return (
       <div
         className="image-thumbnail"
         onClick={onClick}
-        style={{ position: 'relative', overflow: 'hidden' }}
+        style={{ position: 'relative', overflow: 'hidden', background: '#1f2937' }}
       >
         {/* Afficher la preview locale en arrière-plan */}
-        {src && (
+        {src ? (
           <img
             src={src}
             alt={alt || 'Uploading...'}
@@ -73,6 +71,20 @@ const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, in
               opacity: 0.6
             }}
           />
+        ) : (
+          /* Placeholder si pas de preview */
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#374151',
+            color: '#9ca3af',
+            fontSize: 24
+          }}>
+            📷
+          </div>
         )}
 
         {/* Overlay avec progression */}
@@ -80,7 +92,7 @@ const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, in
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
+            background: src ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -178,8 +190,8 @@ const ImageGalleryOptimized = ({
   const allItems = [
     ...uploadQueue.map((item, index) => ({
       ...item,
-      isUploading: true,
-      id: `upload-${index}`
+      isUploading: item.status === 'uploading' || item.status === 'pending',
+      id: item.id || `upload-${index}`
     })),
     ...images.map((img, index) => ({
       ...img,

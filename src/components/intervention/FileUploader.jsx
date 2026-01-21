@@ -132,11 +132,19 @@ const FileUploader = ({
   const createLocalPreview = useCallback((file) => {
     return new Promise((resolve) => {
       if (file.type.startsWith('image/')) {
+        console.log('📸 Creating local preview for:', file.name, file.type, file.size);
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => resolve(null);
+        reader.onload = (e) => {
+          console.log('✅ Local preview created, size:', e.target.result?.length || 0);
+          resolve(e.target.result);
+        };
+        reader.onerror = (err) => {
+          console.error('❌ FileReader error:', err);
+          resolve(null);
+        };
         reader.readAsDataURL(file);
       } else {
+        console.log('📄 Non-image file, no preview:', file.name, file.type);
         resolve(null); // Pas de preview pour les non-images
       }
     });
@@ -208,12 +216,31 @@ const FileUploader = ({
           // Compression si image
           const fileToUpload = await compressImage(files[i]);
 
+          // Simuler progression initiale (Supabase ne supporte pas le tracking natif)
+          let simulatedProgress = 10;
+          const progressInterval = setInterval(() => {
+            if (simulatedProgress < 90) {
+              simulatedProgress += Math.random() * 15;
+              simulatedProgress = Math.min(simulatedProgress, 90);
+              setState((s) => ({
+                ...s,
+                queue: s.queue.map((item) =>
+                  item.id === fileId
+                    ? { ...item, status: 'uploading', progress: Math.round(simulatedProgress) }
+                    : item
+                )
+              }));
+              onUploadProgress?.({ id: fileId, progress: Math.round(simulatedProgress), status: 'uploading' });
+            }
+          }, 300);
+
           // Upload avec suivi de progression
           const result = await storageService.uploadInterventionFile(
             fileToUpload,
             interventionId,
             folder,
             (progress) => {
+              clearInterval(progressInterval);
               setState((s) => ({
                 ...s,
                 queue: s.queue.map((item) =>
@@ -226,6 +253,8 @@ const FileUploader = ({
               onUploadProgress?.({ id: fileId, progress, status: 'uploading' });
             }
           );
+
+          clearInterval(progressInterval);
 
           if (result.error) throw result.error;
 
