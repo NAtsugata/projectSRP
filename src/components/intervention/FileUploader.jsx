@@ -128,26 +128,21 @@ const FileUploader = ({
     });
   }, []);
 
-  // Créer une preview locale (data URL) pour un fichier
+  // Créer une preview locale (blob URL) pour un fichier - plus fiable que FileReader
   const createLocalPreview = useCallback((file) => {
-    return new Promise((resolve) => {
-      if (file.type.startsWith('image/')) {
-        console.log('📸 Creating local preview for:', file.name, file.type, file.size);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          console.log('✅ Local preview created, size:', e.target.result?.length || 0);
-          resolve(e.target.result);
-        };
-        reader.onerror = (err) => {
-          console.error('❌ FileReader error:', err);
-          resolve(null);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        console.log('📄 Non-image file, no preview:', file.name, file.type);
-        resolve(null); // Pas de preview pour les non-images
+    if (file.type.startsWith('image/')) {
+      try {
+        const blobUrl = URL.createObjectURL(file);
+        console.log('📸 Local preview created (blob URL):', file.name, blobUrl);
+        return blobUrl;
+      } catch (err) {
+        console.error('❌ createObjectURL error:', err);
+        return null;
       }
-    });
+    } else {
+      console.log('📄 Non-image file, no preview:', file.name, file.type);
+      return null;
+    }
   }, []);
 
   // Gestion de la sélection de fichiers
@@ -178,23 +173,22 @@ const FileUploader = ({
       // Reset input
       if (inputRef.current) inputRef.current.value = '';
 
-      // Créer les previews locales IMMÉDIATEMENT
-      const previews = await Promise.all(
-        files.map(async (f, i) => {
-          const id = `${f.name}-${Date.now()}-${i}`;
-          const localUrl = await createLocalPreview(f);
-          return {
-            id,
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            localUrl,
-            status: 'uploading',
-            progress: 0,
-            error: null
-          };
-        })
-      );
+      // Créer les previews locales IMMÉDIATEMENT (synchrone avec blob URL)
+      const previews = files.map((f, i) => {
+        const id = `${f.name}-${Date.now()}-${i}`;
+        const localUrl = createLocalPreview(f);
+        console.log('📸 Preview créée:', f.name, '→', localUrl ? 'OK' : 'FAIL');
+        return {
+          id,
+          name: f.name,
+          size: f.size,
+          type: f.type || 'image/jpeg', // Fallback si type non défini
+          localUrl,
+          status: 'uploading',
+          progress: 0,
+          error: null
+        };
+      });
 
       // Envoyer les previews locales au parent IMMÉDIATEMENT
       if (onLocalPreview) {

@@ -90,24 +90,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, []);
 
   // Handler pour la mise à jour de progression d'upload
+  // Ne supprime PAS de la queue - c'est handleUploadComplete qui le fait
   const handleUploadProgress = useCallback(({ id, progress, status, url, error }) => {
     logger.log('📤 Progression upload:', id, progress + '%', status);
-    setUploadQueue(prev => {
-      const updated = prev.map(item =>
-        item.id === id
-          ? { ...item, progress, status, url: url || item.url, error }
-          : item
-      );
-
-      // Si terminé (completed ou error), nettoyer après un délai
-      if (status === 'completed' || status === 'error') {
-        setTimeout(() => {
-          setUploadQueue(q => q.filter(item => item.id !== id));
-        }, 2000);
-      }
-
-      return updated;
-    });
+    setUploadQueue(prev => prev.map(item =>
+      item.id === id
+        ? { ...item, progress, status, url: url || item.url, error }
+        : item
+    ));
   }, []);
 
   // === Scroll locks + restauration ===
@@ -259,19 +249,31 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // Reusable upload completion handler
   const handleUploadComplete = useCallback(async (uploaded) => {
+    logger.log('✅ Upload terminé, ajout de', uploaded.length, 'fichiers');
+
+    // Ajouter les fichiers au rapport
     const updated = { ...report, files: [...(report.files || []), ...uploaded] };
     setReport(updated);
     await persistReport(updated);
-    saveScroll();
-    pendingRestoreRef.current = true;
-    if (!document.body.dataset.__scrollLocked) lock();
+
+    // Vider la queue d'upload - les fichiers sont maintenant dans report.files
+    // Libérer aussi les blob URLs pour éviter les fuites mémoire
+    setUploadQueue(prev => {
+      prev.forEach(item => {
+        if (item.preview?.startsWith('blob:')) {
+          URL.revokeObjectURL(item.preview);
+        }
+      });
+      return [];
+    });
+
+    // Rafraîchir les données
     try {
       await refreshData?.();
-    } finally {
-      unlock();
-      restoreScroll();
+    } catch (e) {
+      console.error('Erreur refresh:', e);
     }
-  }, [report, persistReport, saveScroll, lock, refreshData, unlock, restoreScroll]);
+  }, [report, persistReport, refreshData]);
 
   // Paste handler désactivé (nécessiterait une ré-implémentation avec FileUploader)
 
