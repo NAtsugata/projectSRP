@@ -237,26 +237,23 @@ const FileUploader = ({
     if (inputRef.current) inputRef.current.value = '';
     setError(null);
 
-    console.log(`📸 ${files.length} fichier(s) sélectionné(s)`);
+    console.log(`📸 ${files.length} fichier(s) sélectionné(s) sur mobile`);
 
-    // Traiter chaque fichier
-    for (const file of files) {
-      try {
-        // Créer preview locale IMMÉDIATEMENT
-        const localUrl = createLocalPreview(file);
+    // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
 
-        // Stocker dans IndexedDB et récupérer l'ID
-        const storedId = await storeFileForUpload(file, {
-          interventionId,
-          folder,
-          originalName: file.name
-        });
+      // Générer UN SEUL ID utilisé partout
+      const fileId = `upload_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
-        console.log(`💾 Fichier stocké en cache: ${file.name} (${storedId})`);
+      // Créer preview locale IMMÉDIATEMENT (blob URL)
+      const localUrl = createLocalPreview(file);
+      console.log(`📸 [${i+1}/${files.length}] Preview: ${file.name} → ${localUrl ? 'OK' : 'FAIL'}`);
 
-        // Envoyer la preview au parent avec le MÊME ID que IndexedDB
-        onLocalPreview?.({
-          id: storedId,
+      // Envoyer la preview au parent IMMÉDIATEMENT
+      if (onLocalPreview) {
+        onLocalPreview({
+          id: fileId,
           name: file.name,
           size: file.size,
           type: file.type || 'image/jpeg',
@@ -264,7 +261,17 @@ const FileUploader = ({
           status: 'pending',
           progress: 0
         });
+        console.log(`✅ Preview envoyée au parent: ${fileId}`);
+      }
 
+      // Stocker dans IndexedDB avec le MÊME ID
+      try {
+        await storeFileForUpload(file, {
+          interventionId,
+          folder,
+          originalName: file.name
+        }, fileId); // Passer l'ID personnalisé
+        console.log(`💾 Stocké dans IndexedDB: ${file.name} (${fileId})`);
       } catch (err) {
         console.error(`❌ Erreur stockage ${file.name}:`, err);
         setError(`Erreur: ${err.message}`);
@@ -272,6 +279,7 @@ const FileUploader = ({
     }
 
     // Lancer les uploads en arrière-plan
+    console.log('🚀 Lancement des uploads en arrière-plan...');
     processUploads();
 
   }, [interventionId, folder, createLocalPreview, onLocalPreview, processUploads]);

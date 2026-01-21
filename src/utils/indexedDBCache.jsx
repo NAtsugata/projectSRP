@@ -43,9 +43,10 @@ const initDB = () => {
  * Stocke un fichier pour upload ultérieur
  * @param {File} file - Le fichier à stocker
  * @param {Object} metadata - Métadonnées (userId, interventionId, folder, etc.)
+ * @param {string} customId - ID personnalisé (optionnel)
  * @returns {Promise<string>} ID du fichier stocké
  */
-export const storeFileForUpload = async (file, metadata = {}) => {
+export const storeFileForUpload = async (file, metadata = {}, customId = null) => {
   try {
     const db = await initDB();
 
@@ -53,7 +54,7 @@ export const storeFileForUpload = async (file, metadata = {}) => {
     const arrayBuffer = await file.arrayBuffer();
 
     const uploadItem = {
-      id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: customId || `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       fileData: arrayBuffer,
       fileName: file.name,
       fileType: file.type,
