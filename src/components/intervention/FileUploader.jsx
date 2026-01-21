@@ -104,15 +104,25 @@ const FileUploader = ({
     });
   }, []);
 
-  // Créer blob URL pour preview
+  // Créer blob URL pour preview - TOUJOURS essayer pour les fichiers acceptés
   const createLocalPreview = useCallback((file) => {
-    // Sur mobile, file.type peut être vide - vérifier aussi l'extension
-    const isImage = file.type?.startsWith('image/') ||
-      /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/i.test(file.name);
+    // Sur mobile iOS, file.type peut être vide et le nom peut être "IMG_1234" sans extension
+    // Donc on crée TOUJOURS une preview si le fichier vient de l'input image/*
+    const hasImageType = file.type?.startsWith('image/');
+    const hasImageExt = /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif|tiff?)$/i.test(file.name);
+    const looksLikeImage = /^(IMG|image|photo|screenshot|capture)/i.test(file.name);
 
-    console.log('🔍 createLocalPreview:', file.name, 'type:', file.type, 'isImage:', isImage);
+    console.log('🔍 createLocalPreview:', {
+      name: file.name,
+      type: file.type || '(vide)',
+      size: file.size,
+      hasImageType,
+      hasImageExt,
+      looksLikeImage
+    });
 
-    if (isImage) {
+    // Créer la preview si c'est potentiellement une image
+    if (hasImageType || hasImageExt || looksLikeImage || !file.type) {
       try {
         const blobUrl = URL.createObjectURL(file);
         console.log('✅ Blob URL créée:', blobUrl);
@@ -122,7 +132,8 @@ const FileUploader = ({
         return null;
       }
     }
-    console.log('⏭️ Non-image, pas de preview');
+
+    console.log('⏭️ Pas une image détectée');
     return null;
   }, []);
 
@@ -240,13 +251,17 @@ const FileUploader = ({
   // Gestion de la sélection de fichiers - STOCKAGE LOCAL IMMÉDIAT
   const handleFileChange = useCallback(async (e) => {
     const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    if (!files.length) {
+      console.log('❌ Aucun fichier sélectionné');
+      return;
+    }
 
     // Reset input
     if (inputRef.current) inputRef.current.value = '';
     setError(null);
 
-    console.log(`📸 ${files.length} fichier(s) sélectionné(s) sur mobile`);
+    const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
+    console.log(debugInfo);
 
     // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
@@ -255,13 +270,18 @@ const FileUploader = ({
       // Générer UN SEUL ID utilisé partout
       const fileId = `upload_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Créer preview locale IMMÉDIATEMENT (blob URL)
-      const localUrl = createLocalPreview(file);
-      console.log(`📸 [${i+1}/${files.length}] Preview: ${file.name} → ${localUrl ? 'OK' : 'FAIL'}`);
+      // TOUJOURS créer un blob URL pour les fichiers d'un input image/*
+      let localUrl = null;
+      try {
+        localUrl = URL.createObjectURL(file);
+        console.log(`✅ Blob URL: ${localUrl}`);
+      } catch (err) {
+        console.error(`❌ Blob URL error:`, err);
+      }
 
       // Envoyer la preview au parent IMMÉDIATEMENT
       if (onLocalPreview) {
-        onLocalPreview({
+        const previewData = {
           id: fileId,
           name: file.name,
           size: file.size,
@@ -269,8 +289,11 @@ const FileUploader = ({
           localUrl,
           status: 'pending',
           progress: 0
-        });
-        console.log(`✅ Preview envoyée au parent: ${fileId}`);
+        };
+        console.log('📤 Envoi preview:', previewData.id, previewData.localUrl ? 'avec URL' : 'SANS URL');
+        onLocalPreview(previewData);
+      } else {
+        console.error('❌ onLocalPreview non défini!');
       }
 
       // Stocker dans IndexedDB avec le MÊME ID
@@ -279,19 +302,19 @@ const FileUploader = ({
           interventionId,
           folder,
           originalName: file.name
-        }, fileId); // Passer l'ID personnalisé
-        console.log(`💾 Stocké dans IndexedDB: ${file.name} (${fileId})`);
+        }, fileId);
+        console.log(`💾 IndexedDB OK: ${fileId}`);
       } catch (err) {
-        console.error(`❌ Erreur stockage ${file.name}:`, err);
+        console.error(`❌ IndexedDB error:`, err);
         setError(`Erreur: ${err.message}`);
       }
     }
 
     // Lancer les uploads en arrière-plan
-    console.log('🚀 Lancement des uploads en arrière-plan...');
+    console.log('🚀 Lancement uploads...');
     processUploads();
 
-  }, [interventionId, folder, createLocalPreview, onLocalPreview, processUploads]);
+  }, [interventionId, folder, onLocalPreview, processUploads]);
 
   // Charger la queue au montage et lancer les uploads en attente
   useEffect(() => {
@@ -320,7 +343,7 @@ const FileUploader = ({
         ref={inputRef}
         type="file"
         multiple
-        accept={accept}
+        accept="image/*"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des fichiers"
