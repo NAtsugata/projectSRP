@@ -1,10 +1,18 @@
 // src/components/intervention/FileUploader.js
-// Composant d'upload de fichiers avec compression, queue et retry
+// Composant d'upload avec cache IndexedDB local - permet photos illimitées
+// Les fichiers sont stockés localement puis uploadés en arrière-plan
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '../ui';
 import { storageService } from '../../lib/supabase';
 import { LoaderIcon, CheckCircleIcon, AlertTriangleIcon, UploadIcon } from '../SharedUI';
+import {
+  storeFileForUpload,
+  getPendingUploads,
+  updateUploadStatus,
+  arrayBufferToFile,
+  deleteUpload
+} from '../../utils/indexedDBCache.jsx';
 import './FileUploader.css';
 
 /**
@@ -17,17 +25,10 @@ const withCacheBust = (url) => {
 };
 
 /**
- * Composant FileUploader
- * @param {string} interventionId - ID de l'intervention
- * @param {string} folder - Dossier de destination ('report', 'briefing', 'voice')
- * @param {Function} onUploadComplete - Callback avec array des fichiers uploadés (URLs cloud)
- * @param {Function} onLocalPreview - Callback immédiat avec preview local { id, localUrl, name, status, progress }
- * @param {Function} onUploadProgress - Callback pour mise à jour progression { id, progress, status }
- * @param {Function} onBeginCritical - Callback avant ouverture picker (scroll lock)
- * @param {Function} onEndCritical - Callback après fermeture picker
- * @param {string} accept - Types de fichiers acceptés
- * @param {boolean} capture - Ouvrir directement la caméra sur mobile
- * @param {number} maxFiles - Nombre max de fichiers (défaut: 10)
+ * Composant FileUploader avec cache IndexedDB
+ * - Stockage local immédiat (pas de limite)
+ * - Upload en arrière-plan
+ * - Bouton toujours disponible
  */
 const FileUploader = ({
   interventionId,
@@ -39,37 +40,13 @@ const FileUploader = ({
   onEndCritical,
   accept = 'image/*,application/pdf,audio/webm',
   capture = true,
-  maxFiles = 10
+  maxFiles = 50 // Limite augmentée car stockage local
 }) => {
-  const [state, setState] = useState({
-    uploading: false,
-    queue: [],
-    error: null
-  });
-
+  const [localQueue, setLocalQueue] = useState([]); // Files en cache local
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
   const inputRef = useRef(null);
-  const cancelUnlockTimerRef = useRef(null);
-
-  // Lock de sécurité: débloquer après 12s si le picker ne répond pas (iOS)
-  const startCriticalWithFallback = useCallback(() => {
-    onBeginCritical?.();
-
-    // Fallback pour débloquer si annulation sans event
-    if (cancelUnlockTimerRef.current) {
-      clearTimeout(cancelUnlockTimerRef.current);
-    }
-
-    cancelUnlockTimerRef.current = setTimeout(() => {
-      onEndCritical?.();
-    }, 12000);
-  }, [onBeginCritical, onEndCritical]);
-
-  const clearCriticalFallback = useCallback(() => {
-    if (cancelUnlockTimerRef.current) {
-      clearTimeout(cancelUnlockTimerRef.current);
-      cancelUnlockTimerRef.current = null;
-    }
-  }, []);
+  const uploadingRef = useRef(false); // Pour éviter les uploads en double
 
   // Compression d'image
   const compressImage = useCallback(async (file) => {
@@ -82,12 +59,11 @@ const FileUploader = ({
       const objectUrl = URL.createObjectURL(file);
 
       img.onload = () => {
-        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire
+        URL.revokeObjectURL(objectUrl);
         let { width, height } = img;
-        const MAX_WIDTH = 1280;
-        const MAX_HEIGHT = 720;
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
 
-        // Redimensionnement
         if (width > height) {
           if (width > MAX_WIDTH) {
             height *= MAX_WIDTH / width;
@@ -116,222 +92,210 @@ const FileUploader = ({
             }
           },
           'image/jpeg',
-          0.8
+          0.85
         );
       };
 
       img.onerror = () => {
-        URL.revokeObjectURL(objectUrl); // ✅ Nettoyage mémoire en cas d'erreur
+        URL.revokeObjectURL(objectUrl);
         resolve(file);
       };
       img.src = objectUrl;
     });
   }, []);
 
-  // Créer une preview locale (blob URL) pour un fichier - plus fiable que FileReader
+  // Créer blob URL pour preview
   const createLocalPreview = useCallback((file) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type?.startsWith('image/')) {
       try {
-        const blobUrl = URL.createObjectURL(file);
-        console.log('📸 Local preview created (blob URL):', file.name, blobUrl);
-        return blobUrl;
+        return URL.createObjectURL(file);
       } catch (err) {
         console.error('❌ createObjectURL error:', err);
         return null;
       }
-    } else {
-      console.log('📄 Non-image file, no preview:', file.name, file.type);
-      return null;
     }
+    return null;
   }, []);
 
-  // Gestion de la sélection de fichiers
-  const handleFileChange = useCallback(
-    async (e) => {
-      clearCriticalFallback();
+  // Traiter les uploads en attente (arrière-plan)
+  const processUploads = useCallback(async () => {
+    if (uploadingRef.current) return; // Déjà en cours
+    uploadingRef.current = true;
+    setIsProcessing(true);
 
-      const files = Array.from(e.target.files || []);
-
-      // Annulation du picker
-      if (!files.length) {
-        onEndCritical?.();
-        if (inputRef.current) inputRef.current.value = '';
-        return;
-      }
-
-      // Limite de fichiers
-      if (files.length > maxFiles) {
-        setState((s) => ({
-          ...s,
-          error: `Maximum ${maxFiles} fichiers autorisés`
-        }));
-        onEndCritical?.();
-        if (inputRef.current) inputRef.current.value = '';
-        return;
-      }
-
-      // Reset input
-      if (inputRef.current) inputRef.current.value = '';
-
-      // Créer les previews locales IMMÉDIATEMENT (synchrone avec blob URL)
-      const previews = files.map((f, i) => {
-        const id = `${f.name}-${Date.now()}-${i}`;
-        const localUrl = createLocalPreview(f);
-        console.log('📸 Preview créée:', f.name, '→', localUrl ? 'OK' : 'FAIL');
-        return {
-          id,
-          name: f.name,
-          size: f.size,
-          type: f.type || 'image/jpeg', // Fallback si type non défini
-          localUrl,
-          status: 'uploading',
-          progress: 0,
-          error: null
-        };
-      });
-
-      // Envoyer les previews locales au parent IMMÉDIATEMENT
-      if (onLocalPreview) {
-        previews.forEach((preview) => {
-          onLocalPreview(preview);
-        });
-      }
-
-      // Initialisation de la queue
-      setState({ uploading: true, queue: previews, error: null });
+    try {
+      const pending = await getPendingUploads('pending');
+      console.log(`📤 Traitement de ${pending.length} fichier(s) en attente...`);
 
       const uploaded = [];
 
-      // Upload séquentiel
-      for (let i = 0; i < files.length; i++) {
-        const fileId = previews[i].id;
-
+      for (const item of pending) {
         try {
-          // Compression si image
-          const fileToUpload = await compressImage(files[i]);
+          await updateUploadStatus(item.id, 'uploading');
 
-          // Simuler progression initiale (Supabase ne supporte pas le tracking natif)
-          let simulatedProgress = 10;
+          // Notifier le début d'upload
+          onUploadProgress?.({
+            id: item.id,
+            progress: 10,
+            status: 'uploading'
+          });
+
+          // Reconstruire le fichier depuis IndexedDB
+          const file = arrayBufferToFile(item);
+
+          // Compresser si c'est une image
+          const fileToUpload = await compressImage(file);
+
+          // Simuler progression
+          let progress = 20;
           const progressInterval = setInterval(() => {
-            if (simulatedProgress < 90) {
-              simulatedProgress += Math.random() * 15;
-              simulatedProgress = Math.min(simulatedProgress, 90);
-              setState((s) => ({
-                ...s,
-                queue: s.queue.map((item) =>
-                  item.id === fileId
-                    ? { ...item, status: 'uploading', progress: Math.round(simulatedProgress) }
-                    : item
-                )
-              }));
-              onUploadProgress?.({ id: fileId, progress: Math.round(simulatedProgress), status: 'uploading' });
+            if (progress < 90) {
+              progress += Math.random() * 20;
+              progress = Math.min(progress, 90);
+              onUploadProgress?.({
+                id: item.id,
+                progress: Math.round(progress),
+                status: 'uploading'
+              });
             }
-          }, 300);
+          }, 400);
 
-          // Upload avec suivi de progression
+          // Upload vers Supabase
           const result = await storageService.uploadInterventionFile(
             fileToUpload,
-            interventionId,
-            folder,
-            (progress) => {
-              clearInterval(progressInterval);
-              setState((s) => ({
-                ...s,
-                queue: s.queue.map((item) =>
-                  item.id === fileId
-                    ? { ...item, status: 'uploading', progress }
-                    : item
-                )
-              }));
-              // Notifier le parent de la progression
-              onUploadProgress?.({ id: fileId, progress, status: 'uploading' });
-            }
+            item.metadata.interventionId,
+            item.metadata.folder
           );
 
           clearInterval(progressInterval);
 
           if (result.error) throw result.error;
 
-          const publicUrlRaw = result.publicURL?.publicUrl || result.publicURL;
-          if (typeof publicUrlRaw !== 'string') {
-            throw new Error('URL de fichier invalide');
-          }
+          const publicUrl = withCacheBust(result.publicURL?.publicUrl || result.publicURL);
 
-          const publicUrl = withCacheBust(publicUrlRaw);
+          // Marquer comme complété
+          await updateUploadStatus(item.id, 'completed', { uploadedUrl: publicUrl });
+
+          // Supprimer du cache IndexedDB
+          await deleteUpload(item.id);
 
           uploaded.push({
-            id: fileId,
-            name: files[i].name,
+            id: item.id,
+            name: item.fileName,
             url: publicUrl,
-            type: files[i].type
+            type: item.fileType
           });
 
-          setState((s) => ({
-            ...s,
-            queue: s.queue.map((item) =>
-              item.id === fileId ? { ...item, status: 'completed', progress: 100 } : item
-            )
-          }));
+          // Notifier la complétion
+          onUploadProgress?.({
+            id: item.id,
+            progress: 100,
+            status: 'completed',
+            url: publicUrl
+          });
 
-          // Notifier le parent que l'upload est terminé
-          onUploadProgress?.({ id: fileId, progress: 100, status: 'completed', url: publicUrl });
+          console.log(`✅ Upload réussi: ${item.fileName}`);
+
         } catch (err) {
-          setState((s) => ({
-            ...s,
-            queue: s.queue.map((item) =>
-              item.id === fileId
-                ? {
-                    ...item,
-                    status: 'error',
-                    error: String(err.message || err)
-                  }
-                : item
-            )
-          }));
-          // Notifier le parent de l'erreur
-          onUploadProgress?.({ id: fileId, progress: 0, status: 'error', error: String(err.message || err) });
+          console.error(`❌ Échec upload ${item.fileName}:`, err);
+          await updateUploadStatus(item.id, 'failed', {
+            lastError: err.message,
+            retryCount: (item.retryCount || 0) + 1
+          });
+          onUploadProgress?.({
+            id: item.id,
+            progress: 0,
+            status: 'error',
+            error: err.message
+          });
         }
       }
 
-      // Callback avec fichiers uploadés
+      // Notifier les uploads terminés
       if (uploaded.length && onUploadComplete) {
-        try {
-          await onUploadComplete(uploaded);
-        } catch (err) {
-          setState((s) => ({
-            ...s,
-            error: 'La sauvegarde des fichiers a échoué.'
-          }));
-        }
+        await onUploadComplete(uploaded);
       }
 
-      setState((s) => ({ ...s, uploading: false }));
-      onEndCritical?.();
-    },
-    [
-      compressImage,
-      createLocalPreview,
-      interventionId,
-      folder,
-      onUploadComplete,
-      onLocalPreview,
-      onUploadProgress,
-      onEndCritical,
-      clearCriticalFallback,
-      maxFiles
-    ]
-  );
+      // Mettre à jour la queue locale
+      const remaining = await getPendingUploads('pending');
+      setLocalQueue(remaining);
+
+    } catch (err) {
+      console.error('❌ Erreur processUploads:', err);
+    } finally {
+      uploadingRef.current = false;
+      setIsProcessing(false);
+    }
+  }, [compressImage, onUploadComplete, onUploadProgress]);
+
+  // Gestion de la sélection de fichiers - STOCKAGE LOCAL IMMÉDIAT
+  const handleFileChange = useCallback(async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    // Reset input
+    if (inputRef.current) inputRef.current.value = '';
+    setError(null);
+
+    console.log(`📸 ${files.length} fichier(s) sélectionné(s)`);
+
+    // Traiter chaque fichier
+    for (const file of files) {
+      try {
+        // Créer preview locale IMMÉDIATEMENT
+        const localUrl = createLocalPreview(file);
+
+        // Stocker dans IndexedDB et récupérer l'ID
+        const storedId = await storeFileForUpload(file, {
+          interventionId,
+          folder,
+          originalName: file.name
+        });
+
+        console.log(`💾 Fichier stocké en cache: ${file.name} (${storedId})`);
+
+        // Envoyer la preview au parent avec le MÊME ID que IndexedDB
+        onLocalPreview?.({
+          id: storedId,
+          name: file.name,
+          size: file.size,
+          type: file.type || 'image/jpeg',
+          localUrl,
+          status: 'pending',
+          progress: 0
+        });
+
+      } catch (err) {
+        console.error(`❌ Erreur stockage ${file.name}:`, err);
+        setError(`Erreur: ${err.message}`);
+      }
+    }
+
+    // Lancer les uploads en arrière-plan
+    processUploads();
+
+  }, [interventionId, folder, createLocalPreview, onLocalPreview, processUploads]);
+
+  // Charger la queue au montage et lancer les uploads en attente
+  useEffect(() => {
+    const init = async () => {
+      const pending = await getPendingUploads('pending');
+      setLocalQueue(pending);
+
+      // Relancer les uploads en attente
+      if (pending.length > 0) {
+        console.log(`📦 ${pending.length} fichier(s) en attente de reprise`);
+        processUploads();
+      }
+    };
+    init();
+  }, [processUploads]);
 
   const handleButtonClick = () => {
-    startCriticalWithFallback();
     inputRef.current?.click();
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+  const pendingCount = localQueue.length;
 
   return (
     <div className="file-uploader">
@@ -341,7 +305,6 @@ const FileUploader = ({
         multiple
         accept={accept}
         onChange={handleFileChange}
-        disabled={state.uploading}
         style={{ display: 'none' }}
         aria-label="Sélectionner des fichiers"
       />
@@ -350,72 +313,29 @@ const FileUploader = ({
         variant="secondary"
         fullWidth
         onClick={handleButtonClick}
-        disabled={state.uploading}
-        loading={state.uploading}
-        icon={<UploadIcon />}
+        icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
       >
-        {state.uploading ? 'Envoi en cours…' : 'Choisir des fichiers'}
+        {isProcessing
+          ? `Envoi en cours (${pendingCount})...`
+          : 'Ajouter des photos'}
       </Button>
 
-      {state.error && (
-        <div className="file-uploader-error" role="alert">
-          <AlertTriangleIcon />
-          <span>{state.error}</span>
+      {pendingCount > 0 && !isProcessing && (
+        <div className="file-uploader-pending">
+          <span>📦 {pendingCount} fichier(s) en attente</span>
+          <button
+            onClick={processUploads}
+            className="btn-retry"
+          >
+            Relancer
+          </button>
         </div>
       )}
 
-      {state.queue.length > 0 && (
-        <div className="upload-queue" role="status" aria-live="polite">
-          {state.queue.map((item) => (
-            <div
-              key={item.id}
-              className={`upload-queue-item upload-status-${item.status}`}
-            >
-              <div className="upload-queue-icon">
-                {item.status === 'uploading' && (
-                  <LoaderIcon className="animate-spin" aria-hidden="true" />
-                )}
-                {item.status === 'completed' && (
-                  <CheckCircleIcon
-                    style={{ color: '#16a34a' }}
-                    aria-label="Uploadé avec succès"
-                  />
-                )}
-                {item.status === 'error' && (
-                  <AlertTriangleIcon
-                    style={{ color: '#dc2626' }}
-                    aria-label="Erreur d'upload"
-                  />
-                )}
-              </div>
-
-              <div className="upload-queue-content">
-                <div className="upload-queue-name">{item.name}</div>
-                {item.size && (
-                  <div className="upload-queue-size">
-                    {formatFileSize(item.size)}
-                  </div>
-                )}
-
-                {item.status === 'uploading' && (
-                  <div className="upload-progress-bar">
-                    <div
-                      className="upload-progress-fill"
-                      style={{ width: `${item.progress}%` }}
-                      role="progressbar"
-                      aria-valuenow={item.progress}
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                    />
-                  </div>
-                )}
-
-                {item.error && (
-                  <div className="upload-queue-error">{item.error}</div>
-                )}
-              </div>
-            </div>
-          ))}
+      {error && (
+        <div className="file-uploader-error" role="alert">
+          <AlertTriangleIcon />
+          <span>{error}</span>
         </div>
       )}
     </div>
