@@ -745,7 +745,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <div className="section-header">
             <h3 className="section-title">
               <span className="section-title-icon">📷</span>
-              Photos et Documents <span style={{ fontSize: '0.7em', color: '#ff0000' }}>(v3.1 NO CACHE)</span>
+              Photos et Documents <span style={{ fontSize: '0.7em', color: '#16a34a' }}>(v4.0 IndexedDB Cache)</span>
               {report.files && report.files.length > 0 && (
                 <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
                   ({report.files.length})
