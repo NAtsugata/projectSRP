@@ -106,14 +106,23 @@ const FileUploader = ({
 
   // Créer blob URL pour preview
   const createLocalPreview = useCallback((file) => {
-    if (file.type?.startsWith('image/')) {
+    // Sur mobile, file.type peut être vide - vérifier aussi l'extension
+    const isImage = file.type?.startsWith('image/') ||
+      /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/i.test(file.name);
+
+    console.log('🔍 createLocalPreview:', file.name, 'type:', file.type, 'isImage:', isImage);
+
+    if (isImage) {
       try {
-        return URL.createObjectURL(file);
+        const blobUrl = URL.createObjectURL(file);
+        console.log('✅ Blob URL créée:', blobUrl);
+        return blobUrl;
       } catch (err) {
         console.error('❌ createObjectURL error:', err);
         return null;
       }
     }
+    console.log('⏭️ Non-image, pas de preview');
     return null;
   }, []);
 

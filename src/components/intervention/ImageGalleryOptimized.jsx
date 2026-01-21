@@ -188,17 +188,26 @@ const ImageGalleryOptimized = ({
 
   // Combiner upload queue + images existantes
   const allItems = [
-    ...uploadQueue.map((item, index) => ({
-      ...item,
-      isUploading: item.status === 'uploading' || item.status === 'pending',
-      id: item.id || `upload-${index}`
-    })),
+    ...uploadQueue.map((item, index) => {
+      const mapped = {
+        ...item,
+        isUploading: item.status === 'uploading' || item.status === 'pending',
+        id: item.id || `upload-${index}`
+      };
+      console.log('🖼️ Upload item mapped:', mapped.id, 'preview:', mapped.preview ? 'OK' : 'NULL', 'status:', mapped.status);
+      return mapped;
+    }),
     ...images.map((img, index) => ({
       ...img,
       isUploading: false,
       id: img.id || img.url || `image-${index}`
     }))
   ];
+
+  // Debug
+  if (uploadQueue.length > 0) {
+    console.log('📊 ImageGalleryOptimized - uploadQueue:', uploadQueue.length, 'allItems:', allItems.length);
+  }
 
   // Pagination
   const totalPages = Math.ceil(allItems.length / imagesPerPage);

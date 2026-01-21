@@ -82,11 +82,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // Handler pour les previews locales - affichage IMMÉDIAT
   const handleLocalPreview = useCallback((preview) => {
-    logger.log('🖼️ Preview locale reçue:', preview.name, preview.localUrl?.slice(0, 50));
-    setUploadQueue(prev => [...prev, {
+    console.log('🖼️ handleLocalPreview appelé:', {
+      id: preview.id,
+      name: preview.name,
+      type: preview.type,
+      localUrl: preview.localUrl ? 'blob:...' : 'NULL',
+      status: preview.status
+    });
+
+    const newItem = {
       ...preview,
-      preview: preview.localUrl  // Map localUrl → preview pour ImageGalleryOptimized
-    }]);
+      preview: preview.localUrl,  // Map localUrl → preview pour ImageGalleryOptimized
+      type: preview.type || 'image/jpeg'  // Fallback si type vide
+    };
+
+    console.log('➕ Ajout à uploadQueue:', newItem.id);
+    setUploadQueue(prev => {
+      const updated = [...prev, newItem];
+      console.log('📊 uploadQueue après ajout:', updated.length, 'items');
+      return updated;
+    });
   }, []);
 
   // Handler pour la mise à jour de progression d'upload
@@ -776,7 +791,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               name: f.name,
               type: f.type
             }))}
-            uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
+            uploadQueue={uploadQueue.filter(item => {
+              // Sur mobile, le type peut être vide - accepter si localUrl existe (c'est une image)
+              const isImage = item.type?.startsWith('image/') || item.localUrl || item.preview;
+              console.log('🔍 Filter uploadQueue item:', item.name, 'type:', item.type, 'isImage:', isImage);
+              return isImage;
+            })}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
             onDeleteImage={handleDeleteImage}
           />
