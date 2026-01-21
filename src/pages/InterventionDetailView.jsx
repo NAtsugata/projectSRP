@@ -801,8 +801,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             onLocalPreview={handleLocalPreview}
             onUploadProgress={handleUploadProgress}
             onUploadComplete={handleUploadComplete}
-            onBeginCritical={beginCriticalPicker}
-            onEndCritical={unlock}
           />
         </div>
 
