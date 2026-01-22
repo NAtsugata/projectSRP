@@ -283,16 +283,32 @@ const FileUploader = ({
 
       // Envoyer la preview au parent IMMÉDIATEMENT
       if (onLocalPreview) {
+        // Déterminer le type correct (ne pas forcer image/jpeg pour les documents)
+        let fileType = file.type;
+        if (!fileType) {
+          // Deviner le type par l'extension
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
+            fileType = 'image/jpeg';
+          } else if (ext === 'pdf') {
+            fileType = 'application/pdf';
+          } else if (['mp3', 'wav', 'm4a', 'webm', 'ogg'].includes(ext)) {
+            fileType = 'audio/' + ext;
+          } else {
+            fileType = 'application/octet-stream';
+          }
+        }
+
         const previewData = {
           id: fileId,
           name: file.name,
           size: file.size,
-          type: file.type || 'image/jpeg',
+          type: fileType,
           localUrl,
           status: 'pending',
           progress: 0
         };
-        console.log('📤 Envoi preview:', previewData.id, previewData.localUrl ? 'avec URL' : 'SANS URL');
+        console.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
         onLocalPreview(previewData);
       } else {
         console.error('❌ onLocalPreview non défini!');

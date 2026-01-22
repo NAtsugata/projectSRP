@@ -792,14 +792,29 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               type: f.type
             }))}
             uploadQueue={uploadQueue.filter(item => {
-              // Sur mobile, le type peut être vide - accepter si localUrl existe (c'est une image)
-              const isImage = item.type?.startsWith('image/') || item.localUrl || item.preview;
-              console.log('🔍 Filter uploadQueue item:', item.name, 'type:', item.type, 'isImage:', isImage);
+              // Filtrer UNIQUEMENT les images (pas les PDFs ou audios)
+              const isImage = item.type?.startsWith('image/');
               return isImage;
             })}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
             onDeleteImage={isAdmin ? handleDeleteImage : null}
           />
+
+          {/* Documents en cours d'upload */}
+          {uploadQueue.some(item => !item.type?.startsWith('image/')) && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#fef3c7', borderRadius: '8px', border: '1px solid #f59e0b' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: '#92400e' }}>📤 Documents en cours d'envoi...</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {uploadQueue.filter(item => !item.type?.startsWith('image/')).map((item) => (
+                  <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0', borderBottom: '1px solid #fde68a' }}>
+                    <span style={{ fontSize: '1.25rem' }}>{item.type?.startsWith('audio/') ? '🎵' : '📄'}</span>
+                    <span style={{ flex: 1, fontSize: '0.875rem', color: '#92400e' }}>{item.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#b45309' }}>{item.progress || 0}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Documents non-image (PDF, audio, etc.) */}
           {report.files?.some(f => !f.type?.startsWith('image/')) && (
