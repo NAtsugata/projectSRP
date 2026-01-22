@@ -798,7 +798,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               return isImage;
             })}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-            onDeleteImage={handleDeleteImage}
+            onDeleteImage={isAdmin ? handleDeleteImage : null}
           />
 
           {/* Documents non-image (PDF, audio, etc.) */}
