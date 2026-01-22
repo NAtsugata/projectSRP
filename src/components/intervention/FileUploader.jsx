@@ -46,6 +46,7 @@ const FileUploader = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
+  const docInputRef = useRef(null); // Input pour documents
   const uploadingRef = useRef(false); // Pour éviter les uploads en double
 
   // Compression d'image
@@ -256,8 +257,9 @@ const FileUploader = ({
       return;
     }
 
-    // Reset input
+    // Reset inputs
     if (inputRef.current) inputRef.current.value = '';
+    if (docInputRef.current) docInputRef.current.value = '';
     setError(null);
 
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
@@ -339,6 +341,7 @@ const FileUploader = ({
 
   return (
     <div className="file-uploader">
+      {/* Input pour images */}
       <input
         ref={inputRef}
         type="file"
@@ -346,19 +349,42 @@ const FileUploader = ({
         accept="image/*"
         onChange={handleFileChange}
         style={{ display: 'none' }}
-        aria-label="Sélectionner des fichiers"
+        aria-label="Sélectionner des photos"
       />
 
-      <Button
-        variant="secondary"
-        fullWidth
-        onClick={handleButtonClick}
-        icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
-      >
-        {isProcessing
-          ? `Envoi en cours (${pendingCount})...`
-          : 'Ajouter des photos'}
-      </Button>
+      {/* Input pour documents */}
+      <input
+        ref={docInputRef}
+        type="file"
+        multiple
+        accept="application/pdf,audio/*,.pdf,.mp3,.wav,.m4a,.webm"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+        aria-label="Sélectionner des documents"
+      />
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={handleButtonClick}
+          icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
+        >
+          {isProcessing
+            ? `Envoi (${pendingCount})...`
+            : '📷 Photos'}
+        </Button>
+
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => docInputRef.current?.click()}
+          icon={<UploadIcon />}
+          disabled={isProcessing}
+        >
+          📄 Documents
+        </Button>
+      </div>
 
       {pendingCount > 0 && !isProcessing && (
         <div className="file-uploader-pending">
