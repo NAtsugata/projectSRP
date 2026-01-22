@@ -267,12 +267,32 @@ const FileUploader = ({
 
     // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+      let file = files[i];
 
       // Générer UN SEUL ID utilisé partout
       const fileId = `upload_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // TOUJOURS créer un blob URL pour les fichiers d'un input image/*
+      // Déterminer le type correct AVANT tout (mobile iOS peut avoir type vide)
+      let fileType = file.type;
+      if (!fileType) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
+          fileType = 'image/jpeg';
+        } else if (ext === 'pdf') {
+          fileType = 'application/pdf';
+        } else if (['mp3', 'wav', 'm4a', 'webm', 'ogg'].includes(ext)) {
+          fileType = 'audio/' + ext;
+        } else {
+          fileType = 'application/octet-stream';
+        }
+        // Créer un nouveau File avec le bon type pour IndexedDB
+        console.log(`🔧 Type corrigé: ${file.type || '(vide)'} → ${fileType}`);
+        file = new File([file], file.name, { type: fileType, lastModified: file.lastModified });
+      }
+
+      console.log(`📁 Fichier ${i + 1}/${files.length}: ${file.name}, type: ${fileType}`);
+
+      // Créer blob URL pour preview locale
       let localUrl = null;
       try {
         localUrl = URL.createObjectURL(file);
@@ -281,24 +301,8 @@ const FileUploader = ({
         console.error(`❌ Blob URL error:`, err);
       }
 
-      // Envoyer la preview au parent IMMÉDIATEMENT
+      // Envoyer la preview au parent IMMÉDIATEMENT (avant IndexedDB)
       if (onLocalPreview) {
-        // Déterminer le type correct (ne pas forcer image/jpeg pour les documents)
-        let fileType = file.type;
-        if (!fileType) {
-          // Deviner le type par l'extension
-          const ext = file.name.split('.').pop()?.toLowerCase();
-          if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
-            fileType = 'image/jpeg';
-          } else if (ext === 'pdf') {
-            fileType = 'application/pdf';
-          } else if (['mp3', 'wav', 'm4a', 'webm', 'ogg'].includes(ext)) {
-            fileType = 'audio/' + ext;
-          } else {
-            fileType = 'application/octet-stream';
-          }
-        }
-
         const previewData = {
           id: fileId,
           name: file.name,
@@ -314,14 +318,14 @@ const FileUploader = ({
         console.error('❌ onLocalPreview non défini!');
       }
 
-      // Stocker dans IndexedDB avec le MÊME ID
+      // Stocker dans IndexedDB avec le MÊME ID (file a maintenant le bon type)
       try {
         await storeFileForUpload(file, {
           interventionId,
           folder,
           originalName: file.name
         }, fileId);
-        console.log(`💾 IndexedDB OK: ${fileId}`);
+        console.log(`💾 IndexedDB OK: ${fileId}, type: ${file.type}`);
       } catch (err) {
         console.error(`❌ IndexedDB error:`, err);
         setError(`Erreur: ${err.message}`);
@@ -395,10 +399,9 @@ const FileUploader = ({
           variant="secondary"
           fullWidth
           onClick={() => docInputRef.current?.click()}
-          icon={<UploadIcon />}
-          disabled={isProcessing}
+          icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
         >
-          📄 Documents
+          {isProcessing ? `📄 Envoi...` : '📄 Documents'}
         </Button>
       </div>
 
