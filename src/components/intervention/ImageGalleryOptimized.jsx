@@ -11,7 +11,7 @@ import './ImageGallery.css';
  * ImageThumbnail - Miniature optimisée avec IntersectionObserver
  * Affiche preview locale avec progression d'upload
  */
-const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, index }) => {
+const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, index, onDelete }) => {
   const [loadState, setLoadState] = useState('idle');
   const imgRef = useRef(null);
   const observerRef = useRef(null);
@@ -168,6 +168,20 @@ const ImageThumbnail = ({ src, alt, onClick, isLoading, status, progress = 0, in
         loading="lazy"
         draggable={false}
       />
+      {onDelete && (
+        <button
+          className="thumbnail-delete-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm('Supprimer cette image ?')) {
+              onDelete();
+            }
+          }}
+          title="Supprimer"
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 };
@@ -269,6 +283,7 @@ const ImageGalleryOptimized = ({
             progress={item.progress}
             index={startIndex + index}
             onClick={() => !item.isUploading && openLightbox(index)}
+            onDelete={!item.isUploading && onDeleteImage ? () => onDeleteImage(item) : null}
           />
         ))}
       </div>
