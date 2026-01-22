@@ -800,19 +800,98 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             onDeleteImage={isAdmin ? handleDeleteImage : null}
           />
 
-          {/* Documents en cours d'upload */}
+          {/* Documents en cours d'upload - avec progression visuelle */}
           {uploadQueue.some(item => !item.type?.startsWith('image/')) && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#fef3c7', borderRadius: '8px', border: '1px solid #f59e0b' }}>
-              <h4 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: '#92400e' }}>📤 Documents en cours d'envoi...</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {uploadQueue.filter(item => !item.type?.startsWith('image/')).map((item) => (
-                  <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0', borderBottom: '1px solid #fde68a' }}>
-                    <span style={{ fontSize: '1.25rem' }}>{item.type?.startsWith('audio/') ? '🎵' : '📄'}</span>
-                    <span style={{ flex: 1, fontSize: '0.875rem', color: '#92400e' }}>{item.name}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#b45309' }}>{item.progress || 0}%</span>
-                  </li>
-                ))}
-              </ul>
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>📤 Documents en cours d'envoi</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {uploadQueue.filter(item => !item.type?.startsWith('image/')).map((item) => {
+                  const progress = item.progress || 0;
+                  const isAudio = item.type?.startsWith('audio/');
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Barre de progression en arrière-plan */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: `${progress}%`,
+                          background: 'linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%)',
+                          transition: 'width 0.3s ease',
+                          zIndex: 0
+                        }}
+                      />
+
+                      {/* Icône avec cercle de progression */}
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: '50%',
+                          background: `conic-gradient(#0ea5a5 ${progress * 3.6}deg, #e2e8f0 0deg)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          zIndex: 1
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.25rem'
+                          }}
+                        >
+                          {isAudio ? '🎵' : '📄'}
+                        </div>
+                      </div>
+
+                      {/* Nom du fichier */}
+                      <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {item.status === 'pending' ? 'En attente...' : item.status === 'uploading' ? 'Envoi en cours...' : 'Traitement...'}
+                        </div>
+                      </div>
+
+                      {/* Pourcentage */}
+                      <div
+                        style={{
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          color: '#0ea5a5',
+                          zIndex: 1
+                        }}
+                      >
+                        {progress}%
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
