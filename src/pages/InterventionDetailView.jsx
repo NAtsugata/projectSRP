@@ -811,7 +811,23 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     {file.type?.startsWith('audio/') ? <div style={{ width: 40 }}><audio controls src={file.url} style={{ height: 32 }} /></div>
                       : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
                     <span className="file-name">{file.name}</span>
-                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
+                      {isAdmin && (
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: '#dc2626', color: 'white', border: 'none' }}
+                          onClick={() => {
+                            if (window.confirm(`Supprimer "${file.name}" ?`)) {
+                              handleDeleteImage(file);
+                            }
+                          }}
+                          title="Supprimer"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
