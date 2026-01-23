@@ -403,27 +403,30 @@ const FileUploader = ({
     init();
   }, [processUploads]);
 
-  const handleButtonClick = () => {
-    inputRef.current?.click();
-  };
-
   const pendingCount = localQueue.length;
+
+  // Générer des IDs uniques pour les inputs (pour les labels)
+  const imageInputId = `file-input-images-${interventionId}`;
+  const docInputId = `file-input-docs-${interventionId}`;
 
   return (
     <div className="file-uploader">
-      {/* Input pour images */}
+      {/* Input pour images - avec ID pour label */}
       <input
+        id={imageInputId}
         ref={inputRef}
         type="file"
         multiple
         accept="image/*"
+        capture="environment"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour documents (PDF + Audio) - accept très permissif pour mobile */}
+      {/* Input pour documents - avec ID pour label */}
       <input
+        id={docInputId}
         ref={docInputRef}
         type="file"
         multiple
@@ -433,26 +436,51 @@ const FileUploader = ({
         aria-label="Sélectionner des documents"
       />
 
+      {/* Utiliser des LABELS au lieu de boutons pour meilleure compatibilité mobile */}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={handleButtonClick}
-          icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
+        <label
+          htmlFor={imageInputId}
+          className="btn btn-secondary"
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1rem',
+            cursor: 'pointer',
+            borderRadius: '0.5rem',
+            border: '1px solid #d1d5db',
+            background: '#f9fafb',
+            fontSize: '0.875rem',
+            fontWeight: 500
+          }}
         >
-          {isProcessing
-            ? `Envoi (${pendingCount})...`
-            : '📷 Photos'}
-        </Button>
+          {isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
+          {isProcessing ? `Envoi (${pendingCount})...` : '📷 Photos'}
+        </label>
 
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => docInputRef.current?.click()}
-          icon={<UploadIcon />}
+        <label
+          htmlFor={docInputId}
+          className="btn btn-secondary"
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1rem',
+            cursor: 'pointer',
+            borderRadius: '0.5rem',
+            border: '1px solid #d1d5db',
+            background: '#f9fafb',
+            fontSize: '0.875rem',
+            fontWeight: 500
+          }}
         >
+          <UploadIcon />
           📄 Documents
-        </Button>
+        </label>
       </div>
 
       {pendingCount > 0 && !isProcessing && (
