@@ -46,7 +46,8 @@ const FileUploader = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
-  const docInputRef = useRef(null); // Input unique pour tous les documents
+  const pdfInputRef = useRef(null); // Input pour PDF
+  const audioInputRef = useRef(null); // Input pour audio
   const uploadingRef = useRef(false); // Pour éviter les uploads en double
 
   // Compression d'image
@@ -268,15 +269,14 @@ const FileUploader = ({
 
     // Reset inputs
     if (inputRef.current) inputRef.current.value = '';
-    if (docInputRef.current) docInputRef.current.value = '';
+    if (pdfInputRef.current) pdfInputRef.current.value = '';
+    if (audioInputRef.current) audioInputRef.current.value = '';
     setError(null);
 
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
     console.log(debugInfo);
 
-    // ÉTAPE 1: Préparer tous les fichiers et envoyer TOUTES les previews immédiatement
-    const filesToStore = [];
-
+    // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
       const originalFile = files[i];
 
@@ -334,7 +334,7 @@ const FileUploader = ({
         console.error(`❌ Blob URL error:`, err);
       }
 
-      // Envoyer la preview au parent IMMÉDIATEMENT
+      // Envoyer la preview au parent IMMÉDIATEMENT (avant IndexedDB)
       if (onLocalPreview) {
         const previewData = {
           id: fileId,
@@ -345,42 +345,29 @@ const FileUploader = ({
           status: 'pending',
           progress: 0
         };
-        console.log('📤 Envoi preview IMMÉDIAT:', previewData.id, 'type:', previewData.type);
+        console.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
         onLocalPreview(previewData);
+      } else {
+        console.error('❌ onLocalPreview non défini!');
       }
 
-      // Ajouter à la liste pour stockage IndexedDB
-      filesToStore.push({ file, fileId, fileType });
-    }
-
-    console.log(`✅ ${filesToStore.length} previews envoyées, stockage IndexedDB en parallèle...`);
-
-    // ÉTAPE 2: Stocker TOUS les fichiers dans IndexedDB en parallèle
-    const storePromises = filesToStore.map(async ({ file, fileId, fileType }) => {
+      // Stocker dans IndexedDB avec le MÊME ID et le type corrigé
       try {
         await storeFileForUpload(file, {
           interventionId,
           folder,
           originalName: file.name,
-          correctedType: fileType
+          correctedType: fileType // Passer le type corrigé en metadata
         }, fileId);
-        console.log(`💾 IndexedDB OK: ${fileId}`);
-        return { success: true, fileId };
+        console.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
       } catch (err) {
-        console.error(`❌ IndexedDB error pour ${fileId}:`, err);
-        return { success: false, fileId, error: err.message };
+        console.error(`❌ IndexedDB error:`, err);
+        setError(`Erreur stockage: ${err.message}`);
       }
-    });
-
-    // Attendre que tous les fichiers soient stockés
-    const storeResults = await Promise.all(storePromises);
-    const failures = storeResults.filter(r => !r.success);
-    if (failures.length > 0) {
-      setError(`${failures.length} fichier(s) non stocké(s)`);
     }
 
-    // ÉTAPE 3: Lancer les uploads en arrière-plan
-    console.log('🚀 Lancement uploads en parallèle...');
+    // Lancer les uploads en arrière-plan
+    console.log('🚀 Lancement uploads...');
     processUploads();
 
   }, [interventionId, folder, onLocalPreview, processUploads]);
@@ -400,11 +387,11 @@ const FileUploader = ({
     init();
   }, [processUploads]);
 
-  const pendingCount = localQueue.length;
-
   const handleButtonClick = () => {
     inputRef.current?.click();
   };
+
+  const pendingCount = localQueue.length;
 
   return (
     <div className="file-uploader">
@@ -414,40 +401,64 @@ const FileUploader = ({
         type="file"
         multiple
         accept="image/*"
-        capture="environment"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour documents */}
+      {/* Input pour PDF - séparé pour meilleure compatibilité mobile */}
       <input
-        ref={docInputRef}
+        ref={pdfInputRef}
         type="file"
         multiple
-        accept="*/*"
+        accept="application/pdf,.pdf"
         onChange={handleFileChange}
         style={{ display: 'none' }}
-        aria-label="Sélectionner des documents"
+        aria-label="Sélectionner des PDF"
       />
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      {/* Input pour audio - séparé pour meilleure compatibilité mobile */}
+      <input
+        ref={audioInputRef}
+        type="file"
+        multiple
+        accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+        aria-label="Sélectionner des fichiers audio"
+      />
+
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Button
           variant="secondary"
           fullWidth
           onClick={handleButtonClick}
           icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
+          style={{ flex: '1 1 45%', minWidth: '120px' }}
         >
-          {isProcessing ? `Envoi (${pendingCount})...` : '📷 Photos'}
+          {isProcessing
+            ? `Envoi (${pendingCount})...`
+            : '📷 Photos'}
         </Button>
 
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => docInputRef.current?.click()}
+          onClick={() => pdfInputRef.current?.click()}
           icon={<UploadIcon />}
+          style={{ flex: '1 1 45%', minWidth: '120px' }}
         >
-          📄 Documents
+          📄 PDF
+        </Button>
+
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => audioInputRef.current?.click()}
+          icon={<UploadIcon />}
+          style={{ flex: '1 1 45%', minWidth: '120px' }}
+        >
+          🎵 Audio
         </Button>
       </div>
 
