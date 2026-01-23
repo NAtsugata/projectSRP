@@ -46,8 +46,7 @@ const FileUploader = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
-  const pdfInputRef = useRef(null); // Input pour PDF
-  const audioInputRef = useRef(null); // Input pour audio
+  const docInputRef = useRef(null); // Input unique pour tous les documents
   const uploadingRef = useRef(false); // Pour éviter les uploads en double
 
   // Compression d'image
@@ -269,9 +268,11 @@ const FileUploader = ({
 
     // Reset inputs
     if (inputRef.current) inputRef.current.value = '';
-    if (pdfInputRef.current) pdfInputRef.current.value = '';
-    if (audioInputRef.current) audioInputRef.current.value = '';
+    if (docInputRef.current) docInputRef.current.value = '';
     setError(null);
+
+    // DEBUG MOBILE
+    alert(`📁 ${files.length} fichier(s) sélectionné(s): ${files.map(f => `${f.name} (${f.type || 'type vide'})`).join(', ')}`);
 
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
     console.log(debugInfo);
@@ -421,35 +422,23 @@ const FileUploader = ({
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour PDF - séparé pour meilleure compatibilité mobile */}
+      {/* Input pour documents (PDF + Audio) - accept très permissif pour mobile */}
       <input
-        ref={pdfInputRef}
+        ref={docInputRef}
         type="file"
         multiple
-        accept="application/pdf,.pdf"
+        accept="*/*"
         onChange={handleFileChange}
         style={{ display: 'none' }}
-        aria-label="Sélectionner des PDF"
+        aria-label="Sélectionner des documents"
       />
 
-      {/* Input pour audio - séparé pour meilleure compatibilité mobile */}
-      <input
-        ref={audioInputRef}
-        type="file"
-        multiple
-        accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        aria-label="Sélectionner des fichiers audio"
-      />
-
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
         <Button
           variant="secondary"
           fullWidth
           onClick={handleButtonClick}
           icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
-          style={{ flex: '1 1 45%', minWidth: '120px' }}
         >
           {isProcessing
             ? `Envoi (${pendingCount})...`
@@ -459,21 +448,10 @@ const FileUploader = ({
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => pdfInputRef.current?.click()}
+          onClick={() => docInputRef.current?.click()}
           icon={<UploadIcon />}
-          style={{ flex: '1 1 45%', minWidth: '120px' }}
         >
-          📄 PDF
-        </Button>
-
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => audioInputRef.current?.click()}
-          icon={<UploadIcon />}
-          style={{ flex: '1 1 45%', minWidth: '120px' }}
-        >
-          🎵 Audio
+          📄 Documents
         </Button>
       </div>
 
