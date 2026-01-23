@@ -276,30 +276,52 @@ const FileUploader = ({
 
     // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
-      let file = files[i];
+      const originalFile = files[i];
 
       // Générer UN SEUL ID utilisé partout
       const fileId = `upload_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Déterminer le type correct AVANT tout (mobile iOS peut avoir type vide)
-      let fileType = file.type;
-      if (!fileType) {
-        const ext = file.name.split('.').pop()?.toLowerCase();
+      let fileType = originalFile.type;
+      const ext = originalFile.name.split('.').pop()?.toLowerCase();
+
+      if (!fileType || fileType === 'application/octet-stream') {
         if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
           fileType = 'image/jpeg';
         } else if (ext === 'pdf') {
           fileType = 'application/pdf';
-        } else if (['mp3', 'wav', 'm4a', 'webm', 'ogg'].includes(ext)) {
-          fileType = 'audio/' + ext;
+        } else if (ext === 'mp3') {
+          fileType = 'audio/mpeg';
+        } else if (ext === 'wav') {
+          fileType = 'audio/wav';
+        } else if (ext === 'm4a') {
+          fileType = 'audio/mp4';
+        } else if (ext === 'webm') {
+          fileType = 'audio/webm';
+        } else if (ext === 'ogg') {
+          fileType = 'audio/ogg';
         } else {
           fileType = 'application/octet-stream';
         }
-        // Créer un nouveau File avec le bon type pour IndexedDB
-        console.log(`🔧 Type corrigé: ${file.type || '(vide)'} → ${fileType}`);
-        file = new File([file], file.name, { type: fileType, lastModified: file.lastModified });
+        console.log(`🔧 Type corrigé: ${originalFile.type || '(vide)'} → ${fileType}`);
       }
 
-      console.log(`📁 Fichier ${i + 1}/${files.length}: ${file.name}, type: ${fileType}`);
+      // Créer un nouveau File avec le bon type (fallback pour mobile)
+      let file = originalFile;
+      try {
+        if (originalFile.type !== fileType) {
+          file = new File([originalFile], originalFile.name, {
+            type: fileType,
+            lastModified: originalFile.lastModified || Date.now()
+          });
+        }
+      } catch (err) {
+        // Fallback si new File() échoue sur mobile
+        console.warn('⚠️ new File() non supporté, utilisation du fichier original');
+        file = originalFile;
+      }
+
+      console.log(`📁 Fichier ${i + 1}/${files.length}: ${file.name}, type: ${fileType}, size: ${file.size}`);
 
       // Créer blob URL pour preview locale
       let localUrl = null;
@@ -327,17 +349,18 @@ const FileUploader = ({
         console.error('❌ onLocalPreview non défini!');
       }
 
-      // Stocker dans IndexedDB avec le MÊME ID (file a maintenant le bon type)
+      // Stocker dans IndexedDB avec le MÊME ID et le type corrigé
       try {
         await storeFileForUpload(file, {
           interventionId,
           folder,
-          originalName: file.name
+          originalName: file.name,
+          correctedType: fileType // Passer le type corrigé en metadata
         }, fileId);
-        console.log(`💾 IndexedDB OK: ${fileId}, type: ${file.type}`);
+        console.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
       } catch (err) {
         console.error(`❌ IndexedDB error:`, err);
-        setError(`Erreur: ${err.message}`);
+        setError(`Erreur stockage: ${err.message}`);
       }
     }
 
@@ -381,12 +404,12 @@ const FileUploader = ({
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour documents */}
+      {/* Input pour documents - simplifié pour mobile */}
       <input
         ref={docInputRef}
         type="file"
         multiple
-        accept="application/pdf,audio/*,.pdf,.mp3,.wav,.m4a,.webm"
+        accept=".pdf,.mp3,.wav,.m4a,.webm,.ogg,application/pdf,audio/*"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des documents"

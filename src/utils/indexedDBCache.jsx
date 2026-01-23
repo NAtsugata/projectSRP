@@ -53,11 +53,14 @@ export const storeFileForUpload = async (file, metadata = {}, customId = null) =
     // Convertir le fichier en ArrayBuffer pour stockage
     const arrayBuffer = await file.arrayBuffer();
 
+    // Utiliser le type corrigé si disponible (pour mobile iOS)
+    const fileType = metadata.correctedType || file.type || 'application/octet-stream';
+
     const uploadItem = {
       id: customId || `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       fileData: arrayBuffer,
       fileName: file.name,
-      fileType: file.type,
+      fileType: fileType,
       fileSize: file.size,
       metadata: {
         ...metadata,
