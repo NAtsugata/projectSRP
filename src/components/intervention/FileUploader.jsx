@@ -138,7 +138,7 @@ const FileUploader = ({
     return null;
   }, []);
 
-  // Traiter les uploads en attente (arrière-plan)
+  // Traiter les uploads en attente (arrière-plan) - PARALLEL
   const processUploads = useCallback(async () => {
     if (uploadingRef.current) return; // Déjà en cours
     uploadingRef.current = true;
@@ -146,11 +146,10 @@ const FileUploader = ({
 
     try {
       const pending = await getPendingUploads('pending');
-      console.log(`📤 Traitement de ${pending.length} fichier(s) en attente...`);
+      console.log(`📤 Traitement de ${pending.length} fichier(s) en parallèle...`);
 
-      const uploaded = [];
-
-      for (const item of pending) {
+      // Fonction pour uploader un seul fichier
+      const uploadSingleFile = async (item) => {
         try {
           await updateUploadStatus(item.id, 'uploading');
 
@@ -171,7 +170,7 @@ const FileUploader = ({
           let progress = 20;
           const progressInterval = setInterval(() => {
             if (progress < 90) {
-              progress += Math.random() * 20;
+              progress += Math.random() * 15;
               progress = Math.min(progress, 90);
               onUploadProgress?.({
                 id: item.id,
@@ -179,7 +178,7 @@ const FileUploader = ({
                 status: 'uploading'
               });
             }
-          }, 400);
+          }, 300);
 
           // Upload vers Supabase
           const result = await storageService.uploadInterventionFile(
@@ -200,13 +199,6 @@ const FileUploader = ({
           // Supprimer du cache IndexedDB
           await deleteUpload(item.id);
 
-          uploaded.push({
-            id: item.id,
-            name: item.fileName,
-            url: publicUrl,
-            type: item.fileType
-          });
-
           // Notifier la complétion
           onUploadProgress?.({
             id: item.id,
@@ -216,6 +208,14 @@ const FileUploader = ({
           });
 
           console.log(`✅ Upload réussi: ${item.fileName}`);
+
+          return {
+            success: true,
+            id: item.id,
+            name: item.fileName,
+            url: publicUrl,
+            type: item.fileType
+          };
 
         } catch (err) {
           console.error(`❌ Échec upload ${item.fileName}:`, err);
@@ -229,8 +229,17 @@ const FileUploader = ({
             status: 'error',
             error: err.message
           });
+          return { success: false, id: item.id, error: err.message };
         }
-      }
+      };
+
+      // Upload TOUS les fichiers en parallèle (pas de limite)
+      const results = await Promise.all(pending.map(uploadSingleFile));
+
+      // Filtrer les succès
+      const uploaded = results
+        .filter(r => r.success)
+        .map(r => ({ id: r.id, name: r.name, url: r.url, type: r.type }));
 
       // Notifier les uploads terminés
       if (uploaded.length && onUploadComplete) {
