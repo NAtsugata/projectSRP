@@ -271,9 +271,6 @@ const FileUploader = ({
     if (docInputRef.current) docInputRef.current.value = '';
     setError(null);
 
-    // DEBUG MOBILE
-    alert(`📁 ${files.length} fichier(s) sélectionné(s): ${files.map(f => `${f.name} (${f.type || 'type vide'})`).join(', ')}`);
-
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
     console.log(debugInfo);
 
@@ -405,15 +402,14 @@ const FileUploader = ({
 
   const pendingCount = localQueue.length;
 
-  // Générer des IDs uniques pour les inputs (pour les labels)
-  const imageInputId = `file-input-images-${interventionId}`;
-  const docInputId = `file-input-docs-${interventionId}`;
+  const handleButtonClick = () => {
+    inputRef.current?.click();
+  };
 
   return (
     <div className="file-uploader">
-      {/* Input pour images - avec ID pour label */}
+      {/* Input pour images */}
       <input
-        id={imageInputId}
         ref={inputRef}
         type="file"
         multiple
@@ -424,9 +420,8 @@ const FileUploader = ({
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour documents - avec ID pour label */}
+      {/* Input pour documents */}
       <input
-        id={docInputId}
         ref={docInputRef}
         type="file"
         multiple
@@ -436,51 +431,24 @@ const FileUploader = ({
         aria-label="Sélectionner des documents"
       />
 
-      {/* Utiliser des LABELS au lieu de boutons pour meilleure compatibilité mobile */}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <label
-          htmlFor={imageInputId}
-          className="btn btn-secondary"
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1rem',
-            cursor: 'pointer',
-            borderRadius: '0.5rem',
-            border: '1px solid #d1d5db',
-            background: '#f9fafb',
-            fontSize: '0.875rem',
-            fontWeight: 500
-          }}
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={handleButtonClick}
+          icon={isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
         >
-          {isProcessing ? <LoaderIcon className="animate-spin" /> : <UploadIcon />}
           {isProcessing ? `Envoi (${pendingCount})...` : '📷 Photos'}
-        </label>
+        </Button>
 
-        <label
-          htmlFor={docInputId}
-          className="btn btn-secondary"
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1rem',
-            cursor: 'pointer',
-            borderRadius: '0.5rem',
-            border: '1px solid #d1d5db',
-            background: '#f9fafb',
-            fontSize: '0.875rem',
-            fontWeight: 500
-          }}
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => docInputRef.current?.click()}
+          icon={<UploadIcon />}
         >
-          <UploadIcon />
           📄 Documents
-        </label>
+        </Button>
       </div>
 
       {pendingCount > 0 && !isProcessing && (
