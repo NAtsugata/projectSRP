@@ -40,6 +40,36 @@ const initDB = () => {
 };
 
 /**
+ * Convertit un File en ArrayBuffer (avec fallback FileReader pour mobile)
+ * @param {File} file
+ * @returns {Promise<ArrayBuffer>}
+ */
+const fileToArrayBuffer = (file) => {
+  return new Promise((resolve, reject) => {
+    // Essayer d'abord arrayBuffer() (moderne)
+    if (typeof file.arrayBuffer === 'function') {
+      file.arrayBuffer()
+        .then(resolve)
+        .catch(() => {
+          // Fallback FileReader si arrayBuffer() échoue
+          console.log('⚠️ arrayBuffer() échoué, utilisation FileReader...');
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsArrayBuffer(file);
+        });
+    } else {
+      // Fallback FileReader pour vieux navigateurs
+      console.log('⚠️ arrayBuffer() non supporté, utilisation FileReader...');
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    }
+  });
+};
+
+/**
  * Stocke un fichier pour upload ultérieur
  * @param {File} file - Le fichier à stocker
  * @param {Object} metadata - Métadonnées (userId, interventionId, folder, etc.)
@@ -48,10 +78,13 @@ const initDB = () => {
  */
 export const storeFileForUpload = async (file, metadata = {}, customId = null) => {
   try {
+    console.log(`📦 Stockage IndexedDB: ${file.name}, type: ${file.type}, size: ${file.size}`);
+
     const db = await initDB();
 
-    // Convertir le fichier en ArrayBuffer pour stockage
-    const arrayBuffer = await file.arrayBuffer();
+    // Convertir le fichier en ArrayBuffer pour stockage (avec fallback)
+    const arrayBuffer = await fileToArrayBuffer(file);
+    console.log(`✅ ArrayBuffer créé: ${arrayBuffer.byteLength} bytes`);
 
     // Utiliser le type corrigé si disponible (pour mobile iOS)
     const fileType = metadata.correctedType || file.type || 'application/octet-stream';
