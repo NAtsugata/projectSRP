@@ -276,7 +276,9 @@ const FileUploader = ({
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
     console.log(debugInfo);
 
-    // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
+    // ÉTAPE 1: Préparer tous les fichiers et envoyer TOUTES les previews immédiatement
+    const filesToStore = [];
+
     for (let i = 0; i < files.length; i++) {
       const originalFile = files[i];
 
@@ -334,7 +336,7 @@ const FileUploader = ({
         console.error(`❌ Blob URL error:`, err);
       }
 
-      // Envoyer la preview au parent IMMÉDIATEMENT (avant IndexedDB)
+      // Envoyer la preview au parent IMMÉDIATEMENT
       if (onLocalPreview) {
         const previewData = {
           id: fileId,
@@ -345,29 +347,42 @@ const FileUploader = ({
           status: 'pending',
           progress: 0
         };
-        console.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
+        console.log('📤 Envoi preview IMMÉDIAT:', previewData.id, 'type:', previewData.type);
         onLocalPreview(previewData);
-      } else {
-        console.error('❌ onLocalPreview non défini!');
       }
 
-      // Stocker dans IndexedDB avec le MÊME ID et le type corrigé
+      // Ajouter à la liste pour stockage IndexedDB
+      filesToStore.push({ file, fileId, fileType });
+    }
+
+    console.log(`✅ ${filesToStore.length} previews envoyées, stockage IndexedDB en parallèle...`);
+
+    // ÉTAPE 2: Stocker TOUS les fichiers dans IndexedDB en parallèle
+    const storePromises = filesToStore.map(async ({ file, fileId, fileType }) => {
       try {
         await storeFileForUpload(file, {
           interventionId,
           folder,
           originalName: file.name,
-          correctedType: fileType // Passer le type corrigé en metadata
+          correctedType: fileType
         }, fileId);
-        console.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
+        console.log(`💾 IndexedDB OK: ${fileId}`);
+        return { success: true, fileId };
       } catch (err) {
-        console.error(`❌ IndexedDB error:`, err);
-        setError(`Erreur stockage: ${err.message}`);
+        console.error(`❌ IndexedDB error pour ${fileId}:`, err);
+        return { success: false, fileId, error: err.message };
       }
+    });
+
+    // Attendre que tous les fichiers soient stockés
+    const storeResults = await Promise.all(storePromises);
+    const failures = storeResults.filter(r => !r.success);
+    if (failures.length > 0) {
+      setError(`${failures.length} fichier(s) non stocké(s)`);
     }
 
-    // Lancer les uploads en arrière-plan
-    console.log('🚀 Lancement uploads...');
+    // ÉTAPE 3: Lancer les uploads en arrière-plan
+    console.log('🚀 Lancement uploads en parallèle...');
     processUploads();
 
   }, [interventionId, folder, onLocalPreview, processUploads]);
