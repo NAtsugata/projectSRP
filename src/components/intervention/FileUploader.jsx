@@ -395,40 +395,20 @@ const FileUploader = ({
 
   return (
     <div className="file-uploader">
-      {/* Input pour images */}
+      {/* Input pour images - caché, déclenché par click() */}
       <input
         ref={inputRef}
         type="file"
         multiple
         accept="image/*"
+        capture="environment"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des photos"
       />
 
-      {/* Input pour PDF - séparé pour meilleure compatibilité mobile */}
-      <input
-        ref={pdfInputRef}
-        type="file"
-        multiple
-        accept="application/pdf,.pdf"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        aria-label="Sélectionner des PDF"
-      />
-
-      {/* Input pour audio - séparé pour meilleure compatibilité mobile */}
-      <input
-        ref={audioInputRef}
-        type="file"
-        multiple
-        accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        aria-label="Sélectionner des fichiers audio"
-      />
-
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Bouton Photos - fonctionne avec click() sur iOS */}
         <Button
           variant="secondary"
           fullWidth
@@ -441,25 +421,63 @@ const FileUploader = ({
             : '📷 Photos'}
         </Button>
 
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => pdfInputRef.current?.click()}
-          icon={<UploadIcon />}
-          style={{ flex: '1 1 45%', minWidth: '120px' }}
-        >
-          📄 PDF
-        </Button>
+        {/* Bouton PDF - input visible transparent pour iOS */}
+        <div style={{ flex: '1 1 45%', minWidth: '120px', position: 'relative' }}>
+          <Button
+            variant="secondary"
+            fullWidth
+            icon={<UploadIcon />}
+            style={{ width: '100%', pointerEvents: 'none' }}
+          >
+            📄 PDF
+          </Button>
+          <input
+            ref={pdfInputRef}
+            type="file"
+            multiple
+            accept=".pdf,application/pdf"
+            onChange={handleFileChange}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer'
+            }}
+            aria-label="Sélectionner des PDF"
+          />
+        </div>
 
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={() => audioInputRef.current?.click()}
-          icon={<UploadIcon />}
-          style={{ flex: '1 1 45%', minWidth: '120px' }}
-        >
-          🎵 Audio
-        </Button>
+        {/* Bouton Audio - input visible transparent pour iOS */}
+        <div style={{ flex: '1 1 45%', minWidth: '120px', position: 'relative' }}>
+          <Button
+            variant="secondary"
+            fullWidth
+            icon={<UploadIcon />}
+            style={{ width: '100%', pointerEvents: 'none' }}
+          >
+            🎵 Audio
+          </Button>
+          <input
+            ref={audioInputRef}
+            type="file"
+            multiple
+            accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
+            onChange={handleFileChange}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer'
+            }}
+            aria-label="Sélectionner des fichiers audio"
+          />
+        </div>
       </div>
 
       {pendingCount > 0 && !isProcessing && (
