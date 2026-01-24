@@ -401,7 +401,6 @@ const FileUploader = ({
         type="file"
         multiple
         accept="image/*"
-        capture="environment"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-label="Sélectionner des photos"
