@@ -6,26 +6,49 @@ import logger from '../utils/logger';
 
 export const interventionService = {
   async getInterventions(userId = null, isArchived = false) {
-    let query = supabase.from('interventions').select(`
-      *,
-      intervention_assignments (
-        user_id,
-        profiles (full_name)
-      )
-    `);
+    logger.log('📋 getInterventions called with:', { userId, isArchived });
+
+    let query;
 
     if (userId) {
-      query = supabase.from('interventions').select(`
-        *,
-        intervention_assignments!inner (user_id)
-      `).eq('intervention_assignments.user_id', userId);
+      // Requête pour un employé spécifique - utiliser inner join pour filtrer
+      query = supabase
+        .from('interventions')
+        .select(`
+          *,
+          intervention_assignments!inner (
+            user_id,
+            profiles (full_name)
+          )
+        `)
+        .eq('intervention_assignments.user_id', userId);
+
+      logger.log('📋 Filtering interventions for user:', userId);
+    } else {
+      // Requête admin - toutes les interventions
+      query = supabase
+        .from('interventions')
+        .select(`
+          *,
+          intervention_assignments (
+            user_id,
+            profiles (full_name)
+          )
+        `);
     }
 
     if (isArchived !== null) {
       query = query.eq('is_archived', isArchived);
     }
 
-    return await query.order('scheduled_dates', { ascending: false });
+    const result = await query.order('scheduled_dates', { ascending: false });
+
+    logger.log('📋 getInterventions result:', {
+      count: result.data?.length || 0,
+      error: result.error?.message
+    });
+
+    return result;
   },
 
   async createIntervention(interventionData, assignedUserIds = [], briefingFiles = []) {
