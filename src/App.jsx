@@ -83,7 +83,7 @@ function App() {
   }, []);
 
   // Sync with Zustand store
-  const { setUser, setProfile: setStoreProfile, setLoading: setStoreLoading } = useAuthStore();
+  const { setUser, setProfile: setStoreProfile, setLoading: setStoreLoading, logout } = useAuthStore();
 
   useEffect(() => {
     setStoreLoading(loading);
@@ -173,7 +173,12 @@ function App() {
   }, [profile, queryClient]);
 
   const handleLogout = async () => {
-    await authService.signOut();
+    // Utiliser la fonction logout du store pour nettoyer l'état
+    await logout();
+    // Réinitialiser l'état local aussi
+    setSession(null);
+    setProfile(null);
+    // Naviguer vers login
     navigate('/login');
   };
 
