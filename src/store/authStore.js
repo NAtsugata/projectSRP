@@ -30,8 +30,8 @@ export const useAuthStore = create((set, get) => ({
             if (session?.user) {
                 set({ user: session.user });
 
-                // Charger le profil
-                const profile = await profileService.getProfile(session.user.id);
+                // Charger le profil - extraire data de la réponse
+                const { data: profile } = await profileService.getProfile(session.user.id);
                 set({ profile, loading: false });
             } else {
                 set({ user: null, profile: null, loading: false });
@@ -54,8 +54,8 @@ export const useAuthStore = create((set, get) => ({
             if (data?.user) {
                 set({ user: data.user });
 
-                // Charger le profil
-                const profile = await profileService.getProfile(data.user.id);
+                // Charger le profil - extraire data de la réponse
+                const { data: profile } = await profileService.getProfile(data.user.id);
                 set({ profile, loading: false });
 
                 return { success: true };
@@ -84,7 +84,7 @@ export const useAuthStore = create((set, get) => ({
         if (!user) return;
 
         try {
-            const profile = await profileService.getProfile(user.id);
+            const { data: profile } = await profileService.getProfile(user.id);
             set({ profile });
         } catch (error) {
             console.error('Error refreshing profile:', error);
