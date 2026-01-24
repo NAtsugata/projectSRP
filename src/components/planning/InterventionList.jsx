@@ -78,6 +78,7 @@ const filterInterventions = (interventions, filters) => {
  * @param {Function} onView - Handler to view details
  * @param {Function} onArchive - Handler to archive
  * @param {Function} onDelete - Handler to delete
+ * @param {Function} onEditTeam - Handler to edit team assignment
  * @param {Array} checklistTemplates - Available checklist templates
  * @param {Function} onAssignChecklist - Handler to assign checklist
  * @param {boolean} showFilters - Show filter controls
@@ -89,6 +90,7 @@ const InterventionList = ({
   onView,
   onArchive,
   onDelete,
+  onEditTeam,
   checklistTemplates,
   onAssignChecklist,
   showFilters = true,
@@ -170,6 +172,7 @@ const InterventionList = ({
                 onView={onView}
                 onArchive={onArchive}
                 onDelete={onDelete}
+                onEditTeam={onEditTeam}
                 checklistTemplates={checklistTemplates}
                 onAssignChecklist={onAssignChecklist}
                 showActions={showActions}

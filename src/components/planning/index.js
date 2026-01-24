@@ -4,3 +4,4 @@
 export { default as InterventionForm } from './InterventionForm';
 export { default as InterventionCard } from './InterventionCard';
 export { default as InterventionList } from './InterventionList';
+export { default as EditTeamModal } from './EditTeamModal';

@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { InterventionForm, InterventionList } from '../components/planning';
+import { InterventionForm, InterventionList, EditTeamModal } from '../components/planning';
 import { Button, ConfirmDialog } from '../components/ui';
 import { PlusIcon, ClipboardListIcon } from '../components/SharedUI';
 import logger from '../utils/logger';
@@ -15,6 +15,8 @@ export default function AdminPlanningView({
   onAddIntervention,
   onArchive,
   onDelete,
+  onUpdateTeam,
+  isUpdatingTeam = false,
   checklistTemplates,
   onAssignChecklist
 }) {
@@ -24,6 +26,7 @@ export default function AdminPlanningView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [archiveConfirm, setArchiveConfirm] = useState(null);
+  const [editTeamIntervention, setEditTeamIntervention] = useState(null);
 
   // Sync form visibility with URL params
   useEffect(() => {
@@ -94,6 +97,22 @@ export default function AdminPlanningView({
     }
   }, [deleteConfirm, onDelete]);
 
+  const handleEditTeam = useCallback((intervention) => {
+    logger.log('AdminPlanningView: Ouverture modal équipe', intervention.id);
+    setEditTeamIntervention(intervention);
+  }, []);
+
+  const handleSaveTeam = useCallback(async (selectedUserIds) => {
+    if (editTeamIntervention && onUpdateTeam) {
+      logger.log('AdminPlanningView: Sauvegarde équipe', {
+        interventionId: editTeamIntervention.id,
+        userIds: selectedUserIds
+      });
+      await onUpdateTeam(editTeamIntervention.id, selectedUserIds);
+      setEditTeamIntervention(null);
+    }
+  }, [editTeamIntervention, onUpdateTeam]);
+
   return (
     <div className="admin-planning-view">
       {/* Header */}
@@ -131,6 +150,7 @@ export default function AdminPlanningView({
           onView={handleView}
           onArchive={handleArchive}
           onDelete={handleDelete}
+          onEditTeam={handleEditTeam}
           checklistTemplates={checklistTemplates}
           onAssignChecklist={onAssignChecklist}
           showFilters={true}
@@ -154,6 +174,16 @@ export default function AdminPlanningView({
         message="L'intervention sera déplacée dans les archives. Vous pourrez la restaurer plus tard."
         onConfirm={confirmArchive}
         onCancel={() => setArchiveConfirm(null)}
+      />
+
+      {/* Edit team modal */}
+      <EditTeamModal
+        isOpen={!!editTeamIntervention}
+        intervention={editTeamIntervention}
+        users={users}
+        onSave={handleSaveTeam}
+        onCancel={() => setEditTeamIntervention(null)}
+        loading={isUpdatingTeam}
       />
     </div>
   );

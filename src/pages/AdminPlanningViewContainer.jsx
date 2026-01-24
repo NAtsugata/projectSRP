@@ -10,7 +10,7 @@ import AdminPlanningView from './AdminPlanningView';
 const AdminPlanningViewContainer = () => {
     const navigate = useNavigate();
     const toast = useToast();
-    const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention } = useInterventions();
+    const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention, updateAssignments, isUpdatingAssignments } = useInterventions();
     const { users } = useUsers();
     const { templates, assignChecklist } = useChecklists();
 
@@ -74,6 +74,16 @@ const AdminPlanningViewContainer = () => {
         }
     };
 
+    const handleUpdateTeam = async (interventionId, userIds) => {
+        try {
+            await updateAssignments({ interventionId, userIds });
+            toast?.success('Équipe mise à jour !');
+        } catch (error) {
+            toast?.error('Erreur lors de la mise à jour de l\'équipe');
+            throw error;
+        }
+    };
+
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
@@ -92,6 +102,8 @@ const AdminPlanningViewContainer = () => {
             onDelete={handleDeleteIntervention}
             onArchive={(id) => handleUpdateIntervention(id, { is_archived: true })}
             onAssignChecklist={handleAssignChecklist}
+            onUpdateTeam={handleUpdateTeam}
+            isUpdatingTeam={isUpdatingAssignments}
             onView={(itv) => navigate(`/planning/${itv.id}`)}
         />
     );

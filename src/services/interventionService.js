@@ -77,6 +77,39 @@ export const interventionService = {
     return await supabase.from('interventions').delete().eq('id', id);
   },
 
+  async updateAssignments(interventionId, newUserIds) {
+    // 1. Supprimer les anciennes assignations
+    const { error: deleteError } = await supabase
+      .from('intervention_assignments')
+      .delete()
+      .eq('intervention_id', interventionId);
+
+    if (deleteError) {
+      logger.error('❌ Erreur suppression anciennes assignations:', deleteError);
+      return { error: deleteError };
+    }
+
+    // 2. Créer les nouvelles assignations
+    if (newUserIds && newUserIds.length > 0) {
+      const assignments = newUserIds.map(userId => ({
+        intervention_id: interventionId,
+        user_id: userId
+      }));
+
+      const { error: insertError } = await supabase
+        .from('intervention_assignments')
+        .insert(assignments);
+
+      if (insertError) {
+        logger.error('❌ Erreur création nouvelles assignations:', insertError);
+        return { error: insertError };
+      }
+    }
+
+    logger.log('✅ Assignations mises à jour pour intervention', interventionId);
+    return { error: null };
+  },
+
   async addBriefingDocuments(id, files) {
     // Placeholder
     return { error: null };

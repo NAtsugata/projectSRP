@@ -67,6 +67,14 @@ export function useInterventions(userId = null, isArchived = false) {
         },
     });
 
+    // Mutation pour mettre à jour les assignations d'une intervention
+    const updateAssignmentsMutation = useMutation({
+        mutationFn: ({ interventionId, userIds }) => interventionService.updateAssignments(interventionId, userIds),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        },
+    });
+
     return {
         // Données
         interventions,
@@ -83,6 +91,10 @@ export function useInterventions(userId = null, isArchived = false) {
         isCreating: createMutation.isPending,
         isUpdating: updateMutation.isPending,
         isDeleting: deleteMutation.isPending,
+        isUpdatingAssignments: updateAssignmentsMutation.isPending,
+
+        // Nouvelle fonction pour mettre à jour les assignations
+        updateAssignments: updateAssignmentsMutation.mutate,
     };
 }
 

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from '../ui';
-import { EditIcon, ArchiveIcon, TrashIcon } from '../SharedUI';
+import { EditIcon, ArchiveIcon, TrashIcon, UsersIcon } from '../SharedUI';
 import { getAssignedUsersNames } from '../../utils/helpers';
 import AssignChecklistButton from '../intervention/AssignChecklistButton';
 import logger from '../../utils/logger';
@@ -33,6 +33,7 @@ const STATUS_COLORS = {
  * @param {Function} onView - Handler to view details
  * @param {Function} onArchive - Handler to archive
  * @param {Function} onDelete - Handler to delete
+ * @param {Function} onEditTeam - Handler to edit team assignment
  * @param {Array} checklistTemplates - Available checklist templates
  * @param {Function} onAssignChecklist - Handler to assign checklist
  * @param {boolean} showActions - Show action buttons
@@ -42,6 +43,7 @@ const InterventionCard = ({
   onView,
   onArchive,
   onDelete,
+  onEditTeam,
   checklistTemplates,
   onAssignChecklist,
   showActions = true
@@ -151,6 +153,21 @@ const InterventionCard = ({
           >
             Détails
           </Button>
+          {onEditTeam && (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<UsersIcon width={18} height={18} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditTeam(intervention);
+              }}
+              title="Modifier l'équipe"
+              aria-label={`Modifier l'équipe de l'intervention ${intervention.client}`}
+            >
+              Équipe
+            </Button>
+          )}
           {checklistTemplates && onAssignChecklist && (
             <AssignChecklistButton
               intervention={intervention}
