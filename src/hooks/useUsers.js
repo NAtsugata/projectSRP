@@ -27,7 +27,16 @@ export function useUsers() {
 
     // Mutation pour mettre à jour un utilisateur
     const updateMutation = useMutation({
-        mutationFn: ({ id, updates }) => profileService.updateProfile(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            console.log('🔄 Updating user:', { id, updates });
+            const result = await profileService.updateProfile(id, updates);
+            console.log('🔄 Update result:', result);
+            if (result.error) {
+                console.error('❌ Update error:', result.error);
+                throw result.error;
+            }
+            return result.data;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
         },
