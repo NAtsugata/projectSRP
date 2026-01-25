@@ -15,15 +15,16 @@ export function register(config) {
   // ✅ Enregistrer le Service Worker en production ET en développement
   // Le Service Worker fonctionne sur localhost pour faciliter les tests
   if ('serviceWorker' in navigator) {
-    // URL du Service Worker
-    const publicUrl = new URL(process.env.PUBLIC_URL || '', window.location.href);
+    // URL de base - compatible Vite et CRA
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const publicUrl = new URL(baseUrl, window.location.href);
     if (publicUrl.origin !== window.location.origin) {
-      // Notre Service Worker ne fonctionnera pas si PUBLIC_URL est sur un domaine différent
+      // Notre Service Worker ne fonctionnera pas si BASE_URL est sur un domaine différent
       return;
     }
 
     window.addEventListener('load', () => {
-      const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
+      const swUrl = `${baseUrl}service-worker.js`;
 
       if (isLocalhost) {
         // En localhost, vérifier que le Service Worker existe
