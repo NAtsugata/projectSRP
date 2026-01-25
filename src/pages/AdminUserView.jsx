@@ -11,7 +11,9 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
     // On rend la fonction asynchrone pour une meilleure gestion
     const handleSave = async (e) => {
         e.preventDefault();
-        await onSave(formData); // On attend que la sauvegarde soit tentée
+        // Extraire l'id et envoyer seulement les champs à modifier
+        const { id, ...updates } = formData;
+        await onSave(id, updates);
         onCancel();
     };
 
