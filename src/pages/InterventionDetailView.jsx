@@ -35,6 +35,11 @@ import './InterventionDetailView_Modern.css';
 const MIN_REQUIRED_PHOTOS = 2;
 
 const isImageUrl = (f) => {
+  // Check MIME type property first (most reliable for uploaded files)
+  if (typeof f === 'object' && f?.type?.startsWith('image/')) {
+    return true;
+  }
+  // Fall back to URL pattern matching for legacy/string entries
   const u = typeof f === 'string' ? f : f?.url;
   if (!u) return false;
   return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
@@ -533,8 +538,19 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const validateCanClose = () => {
     const imgCount = Array.isArray(report.files) ? report.files.filter(isImageUrl).length : 0;
     const checkpointsOK = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.every(c => !!c.done) : true;
+
+    // Debug logging
+    console.log('🔍 Validation:', {
+      filesCount: report.files?.length || 0,
+      imgCount,
+      files: report.files?.map(f => ({ url: f.url?.substring(0, 50), type: f.type, isImage: isImageUrl(f) })),
+      hasSignature: !!report.signature,
+      checkpoints: report.quick_checkpoints?.map(c => ({ label: c.label, done: c.done })),
+      checkpointsOK
+    });
+
     if (!report.signature) return { ok: false, msg: 'Signature client manquante.' };
-    if (imgCount < MIN_REQUIRED_PHOTOS) return { ok: false, msg: `Minimum ${MIN_REQUIRED_PHOTOS} photo(s) requise(s).` };
+    if (imgCount < MIN_REQUIRED_PHOTOS) return { ok: false, msg: `Minimum ${MIN_REQUIRED_PHOTOS} photo(s) requise(s). (${imgCount} trouvée(s))` };
     if (!checkpointsOK) return { ok: false, msg: 'Tous les checkpoints rapides doivent être validés.' };
     return { ok: true };
   };
@@ -940,6 +956,69 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             onUploadProgress={handleUploadProgress}
             onUploadComplete={handleUploadComplete}
           />
+        </div>
+
+        {/* Checkpoints rapides */}
+        <div className="modern-section" id="checklist-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="section-title-icon">✅</span>
+              Checklist rapide
+            </h3>
+          </div>
+          <div className="checklist-items">
+            {(report.quick_checkpoints || []).map((checkpoint, index) => (
+              <label
+                key={index}
+                className={`checklist-item ${checkpoint.done ? 'checked' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  background: checkpoint.done ? '#ecfdf5' : '#f9fafb',
+                  border: `2px solid ${checkpoint.done ? '#10b981' : '#e5e7eb'}`,
+                  borderRadius: '0.5rem',
+                  marginBottom: '0.5rem',
+                  cursor: isAdmin ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checkpoint.done || false}
+                  onChange={(e) => {
+                    if (isAdmin) return;
+                    const updated = [...report.quick_checkpoints];
+                    updated[index] = {
+                      ...updated[index],
+                      done: e.target.checked,
+                      at: e.target.checked ? new Date().toISOString() : null
+                    };
+                    persistReport({ ...report, quick_checkpoints: updated });
+                  }}
+                  disabled={isAdmin}
+                  style={{
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    accentColor: '#10b981'
+                  }}
+                />
+                <span style={{
+                  fontWeight: 500,
+                  color: checkpoint.done ? '#059669' : '#374151',
+                  textDecoration: checkpoint.done ? 'none' : 'none'
+                }}>
+                  {checkpoint.label}
+                </span>
+                {checkpoint.done && checkpoint.at && (
+                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280' }}>
+                    ✓ {new Date(checkpoint.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Signature */}
