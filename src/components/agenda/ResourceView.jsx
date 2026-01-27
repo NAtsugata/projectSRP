@@ -28,8 +28,11 @@ const groupInterventionsByEmployee = (interventions, employees) => {
 
   // Grouper les interventions
   interventions.forEach(itv => {
-    if (itv.assigned_to && Array.isArray(itv.assigned_to)) {
-      itv.assigned_to.forEach(empId => {
+    // Utiliser intervention_assignments (structure réelle de la BDD)
+    const assignments = itv.intervention_assignments;
+    if (assignments && Array.isArray(assignments)) {
+      assignments.forEach(assignment => {
+        const empId = assignment.user_id;
         if (grouped[empId]) {
           grouped[empId].interventions.push(itv);
           grouped[empId].stats.total++;

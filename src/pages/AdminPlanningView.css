@@ -57,6 +57,69 @@
 
 /* .planning-title::before removed - replaced by SVG icon */
 
+/* ==================== HEADER ACTIONS ==================== */
+.planning-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+/* ==================== VIEW MODE SELECTOR ==================== */
+.view-mode-selector {
+  display: flex;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.view-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-mode-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.view-mode-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary-600);
+}
+
+.view-mode-btn.active {
+  background: var(--color-primary-500);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.view-mode-label {
+  display: inline;
+}
+
+/* ==================== CONTENT SECTIONS ==================== */
+.planning-content-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.planning-calendar-section,
+.planning-team-section {
+  animation: fadeInUp 0.4s ease-out;
+}
+
 /* ==================== FORM SECTION ==================== */
 .planning-form-section {
   position: relative;
@@ -265,6 +328,26 @@
     align-items: stretch;
     padding: var(--spacing-4);
     gap: var(--spacing-3);
+  }
+
+  .planning-header-actions {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .view-mode-selector {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .view-mode-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .view-mode-label {
+    display: none;
   }
 
   .planning-title {

@@ -1,0 +1,277 @@
+/* src/components/planning/PlanningCalendarView.css */
+
+.planning-calendar {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Header */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  color: white;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.calendar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  min-width: 180px;
+  text-align: center;
+}
+
+.today-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.today-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.today-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Jours de la semaine */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.weekday {
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Grille du calendrier */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+}
+
+.calendar-day {
+  min-height: 120px;
+  background: white;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-day:hover {
+  background: #f8fafc;
+}
+
+.calendar-day.other-month {
+  background: #f8fafc;
+}
+
+.calendar-day.other-month .day-number {
+  color: #cbd5e1;
+}
+
+.calendar-day.today {
+  background: #eff6ff;
+}
+
+.calendar-day.today .day-number {
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day.has-interventions {
+  border-left: 3px solid #2563eb;
+}
+
+.day-number {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+/* Interventions du jour */
+.day-interventions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.intervention-chip {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid #3b82f6;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.intervention-chip:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.intervention-chip.completed {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.chip-time {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.chip-client {
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more-interventions {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 500;
+  padding: 0.25rem;
+  text-align: center;
+  background: #f1f5f9;
+  border-radius: 0.25rem;
+}
+
+/* Légende */
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.today-dot {
+  background: #2563eb;
+}
+
+.has-dot {
+  background: #3b82f6;
+  border-left: 3px solid #1d4ed8;
+}
+
+.completed-dot {
+  background: #94a3b8;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+    padding: 0.25rem;
+  }
+
+  .day-number {
+    font-size: 0.75rem;
+  }
+
+  .intervention-chip {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.65rem;
+  }
+
+  .chip-time {
+    display: none;
+  }
+
+  .calendar-legend {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .weekday {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+}
