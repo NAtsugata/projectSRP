@@ -7,3 +7,4 @@ export { default as InterventionList } from './InterventionList';
 export { default as EditTeamModal } from './EditTeamModal';
 export { default as PlanningCalendarView } from './PlanningCalendarView';
 export { default as TeamGroupedView } from './TeamGroupedView';
+export { default as PlanningGanttView } from './PlanningGanttView';

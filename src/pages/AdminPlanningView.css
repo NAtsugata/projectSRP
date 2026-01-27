@@ -115,8 +115,7 @@
   animation: fadeIn 0.3s ease-out;
 }
 
-.planning-calendar-section,
-.planning-team-section {
+.planning-gantt-section {
   animation: fadeInUp 0.4s ease-out;
 }
 

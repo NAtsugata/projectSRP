@@ -3,17 +3,16 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { InterventionForm, InterventionList, EditTeamModal, PlanningCalendarView, TeamGroupedView } from '../components/planning';
+import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView } from '../components/planning';
 import { Button, ConfirmDialog } from '../components/ui';
-import { PlusIcon, ClipboardListIcon, CalendarIcon, UsersIcon, ListIcon } from '../components/SharedUI';
+import { PlusIcon, ClipboardListIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
 import logger from '../utils/logger';
 import './AdminPlanningView.css';
 
 // Types de vue disponibles
 const VIEW_MODES = {
-  LIST: 'list',
-  CALENDAR: 'calendar',
-  TEAM: 'team'
+  GANTT: 'gantt',
+  LIST: 'list'
 };
 
 export default function AdminPlanningView({
@@ -31,8 +30,8 @@ export default function AdminPlanningView({
   const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [viewMode, setViewMode] = useState(() => {
-    // Récupérer la préférence de vue depuis localStorage
-    return localStorage.getItem('planningViewMode') || VIEW_MODES.LIST;
+    // Récupérer la préférence de vue depuis localStorage (Gantt par défaut)
+    return localStorage.getItem('planningViewMode') || VIEW_MODES.GANTT;
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -140,8 +139,16 @@ export default function AdminPlanningView({
           Gestion du Planning
         </h2>
         <div className="planning-header-actions">
-          {/* Sélecteur de vue */}
+          {/* Sélecteur de vue simplifié */}
           <div className="view-mode-selector">
+            <button
+              className={`view-mode-btn ${viewMode === VIEW_MODES.GANTT ? 'active' : ''}`}
+              onClick={() => handleViewModeChange(VIEW_MODES.GANTT)}
+              title="Vue Gantt"
+            >
+              <CalendarIcon />
+              <span className="view-mode-label">Planning</span>
+            </button>
             <button
               className={`view-mode-btn ${viewMode === VIEW_MODES.LIST ? 'active' : ''}`}
               onClick={() => handleViewModeChange(VIEW_MODES.LIST)}
@@ -149,22 +156,6 @@ export default function AdminPlanningView({
             >
               <ListIcon />
               <span className="view-mode-label">Liste</span>
-            </button>
-            <button
-              className={`view-mode-btn ${viewMode === VIEW_MODES.CALENDAR ? 'active' : ''}`}
-              onClick={() => handleViewModeChange(VIEW_MODES.CALENDAR)}
-              title="Vue calendrier"
-            >
-              <CalendarIcon />
-              <span className="view-mode-label">Calendrier</span>
-            </button>
-            <button
-              className={`view-mode-btn ${viewMode === VIEW_MODES.TEAM ? 'active' : ''}`}
-              onClick={() => handleViewModeChange(VIEW_MODES.TEAM)}
-              title="Vue par équipe"
-            >
-              <UsersIcon />
-              <span className="view-mode-label">Équipes</span>
             </button>
           </div>
 
@@ -192,6 +183,16 @@ export default function AdminPlanningView({
 
       {/* Contenu selon le mode de vue */}
       <div className="planning-content-section">
+        {viewMode === VIEW_MODES.GANTT && (
+          <div className="planning-gantt-section">
+            <PlanningGanttView
+              interventions={interventions}
+              users={users}
+              onInterventionClick={handleView}
+            />
+          </div>
+        )}
+
         {viewMode === VIEW_MODES.LIST && (
           <div className="planning-list-section">
             <h3 className="section-title">Interventions planifiées</h3>
@@ -205,29 +206,6 @@ export default function AdminPlanningView({
               onAssignChecklist={onAssignChecklist}
               showFilters={true}
               showSort={true}
-            />
-          </div>
-        )}
-
-        {viewMode === VIEW_MODES.CALENDAR && (
-          <div className="planning-calendar-section">
-            <PlanningCalendarView
-              interventions={interventions}
-              users={users}
-              onInterventionClick={handleView}
-              onDateClick={(date, dayInterventions) => {
-                logger.log('Date cliquée:', date, dayInterventions.length, 'interventions');
-              }}
-            />
-          </div>
-        )}
-
-        {viewMode === VIEW_MODES.TEAM && (
-          <div className="planning-team-section">
-            <TeamGroupedView
-              interventions={interventions}
-              users={users}
-              onInterventionClick={handleView}
             />
           </div>
         )}
