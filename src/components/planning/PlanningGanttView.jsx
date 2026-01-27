@@ -17,6 +17,9 @@ const TEAM_COLORS = [
   '#84cc16', // Lime
 ];
 
+// Nombre max d'interventions visibles par cellule
+const MAX_VISIBLE_PER_CELL = 3;
+
 /**
  * Génère les jours de la semaine à partir d'une date
  */
@@ -100,26 +103,47 @@ const groupByTeam = (interventions, users) => {
 /**
  * Composant pour une barre d'intervention
  */
-const InterventionBar = ({ intervention, color, onClick }) => {
+const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMiddle, isSpanEnd, spanDays }) => {
   const status = intervention.status || 'À venir';
   const isCompleted = status === 'Terminée';
   const isInProgress = status === 'En cours';
 
+  // Classes pour les barres multi-jours
+  const spanClass = isSpanStart ? 'span-start' : isSpanMiddle ? 'span-middle' : isSpanEnd ? 'span-end' : '';
+
   return (
     <div
-      className={`gantt-bar ${isCompleted ? 'completed' : ''} ${isInProgress ? 'in-progress' : ''}`}
+      className={`gantt-bar ${isCompleted ? 'completed' : ''} ${isInProgress ? 'in-progress' : ''} ${spanClass}`}
       style={{ '--bar-color': color }}
       onClick={() => onClick?.(intervention)}
-      title={`${intervention.client} - ${intervention.service || ''}\n${intervention.address || ''}`}
+      title={`${intervention.client} - ${intervention.service || ''}\n${intervention.address || ''}${spanDays > 1 ? `\n📅 ${spanDays} jours` : ''}`}
     >
-      <span className="bar-time">{intervention.time || '08:00'}</span>
-      <span className="bar-client">{intervention.client}</span>
-      {intervention.service && (
-        <span className="bar-service">{intervention.service}</span>
+      {isSpanMiddle ? (
+        <span className="bar-continuation">→</span>
+      ) : (
+        <>
+          <span className="bar-time">{intervention.time || '08:00'}</span>
+          <span className="bar-client">{intervention.client}</span>
+          {intervention.service && !isSpanEnd && (
+            <span className="bar-service">{intervention.service}</span>
+          )}
+        </>
+      )}
+      {spanDays > 1 && isSpanStart && (
+        <span className="bar-days-badge">{spanDays}j</span>
       )}
     </div>
   );
 };
+
+/**
+ * Indicateur de débordement (plus d'interventions que visible)
+ */
+const OverflowIndicator = ({ count, onClick }) => (
+  <button className="overflow-indicator" onClick={onClick}>
+    +{count} autre{count > 1 ? 's' : ''}
+  </button>
+);
 
 /**
  * Composant principal Gantt
@@ -157,13 +181,48 @@ const PlanningGanttView = ({
     setCurrentDate(new Date());
   };
 
-  // Obtenir les interventions d'une équipe pour un jour donné
-  const getInterventionsForDay = (team, dateStr) => {
-    return team.interventions.filter(itv => {
-      // Vérifier scheduled_dates d'abord
-      if (itv.scheduled_dates?.includes(dateStr)) return true;
-      // Sinon vérifier la date principale
-      return itv.date === dateStr;
+  // Obtenir les interventions d'une équipe pour un jour donné avec infos de span
+  const getInterventionsForDay = (team, dateStr, weekDaysArray) => {
+    const dayInterventions = [];
+
+    team.interventions.forEach(itv => {
+      // Récupérer toutes les dates de l'intervention
+      const allDates = itv.scheduled_dates?.length > 0
+        ? [...itv.scheduled_dates].sort()
+        : [itv.date];
+
+      // Vérifier si cette date fait partie des dates de l'intervention
+      if (!allDates.includes(dateStr)) return;
+
+      // Déterminer la position dans le span
+      const indexInDates = allDates.indexOf(dateStr);
+      const totalDays = allDates.length;
+      const isSpanStart = indexInDates === 0;
+      const isSpanEnd = indexInDates === totalDays - 1;
+      const isSpanMiddle = !isSpanStart && !isSpanEnd;
+
+      // Vérifier si l'intervention continue avant ou après la semaine visible
+      const weekStart = weekDaysArray[0].dateStr;
+      const weekEnd = weekDaysArray[6].dateStr;
+      const hasDatesBefore = allDates.some(d => d < weekStart);
+      const hasDatesAfter = allDates.some(d => d > weekEnd);
+
+      dayInterventions.push({
+        ...itv,
+        isSpanStart: isSpanStart && !hasDatesBefore,
+        isSpanMiddle: isSpanMiddle || (isSpanStart && hasDatesBefore),
+        isSpanEnd: isSpanEnd && !hasDatesAfter,
+        spanDays: totalDays,
+        continuesBefore: hasDatesBefore && dateStr === weekStart,
+        continuesAfter: hasDatesAfter && dateStr === weekEnd
+      });
+    });
+
+    // Trier par heure
+    return dayInterventions.sort((a, b) => {
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
     });
   };
 
@@ -263,21 +322,38 @@ const PlanningGanttView = ({
 
                 {/* Cellules des jours */}
                 {weekDays.map(day => {
-                  const dayInterventions = getInterventionsForDay(team, day.dateStr);
+                  const dayInterventions = getInterventionsForDay(team, day.dateStr, weekDays);
+                  const visibleInterventions = dayInterventions.slice(0, MAX_VISIBLE_PER_CELL);
+                  const overflowCount = dayInterventions.length - MAX_VISIBLE_PER_CELL;
+                  const hasOverflow = overflowCount > 0;
 
                   return (
                     <div
                       key={day.dateStr}
-                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''}`}
+                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''}`}
                     >
-                      {dayInterventions.map(itv => (
+                      {visibleInterventions.map(itv => (
                         <InterventionBar
                           key={itv.id}
                           intervention={itv}
                           color={team.color}
                           onClick={onInterventionClick}
+                          isSpanStart={itv.isSpanStart}
+                          isSpanMiddle={itv.isSpanMiddle}
+                          isSpanEnd={itv.isSpanEnd}
+                          spanDays={itv.spanDays}
                         />
                       ))}
+                      {hasOverflow && (
+                        <OverflowIndicator
+                          count={overflowCount}
+                          onClick={() => {
+                            // Ouvrir la première intervention cachée
+                            const firstHidden = dayInterventions[MAX_VISIBLE_PER_CELL];
+                            onInterventionClick?.(firstHidden);
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}

@@ -187,12 +187,15 @@
 .gantt-day-cell {
   padding: 0.5rem;
   min-height: 80px;
+  max-height: 200px;
   border-right: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
   transition: background 0.2s ease;
   background: white;
+  overflow: hidden;
+  position: relative;
 }
 
 .gantt-day-cell:last-child {
@@ -274,6 +277,47 @@
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  min-height: 44px;
+}
+
+/* Barres multi-jours */
+.gantt-bar.span-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: -0.5rem;
+}
+
+.gantt-bar.span-middle {
+  border-radius: 0;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+  justify-content: center;
+  align-items: center;
+  min-height: 36px;
+}
+
+.gantt-bar.span-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -0.5rem;
+}
+
+.bar-continuation {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: bold;
+}
+
+.bar-days-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.75rem;
 }
 
 .gantt-bar::before {
@@ -356,6 +400,44 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ==================== INDICATEUR DE DÉBORDEMENT ==================== */
+.overflow-indicator {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border: 1px dashed #94a3b8;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.overflow-indicator:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  border-color: #6366f1;
+  color: #4338ca;
+  transform: translateY(-1px);
+}
+
+/* Cellule avec débordement */
+.gantt-day-cell.has-overflow {
+  position: relative;
+}
+
+.gantt-day-cell.has-overflow::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.9));
+  pointer-events: none;
 }
 
 /* ==================== ÉTAT VIDE ==================== */
