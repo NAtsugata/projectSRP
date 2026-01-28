@@ -5,6 +5,7 @@ import React, { useCallback, useState } from 'react';
 import { CoffeeIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
 import { useNavigate } from 'react-router-dom';
 import { InterventionList, PlanningGanttView } from '../components/planning';
+import { QuickAlertButton } from '../components/employee';
 import { LoadingSpinner } from '../components/ui';
 import './EmployeePlanningView.css';
 
@@ -14,7 +15,7 @@ const VIEW_MODES = {
   LIST: 'list'
 };
 
-export default function EmployeePlanningView({ interventions, loading = false, userName, users = [] }) {
+export default function EmployeePlanningView({ interventions, loading = false, userId, userName, users = [] }) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('employeePlanningViewMode') || VIEW_MODES.GANTT;
@@ -55,24 +56,33 @@ export default function EmployeePlanningView({ interventions, loading = false, u
             </p>
           </div>
 
-          {/* Sélecteur de vue */}
-          <div className="view-mode-selector">
-            <button
-              className={`view-mode-btn ${viewMode === VIEW_MODES.GANTT ? 'active' : ''}`}
-              onClick={() => handleViewModeChange(VIEW_MODES.GANTT)}
-              title="Vue Planning"
-            >
-              <CalendarIcon />
-              <span className="view-mode-label">Planning</span>
-            </button>
-            <button
-              className={`view-mode-btn ${viewMode === VIEW_MODES.LIST ? 'active' : ''}`}
-              onClick={() => handleViewModeChange(VIEW_MODES.LIST)}
-              title="Vue Liste"
-            >
-              <ListIcon />
-              <span className="view-mode-label">Liste</span>
-            </button>
+          <div className="header-actions">
+            {/* Bouton alerte rapide */}
+            <QuickAlertButton
+              userId={userId}
+              userName={userName}
+              currentIntervention={interventions?.[0]}
+            />
+
+            {/* Sélecteur de vue */}
+            <div className="view-mode-selector">
+              <button
+                className={`view-mode-btn ${viewMode === VIEW_MODES.GANTT ? 'active' : ''}`}
+                onClick={() => handleViewModeChange(VIEW_MODES.GANTT)}
+                title="Vue Planning"
+              >
+                <CalendarIcon />
+                <span className="view-mode-label">Planning</span>
+              </button>
+              <button
+                className={`view-mode-btn ${viewMode === VIEW_MODES.LIST ? 'active' : ''}`}
+                onClick={() => handleViewModeChange(VIEW_MODES.LIST)}
+                title="Vue Liste"
+              >
+                <ListIcon />
+                <span className="view-mode-label">Liste</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

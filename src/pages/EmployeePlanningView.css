@@ -64,6 +64,14 @@
   font-weight: 400;
 }
 
+/* ==================== HEADER ACTIONS ==================== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 /* ==================== VIEW MODE SELECTOR ==================== */
 .employee-planning-view .view-mode-selector {
   display: flex;
@@ -193,8 +201,13 @@
     gap: var(--spacing-3);
   }
 
-  .employee-planning-view .view-mode-selector {
+  .header-actions {
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .employee-planning-view .view-mode-selector {
+    flex: 1;
     justify-content: center;
   }
 

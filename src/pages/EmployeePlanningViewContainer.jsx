@@ -44,6 +44,7 @@ const EmployeePlanningViewContainer = () => {
             interventions={interventions}
             users={users}
             loading={isLoading}
+            userId={profile?.id}
             userName={profile?.full_name || profile?.email?.split('@')[0] || 'Collaborateur'}
         />
     );
