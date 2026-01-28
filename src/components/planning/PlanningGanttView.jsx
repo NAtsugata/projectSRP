@@ -2,7 +2,7 @@
 // Vue Gantt pour visualiser le planning par équipe et par jour
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, UsersIcon } from '../SharedUI';
+import { ChevronLeftIcon, ChevronRightIcon, UsersIcon, EditIcon } from '../SharedUI';
 import './PlanningGanttView.css';
 
 // Couleurs pour les équipes
@@ -116,7 +116,7 @@ const formatTime = (time) => {
 /**
  * Composant pour une barre d'intervention
  */
-const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMiddle, isSpanEnd, spanDays }) => {
+const InterventionBar = ({ intervention, color, onClick, onEditTeam, isSpanStart, isSpanMiddle, isSpanEnd, spanDays }) => {
   const status = intervention.status || 'À venir';
   const isCompleted = status === 'Terminée';
   const isInProgress = status === 'En cours';
@@ -124,6 +124,11 @@ const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMidd
   // Classes pour les barres multi-jours
   const spanClass = isSpanStart ? 'span-start' : isSpanMiddle ? 'span-middle' : isSpanEnd ? 'span-end' : '';
   const isMultiDay = spanDays > 1;
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    onEditTeam?.(intervention);
+  };
 
   return (
     <div
@@ -146,6 +151,15 @@ const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMidd
       {isMultiDay && isSpanStart && (
         <span className="bar-days-badge">{spanDays}j</span>
       )}
+      {onEditTeam && !isSpanMiddle && (
+        <button
+          className="bar-edit-btn"
+          onClick={handleEditClick}
+          title="Modifier l'équipe"
+        >
+          <EditIcon />
+        </button>
+      )}
     </div>
   );
 };
@@ -165,7 +179,8 @@ const OverflowIndicator = ({ count, onClick }) => (
 const PlanningGanttView = ({
   interventions = [],
   users = [],
-  onInterventionClick
+  onInterventionClick,
+  onEditTeam
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -352,6 +367,7 @@ const PlanningGanttView = ({
                           intervention={itv}
                           color={team.color}
                           onClick={onInterventionClick}
+                          onEditTeam={onEditTeam}
                           isSpanStart={itv.isSpanStart}
                           isSpanMiddle={itv.isSpanMiddle}
                           isSpanEnd={itv.isSpanEnd}

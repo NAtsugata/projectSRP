@@ -320,6 +320,46 @@
   border-radius: 0.75rem;
 }
 
+/* Bouton d'édition d'équipe */
+.bar-edit-btn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.bar-edit-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.gantt-bar:hover .bar-edit-btn {
+  opacity: 1;
+}
+
+.bar-edit-btn:hover {
+  background: white;
+  color: #3b82f6;
+  transform: scale(1.1);
+}
+
+/* Ajuster badge si bouton présent */
+.gantt-bar:hover .bar-days-badge {
+  right: 2rem;
+}
+
 .gantt-bar::before {
   content: '';
   position: absolute;

@@ -189,6 +189,7 @@ export default function AdminPlanningView({
               interventions={interventions}
               users={users}
               onInterventionClick={handleView}
+              onEditTeam={handleEditTeam}
             />
           </div>
         )}
