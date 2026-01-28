@@ -101,6 +101,19 @@ const groupByTeam = (interventions, users) => {
 };
 
 /**
+ * Formate l'heure pour enlever les secondes (08:00:00 → 08:00)
+ */
+const formatTime = (time) => {
+  if (!time) return '08:00';
+  // Si le format est HH:MM:SS, enlever les secondes
+  const parts = time.split(':');
+  if (parts.length >= 2) {
+    return `${parts[0]}:${parts[1]}`;
+  }
+  return time;
+};
+
+/**
  * Composant pour une barre d'intervention
  */
 const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMiddle, isSpanEnd, spanDays }) => {
@@ -110,26 +123,27 @@ const InterventionBar = ({ intervention, color, onClick, isSpanStart, isSpanMidd
 
   // Classes pour les barres multi-jours
   const spanClass = isSpanStart ? 'span-start' : isSpanMiddle ? 'span-middle' : isSpanEnd ? 'span-end' : '';
+  const isMultiDay = spanDays > 1;
 
   return (
     <div
-      className={`gantt-bar ${isCompleted ? 'completed' : ''} ${isInProgress ? 'in-progress' : ''} ${spanClass}`}
+      className={`gantt-bar ${isCompleted ? 'completed' : ''} ${isInProgress ? 'in-progress' : ''} ${spanClass} ${isMultiDay ? 'multi-day' : ''}`}
       style={{ '--bar-color': color }}
       onClick={() => onClick?.(intervention)}
-      title={`${intervention.client} - ${intervention.service || ''}\n${intervention.address || ''}${spanDays > 1 ? `\n📅 ${spanDays} jours` : ''}`}
+      title={`${intervention.client} - ${intervention.service || ''}\n${intervention.address || ''}${isMultiDay ? `\n📅 ${spanDays} jours` : ''}`}
     >
       {isSpanMiddle ? (
-        <span className="bar-continuation">→</span>
+        <span className="bar-continuation">⋯</span>
       ) : (
         <>
-          <span className="bar-time">{intervention.time || '08:00'}</span>
+          <span className="bar-time">{formatTime(intervention.time)}</span>
           <span className="bar-client">{intervention.client}</span>
-          {intervention.service && !isSpanEnd && (
+          {intervention.service && !isSpanMiddle && (
             <span className="bar-service">{intervention.service}</span>
           )}
         </>
       )}
-      {spanDays > 1 && isSpanStart && (
+      {isMultiDay && isSpanStart && (
         <span className="bar-days-badge">{spanDays}j</span>
       )}
     </div>
