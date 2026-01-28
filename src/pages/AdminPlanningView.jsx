@@ -3,7 +3,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView } from '../components/planning';
+import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView } from '../components/planning';
+import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
 import { Button, ConfirmDialog } from '../components/ui';
 import { PlusIcon, ClipboardListIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
 import logger from '../utils/logger';
@@ -12,6 +13,7 @@ import './AdminPlanningView.css';
 // Types de vue disponibles
 const VIEW_MODES = {
   GANTT: 'gantt',
+  MONTH: 'month',
   LIST: 'list'
 };
 
@@ -37,6 +39,8 @@ export default function AdminPlanningView({
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [archiveConfirm, setArchiveConfirm] = useState(null);
   const [editTeamIntervention, setEditTeamIntervention] = useState(null);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const unreadAlertsCount = useUnreadAlertsCount();
 
   // Sync form visibility with URL params
   useEffect(() => {
@@ -139,15 +143,35 @@ export default function AdminPlanningView({
           Gestion du Planning
         </h2>
         <div className="planning-header-actions">
+          {/* Bouton alertes employés */}
+          <button
+            className="alerts-btn"
+            onClick={() => setShowAlerts(true)}
+            title="Alertes employés"
+          >
+            <span className="alerts-icon">🚨</span>
+            {unreadAlertsCount > 0 && (
+              <span className="alerts-badge">{unreadAlertsCount}</span>
+            )}
+          </button>
+
           {/* Sélecteur de vue simplifié */}
           <div className="view-mode-selector">
             <button
               className={`view-mode-btn ${viewMode === VIEW_MODES.GANTT ? 'active' : ''}`}
               onClick={() => handleViewModeChange(VIEW_MODES.GANTT)}
-              title="Vue Gantt"
+              title="Vue Semaine"
             >
               <CalendarIcon />
-              <span className="view-mode-label">Planning</span>
+              <span className="view-mode-label">Semaine</span>
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === VIEW_MODES.MONTH ? 'active' : ''}`}
+              onClick={() => handleViewModeChange(VIEW_MODES.MONTH)}
+              title="Vue Mois"
+            >
+              <span className="view-mode-icon">📅</span>
+              <span className="view-mode-label">Mois</span>
             </button>
             <button
               className={`view-mode-btn ${viewMode === VIEW_MODES.LIST ? 'active' : ''}`}
@@ -190,6 +214,15 @@ export default function AdminPlanningView({
               users={users}
               onInterventionClick={handleView}
               onEditTeam={handleEditTeam}
+            />
+          </div>
+        )}
+
+        {viewMode === VIEW_MODES.MONTH && (
+          <div className="planning-month-section">
+            <PlanningMonthView
+              interventions={interventions}
+              onInterventionClick={handleView}
             />
           </div>
         )}
@@ -239,6 +272,11 @@ export default function AdminPlanningView({
         onCancel={() => setEditTeamIntervention(null)}
         loading={isUpdatingTeam}
       />
+
+      {/* Panneau alertes employés */}
+      {showAlerts && (
+        <EmployeeAlertsPanel onClose={() => setShowAlerts(false)} />
+      )}
     </div>
   );
 }
