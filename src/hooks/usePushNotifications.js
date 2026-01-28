@@ -195,17 +195,39 @@ export const useInterventionNotifications = (userId, enabled = true) => {
     };
   }, [userId, enabled]);
 
-  // ⏰ Rappels programmés (1h avant)
+  // ⏰ Rappels programmés améliorés (basés sur l'heure exacte)
   useEffect(() => {
     if (!userId || !enabled || !isNotificationEnabled()) {
       return;
     }
 
+    /**
+     * Combine une date et une heure en un objet Date
+     * @param {string} dateStr - Date au format YYYY-MM-DD
+     * @param {string} timeStr - Heure au format HH:MM ou HH:MM:SS
+     * @returns {Date}
+     */
+    const combineDateTime = (dateStr, timeStr) => {
+      const time = timeStr || '08:00';
+      const [hours, minutes] = time.split(':').map(Number);
+      const date = new Date(dateStr);
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    };
+
+    /**
+     * Formate l'heure pour l'affichage
+     */
+    const formatTimeDisplay = (timeStr) => {
+      if (!timeStr) return '08:00';
+      const parts = timeStr.split(':');
+      return `${parts[0]}:${parts[1]}`;
+    };
+
     const checkUpcomingInterventions = async () => {
       try {
         const now = new Date();
-        const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-        const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
+        const todayStr = now.toISOString().split('T')[0];
 
         // Récupérer les interventions assignées à l'utilisateur
         const { data: assignments } = await supabase
@@ -217,51 +239,160 @@ export const useInterventionNotifications = (userId, enabled = true) => {
 
         const interventionIds = assignments.map(a => a.intervention_id);
 
-        // Récupérer les interventions à venir
+        // Récupérer les interventions à venir (aujourd'hui et demain)
         const { data: interventions } = await supabase
           .from('interventions')
           .select('*')
           .in('id', interventionIds)
-          .neq('status', 'completed')
+          .neq('status', 'Terminée')
           .neq('status', 'cancelled')
           .eq('is_archived', false);
 
         if (!interventions) return;
 
         for (const intervention of interventions) {
-          // Vérifier les dates programmées
-          const scheduledDates = intervention.scheduled_dates || [];
+          // Utiliser scheduled_dates ou la date principale
+          const scheduledDates = intervention.scheduled_dates?.length > 0
+            ? intervention.scheduled_dates
+            : (intervention.date ? [intervention.date] : []);
 
           for (const dateStr of scheduledDates) {
-            const scheduledDate = new Date(dateStr);
+            // Combiner date + heure pour obtenir le datetime exact
+            const scheduledDateTime = combineDateTime(dateStr, intervention.time);
+            const timeUntil = scheduledDateTime.getTime() - now.getTime();
+            const minutesUntil = timeUntil / (1000 * 60);
 
-            // Rappel 1h avant
-            const reminderKey = `${intervention.id}_${dateStr}_1h`;
+            // === RAPPEL 1H AVANT (entre 55 et 65 minutes avant) ===
+            const reminder1hKey = `${intervention.id}_${dateStr}_1h`;
             if (
-              !sentRemindersRef.current.has(reminderKey) &&
-              scheduledDate > thirtyMinLater &&
-              scheduledDate <= oneHourLater
+              !sentRemindersRef.current.has(reminder1hKey) &&
+              minutesUntil > 55 &&
+              minutesUntil <= 65
             ) {
-              logger.log('⏰ Rappel 1h avant pour:', intervention.client);
+              logger.log('⏰ Rappel 1h avant pour:', intervention.client, 'à', formatTimeDisplay(intervention.time));
 
-              await showLocalNotification('⏰ Rappel intervention dans 1h', {
-                body: `${intervention.client}\n${intervention.address || 'Adresse non spécifiée'}`,
-                tag: `reminder-${intervention.id}`,
+              await showLocalNotification('⏰ Intervention dans 1 heure', {
+                body: `${formatTimeDisplay(intervention.time)} - ${intervention.client}\n${intervention.address || 'Adresse non spécifiée'}`,
+                tag: `reminder-1h-${intervention.id}`,
                 requireInteraction: true,
+                vibrate: [200, 100, 200],
                 data: {
                   url: `/planning/${intervention.id}`,
                   interventionId: intervention.id,
-                  type: 'reminder'
+                  type: 'reminder-1h'
                 }
               });
 
-              sentRemindersRef.current.add(reminderKey);
+              sentRemindersRef.current.add(reminder1hKey);
               setLastNotification({
-                type: 'reminder',
+                type: 'reminder-1h',
                 intervention,
                 timestamp: new Date()
               });
             }
+
+            // === RAPPEL 15 MIN AVANT (entre 10 et 20 minutes avant) ===
+            const reminder15minKey = `${intervention.id}_${dateStr}_15min`;
+            if (
+              !sentRemindersRef.current.has(reminder15minKey) &&
+              minutesUntil > 10 &&
+              minutesUntil <= 20
+            ) {
+              logger.log('⏰ Rappel 15min avant pour:', intervention.client);
+
+              await showLocalNotification('⚡ Intervention dans 15 minutes', {
+                body: `${formatTimeDisplay(intervention.time)} - ${intervention.client}\n${intervention.address || 'Adresse non spécifiée'}`,
+                tag: `reminder-15min-${intervention.id}`,
+                requireInteraction: true,
+                vibrate: [300, 100, 300],
+                data: {
+                  url: `/planning/${intervention.id}`,
+                  interventionId: intervention.id,
+                  type: 'reminder-15min'
+                }
+              });
+
+              sentRemindersRef.current.add(reminder15minKey);
+              setLastNotification({
+                type: 'reminder-15min',
+                intervention,
+                timestamp: new Date()
+              });
+            }
+
+            // === NOTIFICATION "C'EST MAINTENANT" (entre -2 et +5 minutes) ===
+            const reminderNowKey = `${intervention.id}_${dateStr}_now`;
+            if (
+              !sentRemindersRef.current.has(reminderNowKey) &&
+              minutesUntil >= -2 &&
+              minutesUntil <= 5
+            ) {
+              logger.log('🔔 C\'est maintenant pour:', intervention.client);
+
+              await showLocalNotification('🚀 C\'est maintenant !', {
+                body: `${intervention.client}\n${intervention.service || ''}\n📍 ${intervention.address || 'Adresse non spécifiée'}`,
+                tag: `reminder-now-${intervention.id}`,
+                requireInteraction: true,
+                vibrate: [500, 200, 500, 200, 500],
+                data: {
+                  url: `/planning/${intervention.id}`,
+                  interventionId: intervention.id,
+                  type: 'reminder-now'
+                }
+              });
+
+              sentRemindersRef.current.add(reminderNowKey);
+              setLastNotification({
+                type: 'reminder-now',
+                intervention,
+                timestamp: new Date()
+              });
+            }
+          }
+        }
+
+        // === RAPPEL MATINAL À 7H ===
+        const morningKey = `morning_${todayStr}`;
+        const currentHour = now.getHours();
+        const currentMinutes = now.getMinutes();
+
+        if (
+          !sentRemindersRef.current.has(morningKey) &&
+          currentHour === 7 &&
+          currentMinutes >= 0 &&
+          currentMinutes <= 10
+        ) {
+          // Compter les interventions d'aujourd'hui
+          const todayInterventions = interventions.filter(itv => {
+            const dates = itv.scheduled_dates?.length > 0 ? itv.scheduled_dates : [itv.date];
+            return dates.includes(todayStr);
+          });
+
+          if (todayInterventions.length > 0) {
+            logger.log('☀️ Rappel matinal:', todayInterventions.length, 'interventions');
+
+            const firstIntervention = todayInterventions[0];
+            const body = todayInterventions.length === 1
+              ? `${formatTimeDisplay(firstIntervention.time)} - ${firstIntervention.client}`
+              : `${todayInterventions.length} interventions aujourd'hui\nPremière à ${formatTimeDisplay(firstIntervention.time)}`;
+
+            await showLocalNotification('☀️ Bonjour ! Vos interventions du jour', {
+              body,
+              tag: 'morning-reminder',
+              requireInteraction: false,
+              vibrate: [200, 100, 200],
+              data: {
+                url: '/planning',
+                type: 'morning-reminder'
+              }
+            });
+
+            sentRemindersRef.current.add(morningKey);
+            setLastNotification({
+              type: 'morning-reminder',
+              count: todayInterventions.length,
+              timestamp: new Date()
+            });
           }
         }
       } catch (error) {
@@ -269,18 +400,26 @@ export const useInterventionNotifications = (userId, enabled = true) => {
       }
     };
 
-    // Vérifier immédiatement puis toutes les 5 minutes
+    // Vérifier immédiatement puis toutes les 2 minutes (pour plus de précision)
     checkUpcomingInterventions();
-    const intervalId = setInterval(checkUpcomingInterventions, 5 * 60 * 1000);
+    const intervalId = setInterval(checkUpcomingInterventions, 2 * 60 * 1000);
 
     // Nettoyer les anciens rappels de plus de 24h
     const cleanupInterval = setInterval(() => {
       const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
       sentRemindersRef.current.forEach(key => {
-        const parts = key.split('_');
-        const dateStr = parts[1];
-        if (new Date(dateStr).getTime() < oneDayAgo) {
-          sentRemindersRef.current.delete(key);
+        // Ne pas supprimer les clés "morning_" trop récentes
+        if (key.startsWith('morning_')) {
+          const dateStr = key.replace('morning_', '');
+          if (new Date(dateStr).getTime() < oneDayAgo) {
+            sentRemindersRef.current.delete(key);
+          }
+        } else {
+          const parts = key.split('_');
+          const dateStr = parts[1];
+          if (new Date(dateStr).getTime() < oneDayAgo) {
+            sentRemindersRef.current.delete(key);
+          }
         }
       });
     }, 60 * 60 * 1000); // Nettoyage toutes les heures
