@@ -2,7 +2,8 @@
 // Vue mensuelle du planning
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '../SharedUI';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
+import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
 import './PlanningMonthView.css';
 
 /**
@@ -67,6 +68,7 @@ const PlanningMonthView = ({
   onDayClick
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isExporting, setIsExporting] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -104,6 +106,19 @@ const PlanningMonthView = ({
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      await exportMonthlyPlanningPdf(year, month, interventions, {
+        title: 'Planning Mensuel'
+      });
+    } catch (error) {
+      console.error('Erreur export PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Stats du mois
@@ -144,9 +159,20 @@ const PlanningMonthView = ({
             <ChevronRightIcon />
           </button>
         </div>
-        <button className="today-btn" onClick={goToToday}>
-          Aujourd'hui
-        </button>
+        <div className="month-actions">
+          <button className="today-btn" onClick={goToToday}>
+            Aujourd'hui
+          </button>
+          <button
+            className="export-btn"
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            title="Exporter en PDF"
+          >
+            <DownloadIcon />
+            {isExporting ? 'Export...' : 'PDF'}
+          </button>
+        </div>
       </div>
 
       {/* Grille du calendrier */}

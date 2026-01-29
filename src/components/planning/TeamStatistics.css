@@ -1,0 +1,341 @@
+/* src/components/planning/TeamStatistics.css */
+
+.team-statistics {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+/* Header */
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  color: white;
+}
+
+.stats-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.stats-period {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  text-transform: capitalize;
+}
+
+/* Résumé global */
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stat-card {
+  background: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.stat-card.completed .stat-value {
+  color: #10b981;
+}
+
+.stat-card.in-progress .stat-value {
+  color: #f59e0b;
+}
+
+.stat-card.upcoming .stat-value {
+  color: #3b82f6;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Barre de progression */
+.stats-progress-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.progress-value {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Sections */
+.stats-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stats-section:last-child {
+  border-bottom: none;
+}
+
+.stats-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-section h4 svg {
+  width: 16px;
+  height: 16px;
+  color: #6366f1;
+}
+
+/* Stats par employé */
+.employee-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.employee-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.emp-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.emp-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emp-count {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.emp-bar-container {
+  width: 100%;
+}
+
+.emp-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+}
+
+.emp-bar-completed {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.3s ease;
+}
+
+.emp-bar-progress {
+  height: 100%;
+  background: #f59e0b;
+  transition: width 0.3s ease;
+}
+
+.emp-details {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.emp-completed {
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.emp-in-progress {
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.mini-icon {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Stats par service */
+.service-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.service-stat-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.svc-name {
+  font-size: 0.8125rem;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svc-bar-container {
+  width: 100%;
+}
+
+.svc-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.svc-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.svc-count {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+}
+
+/* Jours les plus chargés */
+.busiest-days-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.busiest-day-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 30px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.day-label {
+  font-size: 0.8125rem;
+  color: #475569;
+  text-transform: capitalize;
+}
+
+.day-bar-container {
+  width: 100%;
+}
+
+.day-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.day-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.day-count {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .employee-stat-row {
+    grid-template-columns: 1fr 1.5fr auto;
+  }
+
+  .service-stat-row {
+    grid-template-columns: 90px 1fr 30px;
+  }
+
+  .busiest-day-row {
+    grid-template-columns: 80px 1fr 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-header {
+    padding: 1rem;
+  }
+
+  .stats-section {
+    padding: 0.75rem 1rem;
+  }
+
+  .stats-progress-section {
+    padding: 0.75rem 1rem;
+  }
+}

@@ -2,7 +2,8 @@
 // Vue Gantt pour visualiser le planning par équipe et par jour
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, UsersIcon, EditIcon } from '../SharedUI';
+import { ChevronLeftIcon, ChevronRightIcon, UsersIcon, EditIcon, DownloadIcon } from '../SharedUI';
+import { exportWeeklyPlanningPdf } from '../../utils/planningPdfExport';
 import './PlanningGanttView.css';
 
 // Couleurs pour les équipes
@@ -183,6 +184,7 @@ const PlanningGanttView = ({
   onEditTeam
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isExporting, setIsExporting] = useState(false);
 
   // Générer les jours de la semaine
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
@@ -208,6 +210,20 @@ const PlanningGanttView = ({
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  // Export PDF
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      await exportWeeklyPlanningPdf(weekDays, teams, {
+        title: 'Planning Hebdomadaire'
+      });
+    } catch (error) {
+      console.error('Erreur export PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Obtenir les interventions d'une équipe pour un jour donné avec infos de span
@@ -307,9 +323,20 @@ const PlanningGanttView = ({
             <ChevronRightIcon />
           </button>
         </div>
-        <button className="today-btn" onClick={goToToday}>
-          Aujourd'hui
-        </button>
+        <div className="gantt-actions">
+          <button className="today-btn" onClick={goToToday}>
+            Aujourd'hui
+          </button>
+          <button
+            className="export-btn"
+            onClick={handleExportPdf}
+            disabled={isExporting}
+            title="Exporter en PDF"
+          >
+            <DownloadIcon />
+            {isExporting ? 'Export...' : 'PDF'}
+          </button>
+        </div>
       </div>
 
       {/* Grille Gantt */}

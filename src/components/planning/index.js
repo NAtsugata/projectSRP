@@ -9,3 +9,4 @@ export { default as PlanningCalendarView } from './PlanningCalendarView';
 export { default as TeamGroupedView } from './TeamGroupedView';
 export { default as PlanningGanttView } from './PlanningGanttView';
 export { default as PlanningMonthView } from './PlanningMonthView';
+export { default as TeamStatistics } from './TeamStatistics';

@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView } from '../components/planning';
+import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
 import { Button, ConfirmDialog } from '../components/ui';
 import { PlusIcon, ClipboardListIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
@@ -243,6 +243,14 @@ export default function AdminPlanningView({
             />
           </div>
         )}
+
+        {/* Statistiques d'équipe (visible sur toutes les vues) */}
+        <div className="planning-stats-section">
+          <TeamStatistics
+            interventions={interventions}
+            users={users}
+          />
+        </div>
       </div>
 
       {/* Delete confirmation dialog */}
