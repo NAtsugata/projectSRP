@@ -59,20 +59,23 @@ const InterventionDetailViewContainer = () => {
         return { success: !error, error };
     };
 
-    // 💾 Sauvegarde + statut
+    // 💾 Sauvegarde + clôture
     const handleUpdateInterventionReport = async (id, report) => {
         try {
-            const newStatus = report?.departureTime ? 'Terminée' : 'En cours';
+            // L'utilisateur a cliqué "Sauvegarder et Clôturer" → toujours Terminée
             const sanitizedReport = buildSanitizedReport(report);
+            if (!sanitizedReport.departureTime) {
+                sanitizedReport.departureTime = new Date().toISOString();
+            }
 
             const { error } = await interventionService.updateIntervention(id, {
                 report: sanitizedReport,
-                status: newStatus
+                status: 'Terminée'
             });
 
             if (error) throw error;
 
-            toast?.success(newStatus === 'Terminée' ? 'Rapport sauvegardé et intervention clôturée.' : 'Rapport sauvegardé.');
+            toast?.success('Rapport sauvegardé et intervention clôturée.');
             queryClient.invalidateQueries({ queryKey: ['intervention', id] });
             queryClient.invalidateQueries({ queryKey: ['interventions'] }); // Refresh list too
             navigate('/planning');
