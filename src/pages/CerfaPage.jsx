@@ -4,7 +4,7 @@
 // Optimisé pour mobile
 // =============================
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     fillCerfa15497,
@@ -19,6 +19,8 @@ import {
 import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
+
+const DRAFT_KEY = 'cerfa_15497_draft';
 
 // GWP (Global Warming Potential) des fluides frigorigènes - pour calcul teqCO2
 const GWP_VALUES = {
@@ -190,11 +192,43 @@ function CerfaPage() {
     const [toast, setToast] = useState(null);
     const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
     const [showAdminReset, setShowAdminReset] = useState(false);
+    const [draftRestored, setDraftRestored] = useState(false);
+    const saveTimerRef = useRef(null);
 
     // Rafraîchir le numéro de fiche après génération
     const refreshFicheInfo = useCallback(() => {
         setFicheInfo(getCurrentFicheInfo());
     }, []);
+
+    // Auto-save brouillon dans sessionStorage (debounce 1s)
+    useEffect(() => {
+        if (!draftRestored) return; // Ne pas sauvegarder avant la restauration
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            try {
+                sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+            } catch (e) { /* quota exceeded, ignore */ }
+        }, 1000);
+        return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+    }, [formData, draftRestored]);
+
+    // Restaurer le brouillon au montage
+    useEffect(() => {
+        try {
+            const draft = sessionStorage.getItem(DRAFT_KEY);
+            if (draft) {
+                const parsed = JSON.parse(draft);
+                // Ne restaurer que si le brouillon a du contenu significatif
+                const hasContent = parsed.detenteurNom || parsed.fluideDesignation ||
+                    parsed.observations || parsed.signatureOperateur;
+                if (hasContent) {
+                    setFormData(prev => ({ ...prev, ...parsed }));
+                    console.log('[CERFA] Brouillon restauré');
+                }
+            }
+        } catch (e) { /* ignore parse errors */ }
+        setDraftRestored(true);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calcul automatique du teqCO2 basé sur le fluide et la charge
     const calculatedTeqCO2 = useMemo(() => {
@@ -350,6 +384,9 @@ function CerfaPage() {
                 filename,
                 ficheNumber
             });
+
+            // Effacer le brouillon après génération réussie
+            try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
 
             showToast(`CERFA ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche

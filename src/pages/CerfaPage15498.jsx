@@ -3,7 +3,7 @@
 // Formulaire CERFA 15498 - Attestation d'acquisition de fluides frigorigènes
 // =============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     fillCerfa15498,
@@ -18,6 +18,8 @@ import {
 import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
+
+const DRAFT_KEY_15498 = 'cerfa_15498_draft';
 
 function CerfaPage15498() {
     const [searchParams] = useSearchParams();
@@ -86,11 +88,42 @@ function CerfaPage15498() {
     const [toast, setToast] = useState(null);
     const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
     const [showAdminReset, setShowAdminReset] = useState(false);
+    const [draftRestored, setDraftRestored] = useState(false);
+    const saveTimerRef = useRef(null);
 
     // Rafraîchir le numéro de fiche après génération
     const refreshFicheInfo = useCallback(() => {
         setFicheInfo(getCurrentFicheInfo());
     }, []);
+
+    // Auto-save brouillon dans sessionStorage (debounce 1s)
+    useEffect(() => {
+        if (!draftRestored) return;
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            try {
+                sessionStorage.setItem(DRAFT_KEY_15498, JSON.stringify(formData));
+            } catch (e) { /* quota exceeded, ignore */ }
+        }, 1000);
+        return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+    }, [formData, draftRestored]);
+
+    // Restaurer le brouillon au montage
+    useEffect(() => {
+        try {
+            const draft = sessionStorage.getItem(DRAFT_KEY_15498);
+            if (draft) {
+                const parsed = JSON.parse(draft);
+                const hasContent = parsed.acq_nom || parsed.details ||
+                    parsed.signatureAcquereur || parsed.inst_raison;
+                if (hasContent) {
+                    setFormData(prev => ({ ...prev, ...parsed }));
+                    console.log('[CERFA 15498] Brouillon restauré');
+                }
+            }
+        } catch (e) { /* ignore parse errors */ }
+        setDraftRestored(true);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
@@ -242,6 +275,9 @@ function CerfaPage15498() {
                 filename,
                 ficheNumber
             });
+
+            // Effacer le brouillon après génération réussie
+            try { sessionStorage.removeItem(DRAFT_KEY_15498); } catch (e) { /* ignore */ }
 
             showToast(`CERFA 15498 ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo();
