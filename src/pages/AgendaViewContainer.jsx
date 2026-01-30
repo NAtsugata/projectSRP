@@ -16,7 +16,7 @@ const AgendaViewContainer = () => {
     const { profile } = useAuthStore();
 
     // Récupérer les interventions avec le hook
-    const { interventions, isLoading: interventionsLoading, error: interventionsError } = useInterventions(
+    const { interventions, isLoading: interventionsLoading, error: interventionsError, refetch } = useInterventions(
         profile?.is_admin ? null : profile?.id
     );
 
@@ -46,6 +46,7 @@ const AgendaViewContainer = () => {
             loading={loading}
             error={error}
             currentUserId={profile?.id}
+            onRefreshInterventions={refetch}
         />
     );
 };

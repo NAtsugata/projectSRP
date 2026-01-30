@@ -44,7 +44,11 @@ export function useChecklists(userId = null) {
 
     // Mutation pour mettre à jour une checklist
     const updateMutation = useMutation({
-        mutationFn: ({ id, updates }) => checklistService.updateChecklist(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            const result = await checklistService.updateChecklist(id, updates);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['checklists'] });
         },
@@ -52,7 +56,11 @@ export function useChecklists(userId = null) {
 
     // Mutation pour créer un template
     const createTemplateMutation = useMutation({
-        mutationFn: (template) => checklistService.createTemplate(template),
+        mutationFn: async (template) => {
+            const result = await checklistService.createTemplate(template);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },
@@ -60,7 +68,11 @@ export function useChecklists(userId = null) {
 
     // Mutation pour mettre à jour un template
     const updateTemplateMutation = useMutation({
-        mutationFn: ({ id, updates }) => checklistService.updateTemplate(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            const result = await checklistService.updateTemplate(id, updates);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },
@@ -68,7 +80,11 @@ export function useChecklists(userId = null) {
 
     // Mutation pour supprimer un template
     const deleteTemplateMutation = useMutation({
-        mutationFn: (id) => checklistService.deleteTemplate(id),
+        mutationFn: async (id) => {
+            const result = await checklistService.deleteTemplate(id);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['checklistTemplates'] });
         },

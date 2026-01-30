@@ -40,7 +40,8 @@ const AgendaView = ({
   employees = [],
   loading = false,
   error = null,
-  currentUserId
+  currentUserId,
+  onRefreshInterventions
 }) => {
   const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -206,8 +207,8 @@ const AgendaView = ({
       logger.log('✅ Intervention déplacée avec succès');
       toast.success('Intervention déplacée avec succès');
 
-      // TODO: Recharger les données
-      // await onRefreshInterventions();
+      // Recharger les données après déplacement
+      if (onRefreshInterventions) await onRefreshInterventions();
 
     } catch (error) {
       logger.error('❌ Erreur lors du déplacement:', error);

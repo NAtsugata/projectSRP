@@ -49,7 +49,11 @@ export function useVault(userId = null) {
 
     // Mutation pour supprimer un document
     const deleteMutation = useMutation({
-        mutationFn: (id) => vaultService.deleteVaultDocument(id),
+        mutationFn: async (id) => {
+            const result = await vaultService.deleteVaultDocument(id);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vault'] });
         },

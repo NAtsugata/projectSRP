@@ -1,5 +1,6 @@
-# Ignore ONNX models (too large for git, user-specific)
+# Ignore ONNX models except best.onnx (YOLO document detector)
 *.onnx
+!best.onnx
 
 # Ignore PyTorch models
 *.pt

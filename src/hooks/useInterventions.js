@@ -53,7 +53,11 @@ export function useInterventions(userId = null, isArchived = false) {
 
     // Mutation pour mettre à jour une intervention
     const updateMutation = useMutation({
-        mutationFn: ({ id, updates }) => interventionService.updateIntervention(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            const result = await interventionService.updateIntervention(id, updates);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },
@@ -61,7 +65,11 @@ export function useInterventions(userId = null, isArchived = false) {
 
     // Mutation pour supprimer une intervention
     const deleteMutation = useMutation({
-        mutationFn: (id) => interventionService.deleteIntervention(id),
+        mutationFn: async (id) => {
+            const result = await interventionService.deleteIntervention(id);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },
@@ -69,7 +77,11 @@ export function useInterventions(userId = null, isArchived = false) {
 
     // Mutation pour mettre à jour les assignations d'une intervention
     const updateAssignmentsMutation = useMutation({
-        mutationFn: ({ interventionId, userIds }) => interventionService.updateAssignments(interventionId, userIds),
+        mutationFn: async ({ interventionId, userIds }) => {
+            const result = await interventionService.updateAssignments(interventionId, userIds);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['interventions'] });
         },

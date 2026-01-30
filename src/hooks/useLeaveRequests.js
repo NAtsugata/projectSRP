@@ -28,7 +28,11 @@ export function useLeaveRequests(userId = null) {
 
     // Mutation pour créer une demande de congé
     const createMutation = useMutation({
-        mutationFn: (newLeaveRequest) => leaveService.createLeaveRequest(newLeaveRequest),
+        mutationFn: async (newLeaveRequest) => {
+            const result = await leaveService.createLeaveRequest(newLeaveRequest);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },
@@ -36,7 +40,11 @@ export function useLeaveRequests(userId = null) {
 
     // Mutation pour mettre à jour une demande de congé
     const updateMutation = useMutation({
-        mutationFn: ({ id, updates }) => leaveService.updateLeaveRequest(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            const result = await leaveService.updateLeaveRequest(id, updates);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },
@@ -44,7 +52,11 @@ export function useLeaveRequests(userId = null) {
 
     // Mutation pour supprimer une demande de congé
     const deleteMutation = useMutation({
-        mutationFn: (id) => leaveService.deleteLeaveRequest(id),
+        mutationFn: async (id) => {
+            const result = await leaveService.deleteLeaveRequest(id);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
         },

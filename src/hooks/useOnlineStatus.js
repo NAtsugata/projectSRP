@@ -5,17 +5,17 @@
  * @returns {boolean} - true si en ligne, false si hors ligne
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import logger from '../utils/logger';
 
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(() => {
-    // Valeur initiale depuis navigator.onLine
     return typeof navigator !== 'undefined' ? navigator.onLine : true;
   });
+  const isOnlineRef = useRef(isOnline);
+  isOnlineRef.current = isOnline;
 
   useEffect(() => {
-    // Fonction pour mettre à jour le statut
     function handleOnline() {
       logger.log('📶 Connexion rétablie');
       setIsOnline(true);
@@ -26,26 +26,24 @@ export function useOnlineStatus() {
       setIsOnline(false);
     }
 
-    // Écouter les événements de connexion
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Vérification périodique (utile sur mobile où les événements ne sont pas toujours fiables)
+    // Vérification périodique (utile sur mobile)
     const checkInterval = setInterval(() => {
       const currentStatus = navigator.onLine;
-      if (currentStatus !== isOnline) {
+      if (currentStatus !== isOnlineRef.current) {
         setIsOnline(currentStatus);
         logger.log(`📡 Statut connexion mis à jour: ${currentStatus ? 'en ligne' : 'hors ligne'}`);
       }
-    }, 5000); // Vérifier toutes les 5 secondes
+    }, 5000);
 
-    // Cleanup
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(checkInterval);
     };
-  }, [isOnline]);
+  }, []);
 
   return isOnline;
 }
