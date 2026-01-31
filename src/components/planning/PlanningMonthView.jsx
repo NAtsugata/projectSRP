@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
 import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
+import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './PlanningMonthView.css';
 
 /**
@@ -22,7 +23,7 @@ const getMonthDays = (year, month) => {
     const date = new Date(year, month, 1 - i);
     days.push({
       date,
-      dateStr: date.toISOString().split('T')[0],
+      dateStr: toLocalDateStr(date),
       dayNum: date.getDate(),
       isCurrentMonth: false,
       isToday: date.toDateString() === new Date().toDateString(),
@@ -35,7 +36,7 @@ const getMonthDays = (year, month) => {
     const date = new Date(year, month, d);
     days.push({
       date,
-      dateStr: date.toISOString().split('T')[0],
+      dateStr: toLocalDateStr(date),
       dayNum: d,
       isCurrentMonth: true,
       isToday: date.toDateString() === new Date().toDateString(),
@@ -49,7 +50,7 @@ const getMonthDays = (year, month) => {
     const date = new Date(year, month + 1, i);
     days.push({
       date,
-      dateStr: date.toISOString().split('T')[0],
+      dateStr: toLocalDateStr(date),
       dayNum: i,
       isCurrentMonth: false,
       isToday: date.toDateString() === new Date().toDateString(),

@@ -222,12 +222,11 @@ export const getDateRange = (date, viewMode) => {
   }
 
   if (viewMode === 'week') {
-    // Start on Monday
+    // Start on Monday (local time, sans mutation de current)
     const day = current.getDay();
     const diff = current.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(current.setDate(diff));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    const monday = new Date(current.getFullYear(), current.getMonth(), diff);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
 
     return {
       start: monday,
@@ -517,6 +516,18 @@ export const formatMinutesToTime = (minutes) => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Formate une date en YYYY-MM-DD en heure locale (évite le décalage UTC de toISOString)
+ * @param {Date} date
+ * @returns {string} - Format YYYY-MM-DD
+ */
+export const toLocalDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 };
 
 export { START_MIN, END_MIN, DAY_SPAN };

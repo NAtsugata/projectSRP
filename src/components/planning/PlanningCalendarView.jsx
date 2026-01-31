@@ -3,6 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '../SharedUI';
+import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './PlanningCalendarView.css';
 
 /**
@@ -60,7 +61,7 @@ const generateCalendarDays = (year, month) => {
  * Formater la date en YYYY-MM-DD
  */
 const formatDateKey = (date) => {
-  return date.toISOString().split('T')[0];
+  return toLocalDateStr(date);
 };
 
 /**

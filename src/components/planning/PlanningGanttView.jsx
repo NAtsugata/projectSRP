@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, UsersIcon, EditIcon, DownloadIcon } from '../SharedUI';
 import { exportWeeklyPlanningPdf } from '../../utils/planningPdfExport';
+import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './PlanningGanttView.css';
 
 // Couleurs pour les équipes
@@ -26,18 +27,17 @@ const MAX_VISIBLE_PER_CELL = 3;
  */
 const getWeekDays = (startDate) => {
   const days = [];
-  const start = new Date(startDate);
-  // Aller au lundi de cette semaine
-  const day = start.getDay();
-  const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-  start.setDate(diff);
+  const s = new Date(startDate);
+  // Aller au lundi de cette semaine (en heure locale, sans mutation)
+  const day = s.getDay();
+  const diff = s.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(s.getFullYear(), s.getMonth(), diff);
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
+    const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
     days.push({
       date,
-      dateStr: date.toISOString().split('T')[0],
+      dateStr: toLocalDateStr(date),
       dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
       dayNum: date.getDate(),
       isToday: date.toDateString() === new Date().toDateString(),

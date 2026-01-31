@@ -17,7 +17,8 @@ import { CalendarIcon } from '../components/SharedUI';
 import {
   filterInterventions,
   getDateRange,
-  navigatePeriod
+  navigatePeriod,
+  toLocalDateStr
 } from '../utils/agendaHelpers';
 // eslint-disable-next-line no-unused-vars -- Reserved for future notification features
 import { supabase } from '../lib/supabase';
@@ -68,8 +69,8 @@ const AgendaView = ({
     });
 
     // First filter by date range
-    const startStr = dateRange.start.toISOString().split('T')[0];
-    const endStr = dateRange.end.toISOString().split('T')[0];
+    const startStr = toLocalDateStr(dateRange.start);
+    const endStr = toLocalDateStr(dateRange.end);
 
     // Expand multi-day interventions: create a separate entry for each scheduled date
     const expanded = [];
