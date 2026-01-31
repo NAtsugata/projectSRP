@@ -13,6 +13,7 @@ import {
   arrayBufferToFile,
   deleteUpload
 } from '../../utils/indexedDBCache.jsx';
+import logger from '../../utils/logger';
 import './FileUploader.css';
 
 /**
@@ -114,7 +115,7 @@ const FileUploader = ({
     const hasImageExt = /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif|tiff?)$/i.test(file.name);
     const looksLikeImage = /^(IMG|image|photo|screenshot|capture)/i.test(file.name);
 
-    console.log('🔍 createLocalPreview:', {
+    logger.log('🔍 createLocalPreview:', {
       name: file.name,
       type: file.type || '(vide)',
       size: file.size,
@@ -127,15 +128,15 @@ const FileUploader = ({
     if (hasImageType || hasImageExt || looksLikeImage || !file.type) {
       try {
         const blobUrl = URL.createObjectURL(file);
-        console.log('✅ Blob URL créée:', blobUrl);
+        logger.log('✅ Blob URL créée:', blobUrl);
         return blobUrl;
       } catch (err) {
-        console.error('❌ createObjectURL error:', err);
+        logger.error('❌ createObjectURL error:', err);
         return null;
       }
     }
 
-    console.log('⏭️ Pas une image détectée');
+    logger.log('⏭️ Pas une image détectée');
     return null;
   }, []);
 
@@ -147,7 +148,7 @@ const FileUploader = ({
 
     try {
       const pending = await getPendingUploads('pending');
-      console.log(`📤 Traitement de ${pending.length} fichier(s) en parallèle...`);
+      logger.log(`📤 Traitement de ${pending.length} fichier(s) en parallèle...`);
 
       // Fonction pour uploader un seul fichier
       const uploadSingleFile = async (item) => {
@@ -208,7 +209,7 @@ const FileUploader = ({
             url: publicUrl
           });
 
-          console.log(`✅ Upload réussi: ${item.fileName}`);
+          logger.log(`✅ Upload réussi: ${item.fileName}`);
 
           return {
             success: true,
@@ -219,7 +220,7 @@ const FileUploader = ({
           };
 
         } catch (err) {
-          console.error(`❌ Échec upload ${item.fileName}:`, err);
+          logger.error(`❌ Échec upload ${item.fileName}:`, err);
           await updateUploadStatus(item.id, 'failed', {
             lastError: err.message,
             retryCount: (item.retryCount || 0) + 1
@@ -252,7 +253,7 @@ const FileUploader = ({
       setLocalQueue(remaining);
 
     } catch (err) {
-      console.error('❌ Erreur processUploads:', err);
+      logger.error('❌ Erreur processUploads:', err);
     } finally {
       uploadingRef.current = false;
       setIsProcessing(false);
@@ -263,7 +264,7 @@ const FileUploader = ({
   const handleFileChange = useCallback(async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) {
-      console.log('❌ Aucun fichier sélectionné');
+      logger.log('❌ Aucun fichier sélectionné');
       return;
     }
 
@@ -274,7 +275,7 @@ const FileUploader = ({
     setError(null);
 
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
-    console.log(debugInfo);
+    logger.log(debugInfo);
 
     // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
@@ -305,7 +306,7 @@ const FileUploader = ({
         } else {
           fileType = 'application/octet-stream';
         }
-        console.log(`🔧 Type corrigé: ${originalFile.type || '(vide)'} → ${fileType}`);
+        logger.log(`🔧 Type corrigé: ${originalFile.type || '(vide)'} → ${fileType}`);
       }
 
       // Créer un nouveau File avec le bon type (fallback pour mobile)
@@ -319,19 +320,19 @@ const FileUploader = ({
         }
       } catch (err) {
         // Fallback si new File() échoue sur mobile
-        console.warn('⚠️ new File() non supporté, utilisation du fichier original');
+        logger.warn('⚠️ new File() non supporté, utilisation du fichier original');
         file = originalFile;
       }
 
-      console.log(`📁 Fichier ${i + 1}/${files.length}: ${file.name}, type: ${fileType}, size: ${file.size}`);
+      logger.log(`📁 Fichier ${i + 1}/${files.length}: ${file.name}, type: ${fileType}, size: ${file.size}`);
 
       // Créer blob URL pour preview locale
       let localUrl = null;
       try {
         localUrl = URL.createObjectURL(file);
-        console.log(`✅ Blob URL: ${localUrl}`);
+        logger.log(`✅ Blob URL: ${localUrl}`);
       } catch (err) {
-        console.error(`❌ Blob URL error:`, err);
+        logger.error(`❌ Blob URL error:`, err);
       }
 
       // Envoyer la preview au parent IMMÉDIATEMENT (avant IndexedDB)
@@ -345,10 +346,10 @@ const FileUploader = ({
           status: 'pending',
           progress: 0
         };
-        console.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
+        logger.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
         onLocalPreview(previewData);
       } else {
-        console.error('❌ onLocalPreview non défini!');
+        logger.error('❌ onLocalPreview non défini!');
       }
 
       // Stocker dans IndexedDB avec le MÊME ID et le type corrigé
@@ -359,15 +360,15 @@ const FileUploader = ({
           originalName: file.name,
           correctedType: fileType // Passer le type corrigé en metadata
         }, fileId);
-        console.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
+        logger.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
       } catch (err) {
-        console.error(`❌ IndexedDB error:`, err);
+        logger.error(`❌ IndexedDB error:`, err);
         setError(`Erreur stockage: ${err.message}`);
       }
     }
 
     // Lancer les uploads en arrière-plan
-    console.log('🚀 Lancement uploads...');
+    logger.log('🚀 Lancement uploads...');
     processUploads();
 
   }, [interventionId, folder, onLocalPreview, processUploads]);
@@ -380,7 +381,7 @@ const FileUploader = ({
 
       // Relancer les uploads en attente
       if (pending.length > 0) {
-        console.log(`📦 ${pending.length} fichier(s) en attente de reprise`);
+        logger.log(`📦 ${pending.length} fichier(s) en attente de reprise`);
         processUploads();
       }
     };

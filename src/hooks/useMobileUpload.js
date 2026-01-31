@@ -79,6 +79,7 @@ export const useImageCompression = () => {
       const img = new Image();
 
       img.onload = () => {
+        URL.revokeObjectURL(img.src);
         // Calcul des nouvelles dimensions
         let { width, height } = img;
 
@@ -129,7 +130,10 @@ export const useImageCompression = () => {
         );
       };
 
-      img.onerror = () => resolve(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        resolve(file);
+      };
       img.src = URL.createObjectURL(file);
     });
   }, []);

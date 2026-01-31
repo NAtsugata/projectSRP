@@ -95,6 +95,8 @@ export const useInterventionNotifications = (userId, enabled = true) => {
       return;
     }
 
+    let isMounted = true;
+
     logger.log('🔔 Écoute des interventions pour l\'utilisateur:', userId);
 
     // Canal pour les assignations (nouvelles interventions assignées)
@@ -119,7 +121,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
               .eq('id', payload.new.intervention_id)
               .single();
 
-            if (intervention) {
+            if (intervention && isMounted) {
               await notifyNewIntervention(intervention);
               setLastNotification({
                 type: 'new',
@@ -147,6 +149,8 @@ export const useInterventionNotifications = (userId, enabled = true) => {
           table: 'interventions'
         },
         async (payload) => {
+          if (!isMounted) return;
+
           // Vérifier si l'utilisateur est assigné à cette intervention
           const { data: assignment } = await supabase
             .from('intervention_assignments')
@@ -155,7 +159,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
             .eq('user_id', userId)
             .single();
 
-          if (!assignment) return; // L'utilisateur n'est pas assigné
+          if (!assignment || !isMounted) return;
 
           logger.log('📝 Intervention modifiée:', payload);
 
@@ -173,11 +177,13 @@ export const useInterventionNotifications = (userId, enabled = true) => {
             }
 
             await notifyInterventionUpdate(updated, updateType);
-            setLastNotification({
-              type: updateType,
-              intervention: updated,
-              timestamp: new Date()
-            });
+            if (isMounted) {
+              setLastNotification({
+                type: updateType,
+                intervention: updated,
+                timestamp: new Date()
+              });
+            }
           } catch (error) {
             logger.error('Erreur notification mise à jour intervention:', error);
           }
@@ -189,6 +195,7 @@ export const useInterventionNotifications = (userId, enabled = true) => {
 
     // Cleanup
     return () => {
+      isMounted = false;
       logger.log('🔕 Arrêt écoute interventions');
       assignmentChannel.unsubscribe();
       interventionChannel.unsubscribe();

@@ -245,4 +245,4 @@ const PlanningMonthView = ({
   );
 };
 
-export default PlanningMonthView;
+export default React.memo(PlanningMonthView);

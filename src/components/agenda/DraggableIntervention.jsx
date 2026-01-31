@@ -88,4 +88,4 @@ const DraggableIntervention = ({
   );
 };
 
-export default DraggableIntervention;
+export default React.memo(DraggableIntervention);

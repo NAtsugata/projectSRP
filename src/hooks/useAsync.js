@@ -1,7 +1,7 @@
 // src/hooks/useAsync.js
 // Hook pour gérer les opérations asynchrones avec loading, error et data states
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
  * Hook pour gérer les opérations asynchrones
@@ -13,6 +13,12 @@ export const useAsync = (asyncFunction, immediate = false) => {
   const [status, setStatus] = useState('idle'); // idle | pending | success | error
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const execute = useCallback(
     async (...params) => {
@@ -22,12 +28,16 @@ export const useAsync = (asyncFunction, immediate = false) => {
 
       try {
         const response = await asyncFunction(...params);
-        setData(response);
-        setStatus('success');
+        if (mountedRef.current) {
+          setData(response);
+          setStatus('success');
+        }
         return { data: response, error: null };
       } catch (err) {
-        setError(err);
-        setStatus('error');
+        if (mountedRef.current) {
+          setError(err);
+          setStatus('error');
+        }
         return { data: null, error: err };
       }
     },

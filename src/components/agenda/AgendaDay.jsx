@@ -272,4 +272,4 @@ const AgendaDay = ({
   );
 };
 
-export default AgendaDay;
+export default React.memo(AgendaDay);

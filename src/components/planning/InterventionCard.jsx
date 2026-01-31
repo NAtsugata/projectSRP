@@ -204,4 +204,4 @@ const InterventionCard = ({
   );
 };
 
-export default InterventionCard;
+export default React.memo(InterventionCard);

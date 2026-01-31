@@ -29,9 +29,12 @@ export const useDocumentDetection = (options = {}) => {
 
   // Charger le modèle YOLO au montage si sélectionné
   useEffect(() => {
+    let cancelled = false;
+
     if (detectorType === 'yolo' && !isYoloReady()) {
       setYoloModelLoading(true);
       loadYoloModel().then((loaded) => {
+        if (cancelled) return;
         setYoloModelLoaded(loaded);
         setYoloModelLoading(false);
         if (!loaded) {
@@ -42,16 +45,19 @@ export const useDocumentDetection = (options = {}) => {
     } else if (isYoloReady()) {
       setYoloModelLoaded(true);
     }
+
+    return () => { cancelled = true; };
   }, [detectorType]);
 
   // Détection sur un fichier (capture finale)
   const detectDocument = useCallback(async (file) => {
     // Charger l'image
+    const objectUrl = URL.createObjectURL(file);
     const img = await new Promise((resolve, reject) => {
       const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('Image load failed'));
-      image.src = URL.createObjectURL(file);
+      image.onload = () => { URL.revokeObjectURL(objectUrl); resolve(image); };
+      image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')); };
+      image.src = objectUrl;
     });
 
     try {

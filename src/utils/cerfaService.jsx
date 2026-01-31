@@ -63,7 +63,7 @@ export const getNextFicheNumber = () => {
         const paddedCount = String(stored.count).padStart(4, '0');
         return `CERFA-${currentYear}-${paddedCount}`;
     } catch (e) {
-        console.error('Erreur génération numéro fiche:', e);
+        logger.error('Erreur génération numéro fiche:', e);
         return `CERFA-${Date.now()}`;
     }
 };
@@ -103,7 +103,7 @@ export const resetFicheCounter = (startNumber = 0) => {
         }));
         return true;
     } catch (e) {
-        console.error('Erreur réinitialisation compteur:', e);
+        logger.error('Erreur réinitialisation compteur:', e);
         return false;
     }
 };
@@ -123,7 +123,7 @@ export const getCompanyInfo = () => {
             return { ...DEFAULT_COMPANY_INFO, ...JSON.parse(saved) };
         }
     } catch (e) {
-        console.error('Erreur lecture company info:', e);
+        logger.error('Erreur lecture company info:', e);
     }
     return { ...DEFAULT_COMPANY_INFO };
 };
@@ -137,7 +137,7 @@ export const saveCompanyInfo = (info) => {
         localStorage.setItem(STORAGE_KEY_COMPANY, JSON.stringify(info));
         return true;
     } catch (e) {
-        console.error('Erreur sauvegarde company info:', e);
+        logger.error('Erreur sauvegarde company info:', e);
         return false;
     }
 };
@@ -159,7 +159,7 @@ export const getEquipmentInfo = (clientId) => {
             return parsed[clientId] || null;
         }
     } catch (e) {
-        console.error('Erreur lecture equipment info:', e);
+        logger.error('Erreur lecture equipment info:', e);
     }
     return null;
 };
@@ -176,7 +176,7 @@ export const saveEquipmentInfo = (clientId, info) => {
         localStorage.setItem('cerfa_equipment_info', JSON.stringify(allEquipment));
         return true;
     } catch (e) {
-        console.error('Erreur sauvegarde equipment info:', e);
+        logger.error('Erreur sauvegarde equipment info:', e);
         return false;
     }
 };
@@ -206,7 +206,7 @@ export const inspectCerfaFields = async () => {
         logger.log('CERFA Fields:', fieldInfo);
         return fieldInfo;
     } catch (e) {
-        console.error('Erreur inspection CERFA:', e);
+        logger.error('Erreur inspection CERFA:', e);
         return [];
     }
 };
@@ -220,26 +220,26 @@ export const fillCerfa15497 = async (data) => {
     try {
         // Utiliser le numéro de fiche fourni (ne pas incrémenter ici, c'est fait dans CerfaPage)
         const ficheNumber = data.ficheNo || data.ficheNumber || '';
-        console.log('[CERFA] Numéro de fiche:', ficheNumber);
+        logger.log('[CERFA] Numéro de fiche:', ficheNumber);
 
         // Debug: Log all input data
-        console.log('[CERFA] === Données reçues ===');
-        console.log('[CERFA] fluide:', data.fluide);
-        console.log('[CERFA] denominationFluide:', data.denominationFluide);
-        console.log('[CERFA] charge:', data.charge);
-        console.log('[CERFA] technicianName:', data.technicianName);
-        console.log('[CERFA] clientSignatureName:', data.clientSignatureName);
-        console.log('[CERFA] date:', data.date);
-        console.log('[CERFA] dateIntervention:', data.dateIntervention);
+        logger.log('[CERFA] === Données reçues ===');
+        logger.log('[CERFA] fluide:', data.fluide);
+        logger.log('[CERFA] denominationFluide:', data.denominationFluide);
+        logger.log('[CERFA] charge:', data.charge);
+        logger.log('[CERFA] technicianName:', data.technicianName);
+        logger.log('[CERFA] clientSignatureName:', data.clientSignatureName);
+        logger.log('[CERFA] date:', data.date);
+        logger.log('[CERFA] dateIntervention:', data.dateIntervention);
 
         // Charger le PDF template (importé comme asset webpack)
-        console.log('[CERFA] Chargement du PDF depuis:', CERFA_PATH);
+        logger.log('[CERFA] Chargement du PDF depuis:', CERFA_PATH);
 
         let pdfResponse = await fetch(CERFA_PATH);
 
         if (!pdfResponse.ok) {
             // Fallback: essayer depuis le dossier public
-            console.warn('[CERFA] Asset non trouvé, tentative depuis /cerfa/...');
+            logger.warn('[CERFA] Asset non trouvé, tentative depuis /cerfa/...');
             const fallbackPath = `${window.location.origin}/cerfa/cerfa_15497-04.pdf`;
             pdfResponse = await fetch(fallbackPath);
             if (!pdfResponse.ok) {
@@ -247,7 +247,7 @@ export const fillCerfa15497 = async (data) => {
             }
         }
 
-        console.log('[CERFA] PDF chargé avec succès');
+        logger.log('[CERFA] PDF chargé avec succès');
         const pdfBytes = await pdfResponse.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
@@ -261,13 +261,13 @@ export const fillCerfa15497 = async (data) => {
                     const textValue = value ? String(value) : '';
                     field.setText(textValue);
                     if (textValue) {
-                        console.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
+                        logger.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
                     }
                 } else {
-                    console.log(`[CERFA] ✗ Champ introuvable: ${fieldName}`);
+                    logger.log(`[CERFA] ✗ Champ introuvable: ${fieldName}`);
                 }
             } catch (e) {
-                console.log(`[CERFA] ✗ Erreur ${fieldName}: ${e.message}`);
+                logger.log(`[CERFA] ✗ Erreur ${fieldName}: ${e.message}`);
             }
         };
 
@@ -278,11 +278,11 @@ export const fillCerfa15497 = async (data) => {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
                         field.check();
-                        console.log(`[CERFA] ✓ Coché: ${fieldName}`);
+                        logger.log(`[CERFA] ✓ Coché: ${fieldName}`);
                     }
                 }
             } catch (e) {
-                console.log(`[CERFA] ✗ Checkbox non trouvée: ${fieldName}`);
+                logger.log(`[CERFA] ✗ Checkbox non trouvée: ${fieldName}`);
             }
         };
 
@@ -292,10 +292,10 @@ export const fillCerfa15497 = async (data) => {
                 const radioGroup = form.getRadioGroup(groupName);
                 if (radioGroup && optionValue) {
                     radioGroup.select(optionValue);
-                    console.log(`[CERFA] ✓ Radio: ${groupName} = "${optionValue}"`);
+                    logger.log(`[CERFA] ✓ Radio: ${groupName} = "${optionValue}"`);
                 }
             } catch (e) {
-                console.log(`[CERFA] ✗ Radio non trouvé: ${groupName} - ${e.message}`);
+                logger.log(`[CERFA] ✗ Radio non trouvé: ${groupName} - ${e.message}`);
             }
         };
 
@@ -547,9 +547,9 @@ export const fillCerfa15497 = async (data) => {
                     width: scaledWidth,
                     height: scaledHeight,
                 });
-                console.log(`[CERFA] ✓ Signature intégrée à x=${x}, y=${y}`);
+                logger.log(`[CERFA] ✓ Signature intégrée à x=${x}, y=${y}`);
             } catch (e) {
-                console.warn('[CERFA] ✗ Erreur intégration signature:', e.message);
+                logger.warn('[CERFA] ✗ Erreur intégration signature:', e.message);
             }
         };
 
@@ -576,7 +576,7 @@ export const fillCerfa15497 = async (data) => {
         // Créer et retourner le Blob
         return new Blob([filledPdfBytes], { type: 'application/pdf' });
     } catch (e) {
-        console.error('Erreur remplissage CERFA:', e);
+        logger.error('Erreur remplissage CERFA:', e);
         throw e;
     }
 };
@@ -594,16 +594,16 @@ export const fillCerfa15498 = async (data) => {
     try {
         // Utiliser le numéro de fiche fourni
         const ficheNumber = data.ficheNo || data.ficheNumber || '';
-        console.log('[CERFA 15498] Numéro de fiche:', ficheNumber);
+        logger.log('[CERFA 15498] Numéro de fiche:', ficheNumber);
 
         // Charger le PDF template
-        console.log('[CERFA 15498] Chargement du PDF depuis:', cerfa15498PdfAsset);
+        logger.log('[CERFA 15498] Chargement du PDF depuis:', cerfa15498PdfAsset);
 
         let pdfResponse = await fetch(cerfa15498PdfAsset);
 
         if (!pdfResponse.ok) {
             // Fallback: essayer depuis le dossier public
-            console.warn('[CERFA 15498] Asset non trouvé, tentative depuis /cerfa/...');
+            logger.warn('[CERFA 15498] Asset non trouvé, tentative depuis /cerfa/...');
             const fallbackPath = `${window.location.origin}/cerfa/CERFA_15498_Interactif_V2_PRO.pdf`;
             pdfResponse = await fetch(fallbackPath);
             if (!pdfResponse.ok) {
@@ -611,7 +611,7 @@ export const fillCerfa15498 = async (data) => {
             }
         }
 
-        console.log('[CERFA 15498] PDF chargé avec succès');
+        logger.log('[CERFA 15498] PDF chargé avec succès');
         const pdfBytes = await pdfResponse.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
@@ -624,13 +624,13 @@ export const fillCerfa15498 = async (data) => {
                     const textValue = value ? String(value) : '';
                     field.setText(textValue);
                     if (textValue) {
-                        console.log(`[CERFA 15498] ✓ Rempli: ${fieldName} = "${textValue}"`);
+                        logger.log(`[CERFA 15498] ✓ Rempli: ${fieldName} = "${textValue}"`);
                     }
                 } else {
-                    console.log(`[CERFA 15498] ✗ Champ introuvable: ${fieldName}`);
+                    logger.log(`[CERFA 15498] ✗ Champ introuvable: ${fieldName}`);
                 }
             } catch (e) {
-                console.log(`[CERFA 15498] ✗ Erreur ${fieldName}: ${e.message}`);
+                logger.log(`[CERFA 15498] ✗ Erreur ${fieldName}: ${e.message}`);
             }
         };
 
@@ -641,11 +641,11 @@ export const fillCerfa15498 = async (data) => {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
                         field.check();
-                        console.log(`[CERFA 15498] ✓ Coché: ${fieldName}`);
+                        logger.log(`[CERFA 15498] ✓ Coché: ${fieldName}`);
                     }
                 }
             } catch (e) {
-                console.log(`[CERFA 15498] ✗ Checkbox non trouvée: ${fieldName}`);
+                logger.log(`[CERFA 15498] ✗ Checkbox non trouvée: ${fieldName}`);
             }
         };
 
@@ -734,9 +734,9 @@ export const fillCerfa15498 = async (data) => {
                     width: scaledWidth,
                     height: scaledHeight,
                 });
-                console.log(`[CERFA 15498] ✓ Signature intégrée à x=${x}, y=${y}`);
+                logger.log(`[CERFA 15498] ✓ Signature intégrée à x=${x}, y=${y}`);
             } catch (e) {
-                console.warn('[CERFA 15498] ✗ Erreur intégration signature:', e.message);
+                logger.warn('[CERFA 15498] ✗ Erreur intégration signature:', e.message);
             }
         };
 
@@ -760,7 +760,7 @@ export const fillCerfa15498 = async (data) => {
         // Créer et retourner le Blob
         return new Blob([filledPdfBytes], { type: 'application/pdf' });
     } catch (e) {
-        console.error('Erreur remplissage CERFA 15498:', e);
+        logger.error('Erreur remplissage CERFA 15498:', e);
         throw e;
     }
 };
@@ -803,7 +803,7 @@ export const saveGenerationRecord = (record) => {
         // Garder les 50 dernières générations
         localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history.slice(0, 50)));
     } catch (e) {
-        console.error('Erreur sauvegarde historique:', e);
+        logger.error('Erreur sauvegarde historique:', e);
     }
 };
 

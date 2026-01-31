@@ -439,4 +439,4 @@ const PlanningGanttView = ({
   );
 };
 
-export default PlanningGanttView;
+export default React.memo(PlanningGanttView);

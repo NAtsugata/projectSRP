@@ -227,4 +227,4 @@ const AgendaDashboard = ({
   );
 };
 
-export default AgendaDashboard;
+export default React.memo(AgendaDashboard);
