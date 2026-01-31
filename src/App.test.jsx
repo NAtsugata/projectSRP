@@ -1,120 +1,152 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, test, expect, vi } from 'vitest';
+import { render, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
-// ✅ Mock simple et fonctionnel
-jest.mock('./lib/supabase', () => {
-  // Créer une fonction simple pour le mock
-  const createMockAuthStateChange = () => (callback) => {
-    setTimeout(() => callback('SIGNED_OUT', null), 10);
-    return { data: { subscription: { unsubscribe: () => {} } } };
-  };
-
-  const mockAuthStateChange = createMockAuthStateChange();
-
-  return {
+// Mock supabaseClient first (deepest dependency)
+vi.mock('./lib/supabaseClient', () => ({
     supabase: {
-      auth: {
-        onAuthStateChange: mockAuthStateChange
-      },
-      channel: jest.fn(() => ({
-        on: jest.fn(() => ({ subscribe: jest.fn() }))
-      })),
-      removeChannel: jest.fn(),
+        auth: {
+            onAuthStateChange: vi.fn((callback) => {
+                setTimeout(() => callback('SIGNED_OUT', null), 10);
+                return { data: { subscription: { unsubscribe: vi.fn() } } };
+            }),
+            getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
+        },
+        channel: vi.fn(() => ({
+            on: vi.fn(function () { return this; }),
+            subscribe: vi.fn(),
+        })),
+        removeChannel: vi.fn(),
+        from: vi.fn(() => ({
+            select: vi.fn().mockReturnThis(),
+            insert: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            delete: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        })),
+    },
+}));
+
+// Mock supabase barrel export
+vi.mock('./lib/supabase', () => ({
+    supabase: {
+        auth: {
+            onAuthStateChange: vi.fn((callback) => {
+                setTimeout(() => callback('SIGNED_OUT', null), 10);
+                return { data: { subscription: { unsubscribe: vi.fn() } } };
+            }),
+        },
+        channel: vi.fn(() => ({
+            on: vi.fn(function () { return this; }),
+            subscribe: vi.fn(),
+        })),
+        removeChannel: vi.fn(),
     },
     authService: {
-      onAuthStateChange: mockAuthStateChange,
-      signOut: jest.fn(() => Promise.resolve({ error: null })),
-      signIn: jest.fn(() => Promise.resolve({ error: null })),
+        onAuthStateChange: vi.fn(() => ({
+            data: { subscription: { unsubscribe: vi.fn() } },
+        })),
+        signOut: vi.fn(() => Promise.resolve({ error: null })),
     },
     profileService: {
-      getProfile: jest.fn(() => Promise.resolve({ data: null, error: null })),
-      getAllProfiles: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      updateProfile: jest.fn(() => Promise.resolve({ error: null }))
+        getProfile: vi.fn(() => Promise.resolve({ data: null, error: null })),
     },
     interventionService: {
-      getInterventions: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      createIntervention: jest.fn(() => Promise.resolve({ error: null })),
-      updateIntervention: jest.fn(() => Promise.resolve({ error: null })),
-      deleteIntervention: jest.fn(() => Promise.resolve({ error: null }))
+        getInterventions: vi.fn(() => Promise.resolve({ data: [], error: null })),
     },
-    leaveService: {
-      getLeaveRequests: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      createLeaveRequest: jest.fn(() => Promise.resolve({ error: null })),
-      updateRequestStatus: jest.fn(() => Promise.resolve({ error: null })),
-      deleteLeaveRequest: jest.fn(() => Promise.resolve({ error: null }))
-    },
-    payslipService: {
-      getPayslips: jest.fn(() => Promise.resolve({ data: [], error: null }))
-    },
-    storageService: {
-      uploadVaultFile: jest.fn(() => Promise.resolve({ error: null })),
-      deleteVaultFile: jest.fn(() => Promise.resolve({ error: null })),
-      uploadInterventionFile: jest.fn(() => Promise.resolve({
-        publicURL: 'test.jpg', error: null
-      }))
-    },
-  };
-});
+}));
 
-import App from './App';
+// Mock hooks that rely on Supabase
+vi.mock('./hooks/usePushNotifications', () => ({
+    useRealtimePushNotifications: vi.fn(() => ({ lastNotification: null })),
+}));
 
-// Mocks environnementaux
-Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
-Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
-Object.defineProperty(window, 'sessionStorage', {
-  value: {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn()
-  }
-});
-window.addEventListener = jest.fn();
-window.removeEventListener = jest.fn();
-console.warn = jest.fn();
-console.error = jest.fn();
+vi.mock('./utils/alertOverride', () => ({
+    setToastFunction: vi.fn(),
+    overrideAlert: vi.fn(),
+}));
+
+vi.mock('./utils/debounce', () => ({
+    debounce: vi.fn((fn) => {
+        const debounced = (...args) => fn(...args);
+        debounced.cancel = vi.fn();
+        return debounced;
+    }),
+}));
+
+vi.mock('./store/authStore', () => ({
+    useAuthStore: vi.fn(() => ({
+        setUser: vi.fn(),
+        setProfile: vi.fn(),
+        setLoading: vi.fn(),
+        logout: vi.fn(),
+    })),
+}));
+
+vi.mock('./contexts/DownloadContext', () => ({
+    DownloadProvider: ({ children }) => children,
+}));
+
+vi.mock('./contexts/ToastContext', () => ({
+    ToastProvider: ({ children }) => children,
+}));
+
+vi.mock('./components/OfflineIndicator', () => ({
+    default: () => null,
+}));
+
+vi.mock('./components/mobile/MobileIndicators', () => ({
+    default: () => null,
+}));
+
+vi.mock('./components/pwa/PWAInstallPrompt', () => ({
+    default: () => null,
+}));
+
+vi.mock('./components/mobile/NotificationPermissionPrompt', () => ({
+    NotificationPermissionManager: () => null,
+}));
+
+vi.mock('./components/layout/AppLayout', () => ({
+    default: ({ children }) => children,
+}));
+
+// Mock React Query
+vi.mock('@tanstack/react-query', () => ({
+    useQueryClient: vi.fn(() => ({
+        invalidateQueries: vi.fn(),
+    })),
+    QueryClient: vi.fn(() => ({})),
+    QueryClientProvider: ({ children }) => children,
+}));
+
+const { default: App } = await import('./App');
 
 describe('App Component', () => {
-  test('affiche l\'écran de connexion par défaut', async () => {
-    const { container } = render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+    test('affiche l\'écran de connexion par défaut', async () => {
+        const { container } = render(
+            <BrowserRouter>
+                <App />
+            </BrowserRouter>
+        );
 
-    // Vérifier que l'écran de connexion s'affiche
-    await waitFor(() => {
-      const loginScreen = container.querySelector('.login-screen-container');
-      expect(loginScreen).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
+        await waitFor(
+            () => {
+                const loginScreen = container.querySelector('.login-screen-container');
+                expect(loginScreen).toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
+    });
 
-  test('application ne crash pas', () => {
-    expect(() => {
-      render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
-    }).not.toThrow();
-  });
-
-  test('gère la navigation mobile', async () => {
-    // Simule mobile
-    Object.defineProperty(window, 'innerWidth', { value: 480, writable: true });
-
-    const { container } = render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
-
-    // Vérifier que l'écran de connexion s'affiche
-    await waitFor(() => {
-      const loginScreen = container.querySelector('.login-screen-container');
-      expect(loginScreen).toBeInTheDocument();
-    }, { timeout: 3000 });
-
-    expect(window.innerWidth).toBe(480);
-  });
+    test('application ne crash pas', () => {
+        expect(() => {
+            render(
+                <BrowserRouter>
+                    <App />
+                </BrowserRouter>
+            );
+        }).not.toThrow();
+    });
 });

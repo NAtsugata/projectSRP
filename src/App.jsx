@@ -17,6 +17,8 @@ import { setToastFunction, overrideAlert } from './utils/alertOverride';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
+import ErrorBoundary from './components/ErrorBoundary';
+import SectionErrorBoundary from './components/SectionErrorBoundary';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
@@ -209,6 +211,7 @@ function App() {
             onCancel={() => setModal(null)}
           />
         )}
+        <ErrorBoundary>
         <Routes>
           {!session || !profile ? (
             <Route path="*" element={<LoginScreen />} />
@@ -236,9 +239,11 @@ function App() {
                     }
                   />
                   <Route path="planning/:interventionId" element={
+                    <SectionErrorBoundary section="intervention-detail" title="Erreur intervention">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <InterventionDetailViewContainer />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="archives" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
@@ -292,9 +297,11 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
+                    <SectionErrorBoundary section="ir-docs" title="Erreur documents IR">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <IRShowerFormsViewContainer />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="mobile-diagnostics" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
@@ -307,19 +314,25 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="cerfa" element={
+                    <SectionErrorBoundary section="cerfa" title="Erreur CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaManager />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form" element={
+                    <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
+                    <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage15498 />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </>
@@ -332,9 +345,11 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="planning/:interventionId" element={
+                    <SectionErrorBoundary section="intervention-detail" title="Erreur intervention">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <InterventionDetailViewContainer />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="agenda" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
@@ -370,9 +385,11 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
+                    <SectionErrorBoundary section="ir-docs" title="Erreur documents IR">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <IRShowerFormsViewContainer />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="mobile-diagnostics" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
@@ -385,19 +402,25 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="cerfa" element={
+                    <SectionErrorBoundary section="cerfa" title="Erreur CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaManager />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form" element={
+                    <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
+                    <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage15498 />
                     </Suspense>
+                    </SectionErrorBoundary>
                   } />
                   <Route path="*" element={<Navigate to="/planning" replace />} />
                 </>
@@ -405,6 +428,7 @@ function App() {
             </Route>
           )}
         </Routes>
+        </ErrorBoundary>
 
         {/* ✅ Gestionnaire de notifications push pour tous les utilisateurs */}
         {profile && (
