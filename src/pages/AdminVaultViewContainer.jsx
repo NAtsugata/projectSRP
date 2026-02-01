@@ -40,7 +40,7 @@ const AdminVaultViewContainer = ({ showToast, showConfirmationModal }) => {
 
             showToast('Document envoyé avec succès !');
         } catch (error) {
-            console.error("❌ Erreur lors de l'envoi du document:", error);
+            logger.error("Erreur lors de l'envoi du document:", error);
             showToast(`Erreur d'envoi: ${error.message}`, 'error');
             throw error;
         }

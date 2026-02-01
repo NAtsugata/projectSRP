@@ -212,8 +212,7 @@ const AgendaView = ({
       if (onRefreshInterventions) await onRefreshInterventions();
 
     } catch (error) {
-      logger.error('❌ Erreur lors du déplacement:', error);
-      console.error('Erreur déplacement intervention:', error);
+      logger.error('Erreur lors du déplacement:', error);
       toast.error('Impossible de déplacer l\'intervention. Veuillez réessayer.');
     }
   }, [toast]);

@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, UsersIcon, EditIcon, DownloadIcon } from '../SharedUI';
 import { exportWeeklyPlanningPdf } from '../../utils/planningPdfExport';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
+import logger from '../../utils/logger';
 import './PlanningGanttView.css';
 
 // Couleurs pour les équipes
@@ -220,7 +221,7 @@ const PlanningGanttView = ({
         title: 'Planning Hebdomadaire'
       });
     } catch (error) {
-      console.error('Erreur export PDF:', error);
+      logger.error('Erreur export PDF:', error);
     } finally {
       setIsExporting(false);
     }

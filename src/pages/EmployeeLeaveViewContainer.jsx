@@ -5,6 +5,7 @@ import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import EmployeeLeaveView from './EmployeeLeaveView';
+import logger from '../utils/logger';
 
 /**
  * Container pour EmployeeLeaveView qui gère la logique de données avec React Query
@@ -29,7 +30,7 @@ const EmployeeLeaveViewContainer = () => {
             toast?.success('Demande de congé créée avec succès');
             return true;
         } catch (error) {
-            console.error('Erreur création demande de congé:', error);
+            logger.error('Erreur création demande de congé:', error);
             toast?.error('Erreur lors de la création de la demande');
             return false;
         }

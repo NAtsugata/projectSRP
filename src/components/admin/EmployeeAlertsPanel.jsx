@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getAlerts, markAlertAsRead, ALERT_TYPES, getUnreadCount } from '../../services/employeeAlertService';
 import { Button } from '../ui';
 import './EmployeeAlertsPanel.css';
+import logger from '../../utils/logger';
 
 const EmployeeAlertsPanel = ({ onClose }) => {
   const [alerts, setAlerts] = useState([]);
@@ -22,7 +23,7 @@ const EmployeeAlertsPanel = ({ onClose }) => {
       const { data } = await getAlerts(options);
       setAlerts(data || []);
     } catch (error) {
-      console.error('Erreur chargement alertes:', error);
+      logger.error('Erreur chargement alertes:', error);
     } finally {
       setLoading(false);
     }

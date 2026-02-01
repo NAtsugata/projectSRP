@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
 import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
+import logger from '../../utils/logger';
 import './PlanningMonthView.css';
 
 /**
@@ -116,7 +117,7 @@ const PlanningMonthView = ({
         title: 'Planning Mensuel'
       });
     } catch (error) {
-      console.error('Erreur export PDF:', error);
+      logger.error('Erreur export PDF:', error);
     } finally {
       setIsExporting(false);
     }

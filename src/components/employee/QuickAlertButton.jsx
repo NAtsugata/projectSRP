@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { ALERT_TYPES, sendAlert } from '../../services/employeeAlertService';
 import { Button } from '../ui';
 import './QuickAlertButton.css';
+import logger from '../../utils/logger';
 
 const QuickAlertButton = ({
   userId,
@@ -63,7 +64,7 @@ const QuickAlertButton = ({
         }, 2000);
       }
     } catch (error) {
-      console.error('Erreur envoi alerte:', error);
+      logger.error('Erreur envoi alerte:', error);
     } finally {
       setIsSending(false);
     }

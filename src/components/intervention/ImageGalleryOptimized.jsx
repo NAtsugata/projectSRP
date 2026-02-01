@@ -208,7 +208,7 @@ const ImageGalleryOptimized = ({
         isUploading: item.status === 'uploading' || item.status === 'pending',
         id: item.id || `upload-${index}`
       };
-      console.log('🖼️ Upload item mapped:', mapped.id, 'preview:', mapped.preview ? 'OK' : 'NULL', 'status:', mapped.status);
+      logger.log('Upload item mapped:', mapped.id, 'preview:', mapped.preview ? 'OK' : 'NULL', 'status:', mapped.status);
       return mapped;
     }),
     ...images.map((img, index) => ({
@@ -220,7 +220,7 @@ const ImageGalleryOptimized = ({
 
   // Debug
   if (uploadQueue.length > 0) {
-    console.log('📊 ImageGalleryOptimized - uploadQueue:', uploadQueue.length, 'allItems:', allItems.length);
+    logger.log('ImageGalleryOptimized - uploadQueue:', uploadQueue.length, 'allItems:', allItems.length);
   }
 
   // Pagination

@@ -12,6 +12,7 @@ import reportWebVitals from './reportWebVitals';
 import { initMobileOptimizations } from './utils/mobileUtils';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { initCacheCleanup } from './utils/indexedDBCache';
+import logger from './utils/logger';
 // ✅ Désactiver console.log en production pour réduire l'exposition d'informations sensibles
 import './utils/consoleOverride';
 
@@ -44,11 +45,11 @@ reportWebVitals();
 // ✅ RÉACTIVÉ - PWA Mode actif
 serviceWorkerRegistration.register({
   onSuccess: (registration) => {
-    console.log('✅ PWA prête - Mode hors ligne disponible');
-    console.log('📱 Installation possible sur l\'écran d\'accueil');
+    logger.log('PWA prête - Mode hors ligne disponible');
+    logger.log('Installation possible sur l\'écran d\'accueil');
   },
   onUpdate: async (registration) => {
-    console.log('🔄 Nouvelle version détectée - Mise à jour forcée');
+    logger.log('Nouvelle version détectée - Mise à jour forcée');
 
     const waitingServiceWorker = registration.waiting;
 
@@ -95,7 +96,7 @@ serviceWorkerRegistration.register({
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
-        console.log('✅ Caches vidés:', cacheNames);
+        logger.log('Caches vidés:', cacheNames);
       }
 
       // 3. Attendre un court instant puis recharger
@@ -104,7 +105,7 @@ serviceWorkerRegistration.register({
       }, 1000);
 
     } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
+      logger.error('Erreur lors de la mise à jour:', error);
       // Forcer le rechargement quand même
       window.location.reload(true);
     }

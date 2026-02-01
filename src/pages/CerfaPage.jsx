@@ -19,6 +19,7 @@ import {
 import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
+import logger from '../utils/logger';
 
 const DRAFT_KEY = 'cerfa_15497_draft';
 
@@ -223,7 +224,7 @@ function CerfaPage() {
                     parsed.observations || parsed.signatureOperateur;
                 if (hasContent) {
                     setFormData(prev => ({ ...prev, ...parsed }));
-                    console.log('[CERFA] Brouillon restauré');
+                    logger.log('[CERFA] Brouillon restauré');
                 }
             }
         } catch (e) { /* ignore parse errors */ }
@@ -276,7 +277,7 @@ function CerfaPage() {
                 const parsedData = JSON.parse(decodeURIComponent(data));
                 setFormData(prev => ({ ...prev, ...parsedData }));
             } catch (e) {
-                console.error('Erreur de parsing des données CERFA:', e);
+                logger.error('Erreur de parsing des données CERFA:', e);
             }
         }
 
@@ -370,10 +371,10 @@ function CerfaPage() {
                             intervention_date: formData.dateIntervention || null,
                             notes: formData.observations || ''
                         });
-                    console.log('[CERFA] ✓ Document enregistré dans Supabase');
+                    logger.log('[CERFA] Document enregistré dans Supabase');
                 }
             } catch (storageError) {
-                console.warn('[CERFA] ✗ Erreur enregistrement Supabase:', storageError.message);
+                logger.warn('[CERFA] Erreur enregistrement Supabase:', storageError.message);
                 // Continue même si l'enregistrement échoue
             }
 
@@ -391,7 +392,7 @@ function CerfaPage() {
             showToast(`CERFA ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche
         } catch (error) {
-            console.error('Erreur génération CERFA:', error);
+            logger.error('Erreur génération CERFA:', error);
             showToast(`Erreur: ${error.message}`, 'error');
         } finally {
             setIsGenerating(false);

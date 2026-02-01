@@ -3,6 +3,7 @@
 // Les admins peuvent voir tous les documents de tous les utilisateurs
 
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import logger from '../utils/logger';
 import {
   CameraIcon,
   SearchIcon,
@@ -46,7 +47,7 @@ export default function MyDocumentsView({
   const filteredDocuments = useMemo(() => {
     let docs = scannedDocuments;
     if (!Array.isArray(docs)) {
-      console.error('scannedDocuments is not an array:', docs);
+      logger.error('scannedDocuments is not an array:', docs);
       return [];
     }
 
@@ -110,7 +111,7 @@ export default function MyDocumentsView({
       setShowScanner(false);
       alert(`✅ ${docs.length} document(s) sauvegardé(s)`);
     } catch (error) {
-      console.error('Erreur sauvegarde:', error);
+      logger.error('Erreur sauvegarde:', error);
       alert('❌ Erreur lors de la sauvegarde');
     }
   }, [onSaveDocuments, profile]);
@@ -123,7 +124,7 @@ export default function MyDocumentsView({
       await onDeleteDocument(doc.id);
       alert('✅ Document supprimé');
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      logger.error('Erreur suppression:', error);
       alert('❌ Erreur lors de la suppression');
     }
   }, [onDeleteDocument]);

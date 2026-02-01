@@ -8,6 +8,7 @@ import {
   FolderIcon
 } from '../components/SharedUI';
 import './CoffreNumeriqueView.css';
+import logger from '../utils/logger';
 
 // Icônes par type de fichier
 const getFileIcon = (fileName) => {
@@ -113,7 +114,7 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
         period: getDocumentPeriod(doc.created_at)
       }));
     } catch (e) {
-      console.error('Erreur enrichissement documents:', e);
+      logger.error('Erreur enrichissement documents:', e);
       return [];
     }
   }, [vaultDocuments]);
@@ -207,7 +208,7 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
 
       return sorted;
     } catch (e) {
-      console.error('Erreur filtrage:', e);
+      logger.error('Erreur filtrage:', e);
       return [];
     }
   }, [enrichedDocuments, searchTerm, selectedCategory, selectedPeriod, sortBy]);

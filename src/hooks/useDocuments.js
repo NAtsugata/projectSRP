@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import scannedDocumentsService from '../services/scannedDocumentsService';
+import logger from '../utils/logger';
 
 /**
  * Hook pour gérer les documents scannés avec React Query
@@ -34,7 +35,7 @@ export function useDocuments(userId) {
             queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },
         onError: (error) => {
-            console.error('Erreur sauvegarde documents:', error);
+            logger.error('Erreur sauvegarde documents:', error);
         },
     });
 

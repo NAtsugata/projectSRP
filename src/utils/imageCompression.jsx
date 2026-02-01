@@ -2,6 +2,7 @@
  * Utilitaire de compression d'images pour mobile
  * Réduit la taille des images avant upload pour économiser la bande passante
  */
+import logger from './logger';
 
 /**
  * Compresse une image en réduisant sa résolution et sa qualité
@@ -21,14 +22,14 @@ export const compressImage = async (file, options = {}) => {
 
     // Vérifier si c'est une image
     if (!file.type.startsWith('image/')) {
-        console.warn('Le fichier n\'est pas une image, compression ignorée');
+        logger.warn('Le fichier n\'est pas une image, compression ignorée');
         return file;
     }
 
     // Si l'image est déjà petite, ne pas compresser
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB <= maxSizeMB) {
-        console.log(`Image déjà optimale (${fileSizeMB.toFixed(2)}MB), compression ignorée`);
+        logger.log(`Image déjà optimale (${fileSizeMB.toFixed(2)}MB), compression ignorée`);
         return file;
     }
 
@@ -111,7 +112,7 @@ export const compressImage = async (file, options = {}) => {
                         const compressedSizeMB = compressedFile.size / (1024 * 1024);
                         const reduction = ((1 - compressedSizeMB / originalSizeMB) * 100).toFixed(1);
 
-                        console.log(`✅ Image compressée: ${originalSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB (${reduction}% de réduction)`);
+                        logger.log(`Image compressée: ${originalSizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB (${reduction}% de réduction)`);
 
                         resolve(compressedFile);
                     };
@@ -139,7 +140,7 @@ export const compressImage = async (file, options = {}) => {
 export const compressImages = async (files, options = {}) => {
     const compressionPromises = files.map(file =>
         compressImage(file, options).catch(error => {
-            console.error(`Erreur compression ${file.name}:`, error);
+            logger.error(`Erreur compression ${file.name}:`, error);
             return file; // Retourner le fichier original en cas d'erreur
         })
     );

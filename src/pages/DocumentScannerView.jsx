@@ -69,7 +69,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch(err => {
-        console.error('Erreur play:', err);
+        logger.error('Erreur play:', err);
       });
     }
   }, [stream]);
@@ -153,7 +153,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       });
       setStream(mediaStream);
     } catch (error) {
-      console.error('Erreur caméra:', error);
+      logger.error('Erreur caméra:', error);
       alert('Impossible d\'accéder à la caméra');
     }
   }, []);
@@ -244,7 +244,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setMode('adjust');
 
     } catch (error) {
-      console.error('Erreur capture/détection:', error);
+      logger.error('Erreur capture/détection:', error);
       setCorners([
         { x: 10, y: 10 },
         { x: 90, y: 10 },
@@ -308,7 +308,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   // Valider l'ajustement
   const validateAdjustment = useCallback(async () => {
     if (!corners || !originalImage) {
-      console.error('Validation impossible: corners ou originalImage manquant');
+      logger.error('Validation impossible: corners ou originalImage manquant');
       return;
     }
 
@@ -411,7 +411,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       logger.log('[VALIDATE] Validation terminée avec succès');
 
     } catch (error) {
-      console.error('Erreur transformation:', error);
+      logger.error('Erreur transformation:', error);
       logger.error('[VALIDATE] Erreur:', error.message);
       alert('Erreur: ' + error.message);
     } finally {

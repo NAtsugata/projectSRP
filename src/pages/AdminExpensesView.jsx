@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserExpensesAccordion } from '../components/expenses';
 import * as expenseStatsService from '../services/expenseStatsService';
 import '../components/expenses/ExpensesStyles.css';
+import logger from '../utils/logger';
 
 export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters, onUpdateFilters }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -51,7 +52,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
         const { data, error } = await expenseStatsService.getGlobalStats();
 
         if (error) {
-          console.error('Erreur lors du chargement des stats:', error);
+          logger.error('Erreur lors du chargement des stats:', error);
           // Fallback: calculer côté client
           const pending = expenses.filter(e => e.status === 'pending');
           const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
@@ -72,7 +73,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
           });
         }
       } catch (err) {
-        console.error('Erreur inattendue:', err);
+        logger.error('Erreur inattendue:', err);
       } finally {
         setStatsLoading(false);
       }

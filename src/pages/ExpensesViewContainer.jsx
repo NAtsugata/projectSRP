@@ -5,6 +5,7 @@ import { useExpenses } from '../hooks/useExpenses';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import ExpensesView from './ExpensesView';
+import logger from '../utils/logger';
 
 /**
  * Container pour ExpensesView qui gère la logique de données avec React Query
@@ -36,7 +37,7 @@ const ExpensesViewContainer = () => {
             await createExpense(expenseData);
             toast?.success('Note de frais créée avec succès');
         } catch (error) {
-            console.error('Erreur création note de frais:', error);
+            logger.error('Erreur création note de frais:', error);
             toast?.error('Erreur lors de la création de la note de frais');
             throw error;
         }
@@ -48,7 +49,7 @@ const ExpensesViewContainer = () => {
             await deleteExpense(expenseId);
             toast?.success('Note de frais supprimée');
         } catch (error) {
-            console.error('Erreur suppression note de frais:', error);
+            logger.error('Erreur suppression note de frais:', error);
             toast?.error('Erreur lors de la suppression');
             throw error;
         }

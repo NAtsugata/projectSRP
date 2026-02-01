@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { buildSanitizedReport } from '../utils/reportHelpers';
 import InterventionDetailView from './InterventionDetailView';
+import logger from '../utils/logger';
 
 const InterventionDetailViewContainer = () => {
     const { interventionId } = useParams();
@@ -18,7 +19,7 @@ const InterventionDetailViewContainer = () => {
     const { data: intervention, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
-            console.log('🔍 Fetching intervention:', interventionId);
+            logger.log('Fetching intervention:', interventionId);
             const { data, error } = await supabase
                 .from('interventions')
                 .select('*')
@@ -26,7 +27,7 @@ const InterventionDetailViewContainer = () => {
                 .single();
 
             if (error) {
-                console.error('❌ Error fetching intervention:', error);
+                logger.error('Error fetching intervention:', error);
                 throw error;
             }
             return data;

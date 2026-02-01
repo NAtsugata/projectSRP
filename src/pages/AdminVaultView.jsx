@@ -100,13 +100,13 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
       setError(null);
       setSuccess(false);
     } else {
-      console.warn('⚠️ Aucun fichier sélectionné');
+      logger.warn('Aucun fichier sélectionné');
     }
   }, []);
 
   const handleUploadError = useCallback((errors) => {
     setError(errors.join(' • '));
-    console.error('Erreurs upload:', errors);
+    logger.error('Erreurs upload:', errors);
   }, []);
 
   const handleSubmit = async (event) => {
@@ -118,7 +118,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
 
     if (!file || !selectedUserId || !documentName.trim()) {
       const errorMsg = 'Veuillez remplir tous les champs obligatoires.';
-      console.error('❌ Validation échouée:', errorMsg);
+      logger.error('Validation échouée:', errorMsg);
       setError(errorMsg);
       return;
     }
@@ -171,7 +171,7 @@ export default function AdminVaultView({ users = [], vaultDocuments = [], onSend
       }, 3000);
 
     } catch (err) {
-      console.error('Erreur lors de l\'envoi:', err);
+      logger.error('Erreur lors de l\'envoi:', err);
       setError(`Erreur lors de l'envoi : ${err.message || 'Erreur inconnue'}`);
       setUploadProgress(0);
     } finally {

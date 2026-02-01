@@ -18,6 +18,7 @@ import {
 import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
+import logger from '../utils/logger';
 
 const DRAFT_KEY_15498 = 'cerfa_15498_draft';
 
@@ -118,7 +119,7 @@ function CerfaPage15498() {
                     parsed.signatureAcquereur || parsed.inst_raison;
                 if (hasContent) {
                     setFormData(prev => ({ ...prev, ...parsed }));
-                    console.log('[CERFA 15498] Brouillon restauré');
+                    logger.log('[CERFA 15498] Brouillon restauré');
                 }
             }
         } catch (e) { /* ignore parse errors */ }
@@ -133,7 +134,7 @@ function CerfaPage15498() {
                 const parsedData = JSON.parse(decodeURIComponent(data));
                 setFormData(prev => ({ ...prev, ...parsedData }));
             } catch (e) {
-                console.error('Erreur parsing données URL:', e);
+                logger.error('Erreur parsing données URL:', e);
             }
         }
 
@@ -262,10 +263,10 @@ function CerfaPage15498() {
                             intervention_date: null,
                             notes: formData.details || ''
                         });
-                    console.log('[CERFA 15498] ✓ Document enregistré dans Supabase');
+                    logger.log('[CERFA 15498] Document enregistré dans Supabase');
                 }
             } catch (storageError) {
-                console.warn('[CERFA 15498] ✗ Erreur enregistrement Supabase:', storageError.message);
+                logger.warn('[CERFA 15498] Erreur enregistrement Supabase:', storageError.message);
             }
 
             saveGenerationRecord({
@@ -282,7 +283,7 @@ function CerfaPage15498() {
             showToast(`CERFA 15498 ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo();
         } catch (error) {
-            console.error('Erreur génération CERFA 15498:', error);
+            logger.error('Erreur génération CERFA 15498:', error);
             showToast(`Erreur: ${error.message}`, 'error');
         } finally {
             setIsGenerating(false);

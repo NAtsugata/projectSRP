@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import './AdminContractsView.css';
+import logger from '../utils/logger';
 
 // Contract type labels
 const CONTRACT_TYPES = {
@@ -149,7 +150,7 @@ function AdminContractsView({
             auto_renew: Boolean(formData.auto_renew)
         };
 
-        console.log('Submitting contract data:', sanitizedData);
+        logger.log('Submitting contract data:', sanitizedData);
 
         setIsSubmitting(true);
         try {
@@ -162,7 +163,7 @@ function AdminContractsView({
             }
             handleCloseModal();
         } catch (err) {
-            console.error('Contract submit error:', err);
+            logger.error('Contract submit error:', err);
             showToast?.(`Erreur: ${err.message}`, 'error');
         } finally {
             setIsSubmitting(false);
@@ -183,11 +184,11 @@ function AdminContractsView({
         if (!deleteConfirm.contractId) return;
 
         try {
-            console.log('Deleting contract:', deleteConfirm.contractId);
+            logger.log('Deleting contract:', deleteConfirm.contractId);
             await onDeleteContract(deleteConfirm.contractId);
             showToast?.('Contrat supprimé', 'success');
         } catch (err) {
-            console.error('Delete contract error:', err);
+            logger.error('Delete contract error:', err);
             showToast?.(`Erreur: ${err.message}`, 'error');
         } finally {
             setDeleteConfirm({ show: false, contractId: null, contractName: '' });

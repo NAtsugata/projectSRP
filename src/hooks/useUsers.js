@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../lib/supabase';
+import logger from '../utils/logger';
 
 /**
  * Hook pour gérer les utilisateurs avec React Query
@@ -28,11 +29,11 @@ export function useUsers() {
     // Mutation pour mettre à jour un utilisateur
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
-            console.log('🔄 Updating user:', { id, updates });
+            logger.log('Updating user:', { id, updates });
             const result = await profileService.updateProfile(id, updates);
-            console.log('🔄 Update result:', result);
+            logger.log('Update result:', result);
             if (result.error) {
-                console.error('❌ Update error:', result.error);
+                logger.error('Update error:', result.error);
                 throw result.error;
             }
             return result.data;

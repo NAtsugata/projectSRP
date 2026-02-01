@@ -441,17 +441,7 @@ export const initMobileOptimizations = () => {
     document.body.classList.add('is-android');
   }
 
-  // Log mobile environment
-  console.log('📱 Mobile optimizations initialized', {
-    isMobile: isMobile(),
-    isTouch: isTouchDevice(),
-    isIOS: isIOS(),
-    isAndroid: isAndroid(),
-    viewport: {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    },
-  });
+  // Mobile environment initialized — no logging in production
 };
 
 const mobileUtils = {

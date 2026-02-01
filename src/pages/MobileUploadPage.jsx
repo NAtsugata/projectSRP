@@ -7,13 +7,13 @@ import { ChevronLeftIcon, CheckCircleIcon, AlertTriangleIcon, LoaderIcon, AlertC
 import { useMobileNotifications, MobileNotificationContainer } from '../components/mobile/MobileNotifications';
 import '../components/mobile/MobileNotifications.css';
 
-// ✅ LOGS DÉTAILLÉS pour diagnostic
+import logger from '../utils/logger';
+
+// Upload diagnostics logger
 const logUpload = (message, data = {}) => {
-    const timestamp = new Date().toISOString();
-    const userAgent = navigator.userAgent;
-    console.log(`[UPLOAD ${timestamp}] ${message}`, {
+    logger.upload('info', message, {
         ...data,
-        userAgent,
+        userAgent: navigator.userAgent,
         online: navigator.onLine,
     });
 };
@@ -74,7 +74,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                     }, 'image/jpeg', 0.7);
                 });
             } catch (e) {
-                console.warn('Erreur createImageBitmap, fallback legacy:', e);
+                logger.warn('Erreur createImageBitmap, fallback legacy:', e);
             }
         }
 
@@ -176,7 +176,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
             logUpload(`✅ Item terminé ${item.name}`);
 
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             setUploadState(prev => ({
                 ...prev,
                 queue: prev.queue.map(i => i.id === item.id ? { ...i, status: 'error', error: error.message } : i)

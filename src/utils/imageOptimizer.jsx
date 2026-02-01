@@ -1,5 +1,6 @@
 // src/utils/imageOptimizer.js
 // Optimisation avancée des images pour mobile
+import logger from './logger';
 
 /**
  * Compresse une image de manière agressive pour mobile
@@ -75,7 +76,7 @@ export const optimizeImage = async (file, options = {}) => {
             thumbCanvas.toBlob(
               (thumbnailBlob) => {
                 if (!thumbnailBlob) {
-                  console.warn('Échec création thumbnail, on utilise full');
+                  logger.warn('Échec création thumbnail, on utilise full');
                   resolve({ full: fullFile, thumbnail: fullBlob });
                   return;
                 }
@@ -137,7 +138,7 @@ export const optimizeImages = async (files, onProgress) => {
 
       onProgress?.(i + 1, files.length);
 
-      console.log(`✅ Image ${i + 1}/${files.length} optimisée:`, {
+      logger.log(`Image ${i + 1}/${files.length} optimisée:`, {
         nom: file.name,
         avant: (file.size / 1024).toFixed(1) + ' KB',
         après: (optimized.compressedSize / 1024).toFixed(1) + ' KB',
@@ -145,7 +146,7 @@ export const optimizeImages = async (files, onProgress) => {
         ratio: ((1 - optimized.compressedSize / file.size) * 100).toFixed(0) + '% économisé'
       });
     } catch (error) {
-      console.error(`❌ Erreur compression ${file.name}:`, error);
+      logger.error(`Erreur compression ${file.name}:`, error);
       results.push({ file, error: error.message, isImage: true });
     }
   }

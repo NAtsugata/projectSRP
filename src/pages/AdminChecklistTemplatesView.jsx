@@ -6,6 +6,7 @@ import {
   EditIcon,
   SaveIcon
 } from '../components/SharedUI';
+import logger from '../utils/logger';
 
 export default function AdminChecklistTemplatesView({ templates = [], onCreateTemplate, onUpdateTemplate, onDeleteTemplate }) {
   const [isCreating, setIsCreating] = useState(false);
@@ -116,7 +117,7 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
       }
       resetForm();
     } catch (error) {
-      console.error('Erreur sauvegarde template:', error);
+      logger.error('Erreur sauvegarde template:', error);
       alert('Erreur lors de la sauvegarde');
     }
   };
@@ -130,7 +131,7 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
     try {
       await onDeleteTemplate(templateId);
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      logger.error('Erreur suppression:', error);
       alert('Erreur lors de la suppression');
     }
   };

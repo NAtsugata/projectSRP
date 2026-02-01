@@ -307,7 +307,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       localStorage.removeItem('expense_form_isCreating');
       localStorage.removeItem('expense_form_data');
     } catch (err) {
-      console.error('Erreur soumission note de frais:', err);
+      logger.error('Erreur soumission note de frais:', err);
       setError(`Erreur: ${err.message}`);
     } finally {
       setIsSubmitting(false);

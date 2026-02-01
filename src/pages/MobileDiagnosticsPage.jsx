@@ -2,6 +2,7 @@
 // Page de diagnostic pour identifier les problèmes d'upload sur mobile
 import React from 'react';
 import { ChevronLeftIcon } from '../components/SharedUI';
+import logger from '../utils/logger';
 
 export default function MobileDiagnosticsPage({
   diagnostics,
@@ -30,7 +31,7 @@ export default function MobileDiagnosticsPage({
       navigator.share({
         title: 'Diagnostic Mobile',
         text: report,
-      }).catch(console.error);
+      }).catch(err => logger.error('Share failed:', err));
     } else {
       copyReport();
     }

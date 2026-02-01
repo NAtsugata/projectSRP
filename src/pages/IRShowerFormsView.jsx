@@ -145,7 +145,7 @@ export default function IRShowerFormsView({ profile }) {
 
       return pageImages;
     } catch (err) {
-      console.error('Erreur rendu PDF:', err);
+      logger.error('Erreur rendu PDF:', err);
       return null; // null = erreur, [] = pas de pages
     }
   };
@@ -204,12 +204,12 @@ export default function IRShowerFormsView({ profile }) {
     const files = Array.from(e.target.files);
     logger.log('📸 Fichiers détectés:', files.length);
     if (files.length === 0) {
-      console.warn('⚠️ Aucun fichier capturé');
+      logger.warn('Aucun fichier capturé');
       return;
     }
 
     if (!userId) {
-      console.error('❌ Pas d\'userId disponible pour l\'upload');
+      logger.error('Pas d\'userId disponible pour l\'upload');
       return;
     }
 
@@ -243,7 +243,7 @@ export default function IRShowerFormsView({ profile }) {
             name: file.name
           };
         } catch (err) {
-          console.error('❌ Erreur upload fichier:', file.name, err);
+          logger.error('Erreur upload fichier:', file.name, err);
           throw err;
         }
       });
@@ -261,7 +261,7 @@ export default function IRShowerFormsView({ profile }) {
       }
 
     } catch (error) {
-      console.error('❌ Erreur upload fichiers:', error);
+      logger.error('Erreur upload fichiers:', error);
       alert('Erreur lors de l\'upload des photos');
     }
 
@@ -331,7 +331,7 @@ export default function IRShowerFormsView({ profile }) {
       try {
         localStorage.setItem('ir-shower-draft', JSON.stringify(data));
       } catch (e) {
-        console.error('Sauvegarde auto échouée:', e);
+        logger.error('Sauvegarde auto échouée:', e);
       }
     }, 5000);
     return () => clearInterval(saveTimer);
@@ -351,7 +351,7 @@ export default function IRShowerFormsView({ profile }) {
         if (data.signatureInstaller) setSignatureInstaller(data.signatureInstaller);
       }
     } catch (e) {
-      console.error('Restauration échouée:', e);
+      logger.error('Restauration échouée:', e);
     }
   }, [setElementsNoHistory]);
 
@@ -1095,7 +1095,7 @@ export default function IRShowerFormsView({ profile }) {
           imgWidth = planCanvas.width;
           imgHeight = planCanvas.height;
         } catch (canvasErr) {
-          console.error("Canvas toDataURL error:", canvasErr);
+          logger.error("Canvas toDataURL error:", canvasErr);
           img2 = null;
         }
       }
@@ -1184,7 +1184,7 @@ export default function IRShowerFormsView({ profile }) {
           try {
             pdf.addImage(photo.url, "JPEG", 20, photoY, imgW, imgH);
           } catch (e) {
-            console.warn("Could not add photo:", e);
+            logger.warn("Could not add photo:", e);
           }
           photoY += imgH + 10;
         }
@@ -1219,7 +1219,7 @@ export default function IRShowerFormsView({ profile }) {
           try {
             pdf.addImage(photo.url, "JPEG", 20, photoY, imgW, imgH);
           } catch (e) {
-            console.warn("Could not add photo:", e);
+            logger.warn("Could not add photo:", e);
           }
           photoY += imgH + 10;
         }
@@ -1241,7 +1241,7 @@ export default function IRShowerFormsView({ profile }) {
       setPreviewPage(0);
       setTab(prevTab);
     } catch (err) {
-      console.error("Erreur export PDF:", err);
+      logger.error("Erreur export PDF:", err);
       alert("❌ Erreur lors de l'export PDF:\n" + (err.message || err));
     } finally {
       setIsGeneratingPdf(false);

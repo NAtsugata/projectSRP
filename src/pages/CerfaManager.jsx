@@ -12,6 +12,7 @@ import {
     PlusIcon, EditIcon
 } from '../components/SharedUI';
 import './CerfaManager.css';
+import logger from '../utils/logger';
 
 // Templates CERFA disponibles
 const CERFA_TEMPLATES = [
@@ -88,7 +89,7 @@ function CerfaManager() {
             if (error) throw error;
             setDocuments(data || []);
         } catch (error) {
-            console.error('Erreur chargement documents:', error);
+            logger.error('Erreur chargement documents:', error);
             toast.error('Erreur lors du chargement des documents');
         } finally {
             setLoading(false);
@@ -248,7 +249,7 @@ function CerfaManager() {
             });
             loadDocuments();
         } catch (error) {
-            console.error('Erreur upload:', error);
+            logger.error('Erreur upload:', error);
             toast.error(`Erreur: ${error.message}`);
         } finally {
             setUploading(false);
@@ -273,7 +274,7 @@ function CerfaManager() {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Erreur téléchargement:', error);
+            logger.error('Erreur téléchargement:', error);
             toast.error('Erreur lors du téléchargement');
         }
     };

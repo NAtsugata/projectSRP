@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService, profileService } from '../lib/supabase';
+import logger from '../utils/logger';
 
 // Store Zustand pour l'authentification
 export const useAuthStore = create((set, get) => ({
@@ -37,7 +38,7 @@ export const useAuthStore = create((set, get) => ({
                 set({ user: null, profile: null, loading: false });
             }
         } catch (error) {
-            console.error('Error initializing auth:', error);
+            logger.error('Error initializing auth:', error);
             set({ error: error.message, loading: false });
         }
     },
@@ -61,7 +62,7 @@ export const useAuthStore = create((set, get) => ({
                 return { success: true };
             }
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('Login error:', error);
             set({ error: error.message, loading: false });
             return { success: false, error: error.message };
         }
@@ -73,7 +74,7 @@ export const useAuthStore = create((set, get) => ({
             await authService.signOut();
             set({ user: null, profile: null, loading: false, error: null });
         } catch (error) {
-            console.error('Logout error:', error);
+            logger.error('Logout error:', error);
             set({ error: error.message });
         }
     },
@@ -87,7 +88,7 @@ export const useAuthStore = create((set, get) => ({
             const { data: profile } = await profileService.getProfile(user.id);
             set({ profile });
         } catch (error) {
-            console.error('Error refreshing profile:', error);
+            logger.error('Error refreshing profile:', error);
         }
     },
 }));

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 
 const DownloadContext = createContext(null);
 
@@ -113,7 +114,7 @@ export const DownloadProvider = ({ children }) => {
             return { success: true };
 
         } catch (error) {
-            console.error('Download error:', error);
+            logger.error('Download error:', error);
 
             // Marquer comme erreur
             setDownloads(prev => prev.map(d =>

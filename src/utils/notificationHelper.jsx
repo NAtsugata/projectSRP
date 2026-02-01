@@ -3,6 +3,7 @@
 
 import { checkEmployeeOverload } from './agendaHelpers';
 import { isEmployeeAbsent } from '../components/agenda/AbsenceManager';
+import logger from './logger';
 
 /**
  * Check for upcoming interventions (within next 2 hours)
@@ -146,8 +147,8 @@ export const getAgendaNotifications = (interventions, employees, currentUserId, 
  */
 export const showNotificationToast = (notification, toast) => {
   if (!toast) {
-    console.warn('Toast system not available, logging to console:', notification);
-    console.log(`${notification.title}: ${notification.message}`);
+    logger.warn('Toast system not available:', notification);
+    logger.log(`${notification.title}: ${notification.message}`);
     return;
   }
 
