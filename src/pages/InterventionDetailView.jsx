@@ -87,7 +87,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // Handler pour les previews locales - affichage IMMÉDIAT
   const handleLocalPreview = useCallback((preview) => {
-    console.log('🖼️ handleLocalPreview appelé:', {
+    logger.log('🖼️ handleLocalPreview appelé:', {
       id: preview.id,
       name: preview.name,
       type: preview.type,
@@ -101,10 +101,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       type: preview.type || 'image/jpeg'  // Fallback si type vide
     };
 
-    console.log('➕ Ajout à uploadQueue:', newItem.id);
+    logger.log('➕ Ajout à uploadQueue:', newItem.id);
     setUploadQueue(prev => {
       const updated = [...prev, newItem];
-      console.log('📊 uploadQueue après ajout:', updated.length, 'items');
+      logger.log('📊 uploadQueue après ajout:', updated.length, 'items');
       return updated;
     });
   }, []);
@@ -259,7 +259,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       const res = await onSaveSilent(intervention.id, updated);
       if (res?.error) alert('Échec de la sauvegarde du rapport');
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       alert('Échec de la sauvegarde du rapport');
     }
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
@@ -291,7 +291,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     try {
       await refreshData?.();
     } catch (e) {
-      console.error('Erreur refresh:', e);
+      logger.error('Erreur refresh:', e);
     }
   }, [report, persistReport, refreshData]);
 
@@ -306,7 +306,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       const { error: storageError } = await storageService.deleteInterventionFile(image.url);
 
       if (storageError) {
-        console.error('Erreur suppression stockage:', storageError);
+        logger.error('Erreur suppression stockage:', storageError);
         throw new Error('Impossible de supprimer le fichier du stockage');
       }
 
@@ -319,7 +319,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
       logger.log('✅ Image supprimée avec succès');
     } catch (error) {
-      console.error('❌ Erreur suppression image:', error);
+      logger.error('❌ Erreur suppression image:', error);
       throw error;
     }
   }, [report, persistReport]);
@@ -371,7 +371,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             const blob = await response.blob();
             return { success: true, blob, file };
           } catch (error) {
-            console.warn(`⚠️ Tentative ${attempt}/${maxRetries} échouée pour ${file.name}:`, error.message);
+            logger.warn(`⚠️ Tentative ${attempt}/${maxRetries} échouée pour ${file.name}:`, error.message);
             if (attempt === maxRetries) {
               return { success: false, error, file };
             }
@@ -406,7 +406,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             logger.log(`✅ Ajouté au ZIP: ${uniqueName}`);
           } else {
             failCount++;
-            console.error(`❌ Échec final ${result.file.name}:`, result.error?.message);
+            logger.error(`❌ Échec final ${result.file.name}:`, result.error?.message);
           }
         }
       }
@@ -452,7 +452,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         alert(`✅ Tous les ${successCount} fichiers ont été téléchargés dans ${zipName}`);
       }
     } catch (error) {
-      console.error('❌ Erreur création ZIP:', error);
+      logger.error('❌ Erreur création ZIP:', error);
       alert('Erreur lors de la création du fichier ZIP: ' + error.message);
     } finally {
       setIsDownloadingZip(false);
@@ -540,7 +540,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const checkpointsOK = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.every(c => !!c.done) : true;
 
     // Debug logging
-    console.log('🔍 Validation:', {
+    logger.log('🔍 Validation:', {
       filesCount: report.files?.length || 0,
       imgCount,
       files: report.files?.map(f => ({ url: f.url?.substring(0, 50), type: f.type, isImage: isImageUrl(f) })),

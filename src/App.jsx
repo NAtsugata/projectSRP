@@ -14,6 +14,7 @@ import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import { debounce } from './utils/debounce';
 import { setToastFunction, overrideAlert } from './utils/alertOverride';
+import logger from './utils/logger';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
@@ -72,7 +73,7 @@ function App() {
   useEffect(() => {
     setToastFunction(showToast);
     overrideAlert();
-    console.log('✅ alert() remplacé par des toasts');
+    logger.log('alert() remplacé par des toasts');
   }, [showToast]);
 
   useEffect(() => {
@@ -129,7 +130,7 @@ function App() {
       // Debounce pour éviter trop d'invalidations simultanées
       const invalidateDebounced = debounce(
         (keys) => {
-          console.log('🔄 Invalidation React Query:', keys);
+          logger.log('Invalidation React Query:', keys);
           queryClient.invalidateQueries(keys);
         },
         1000,

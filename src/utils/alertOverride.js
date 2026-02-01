@@ -76,7 +76,7 @@ export const overrideAlert = () => {
     }
   };
 
-  console.log('✅ alert() overridden - utilise maintenant des toasts');
+  // alert() override active
 };
 
 /**
@@ -85,7 +85,7 @@ export const overrideAlert = () => {
 export const restoreAlert = () => {
   if (window._originalAlert) {
     window.alert = window._originalAlert;
-    console.log('✅ alert() restauré à la fonction native');
+    // alert() restored
   }
 };
 

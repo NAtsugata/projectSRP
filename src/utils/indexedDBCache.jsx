@@ -15,7 +15,7 @@ const initDB = () => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error('IndexedDB error:', request.error);
+      logger.error('IndexedDB error:', request.error);
       reject(request.error);
     };
 
@@ -52,7 +52,7 @@ const fileToArrayBuffer = (file) => {
         .then(resolve)
         .catch(() => {
           // Fallback FileReader si arrayBuffer() échoue
-          console.log('⚠️ arrayBuffer() échoué, utilisation FileReader...');
+          logger.log('⚠️ arrayBuffer() échoué, utilisation FileReader...');
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
           reader.onerror = () => reject(reader.error);
@@ -60,7 +60,7 @@ const fileToArrayBuffer = (file) => {
         });
     } else {
       // Fallback FileReader pour vieux navigateurs
-      console.log('⚠️ arrayBuffer() non supporté, utilisation FileReader...');
+      logger.log('⚠️ arrayBuffer() non supporté, utilisation FileReader...');
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => reject(reader.error);
@@ -78,13 +78,13 @@ const fileToArrayBuffer = (file) => {
  */
 export const storeFileForUpload = async (file, metadata = {}, customId = null) => {
   try {
-    console.log(`📦 Stockage IndexedDB: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    logger.log(`📦 Stockage IndexedDB: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
     const db = await initDB();
 
     // Convertir le fichier en ArrayBuffer pour stockage (avec fallback)
     const arrayBuffer = await fileToArrayBuffer(file);
-    console.log(`✅ ArrayBuffer créé: ${arrayBuffer.byteLength} bytes`);
+    logger.log(`✅ ArrayBuffer créé: ${arrayBuffer.byteLength} bytes`);
 
     // Utiliser le type corrigé si disponible (pour mobile iOS)
     const fileType = metadata.correctedType || file.type || 'application/octet-stream';
@@ -116,7 +116,7 @@ export const storeFileForUpload = async (file, metadata = {}, customId = null) =
       };
 
       request.onerror = () => {
-        console.error('❌ Erreur stockage fichier:', request.error);
+        logger.error('❌ Erreur stockage fichier:', request.error);
         reject(request.error);
       };
 
@@ -125,7 +125,7 @@ export const storeFileForUpload = async (file, metadata = {}, customId = null) =
       };
     });
   } catch (error) {
-    console.error('❌ Erreur storeFileForUpload:', error);
+    logger.error('❌ Erreur storeFileForUpload:', error);
     throw error;
   }
 };
@@ -164,7 +164,7 @@ export const getPendingUploads = async (status = null) => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur getPendingUploads:', error);
+    logger.error('❌ Erreur getPendingUploads:', error);
     return [];
   }
 };
@@ -196,7 +196,7 @@ export const getUploadById = async (id) => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur getUploadById:', error);
+    logger.error('❌ Erreur getUploadById:', error);
     return null;
   }
 };
@@ -255,7 +255,7 @@ export const updateUploadStatus = async (id, status, updates = {}) => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur updateUploadStatus:', error);
+    logger.error('❌ Erreur updateUploadStatus:', error);
     return false;
   }
 };
@@ -288,7 +288,7 @@ export const deleteUpload = async (id) => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur deleteUpload:', error);
+    logger.error('❌ Erreur deleteUpload:', error);
     return false;
   }
 };
@@ -330,7 +330,7 @@ export const clearCompletedUploads = async () => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur clearCompletedUploads:', error);
+    logger.error('❌ Erreur clearCompletedUploads:', error);
     return 0;
   }
 };
@@ -354,7 +354,7 @@ export const getCacheStats = async () => {
       completed: uploads.filter(u => u.status === 'completed').length
     };
   } catch (error) {
-    console.error('❌ Erreur getCacheStats:', error);
+    logger.error('❌ Erreur getCacheStats:', error);
     return { count: 0, totalSize: 0, totalSizeMB: '0.00', pending: 0, uploading: 0, failed: 0, completed: 0 };
   }
 };
@@ -386,7 +386,7 @@ export const clearAllUploads = async () => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur clearAllUploads:', error);
+    logger.error('❌ Erreur clearAllUploads:', error);
     return false;
   }
 };
@@ -445,7 +445,7 @@ export const cleanOldUploads = async (maxAgeDays = 7) => {
       };
     });
   } catch (error) {
-    console.error('❌ Erreur cleanOldUploads:', error);
+    logger.error('❌ Erreur cleanOldUploads:', error);
     return 0;
   }
 };
@@ -474,7 +474,7 @@ export const initCacheCleanup = async () => {
     logger.log(`✅ Cache nettoyé: ${completedCleaned} complétés, ${oldCleaned} anciens supprimés`);
     logger.log(`📊 Cache actuel: ${stats.count} fichiers (${stats.totalSizeMB} MB)`);
   } catch (error) {
-    console.error('❌ Erreur nettoyage cache:', error);
+    logger.error('❌ Erreur nettoyage cache:', error);
   }
 };
 

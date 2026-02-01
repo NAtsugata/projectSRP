@@ -6,6 +6,7 @@ import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useForm } from '../../hooks';
 import { validateIntervention } from '../../utils/validators';
+import { toLocalDateStr } from '../../utils/agendaHelpers';
 import logger from '../../utils/logger';
 import './InterventionForm.css';
 
@@ -81,7 +82,7 @@ const InterventionForm = ({
   const setDateShortcut = useCallback((daysToAdd) => {
     const date = new Date();
     date.setDate(date.getDate() + daysToAdd);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
     handleChange({ target: { name: 'date', value: dateStr } });
   }, [handleChange]);
 
