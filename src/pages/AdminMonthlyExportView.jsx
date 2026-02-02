@@ -12,8 +12,9 @@ import {
   MapPinIcon,
   ClockIcon,
   DollarSignIcon,
+  FileTextIcon,
 } from '../components/SharedUI';
-import { generateCSV, downloadCSV } from '../services/monthlyExportService';
+import { generateCSV, downloadCSV, generatePDF } from '../services/monthlyExportService';
 import './AdminMonthlyExportView.css';
 
 const MONTHS_FR = [
@@ -93,6 +94,11 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
     downloadCSV(csv, filename);
   }, [filteredEmployees, year, month]);
 
+  // Export PDF
+  const handleExportPDF = useCallback(() => {
+    generatePDF(filteredEmployees, year, month);
+  }, [filteredEmployees, year, month]);
+
   const toggleEmployee = useCallback((id) => {
     setExpandedEmployee(prev => prev === id ? null : id);
   }, []);
@@ -114,14 +120,24 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
           <h2>Export Comptable</h2>
           <p>Données mensuelles pour l'expert-comptable</p>
         </div>
-        <button
-          className="export-csv-btn"
-          onClick={handleExportCSV}
-          disabled={isLoading || filteredEmployees.length === 0}
-        >
-          <DownloadIcon />
-          <span>Exporter CSV</span>
-        </button>
+        <div className="export-actions">
+          <button
+            className="export-csv-btn"
+            onClick={handleExportCSV}
+            disabled={isLoading || filteredEmployees.length === 0}
+          >
+            <DownloadIcon />
+            <span>Exporter CSV</span>
+          </button>
+          <button
+            className="export-pdf-btn"
+            onClick={handleExportPDF}
+            disabled={isLoading || filteredEmployees.length === 0}
+          >
+            <FileTextIcon />
+            <span>Exporter PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Sélecteur de mois */}

@@ -3,6 +3,7 @@
 // Agrège les données par employé pour la fiche de paie
 
 import { supabase } from '../lib/supabaseClient';
+import { jsPDF } from 'jspdf';
 import logger from '../utils/logger';
 
 /**
@@ -314,4 +315,456 @@ export function downloadCSV(csvContent, filename) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/* =====================================================================
+ * EXPORT PDF — Fiche mensuelle par employé pour l'expert-comptable
+ * ===================================================================== */
+
+const EXPENSE_CAT_LABELS = {
+  transport: 'Transport',
+  meals: 'Repas',
+  fuel: 'Carburant',
+  parking: 'Parking',
+  phone: 'Téléphone',
+  supplies: 'Fournitures',
+  accommodation: 'Hébergement',
+  other: 'Autres',
+};
+
+const MONTHS_FR = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+];
+
+/**
+ * Génère et télécharge un PDF complet pour l'expert-comptable
+ */
+export function generatePDF(employeeData, year, month) {
+  const monthLabel = `${MONTHS_FR[month - 1]} ${year}`;
+
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();   // 210
+  const pageH = pdf.internal.pageSize.getHeight();   // 297
+  const mx = 15; // marge horizontale
+  const contentW = pageW - mx * 2;
+
+  // Couleurs
+  const blue = [14, 165, 233];
+  const darkText = [30, 41, 59];
+  const gray = [100, 116, 139];
+  const lightBg = [248, 250, 252];
+  const white = [255, 255, 255];
+  const greenBg = [220, 252, 231];
+  const greenText = [22, 101, 52];
+  const orangeBg = [255, 247, 237];
+  const orangeText = [234, 88, 12];
+
+  // ============= PAGE DE GARDE =============
+  // Bande bleue en haut
+  pdf.setFillColor(...blue);
+  pdf.rect(0, 0, pageW, 50, 'F');
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(24);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Export Comptable', mx, 25);
+
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(monthLabel, mx, 38);
+
+  pdf.setFontSize(10);
+  const dateStr = `Généré le ${new Date().toLocaleDateString('fr-FR')}`;
+  pdf.text(dateStr, pageW - mx - pdf.getTextWidth(dateStr), 38);
+
+  // Résumé global
+  let y = 65;
+  pdf.setTextColor(...darkText);
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Récapitulatif global', mx, y);
+  y += 10;
+
+  const totals = employeeData.reduce((acc, e) => ({
+    employees: acc.employees + 1,
+    workedDays: acc.workedDays + e.workedDays,
+    totalHours: acc.totalHours + e.totalHours,
+    totalKm: acc.totalKm + e.totalKm,
+    paniersRepas: acc.paniersRepas + e.paniersRepas,
+    leaveDays: acc.leaveDays + e.leaveDays,
+    interventions: acc.interventions + e.interventionCount,
+    totalExpenses: acc.totalExpenses + e.totalExpenses,
+  }), { employees: 0, workedDays: 0, totalHours: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, interventions: 0, totalExpenses: 0 });
+
+  const summaryItems = [
+    ['Employés', `${totals.employees}`],
+    ['Jours travaillés', `${totals.workedDays}`],
+    ['Heures totales', `${totals.totalHours}h`],
+    ['Interventions', `${totals.interventions}`],
+    ['Km parcourus', `${totals.totalKm} km`],
+    ['Paniers repas', `${totals.paniersRepas}`],
+    ['Jours de congé', `${totals.leaveDays}`],
+    ['Total dépenses', `${totals.totalExpenses.toFixed(2)} €`],
+  ];
+
+  // Grille résumé (2 colonnes x 4 lignes)
+  const cellW = contentW / 2;
+  const cellH = 10;
+  summaryItems.forEach((item, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cx = mx + col * cellW;
+    const cy = y + row * cellH;
+
+    const isAlt = row % 2 === 0;
+    pdf.setFillColor(...(isAlt ? lightBg : white));
+    pdf.rect(cx, cy, cellW, cellH, 'F');
+
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...gray);
+    pdf.text(item[0], cx + 4, cy + 6.5);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...darkText);
+    pdf.text(item[1], cx + cellW - 4, cy + 6.5, { align: 'right' });
+  });
+
+  y += Math.ceil(summaryItems.length / 2) * cellH + 15;
+
+  // Tableau récapitulatif
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...darkText);
+  pdf.text('Tableau récapitulatif', mx, y);
+  y += 8;
+
+  // En-tête du tableau
+  const cols = [
+    { label: 'Employé', w: 42 },
+    { label: 'Jours', w: 16 },
+    { label: 'Heures', w: 18 },
+    { label: 'Km', w: 18 },
+    { label: 'Zones', w: 32 },
+    { label: 'Repas', w: 16 },
+    { label: 'Congés', w: 16 },
+    { label: 'Dépenses', w: 22 },
+  ];
+
+  pdf.setFillColor(...blue);
+  pdf.rect(mx, y, contentW, 8, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(7.5);
+  pdf.setFont('helvetica', 'bold');
+
+  let colX = mx;
+  cols.forEach(col => {
+    pdf.text(col.label, colX + 2, y + 5.5);
+    colX += col.w;
+  });
+  y += 8;
+
+  // Lignes du tableau
+  employeeData.forEach((emp, idx) => {
+    if (y > pageH - 20) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    const isAlt = idx % 2 === 0;
+    pdf.setFillColor(...(isAlt ? lightBg : white));
+    pdf.rect(mx, y, contentW, 7, 'F');
+
+    pdf.setTextColor(...darkText);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+
+    colX = mx;
+    const rowData = [
+      emp.fullName || '',
+      `${emp.workedDays}`,
+      `${emp.totalHours}h`,
+      `${emp.totalKm}`,
+      emp.zones.slice(0, 3).join(', ') + (emp.zones.length > 3 ? '...' : ''),
+      `${emp.paniersRepas}`,
+      `${emp.leaveDays}`,
+      `${emp.totalExpenses.toFixed(2)}€`,
+    ];
+
+    rowData.forEach((text, ci) => {
+      // Tronquer si trop long
+      const maxW = cols[ci].w - 4;
+      let displayText = text;
+      while (pdf.getTextWidth(displayText) > maxW && displayText.length > 3) {
+        displayText = displayText.slice(0, -4) + '...';
+      }
+      pdf.text(displayText, colX + 2, y + 5);
+      colX += cols[ci].w;
+    });
+
+    y += 7;
+  });
+
+  // ============= FICHES INDIVIDUELLES =============
+  employeeData.forEach(emp => {
+    pdf.addPage();
+    y = 15;
+
+    // En-tête employé
+    pdf.setFillColor(...blue);
+    pdf.rect(0, 0, pageW, 35, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(emp.fullName, mx, 18);
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(emp.email || '', mx, 27);
+
+    pdf.setFontSize(11);
+    const mLabel = monthLabel;
+    pdf.text(mLabel, pageW - mx - pdf.getTextWidth(mLabel), 18);
+
+    y = 45;
+
+    // --- Section Activité ---
+    y = drawSectionTitle(pdf, 'Activité & Temps de travail', mx, y, contentW);
+
+    const activityRows = [
+      ['Jours travaillés', `${emp.workedDays}`],
+      ['Heures totales', `${emp.totalHours}h`],
+      ['Interventions réalisées', `${emp.interventionCount}`],
+      ['Interventions terminées', `${emp.completedCount}`],
+    ];
+    y = drawKeyValueTable(pdf, activityRows, mx, y, contentW);
+
+    // Dates travaillées
+    if (emp.workedDates.length > 0) {
+      y += 3;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...gray);
+      pdf.text('Dates travaillées :', mx, y);
+      y += 4;
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...darkText);
+      pdf.setFontSize(7);
+      const datesText = emp.workedDates.map(d =>
+        new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+      ).join('  |  ');
+
+      // Split en lignes si trop long
+      const lines = pdf.splitTextToSize(datesText, contentW);
+      lines.forEach(line => {
+        if (y > pageH - 20) { pdf.addPage(); y = 20; }
+        pdf.text(line, mx, y);
+        y += 4;
+      });
+    }
+
+    y += 6;
+
+    // --- Section Déplacements ---
+    if (y > pageH - 50) { pdf.addPage(); y = 20; }
+    y = drawSectionTitle(pdf, 'Déplacements & Paniers repas', mx, y, contentW);
+
+    const deplRows = [
+      ['Kilomètres parcourus', `${emp.totalKm} km`],
+      ['Paniers repas', `${emp.paniersRepas}`],
+      ['Zones de déplacement', emp.zones.length > 0 ? emp.zones.join(', ') : 'Aucune'],
+    ];
+    y = drawKeyValueTable(pdf, deplRows, mx, y, contentW);
+    y += 6;
+
+    // --- Section Congés ---
+    if (emp.leaveDays > 0) {
+      if (y > pageH - 50) { pdf.addPage(); y = 20; }
+      y = drawSectionTitle(pdf, `Congés (${emp.leaveDays} jours)`, mx, y, contentW);
+
+      emp.leaves.forEach(leave => {
+        if (y > pageH - 20) { pdf.addPage(); y = 20; }
+
+        const isApproved = leave.status === 'Approuvée';
+        pdf.setFillColor(...(isApproved ? greenBg : orangeBg));
+        pdf.roundedRect(mx, y, contentW, 9, 1.5, 1.5, 'F');
+
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...(isApproved ? greenText : orangeText));
+        pdf.text(leave.status, mx + 3, y + 6);
+
+        pdf.setTextColor(...darkText);
+        pdf.setFont('helvetica', 'normal');
+        const dateRange = `${new Date(leave.startDate).toLocaleDateString('fr-FR')} — ${new Date(leave.endDate).toLocaleDateString('fr-FR')}`;
+        pdf.text(dateRange, mx + 30, y + 6);
+
+        if (leave.reason) {
+          pdf.setTextColor(...gray);
+          pdf.text(leave.reason, mx + 85, y + 6);
+        }
+        y += 11;
+      });
+      y += 4;
+    }
+
+    // --- Section Dépenses ---
+    if (emp.totalExpenses > 0) {
+      if (y > pageH - 60) { pdf.addPage(); y = 20; }
+      y = drawSectionTitle(pdf, `Dépenses — Total : ${emp.totalExpenses.toFixed(2)} €`, mx, y, contentW);
+
+      // Barres par catégorie
+      const cats = Object.entries(emp.expensesByCategory)
+        .filter(([, amount]) => amount > 0)
+        .sort(([, a], [, b]) => b - a);
+
+      cats.forEach(([cat, amount]) => {
+        if (y > pageH - 15) { pdf.addPage(); y = 20; }
+
+        const label = EXPENSE_CAT_LABELS[cat] || cat;
+        const pct = Math.min((amount / emp.totalExpenses) * 100, 100);
+        const barMaxW = contentW - 70;
+
+        // Label
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...gray);
+        pdf.text(label, mx, y + 4.5);
+
+        // Fond de barre
+        const barX = mx + 35;
+        pdf.setFillColor(241, 245, 249);
+        pdf.roundedRect(barX, y + 1, barMaxW, 4, 1.5, 1.5, 'F');
+
+        // Barre remplie
+        const fillW = Math.max((pct / 100) * barMaxW, 2);
+        pdf.setFillColor(...blue);
+        pdf.roundedRect(barX, y + 1, fillW, 4, 1.5, 1.5, 'F');
+
+        // Montant
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...darkText);
+        pdf.text(`${amount.toFixed(2)} €`, pageW - mx, y + 4.5, { align: 'right' });
+
+        y += 8;
+      });
+
+      // Détail des dépenses
+      if (emp.expenseDetails.length > 0) {
+        y += 4;
+        if (y > pageH - 30) { pdf.addPage(); y = 20; }
+
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...gray);
+        pdf.text('Détail des dépenses :', mx, y);
+        y += 5;
+
+        // Mini tableau
+        pdf.setFillColor(...blue);
+        pdf.rect(mx, y, contentW, 6, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(6.5);
+        pdf.text('Date', mx + 2, y + 4);
+        pdf.text('Catégorie', mx + 28, y + 4);
+        pdf.text('Description', mx + 60, y + 4);
+        pdf.text('Montant', pageW - mx - 2, y + 4, { align: 'right' });
+        pdf.text('Statut', mx + 145, y + 4);
+        y += 6;
+
+        emp.expenseDetails.forEach((exp, ei) => {
+          if (y > pageH - 12) { pdf.addPage(); y = 20; }
+
+          pdf.setFillColor(...(ei % 2 === 0 ? lightBg : white));
+          pdf.rect(mx, y, contentW, 5.5, 'F');
+
+          pdf.setTextColor(...darkText);
+          pdf.setFontSize(6.5);
+          pdf.setFont('helvetica', 'normal');
+
+          pdf.text(exp.date ? new Date(exp.date).toLocaleDateString('fr-FR') : '', mx + 2, y + 3.8);
+          pdf.text(EXPENSE_CAT_LABELS[exp.category] || exp.category || '', mx + 28, y + 3.8);
+
+          const desc = (exp.description || '').substring(0, 40);
+          pdf.text(desc, mx + 60, y + 3.8);
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${(exp.amount || 0).toFixed(2)} €`, pageW - mx - 2, y + 3.8, { align: 'right' });
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(exp.status || '', mx + 145, y + 3.8);
+
+          y += 5.5;
+        });
+      }
+    }
+
+    // Pied de page
+    const footerY = pageH - 10;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(mx, footerY - 3, pageW - mx, footerY - 3);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...gray);
+    pdf.text(`SRP — Export comptable ${monthLabel}`, mx, footerY);
+    pdf.text(`${emp.fullName}`, pageW - mx, footerY, { align: 'right' });
+  });
+
+  // Numéros de pages
+  const totalPages = pdf.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(148, 163, 184);
+    pdf.text(`Page ${i}/${totalPages}`, pageW / 2, pageH - 5, { align: 'center' });
+  }
+
+  // Télécharger
+  const filename = `export_comptable_${year}-${String(month).padStart(2, '0')}.pdf`;
+  pdf.save(filename);
+}
+
+/* Helpers PDF */
+
+function drawSectionTitle(pdf, title, x, y, w) {
+  pdf.setFillColor(14, 165, 233);
+  pdf.rect(x, y, 3, 8, 'F');
+
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(30, 41, 59);
+  pdf.text(title, x + 6, y + 6);
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(x, y + 9, x + w, y + 9);
+
+  return y + 13;
+}
+
+function drawKeyValueTable(pdf, rows, x, y, w) {
+  const halfW = w / 2;
+  const rowH = 7.5;
+
+  rows.forEach((row, i) => {
+    const isAlt = i % 2 === 0;
+    pdf.setFillColor(...(isAlt ? [248, 250, 252] : [255, 255, 255]));
+    pdf.rect(x, y, w, rowH, 'F');
+
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(row[0], x + 4, y + 5.2);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(row[1], x + w - 4, y + 5.2, { align: 'right' });
+
+    y += rowH;
+  });
+
+  return y;
 }

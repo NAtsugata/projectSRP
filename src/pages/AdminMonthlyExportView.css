@@ -54,6 +54,36 @@
   cursor: not-allowed;
 }
 
+.export-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.export-pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.export-pdf-btn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.export-pdf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Sélecteur de mois */
 .month-selector {
   display: flex;
@@ -474,7 +504,13 @@
     flex-direction: column;
   }
 
-  .export-csv-btn {
+  .export-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .export-csv-btn,
+  .export-pdf-btn {
     width: 100%;
     justify-content: center;
   }
