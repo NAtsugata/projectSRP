@@ -1,5 +1,6 @@
 // src/pages/AdminMonthlyExportView.jsx
 // Interface admin d'export mensuel pour l'expert-comptable
+// Permet la modification des valeurs avant export
 
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -33,14 +34,38 @@ const EXPENSE_CATEGORIES = {
   other: { label: 'Autres', color: '#64748b' },
 };
 
+// Champs éditables par l'admin
+const EDITABLE_FIELDS = [
+  { key: 'workedDays', label: 'Jours travaillés', type: 'number', step: 1 },
+  { key: 'totalHours', label: 'Heures', type: 'number', step: 0.5 },
+  { key: 'totalKm', label: 'Km total', type: 'number', step: 1 },
+  { key: 'paniersRepas', label: 'Paniers repas', type: 'number', step: 1 },
+  { key: 'leaveDays', label: 'Jours de congé', type: 'number', step: 0.5 },
+];
+
+/**
+ * Fusionne les données originales avec les modifications admin
+ */
+function applyOverrides(employees, overrides) {
+  return employees.map(emp => {
+    const o = overrides[emp.id];
+    if (!o) return emp;
+    return { ...emp, ...o };
+  });
+}
+
 export default function AdminMonthlyExportView({ employeeData = [], isLoading, error, year, month, onChangeMonth }) {
   const [expandedEmployee, setExpandedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // Modifications admin : { [employeeId]: { workedDays?: n, totalHours?: n, ... } }
+  const [overrides, setOverrides] = useState({});
 
   const monthLabel = `${MONTHS_FR[month - 1]} ${year}`;
+  const hasOverrides = Object.keys(overrides).length > 0;
 
-  // Navigation mois
+  // Navigation mois — reset les modifications au changement de mois
   const handlePrevMonth = useCallback(() => {
+    setOverrides({});
     if (month === 1) {
       onChangeMonth(year - 1, 12);
     } else {
@@ -49,6 +74,7 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
   }, [year, month, onChangeMonth]);
 
   const handleNextMonth = useCallback(() => {
+    setOverrides({});
     if (month === 12) {
       onChangeMonth(year + 1, 1);
     } else {
@@ -56,17 +82,48 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
     }
   }, [year, month, onChangeMonth]);
 
+  // Modifier un champ pour un employé
+  const handleFieldChange = useCallback((empId, field, value) => {
+    setOverrides(prev => ({
+      ...prev,
+      [empId]: {
+        ...prev[empId],
+        [field]: value,
+      },
+    }));
+  }, []);
+
+  // Réinitialiser les modifications d'un employé
+  const handleResetEmployee = useCallback((empId) => {
+    setOverrides(prev => {
+      const next = { ...prev };
+      delete next[empId];
+      return next;
+    });
+  }, []);
+
+  // Réinitialiser toutes les modifications
+  const handleResetAll = useCallback(() => {
+    setOverrides({});
+  }, []);
+
+  // Données avec modifications appliquées
+  const mergedData = useMemo(
+    () => applyOverrides(employeeData, overrides),
+    [employeeData, overrides]
+  );
+
   // Filtrage
   const filteredEmployees = useMemo(() => {
-    if (!searchTerm) return employeeData;
+    if (!searchTerm) return mergedData;
     const s = searchTerm.toLowerCase();
-    return employeeData.filter(e =>
+    return mergedData.filter(e =>
       e.fullName?.toLowerCase().includes(s) ||
       e.email?.toLowerCase().includes(s)
     );
-  }, [employeeData, searchTerm]);
+  }, [mergedData, searchTerm]);
 
-  // Totaux globaux
+  // Totaux globaux (utilise les données modifiées)
   const totals = useMemo(() => {
     return filteredEmployees.reduce((acc, emp) => ({
       workedDays: acc.workedDays + emp.workedDays,
@@ -87,14 +144,14 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
     });
   }, [filteredEmployees]);
 
-  // Export CSV
+  // Export CSV (utilise les données modifiées)
   const handleExportCSV = useCallback(() => {
     const csv = generateCSV(filteredEmployees, year, month);
     const filename = `export_comptable_${year}-${String(month).padStart(2, '0')}.csv`;
     downloadCSV(csv, filename);
   }, [filteredEmployees, year, month]);
 
-  // Export PDF
+  // Export PDF (utilise les données modifiées)
   const handleExportPDF = useCallback(() => {
     generatePDF(filteredEmployees, year, month);
   }, [filteredEmployees, year, month]);
@@ -121,6 +178,11 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
           <p>Données mensuelles pour l'expert-comptable</p>
         </div>
         <div className="export-actions">
+          {hasOverrides && (
+            <button className="reset-all-btn" onClick={handleResetAll}>
+              Réinitialiser tout
+            </button>
+          )}
           <button
             className="export-csv-btn"
             onClick={handleExportCSV}
@@ -139,6 +201,12 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
           </button>
         </div>
       </div>
+
+      {hasOverrides && (
+        <div className="overrides-banner">
+          Des valeurs ont été modifiées manuellement. Les exports utiliseront les valeurs modifiées.
+        </div>
+      )}
 
       {/* Sélecteur de mois */}
       <div className="month-selector">
@@ -197,8 +265,12 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
               <EmployeeCard
                 key={emp.id}
                 employee={emp}
+                originalEmployee={employeeData.find(e => e.id === emp.id)}
                 isExpanded={expandedEmployee === emp.id}
                 onToggle={() => toggleEmployee(emp.id)}
+                onFieldChange={handleFieldChange}
+                onReset={handleResetEmployee}
+                hasOverride={!!overrides[emp.id]}
               />
             ))
           )}
@@ -224,9 +296,9 @@ function SummaryCard({ icon, label, value, color, emoji }) {
   );
 }
 
-function EmployeeCard({ employee: emp, isExpanded, onToggle }) {
+function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onToggle, onFieldChange, onReset, hasOverride }) {
   return (
-    <div className={`employee-export-card ${isExpanded ? 'expanded' : ''}`}>
+    <div className={`employee-export-card ${isExpanded ? 'expanded' : ''} ${hasOverride ? 'modified' : ''}`}>
       {/* En-tête cliquable */}
       <div className="employee-card-header" onClick={onToggle}>
         <div className="employee-card-info">
@@ -234,24 +306,67 @@ function EmployeeCard({ employee: emp, isExpanded, onToggle }) {
             {emp.fullName?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div>
-            <h3 className="employee-name">{emp.fullName}</h3>
+            <h3 className="employee-name">
+              {emp.fullName}
+              {hasOverride && <span className="modified-indicator" title="Valeurs modifiées"> *</span>}
+            </h3>
             <p className="employee-email">{emp.email}</p>
           </div>
         </div>
 
         <div className="employee-card-badges">
-          <span className="badge badge-blue">{emp.workedDays}j</span>
-          <span className="badge badge-purple">{emp.totalHours}h</span>
-          <span className="badge badge-teal">{emp.totalKm} km</span>
-          <span className="badge badge-orange">{emp.paniersRepas} repas</span>
-          {emp.leaveDays > 0 && <span className="badge badge-rose">{emp.leaveDays}j congé</span>}
+          <span className={`badge badge-blue ${hasOverride && emp.workedDays !== orig?.workedDays ? 'badge-modified' : ''}`}>{emp.workedDays}j</span>
+          <span className={`badge badge-purple ${hasOverride && emp.totalHours !== orig?.totalHours ? 'badge-modified' : ''}`}>{emp.totalHours}h</span>
+          <span className={`badge badge-teal ${hasOverride && emp.totalKm !== orig?.totalKm ? 'badge-modified' : ''}`}>{emp.totalKm} km</span>
+          <span className={`badge badge-orange ${hasOverride && emp.paniersRepas !== orig?.paniersRepas ? 'badge-modified' : ''}`}>{emp.paniersRepas} repas</span>
+          {emp.leaveDays > 0 && <span className={`badge badge-rose ${hasOverride && emp.leaveDays !== orig?.leaveDays ? 'badge-modified' : ''}`}>{emp.leaveDays}j congé</span>}
           <ChevronDownIcon className={`expand-icon ${isExpanded ? 'rotated' : ''}`} />
         </div>
       </div>
 
-      {/* Détails */}
+      {/* Détails avec champs éditables */}
       {isExpanded && (
         <div className="employee-card-details">
+          {/* Section Modification */}
+          <DetailSection title="Modifier les valeurs">
+            {hasOverride && (
+              <button className="reset-employee-btn" onClick={(e) => { e.stopPropagation(); onReset(emp.id); }}>
+                Réinitialiser les valeurs originales
+              </button>
+            )}
+            <div className="editable-fields-grid">
+              {EDITABLE_FIELDS.map(field => {
+                const currentVal = emp[field.key];
+                const origVal = orig?.[field.key];
+                const isModified = hasOverride && currentVal !== origVal;
+                return (
+                  <div key={field.key} className={`editable-field ${isModified ? 'field-modified' : ''}`}>
+                    <label className="editable-field-label">{field.label}</label>
+                    <div className="editable-field-input-wrap">
+                      <input
+                        type={field.type}
+                        step={field.step}
+                        min={0}
+                        value={currentVal}
+                        onChange={(e) => {
+                          const val = field.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
+                          onFieldChange(emp.id, field.key, val);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="editable-field-input"
+                      />
+                      {isModified && (
+                        <span className="original-value" title="Valeur originale">
+                          (était {origVal})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DetailSection>
+
           {/* Section Déplacements */}
           <DetailSection title="Déplacements">
             <div className="detail-grid">
