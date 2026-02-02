@@ -1,0 +1,536 @@
+/* src/pages/AdminMonthlyExportView.css */
+
+.monthly-export {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.monthly-export-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.monthly-export-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.25rem 0;
+}
+
+.monthly-export-title p {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.export-csv-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.export-csv-btn:hover:not(:disabled) {
+  background: #0284c7;
+}
+
+.export-csv-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sélecteur de mois */
+.month-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.month-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: white;
+  cursor: pointer;
+  color: #475569;
+  transition: all 0.15s;
+}
+
+.month-nav-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.month-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 200px;
+  justify-content: center;
+}
+
+/* Recherche */
+.export-search {
+  margin-bottom: 1.5rem;
+}
+
+.export-search-input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: white;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.export-search-input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Résumé global */
+.export-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid transparent;
+}
+
+.summary-card-blue { border-left-color: #3b82f6; }
+.summary-card-indigo { border-left-color: #6366f1; }
+.summary-card-purple { border-left-color: #8b5cf6; }
+.summary-card-teal { border-left-color: #14b8a6; }
+.summary-card-orange { border-left-color: #f97316; }
+.summary-card-rose { border-left-color: #f43f5e; }
+.summary-card-green { border-left-color: #22c55e; }
+.summary-card-red { border-left-color: #ef4444; }
+
+.summary-card-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.summary-emoji {
+  font-size: 1.25rem;
+}
+
+.summary-card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-card-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.summary-card-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.125rem;
+}
+
+/* Loading */
+.export-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  color: #64748b;
+}
+
+/* Empty / Error */
+.export-empty,
+.monthly-export-error {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+}
+
+.monthly-export-error h3 {
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+}
+
+/* Liste employés */
+.employee-export-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Carte employé */
+.employee-export-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.employee-export-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.employee-export-card.expanded {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.employee-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 1rem;
+}
+
+.employee-card-header:hover {
+  background: #f8fafc;
+}
+
+.employee-card-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.employee-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.employee-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.employee-email {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0.125rem 0 0 0;
+}
+
+.employee-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-blue { background: #eff6ff; color: #2563eb; }
+.badge-purple { background: #f5f3ff; color: #7c3aed; }
+.badge-teal { background: #f0fdfa; color: #0d9488; }
+.badge-orange { background: #fff7ed; color: #ea580c; }
+.badge-rose { background: #fff1f2; color: #e11d48; }
+
+.expand-icon {
+  transition: transform 0.2s;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.expand-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Détails */
+.employee-card-details {
+  border-top: 1px solid #f1f5f9;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: #fafbfc;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.detail-section-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* Dates travaillées */
+.worked-dates {
+  margin-top: 0.5rem;
+}
+
+.date-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+}
+
+.date-chip {
+  display: inline-flex;
+  padding: 0.1875rem 0.5rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+/* Congés */
+.leaves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leave-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  flex-wrap: wrap;
+}
+
+.leave-status {
+  display: inline-flex;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.leave-status.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.leave-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.leave-dates {
+  color: #475569;
+  font-weight: 500;
+}
+
+.leave-reason {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Dépenses */
+.expense-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.expense-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.expense-cat-label {
+  width: 90px;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.expense-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.expense-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.expense-amount {
+  width: 70px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .monthly-export {
+    padding: 1rem;
+  }
+
+  .monthly-export-header {
+    flex-direction: column;
+  }
+
+  .export-csv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .export-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .summary-card {
+    padding: 0.75rem;
+  }
+
+  .summary-card-value {
+    font-size: 1rem;
+  }
+
+  .employee-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .employee-card-badges {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .expense-cat-label {
+    width: 70px;
+  }
+
+  .expense-amount {
+    width: 60px;
+  }
+
+  .month-label {
+    min-width: 160px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .export-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .badge {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.5rem;
+  }
+}
