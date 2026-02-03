@@ -44,6 +44,7 @@ const EDITABLE_FIELDS = [
   { key: 'totalKm', label: 'Km total', type: 'number', step: 1 },
   { key: 'paniersRepas', label: 'Paniers repas', type: 'number', step: 1 },
   { key: 'leaveDays', label: 'Jours de congé', type: 'number', step: 0.5 },
+  { key: 'absenceDays', label: 'Jours d\'absence', type: 'number', step: 0.5 },
 ];
 
 /**
@@ -136,6 +137,7 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
       totalKm: acc.totalKm + emp.totalKm,
       paniersRepas: acc.paniersRepas + emp.paniersRepas,
       leaveDays: acc.leaveDays + emp.leaveDays,
+      absenceDays: acc.absenceDays + (emp.absenceDays || 0),
       interventionCount: acc.interventionCount + emp.interventionCount,
       totalExpenses: acc.totalExpenses + emp.totalExpenses,
       totalPrimes: acc.totalPrimes + (emp.primeExceptionnelle || 0),
@@ -147,6 +149,7 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
       totalKm: 0,
       paniersRepas: 0,
       leaveDays: 0,
+      absenceDays: 0,
       interventionCount: 0,
       totalExpenses: 0,
       totalPrimes: 0,
@@ -250,6 +253,7 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
         <SummaryCard label="Heures supp." value={`${totals.heuresSupp}h`} color="rose" emoji="+" />
         <SummaryCard icon={<MapPinIcon />} label="Km parcourus" value={`${totals.totalKm} km`} color="teal" />
         <SummaryCard label="Paniers repas" value={totals.paniersRepas} color="orange" emoji="🍽️" />
+        <SummaryCard label="Absences" value={`${totals.absenceDays}j`} color="red" emoji="🚫" />
         <SummaryCard label="Primes" value={`${totals.totalPrimes.toFixed(0)}€`} color="green" emoji="🎁" />
         <SummaryCard icon={<DollarSignIcon />} label="Dépenses" value={`${totals.totalExpenses.toFixed(0)}€`} color="red" />
       </div>
@@ -331,6 +335,9 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
           )}
           <span className={`badge badge-teal ${hasOverride && emp.totalKm !== orig?.totalKm ? 'badge-modified' : ''}`}>{emp.totalKm} km</span>
           <span className={`badge badge-orange ${hasOverride && emp.paniersRepas !== orig?.paniersRepas ? 'badge-modified' : ''}`}>{emp.paniersRepas} repas</span>
+          {(emp.absenceDays || 0) > 0 && (
+            <span className="badge badge-red">{emp.absenceDays}j abs.</span>
+          )}
           {(emp.primeExceptionnelle || 0) > 0 && (
             <span className="badge badge-green">{emp.primeExceptionnelle}€ {emp.primeType}</span>
           )}
@@ -524,6 +531,26 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
                       {new Date(leave.startDate).toLocaleDateString('fr-FR')} — {new Date(leave.endDate).toLocaleDateString('fr-FR')}
                     </span>
                     {leave.reason && <span className="leave-reason">{leave.reason}</span>}
+                  </div>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+
+          {/* Section Absences */}
+          {(emp.absenceDays || 0) > 0 && emp.absenceDetails && emp.absenceDetails.length > 0 && (
+            <DetailSection title={`Absences (${emp.absenceDays} jour${emp.absenceDays > 1 ? 's' : ''})`}>
+              <div className="leaves-list">
+                {emp.absenceDetails.map((absence, i) => (
+                  <div key={i} className="leave-item absence-item">
+                    <span className="leave-status absence-status">
+                      {absence.reason}
+                    </span>
+                    <span className="leave-dates">
+                      {new Date(absence.startDate).toLocaleDateString('fr-FR')} — {new Date(absence.endDate).toLocaleDateString('fr-FR')}
+                      <span className="absence-days-count">({absence.days}j)</span>
+                    </span>
+                    {absence.notes && <span className="leave-reason">{absence.notes}</span>}
                   </div>
                 ))}
               </div>

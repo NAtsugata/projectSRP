@@ -44,7 +44,7 @@ export async function getMonthlyExportData(year, month) {
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     // Requêtes parallèles
-    const [profilesRes, interventionsRes, leavesRes, expensesRes] = await Promise.all([
+    const [profilesRes, interventionsRes, leavesRes, expensesRes, absencesRes] = await Promise.all([
       supabase.from('profiles').select('id, full_name, email, is_admin'),
 
       supabase
@@ -69,17 +69,26 @@ export async function getMonthlyExportData(year, month) {
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate),
+
+      // Absences (table employee_absences)
+      supabase
+        .from('employee_absences')
+        .select('*')
+        .lte('start_date', endDate)
+        .gte('end_date', startDate),
     ]);
 
     if (profilesRes.error) throw profilesRes.error;
     if (interventionsRes.error) throw interventionsRes.error;
     if (leavesRes.error) throw leavesRes.error;
     if (expensesRes.error) throw expensesRes.error;
+    // absencesRes peut échouer si la table n'existe pas encore (fallback vide)
 
     const profiles = profilesRes.data || [];
     const allInterventions = interventionsRes.data || [];
     const allLeaves = leavesRes.data || [];
     const expenses = expensesRes.data || [];
+    const allAbsences = absencesRes?.data || [];
 
     // Filtrer les interventions du mois
     const monthInterventions = allInterventions.filter(iv => {
@@ -215,6 +224,30 @@ export async function getMonthlyExportData(year, month) {
           }
         });
 
+        // --- Absences (employee_absences) ---
+        const userAbsences = allAbsences.filter(a => a.employee_id === userId);
+        let absenceDays = 0;
+        const absenceDetails = [];
+        userAbsences.forEach(absence => {
+          const as = new Date(Math.max(new Date(absence.start_date), new Date(startDate)));
+          const ae = new Date(Math.min(new Date(absence.end_date), new Date(endDate)));
+          let days = 0;
+          let current = new Date(as);
+          while (current <= ae) {
+            const day = current.getDay();
+            if (day !== 0 && day !== 6) days++;
+            current.setDate(current.getDate() + 1);
+          }
+          absenceDays += days;
+          absenceDetails.push({
+            startDate: absence.start_date,
+            endDate: absence.end_date,
+            reason: absence.reason || 'Absence',
+            notes: absence.notes || '',
+            days,
+          });
+        });
+
         // --- Dépenses ---
         const userExpenses = expenses.filter(e => e.user_id === userId);
         const expensesByCategory = {};
@@ -246,7 +279,7 @@ export async function getMonthlyExportData(year, month) {
           paniersRepas,
           companyHQ: COMPANY_HQ,
 
-          // Congés
+          // Congés (leave_requests)
           leaveDays,
           leaves: userLeaves.map(l => ({
             startDate: l.start_date,
@@ -254,6 +287,10 @@ export async function getMonthlyExportData(year, month) {
             reason: l.reason,
             status: l.status,
           })),
+
+          // Absences (employee_absences)
+          absenceDays,
+          absenceDetails,
 
           // Interventions
           interventionCount: userInterventions.length,
@@ -323,6 +360,8 @@ export function generateCSV(employeeData, year, month) {
     'Détail zones (depuis Champtercier)',
     'Paniers repas',
     'Jours de congé',
+    'Jours d\'absence',
+    'Détail absences',
     'Prime exceptionnelle (€)',
     'Type prime (brut/net)',
     'Dépenses transport (€)',
@@ -357,6 +396,8 @@ export function generateCSV(employeeData, year, month) {
       zoneDetailStr,
       emp.paniersRepas,
       emp.leaveDays,
+      emp.absenceDays || 0,
+      (emp.absenceDetails || []).map(a => `${a.reason}: ${a.startDate} → ${a.endDate} (${a.days}j)`).join(' | '),
       (emp.primeExceptionnelle || 0).toFixed(2),
       emp.primeType || 'brut',
       (emp.expensesByCategory.transport || 0).toFixed(2),
@@ -489,9 +530,10 @@ export function generatePDF(employeeData, year, month) {
     paniersRepas: acc.paniersRepas + e.paniersRepas,
     leaveDays: acc.leaveDays + e.leaveDays,
     interventions: acc.interventions + e.interventionCount,
+    absenceDays: acc.absenceDays + (e.absenceDays || 0),
     totalExpenses: acc.totalExpenses + e.totalExpenses,
     totalPrimes: acc.totalPrimes + (e.primeExceptionnelle || 0),
-  }), { employees: 0, workedDays: 0, baseHours: 0, totalHours: 0, heuresSupp: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, interventions: 0, totalExpenses: 0, totalPrimes: 0 });
+  }), { employees: 0, workedDays: 0, baseHours: 0, totalHours: 0, heuresSupp: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, absenceDays: 0, interventions: 0, totalExpenses: 0, totalPrimes: 0 });
 
   const summaryItems = [
     ['Employés', `${totals.employees}`],
@@ -502,6 +544,7 @@ export function generatePDF(employeeData, year, month) {
     ['Km parcourus', `${totals.totalKm} km`],
     ['Paniers repas', `${totals.paniersRepas}`],
     ['Jours de congé', `${totals.leaveDays}`],
+    ['Jours d\'absence', `${totals.absenceDays}`],
     ['Total dépenses', `${totals.totalExpenses.toFixed(2)} €`],
     ['Total primes', `${totals.totalPrimes.toFixed(2)} €`],
   ];
@@ -642,6 +685,7 @@ export function generatePDF(employeeData, year, month) {
       ['Heures base (7h/jour)', `${emp.baseHours || 0}h`],
       ['Heures réelles', `${emp.totalHours}h`],
       ['Heures supplémentaires', `${emp.heuresSupp || 0}h`],
+      ['Jours d\'absence', `${emp.absenceDays || 0}`],
       ['Interventions réalisées', `${emp.interventionCount}`],
       ['Interventions terminées', `${emp.completedCount}`],
     ];
@@ -773,6 +817,38 @@ export function generatePDF(employeeData, year, month) {
       pdf.setTextColor(...gray);
       pdf.text(`(${emp.primeType === 'net' ? 'Net' : 'Brut'})`, mx + 4 + pdf.getTextWidth(`${emp.primeExceptionnelle.toFixed(2)} €`) + 3, y + 7);
       y += 14;
+    }
+
+    // --- Section Absences ---
+    if ((emp.absenceDays || 0) > 0 && emp.absenceDetails && emp.absenceDetails.length > 0) {
+      if (y > pageH - 50) { pdf.addPage(); y = 20; }
+      y = drawSectionTitle(pdf, `Absences (${emp.absenceDays} jour${emp.absenceDays > 1 ? 's' : ''})`, mx, y, contentW);
+
+      emp.absenceDetails.forEach(absence => {
+        if (y > pageH - 20) { pdf.addPage(); y = 20; }
+
+        const redBg = [254, 226, 226];
+        const redText = [185, 28, 28];
+        pdf.setFillColor(...redBg);
+        pdf.roundedRect(mx, y, contentW, 9, 1.5, 1.5, 'F');
+
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...redText);
+        pdf.text(absence.reason, mx + 3, y + 6);
+
+        pdf.setTextColor(...darkText);
+        pdf.setFont('helvetica', 'normal');
+        const dateRange = `${new Date(absence.startDate).toLocaleDateString('fr-FR')} — ${new Date(absence.endDate).toLocaleDateString('fr-FR')} (${absence.days}j)`;
+        pdf.text(dateRange, mx + 30, y + 6);
+
+        if (absence.notes) {
+          pdf.setTextColor(...gray);
+          pdf.text(absence.notes.substring(0, 40), mx + 100, y + 6);
+        }
+        y += 11;
+      });
+      y += 4;
     }
 
     // --- Section Congés ---

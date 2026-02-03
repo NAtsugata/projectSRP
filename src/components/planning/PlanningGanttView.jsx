@@ -258,6 +258,24 @@ const PlanningGanttView = ({
     return result;
   }, [absences, weekDays, usersMap]);
 
+  // Absences par employé+jour pour lookup dans les lignes d'équipe
+  const absencesByEmployeeDay = useMemo(() => {
+    const result = {};
+    absences.forEach(absence => {
+      const empId = absence.employeeId || absence.employee_id;
+      const startDate = absence.startDate || absence.start_date;
+      const endDate = absence.endDate || absence.end_date;
+      if (!empId || !startDate || !endDate) return;
+      weekDays.forEach(day => {
+        if (day.dateStr >= startDate && day.dateStr <= endDate) {
+          const key = `${empId}_${day.dateStr}`;
+          result[key] = absence;
+        }
+      });
+    });
+    return result;
+  }, [absences, weekDays]);
+
   // Vérifier s'il y a des absences cette semaine
   const hasAbsencesThisWeek = useMemo(() =>
     Object.values(absencesByDay).some(arr => arr.length > 0),
@@ -482,11 +500,34 @@ const PlanningGanttView = ({
                   const overflowCount = dayInterventions.length - MAX_VISIBLE_PER_CELL;
                   const hasOverflow = overflowCount > 0;
 
+                  // Trouver les membres absents de cette équipe ce jour
+                  const absentMembers = team.userIds
+                    .map(uid => {
+                      const key = `${uid}_${day.dateStr}`;
+                      const absence = absencesByEmployeeDay[key];
+                      if (!absence) return null;
+                      return {
+                        name: usersMap[uid]?.full_name || '?',
+                        reason: absence.reason || 'Absent',
+                      };
+                    })
+                    .filter(Boolean);
+
                   return (
                     <div
                       key={day.dateStr}
-                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''}`}
+                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''} ${absentMembers.length > 0 ? 'has-absent-member' : ''}`}
                     >
+                      {absentMembers.map((member, idx) => (
+                        <div
+                          key={`absent-${idx}`}
+                          className="team-absence-indicator"
+                          title={`${member.name} — ${member.reason}`}
+                        >
+                          <span className="team-absence-icon">🚫</span>
+                          <span className="team-absence-name">{member.name.split(' ')[0]}</span>
+                        </div>
+                      ))}
                       {visibleInterventions.map(itv => (
                         <InterventionBar
                           key={itv.id}
@@ -504,7 +545,6 @@ const PlanningGanttView = ({
                         <OverflowIndicator
                           count={overflowCount}
                           onClick={() => {
-                            // Ouvrir la première intervention cachée
                             const firstHidden = dayInterventions[MAX_VISIBLE_PER_CELL];
                             onInterventionClick?.(firstHidden);
                           }}
