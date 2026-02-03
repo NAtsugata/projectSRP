@@ -25,20 +25,22 @@
   background: linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50));
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-md);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Animated gradient background */
 .planning-header::before {
   content: '';
   position: absolute;
-  inset: -50%;
+  inset: 0;
+  border-radius: inherit;
   background: linear-gradient(45deg,
       transparent,
       rgba(99, 102, 241, 0.1),
       transparent);
   animation: shimmer 3s linear infinite;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .planning-title {
@@ -113,6 +115,26 @@
 @keyframes pulse-badge {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
+}
+
+/* ==================== ABSENCE MANAGER IN HEADER ==================== */
+.planning-header-actions .absence-manager {
+  z-index: 50;
+}
+
+.planning-header-actions .absence-toggle-btn {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: #fb923c;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.planning-header-actions .absence-toggle-btn:hover {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-color: #f97316;
+  color: #9a3412;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.2);
 }
 
 /* ==================== VIEW MODE SELECTOR ==================== */
