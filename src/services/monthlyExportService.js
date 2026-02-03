@@ -4,6 +4,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { jsPDF } from 'jspdf';
+import { batchGetDistances } from '../utils/geocoding';
 import logger from '../utils/logger';
 
 // Adresse de départ de l'entreprise
@@ -117,6 +118,21 @@ export async function getMonthlyExportData(year, month) {
       return ls <= me && le >= ms;
     });
 
+    // Géocoder toutes les adresses uniques des interventions du mois
+    const uniqueAddresses = [...new Set(
+      monthInterventions
+        .map(iv => iv.address)
+        .filter(Boolean)
+    )];
+
+    let distanceMap = {};
+    try {
+      distanceMap = await batchGetDistances(uniqueAddresses);
+      logger.log(`Géocodage: ${Object.keys(distanceMap).length} adresses traitées`);
+    } catch (error) {
+      logger.error('Erreur géocodage batch:', error);
+    }
+
     // Agréger par employé
     const employeeData = profiles
       .filter(p => !p.is_admin)
@@ -174,15 +190,24 @@ export async function getMonthlyExportData(year, month) {
           let interventionKm = 0;
           let distanceAller = 0;
 
-          if (kmStart && kmEnd && kmEnd > kmStart) {
+          // 1. Distance calculée par géocodage (prioritaire)
+          const geocodedDistance = iv.address ? distanceMap[iv.address] : null;
+          if (geocodedDistance && geocodedDistance > 0) {
+            distanceAller = geocodedDistance;
+            // Km total aller-retour estimé
+            interventionKm = distanceAller * 2;
+            totalKm += interventionKm;
+          }
+          // 2. Fallback : compteur kilométrique du véhicule
+          else if (kmStart && kmEnd && kmEnd > kmStart) {
             interventionKm = kmEnd - kmStart;
             totalKm += interventionKm;
-            // Distance aller = km total / 2 (aller-retour depuis Champtercier)
             distanceAller = Math.round(interventionKm / 2);
           }
 
           const city = extractCity(iv.address);
           const zone = distanceAller > 0 ? getZone(distanceAller) : null;
+          const source = geocodedDistance > 0 ? 'géocodage' : (distanceAller > 0 ? 'compteur' : null);
 
           if (zone) {
             zoneCount[zone] = (zoneCount[zone] || 0) + 1;
@@ -196,6 +221,7 @@ export async function getMonthlyExportData(year, month) {
             kmTotal: interventionKm,
             distanceAller,
             zone: zone || 'Non calculée',
+            distanceSource: source,
             status: iv.status,
           });
         });
@@ -379,7 +405,7 @@ export function generateCSV(employeeData, year, month) {
     const zonesStr = (emp.zones || []).map(z => `${z.zone} (x${z.count})`).join(' / ');
     const zoneDetailStr = (emp.interventionDetails || [])
       .filter(d => d.distanceAller > 0)
-      .map(d => `${d.city || d.address}: ${d.distanceAller}km → ${d.zone}`)
+      .map(d => `${d.city || d.address}: ${d.distanceAller}km → ${d.zone} [${d.distanceSource || '?'}]`)
       .join(' | ');
 
     return [
@@ -770,8 +796,9 @@ export function generatePDF(employeeData, year, month) {
         pdf.setFontSize(6.5);
         pdf.text('Client', mx + 2, y + 4);
         pdf.text('Adresse', mx + 35, y + 4);
-        pdf.text('Dist. aller', mx + 110, y + 4);
-        pdf.text('Zone', mx + 135, y + 4);
+        pdf.text('Dist. aller', mx + 100, y + 4);
+        pdf.text('Zone', mx + 123, y + 4);
+        pdf.text('Source', mx + 158, y + 4);
         y += 6;
 
         detailsWithKm.forEach((d, di) => {
@@ -786,14 +813,20 @@ export function generatePDF(employeeData, year, month) {
           const clientText = (d.client || '').substring(0, 20);
           pdf.text(clientText, mx + 2, y + 3.8);
 
-          const addrText = (d.address || '').substring(0, 45);
+          const addrText = (d.address || '').substring(0, 40);
           pdf.text(addrText, mx + 35, y + 3.8);
 
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`${d.distanceAller} km`, mx + 110, y + 3.8);
+          pdf.text(`${d.distanceAller} km`, mx + 100, y + 3.8);
 
           pdf.setFont('helvetica', 'normal');
-          pdf.text(d.zone, mx + 135, y + 3.8);
+          pdf.text(d.zone, mx + 123, y + 3.8);
+
+          // Source du calcul
+          const sourceLabel = d.distanceSource === 'géocodage' ? 'GPS' : 'Compteur';
+          pdf.setTextColor(...(d.distanceSource === 'géocodage' ? [22, 163, 74] : gray));
+          pdf.text(sourceLabel, mx + 158, y + 3.8);
+          pdf.setTextColor(...darkText);
 
           y += 5.5;
         });

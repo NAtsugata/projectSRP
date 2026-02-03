@@ -464,6 +464,7 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
                     <span>Adresse</span>
                     <span>Dist. aller</span>
                     <span>Zone</span>
+                    <span>Source</span>
                   </div>
                   {emp.interventionDetails.filter(d => d.distanceAller > 0).map((d, i) => (
                     <div key={i} className={`chantier-row ${i % 2 === 0 ? 'alt' : ''}`}>
@@ -471,6 +472,9 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
                       <span className="chantier-addr">{d.city || d.address || '-'}</span>
                       <span className="chantier-km">{d.distanceAller} km</span>
                       <span className="chantier-zone">{d.zone}</span>
+                      <span className={`chantier-source ${d.distanceSource === 'géocodage' ? 'source-geo' : 'source-compteur'}`}>
+                        {d.distanceSource === 'géocodage' ? '📍' : '🔧'}
+                      </span>
                     </div>
                   ))}
                 </div>
