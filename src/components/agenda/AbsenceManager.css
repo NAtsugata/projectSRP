@@ -302,8 +302,57 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .absence-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
   .absence-panel {
-    width: 340px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    z-index: 1000;
+    animation: absencePanelSlideUp 0.3s ease;
+  }
+
+  @keyframes absencePanelSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .absence-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-bottom: 2px solid #fb923c;
+  }
+
+  .absence-title {
+    font-size: 18px;
+  }
+
+  .absence-close {
+    width: 36px;
+    height: 36px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .absence-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .absence-btn-text {
@@ -314,7 +363,51 @@
     padding: 10px;
   }
 
+  .absence-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .absence-form {
+    padding: 20px;
+  }
+
+  .absence-form .form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .absence-form .form-control {
+    font-size: 16px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .absence-card {
+    padding: 16px;
+  }
+
+  .absence-employee-name {
+    font-size: 15px;
+  }
+
+  .absence-dates {
+    font-size: 14px;
+  }
+
+  .absence-add-btn {
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  .absence-empty {
+    padding: 60px 20px;
+    font-size: 16px;
   }
 }
