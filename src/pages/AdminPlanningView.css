@@ -402,11 +402,49 @@
   }
 
   .planning-header-actions {
-    flex-direction: column;
-    gap: var(--spacing-3);
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    align-items: center;
   }
 
+  /* Alertes + Absences sur la même ligne à gauche */
+  .planning-header-actions .alerts-btn {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .planning-header-actions .absence-manager {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Nouvelle intervention en haut à droite */
+  .planning-header-actions .btn {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    font-size: 0;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .planning-header-actions .btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Cacher le texte du bouton Nouvelle Intervention sur mobile */
+  .planning-header-actions .btn span {
+    display: none;
+  }
+
+  /* View mode selector pleine largeur en dessous */
   .view-mode-selector {
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
     justify-content: center;
   }
@@ -414,11 +452,19 @@
   .view-mode-btn {
     flex: 1;
     justify-content: center;
-    padding: 0.5rem;
+    padding: 0.625rem 0.5rem;
+    min-height: 44px;
   }
 
   .view-mode-label {
     display: none;
+  }
+
+  .view-mode-btn svg,
+  .view-mode-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 1.125rem;
   }
 
   .planning-title {

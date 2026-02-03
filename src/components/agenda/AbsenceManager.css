@@ -27,6 +27,12 @@
   color: #f59e0b;
 }
 
+.absence-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .absence-btn-text {
   font-size: 14px;
 }
@@ -49,12 +55,14 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* ==================== BACKDROP ==================== */
 .absence-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 99;
+  z-index: 999;
 }
 
+/* ==================== PANEL (Desktop) ==================== */
 .absence-panel {
   position: absolute;
   top: calc(100% + 8px);
@@ -64,7 +72,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   animation: absencePanelAppear 0.2s ease;
@@ -81,6 +89,7 @@
   }
 }
 
+/* ==================== HEADER ==================== */
 .absence-header {
   display: flex;
   align-items: center;
@@ -116,6 +125,7 @@
   color: #1e293b;
 }
 
+/* ==================== BODY ==================== */
 .absence-body {
   flex: 1;
   overflow-y: auto;
@@ -146,6 +156,7 @@
   gap: 8px;
 }
 
+/* ==================== CARDS ==================== */
 .absence-card {
   background: white;
   border: 1px solid #e2e8f0;
@@ -196,14 +207,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #94a3b8;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .absence-delete:hover {
@@ -229,6 +241,7 @@
   width: 14px;
   height: 14px;
   color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .absence-reason {
@@ -248,6 +261,7 @@
   padding-left: 20px;
 }
 
+/* ==================== EMPTY STATE ==================== */
 .absence-empty {
   text-align: center;
   padding: 40px 20px;
@@ -255,6 +269,7 @@
   font-size: 14px;
 }
 
+/* ==================== FORM ==================== */
 .absence-form {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -272,12 +287,19 @@
   margin: 0 0 8px 0;
 }
 
-.form-row {
+.absence-form .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
+.absence-form .form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ==================== ADD BUTTON ==================== */
 .absence-add-btn {
   display: flex;
   align-items: center;
@@ -300,12 +322,17 @@
   color: #3b82f6;
 }
 
-/* Responsive */
+/* ========================================================
+   MOBILE — Panneau plein écran
+   ======================================================== */
 @media (max-width: 768px) {
+  /* Backdrop sombre */
   .absence-backdrop {
     background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
   }
 
+  /* Panneau plein écran */
   .absence-panel {
     position: fixed;
     top: 0;
@@ -313,10 +340,12 @@
     right: 0;
     bottom: 0;
     width: 100%;
-    max-height: 100vh;
+    max-height: none;
+    height: 100%;
     border-radius: 0;
-    z-index: 1000;
+    z-index: 9999;
     animation: absencePanelSlideUp 0.3s ease;
+    overflow: hidden;
   }
 
   @keyframes absencePanelSlideUp {
@@ -330,84 +359,247 @@
     }
   }
 
+  /* Header orange + safe area */
   .absence-header {
     padding: 16px 20px;
+    padding-top: max(16px, env(safe-area-inset-top));
     background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
     border-bottom: 2px solid #fb923c;
   }
 
   .absence-title {
-    font-size: 18px;
+    font-size: 20px;
+    font-weight: 700;
   }
 
+  /* Gros bouton fermer */
   .absence-close {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     background: white;
+    border: 1px solid #e2e8f0;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
 
+  .absence-close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Body scrollable */
   .absence-body {
     padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    gap: 20px;
   }
 
+  /* Section titles */
+  .absence-section-title {
+    font-size: 15px;
+    padding-bottom: 10px;
+  }
+
+  /* Cards plus grandes */
+  .absence-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .absence-card.current {
+    border-left-width: 4px;
+  }
+
+  .absence-card.upcoming {
+    border-left-width: 4px;
+  }
+
+  .absence-employee-name {
+    font-size: 16px;
+  }
+
+  .absence-employee svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Bouton supprimer plus grand pour le tactile */
+  .absence-delete {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #ef4444;
+  }
+
+  .absence-delete svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .absence-dates {
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+
+  .absence-reason {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .absence-notes {
+    font-size: 13px;
+    padding-left: 0;
+    margin-top: 4px;
+  }
+
+  /* Bouton toggle compact */
   .absence-btn-text {
     display: none;
   }
 
   .absence-toggle-btn {
     padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
   }
 
   .absence-toggle-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
+  /* ========== FORMULAIRE MOBILE ========== */
   .absence-form {
     padding: 20px;
+    border-radius: 12px;
+    gap: 16px;
+  }
+
+  .absence-form-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .absence-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .absence-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .absence-form .form-group label {
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 6px;
+    color: #334155;
   }
 
-  .absence-form .form-control {
-    font-size: 16px;
-    padding: 12px;
+  /* Champs de formulaire — taille 16px pour éviter le zoom iOS */
+  .absence-form .form-control,
+  .absence-form select,
+  .absence-form input,
+  .absence-form textarea {
+    font-size: 16px !important;
+    padding: 14px 12px;
+    border: 1px solid #cbd5e1;
     border-radius: 10px;
+    background: white;
+    color: #1e293b;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 48px;
   }
 
-  .absence-card {
-    padding: 16px;
+  .absence-form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
   }
 
-  .absence-employee-name {
-    font-size: 15px;
+  .absence-form textarea {
+    min-height: 80px;
+    resize: vertical;
   }
 
-  .absence-dates {
-    font-size: 14px;
+  /* Boutons d'action pleine largeur */
+  .absence-form .form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
   }
 
-  .absence-add-btn {
-    padding: 16px;
+  .absence-form .form-actions button,
+  .absence-form .form-actions .btn {
+    width: 100%;
+    min-height: 48px;
     font-size: 16px;
-    border-radius: 12px;
+    font-weight: 600;
+    border-radius: 10px;
+    justify-content: center;
   }
 
+  /* Bouton ajouter plus grand */
+  .absence-add-btn {
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    min-height: 56px;
+    border-width: 2px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #3b82f6;
+    color: #1d4ed8;
+  }
+
+  .absence-add-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Empty state */
   .absence-empty {
     padding: 60px 20px;
     font-size: 16px;
+  }
+
+  .absence-empty p {
+    margin: 0;
+  }
+}
+
+/* ========================================================
+   SMALL MOBILE (< 380px)
+   ======================================================== */
+@media (max-width: 380px) {
+  .absence-body {
+    padding: 16px;
+  }
+
+  .absence-header {
+    padding: 14px 16px;
+  }
+
+  .absence-title {
+    font-size: 18px;
+  }
+
+  .absence-card {
+    padding: 14px;
+  }
+
+  .absence-form {
+    padding: 16px;
   }
 }
