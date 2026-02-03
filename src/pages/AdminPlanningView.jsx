@@ -5,6 +5,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
+import AbsenceManager from '../components/agenda/AbsenceManager';
 import { Button, ConfirmDialog } from '../components/ui';
 import { PlusIcon, ClipboardListIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
 import logger from '../utils/logger';
@@ -40,7 +41,12 @@ export default function AdminPlanningView({
   const [archiveConfirm, setArchiveConfirm] = useState(null);
   const [editTeamIntervention, setEditTeamIntervention] = useState(null);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [absences, setAbsences] = useState([]);
   const unreadAlertsCount = useUnreadAlertsCount();
+
+  const handleAbsencesChange = useCallback((newAbsences) => {
+    setAbsences(newAbsences);
+  }, []);
 
   // Sync form visibility with URL params
   useEffect(() => {
@@ -155,6 +161,12 @@ export default function AdminPlanningView({
             )}
           </button>
 
+          {/* Gestionnaire absences */}
+          <AbsenceManager
+            employees={users.filter(u => !u.is_admin)}
+            onAbsencesChange={handleAbsencesChange}
+          />
+
           {/* Sélecteur de vue simplifié */}
           <div className="view-mode-selector">
             <button
@@ -212,6 +224,7 @@ export default function AdminPlanningView({
             <PlanningGanttView
               interventions={interventions}
               users={users}
+              absences={absences}
               onInterventionClick={handleView}
               onEditTeam={handleEditTeam}
             />
@@ -222,6 +235,8 @@ export default function AdminPlanningView({
           <div className="planning-month-section">
             <PlanningMonthView
               interventions={interventions}
+              absences={absences}
+              users={users}
               onInterventionClick={handleView}
             />
           </div>

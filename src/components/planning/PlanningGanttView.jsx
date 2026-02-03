@@ -176,11 +176,40 @@ const OverflowIndicator = ({ count, onClick }) => (
 );
 
 /**
+ * Barre d'absence dans le Gantt
+ */
+const AbsenceBar = ({ absence, employeeName }) => {
+  const reasonLabels = {
+    'Congés': '🏖️',
+    'Maladie': '🏥',
+    'Formation': '📚',
+    'Autre': '📋'
+  };
+  const icon = reasonLabels[absence.reason] || '📋';
+
+  const startDate = new Date(absence.startDate + 'T00:00:00');
+  const endDate = new Date(absence.endDate + 'T00:00:00');
+  const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+  return (
+    <div
+      className={`absence-bar absence-${(absence.reason || 'Autre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}
+      title={`${employeeName} — ${absence.reason || 'Absent'}${absence.notes ? '\n' + absence.notes : ''}\n${days} jour${days > 1 ? 's' : ''}`}
+    >
+      <span className="absence-icon">{icon}</span>
+      <span className="absence-name">{employeeName}</span>
+      <span className="absence-reason">{absence.reason || 'Absent'}</span>
+    </div>
+  );
+};
+
+/**
  * Composant principal Gantt
  */
 const PlanningGanttView = ({
   interventions = [],
   users = [],
+  absences = [],
   onInterventionClick,
   onEditTeam
 }) => {
@@ -194,6 +223,45 @@ const PlanningGanttView = ({
   const teams = useMemo(() =>
     groupByTeam(interventions, users),
     [interventions, users]
+  );
+
+  // Map users par ID pour lookup rapide
+  const usersMap = useMemo(() => {
+    const map = {};
+    users.forEach(u => { map[u.id] = u; });
+    return map;
+  }, [users]);
+
+  // Calculer les absences par jour de la semaine
+  const absencesByDay = useMemo(() => {
+    const result = {};
+    weekDays.forEach(day => {
+      const dayAbsences = [];
+      absences.forEach(absence => {
+        const startDate = absence.startDate || absence.start_date;
+        const endDate = absence.endDate || absence.end_date;
+        const empId = absence.employeeId || absence.employee_id;
+        if (!startDate || !endDate || !empId) return;
+        if (day.dateStr >= startDate && day.dateStr <= endDate) {
+          const user = usersMap[empId];
+          dayAbsences.push({
+            ...absence,
+            employeeId: empId,
+            startDate: startDate,
+            endDate: endDate,
+            employeeName: user?.full_name || '?'
+          });
+        }
+      });
+      result[day.dateStr] = dayAbsences;
+    });
+    return result;
+  }, [absences, weekDays, usersMap]);
+
+  // Vérifier s'il y a des absences cette semaine
+  const hasAbsencesThisWeek = useMemo(() =>
+    Object.values(absencesByDay).some(arr => arr.length > 0),
+    [absencesByDay]
   );
 
   // Navigation
@@ -360,6 +428,36 @@ const PlanningGanttView = ({
             ))}
           </div>
 
+          {/* Ligne des absences */}
+          {hasAbsencesThisWeek && (
+            <div className="gantt-row gantt-absence-row">
+              <div className="gantt-team-cell absence-team-cell">
+                <span className="absence-row-icon">🚫</span>
+                <span className="team-name">Absences</span>
+                <span className="team-count absence-count">
+                  {Object.values(absencesByDay).reduce((sum, arr) => sum + arr.length, 0)}
+                </span>
+              </div>
+              {weekDays.map(day => {
+                const dayAbsences = absencesByDay[day.dateStr] || [];
+                return (
+                  <div
+                    key={day.dateStr}
+                    className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayAbsences.length > 0 ? 'has-absences' : ''}`}
+                  >
+                    {dayAbsences.map((absence, idx) => (
+                      <AbsenceBar
+                        key={`${absence.employeeId}-${idx}`}
+                        absence={absence}
+                        employeeName={absence.employeeName}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Lignes des équipes */}
           {teams.length === 0 ? (
             <div className="gantt-empty">
@@ -434,6 +532,10 @@ const PlanningGanttView = ({
         <div className="legend-item">
           <span className="legend-bar completed"></span>
           <span>Terminée</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-bar absence"></span>
+          <span>Absent</span>
         </div>
       </div>
     </div>
