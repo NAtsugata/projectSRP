@@ -1,6 +1,7 @@
 // src/pages/AdminMonthlyExportView.jsx
 // Interface admin d'export mensuel pour l'expert-comptable
 // Permet la modification des valeurs avant export
+// Base horaire : 35h/semaine (7h/jour), heures supp calculées
 
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -37,7 +38,9 @@ const EXPENSE_CATEGORIES = {
 // Champs éditables par l'admin
 const EDITABLE_FIELDS = [
   { key: 'workedDays', label: 'Jours travaillés', type: 'number', step: 1 },
-  { key: 'totalHours', label: 'Heures', type: 'number', step: 0.5 },
+  { key: 'baseHours', label: 'Heures base (7h/j)', type: 'number', step: 0.5 },
+  { key: 'totalHours', label: 'Heures réelles', type: 'number', step: 0.5 },
+  { key: 'heuresSupp', label: 'Heures supp.', type: 'number', step: 0.5 },
   { key: 'totalKm', label: 'Km total', type: 'number', step: 1 },
   { key: 'paniersRepas', label: 'Paniers repas', type: 'number', step: 1 },
   { key: 'leaveDays', label: 'Jours de congé', type: 'number', step: 0.5 },
@@ -57,7 +60,7 @@ function applyOverrides(employees, overrides) {
 export default function AdminMonthlyExportView({ employeeData = [], isLoading, error, year, month, onChangeMonth }) {
   const [expandedEmployee, setExpandedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // Modifications admin : { [employeeId]: { workedDays?: n, totalHours?: n, ... } }
+  // Modifications admin : { [employeeId]: { workedDays?: n, totalHours?: n, primeExceptionnelle?: n, primeType?: 'net'|'brut', ... } }
   const [overrides, setOverrides] = useState({});
 
   const monthLabel = `${MONTHS_FR[month - 1]} ${year}`;
@@ -127,20 +130,26 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
   const totals = useMemo(() => {
     return filteredEmployees.reduce((acc, emp) => ({
       workedDays: acc.workedDays + emp.workedDays,
+      baseHours: acc.baseHours + (emp.baseHours || 0),
       totalHours: acc.totalHours + emp.totalHours,
+      heuresSupp: acc.heuresSupp + (emp.heuresSupp || 0),
       totalKm: acc.totalKm + emp.totalKm,
       paniersRepas: acc.paniersRepas + emp.paniersRepas,
       leaveDays: acc.leaveDays + emp.leaveDays,
       interventionCount: acc.interventionCount + emp.interventionCount,
       totalExpenses: acc.totalExpenses + emp.totalExpenses,
+      totalPrimes: acc.totalPrimes + (emp.primeExceptionnelle || 0),
     }), {
       workedDays: 0,
+      baseHours: 0,
       totalHours: 0,
+      heuresSupp: 0,
       totalKm: 0,
       paniersRepas: 0,
       leaveDays: 0,
       interventionCount: 0,
       totalExpenses: 0,
+      totalPrimes: 0,
     });
   }, [filteredEmployees]);
 
@@ -175,7 +184,7 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
       <div className="monthly-export-header">
         <div className="monthly-export-title">
           <h2>Export Comptable</h2>
-          <p>Données mensuelles pour l'expert-comptable</p>
+          <p>Données mensuelles — Base 35h/semaine — Départ : Champtercier</p>
         </div>
         <div className="export-actions">
           {hasOverrides && (
@@ -237,11 +246,11 @@ export default function AdminMonthlyExportView({ employeeData = [], isLoading, e
       <div className="export-summary-grid">
         <SummaryCard icon={<UserIcon />} label="Employés" value={filteredEmployees.length} color="blue" />
         <SummaryCard icon={<CalendarIcon />} label="Jours travaillés" value={totals.workedDays} color="indigo" />
-        <SummaryCard icon={<ClockIcon />} label="Heures totales" value={`${totals.totalHours}h`} color="purple" />
+        <SummaryCard icon={<ClockIcon />} label="Heures base" value={`${totals.baseHours}h`} color="purple" />
+        <SummaryCard label="Heures supp." value={`${totals.heuresSupp}h`} color="rose" emoji="+" />
         <SummaryCard icon={<MapPinIcon />} label="Km parcourus" value={`${totals.totalKm} km`} color="teal" />
         <SummaryCard label="Paniers repas" value={totals.paniersRepas} color="orange" emoji="🍽️" />
-        <SummaryCard label="Jours de congé" value={totals.leaveDays} color="rose" emoji="🌴" />
-        <SummaryCard label="Interventions" value={totals.interventionCount} color="green" emoji="🔧" />
+        <SummaryCard label="Primes" value={`${totals.totalPrimes.toFixed(0)}€`} color="green" emoji="🎁" />
         <SummaryCard icon={<DollarSignIcon />} label="Dépenses" value={`${totals.totalExpenses.toFixed(0)}€`} color="red" />
       </div>
 
@@ -316,10 +325,15 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
 
         <div className="employee-card-badges">
           <span className={`badge badge-blue ${hasOverride && emp.workedDays !== orig?.workedDays ? 'badge-modified' : ''}`}>{emp.workedDays}j</span>
-          <span className={`badge badge-purple ${hasOverride && emp.totalHours !== orig?.totalHours ? 'badge-modified' : ''}`}>{emp.totalHours}h</span>
+          <span className={`badge badge-purple ${hasOverride && emp.baseHours !== orig?.baseHours ? 'badge-modified' : ''}`}>{emp.baseHours || 0}h</span>
+          {(emp.heuresSupp || 0) > 0 && (
+            <span className={`badge badge-rose ${hasOverride && emp.heuresSupp !== orig?.heuresSupp ? 'badge-modified' : ''}`}>+{emp.heuresSupp}h sup</span>
+          )}
           <span className={`badge badge-teal ${hasOverride && emp.totalKm !== orig?.totalKm ? 'badge-modified' : ''}`}>{emp.totalKm} km</span>
           <span className={`badge badge-orange ${hasOverride && emp.paniersRepas !== orig?.paniersRepas ? 'badge-modified' : ''}`}>{emp.paniersRepas} repas</span>
-          {emp.leaveDays > 0 && <span className={`badge badge-rose ${hasOverride && emp.leaveDays !== orig?.leaveDays ? 'badge-modified' : ''}`}>{emp.leaveDays}j congé</span>}
+          {(emp.primeExceptionnelle || 0) > 0 && (
+            <span className="badge badge-green">{emp.primeExceptionnelle}€ {emp.primeType}</span>
+          )}
           <ChevronDownIcon className={`expand-icon ${isExpanded ? 'rotated' : ''}`} />
         </div>
       </div>
@@ -327,7 +341,7 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
       {/* Détails avec champs éditables */}
       {isExpanded && (
         <div className="employee-card-details">
-          {/* Section Modification */}
+          {/* Section Modification des valeurs */}
           <DetailSection title="Modifier les valeurs">
             {hasOverride && (
               <button className="reset-employee-btn" onClick={(e) => { e.stopPropagation(); onReset(emp.id); }}>
@@ -336,8 +350,8 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
             )}
             <div className="editable-fields-grid">
               {EDITABLE_FIELDS.map(field => {
-                const currentVal = emp[field.key];
-                const origVal = orig?.[field.key];
+                const currentVal = emp[field.key] ?? 0;
+                const origVal = orig?.[field.key] ?? 0;
                 const isModified = hasOverride && currentVal !== origVal;
                 return (
                   <div key={field.key} className={`editable-field ${isModified ? 'field-modified' : ''}`}>
@@ -367,43 +381,123 @@ function EmployeeCard({ employee: emp, originalEmployee: orig, isExpanded, onTog
             </div>
           </DetailSection>
 
-          {/* Section Déplacements */}
-          <DetailSection title="Déplacements">
+          {/* Section Prime exceptionnelle */}
+          <DetailSection title="Prime exceptionnelle">
+            <div className="prime-fields">
+              <div className="editable-field">
+                <label className="editable-field-label">Montant (€)</label>
+                <input
+                  type="number"
+                  step={0.01}
+                  min={0}
+                  value={emp.primeExceptionnelle || 0}
+                  onChange={(e) => onFieldChange(emp.id, 'primeExceptionnelle', parseFloat(e.target.value) || 0)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="editable-field-input"
+                />
+              </div>
+              <div className="editable-field">
+                <label className="editable-field-label">Type</label>
+                <div className="prime-type-toggle" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className={`prime-type-btn ${(emp.primeType || 'brut') === 'brut' ? 'active' : ''}`}
+                    onClick={() => onFieldChange(emp.id, 'primeType', 'brut')}
+                  >
+                    Brut
+                  </button>
+                  <button
+                    className={`prime-type-btn ${emp.primeType === 'net' ? 'active' : ''}`}
+                    onClick={() => onFieldChange(emp.id, 'primeType', 'net')}
+                  >
+                    Net
+                  </button>
+                </div>
+              </div>
+            </div>
+          </DetailSection>
+
+          {/* Section Déplacements & Zones */}
+          <DetailSection title="Déplacements (depuis 422 rte de Digne, 04660 Champtercier)">
             <div className="detail-grid">
               <div className="detail-item">
                 <span className="detail-label">Km total</span>
                 <span className="detail-value">{emp.totalKm} km</span>
               </div>
               <div className="detail-item">
-                <span className="detail-label">Zones</span>
-                <span className="detail-value">
-                  {emp.zones.length > 0 ? emp.zones.join(', ') : 'Aucune'}
-                </span>
-              </div>
-              <div className="detail-item">
                 <span className="detail-label">Paniers repas</span>
                 <span className="detail-value">{emp.paniersRepas}</span>
               </div>
+              <div className="detail-item">
+                <span className="detail-label">Interventions</span>
+                <span className="detail-value">{emp.interventionCount}</span>
+              </div>
             </div>
+
+            {/* Zones de déplacement */}
+            {emp.zones && emp.zones.length > 0 && (
+              <div className="zone-breakdown">
+                <span className="detail-label">Zones de déplacement :</span>
+                <div className="zone-chips">
+                  {emp.zones.map((z, i) => (
+                    <span key={i} className="zone-chip">
+                      {z.zone} <strong>x{z.count}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Détail par chantier */}
+            {emp.interventionDetails && emp.interventionDetails.filter(d => d.distanceAller > 0).length > 0 && (
+              <div className="chantier-details">
+                <span className="detail-label">Détail par chantier :</span>
+                <div className="chantier-table">
+                  <div className="chantier-header">
+                    <span>Client</span>
+                    <span>Adresse</span>
+                    <span>Dist. aller</span>
+                    <span>Zone</span>
+                  </div>
+                  {emp.interventionDetails.filter(d => d.distanceAller > 0).map((d, i) => (
+                    <div key={i} className={`chantier-row ${i % 2 === 0 ? 'alt' : ''}`}>
+                      <span>{d.client || '-'}</span>
+                      <span className="chantier-addr">{d.city || d.address || '-'}</span>
+                      <span className="chantier-km">{d.distanceAller} km</span>
+                      <span className="chantier-zone">{d.zone}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </DetailSection>
 
           {/* Section Activité */}
-          <DetailSection title="Activité">
+          <DetailSection title="Activité & Heures (base 35h/semaine)">
             <div className="detail-grid">
-              <div className="detail-item">
-                <span className="detail-label">Interventions</span>
-                <span className="detail-value">{emp.interventionCount} ({emp.completedCount} terminées)</span>
-              </div>
               <div className="detail-item">
                 <span className="detail-label">Jours travaillés</span>
                 <span className="detail-value">{emp.workedDays}</span>
               </div>
               <div className="detail-item">
-                <span className="detail-label">Heures</span>
+                <span className="detail-label">Heures base (7h/j)</span>
+                <span className="detail-value">{emp.baseHours || 0}h</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Heures réelles</span>
                 <span className="detail-value">{emp.totalHours}h</span>
               </div>
+              <div className="detail-item">
+                <span className="detail-label">Heures supp.</span>
+                <span className={`detail-value ${(emp.heuresSupp || 0) > 0 ? 'text-rose' : ''}`}>
+                  {(emp.heuresSupp || 0) > 0 ? `+${emp.heuresSupp}h` : '0h'}
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Interventions</span>
+                <span className="detail-value">{emp.interventionCount} ({emp.completedCount} terminées)</span>
+              </div>
             </div>
-            {emp.workedDates.length > 0 && (
+            {emp.workedDates && emp.workedDates.length > 0 && (
               <div className="worked-dates">
                 <span className="detail-label">Dates travaillées :</span>
                 <div className="date-chips">

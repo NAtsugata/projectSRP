@@ -371,6 +371,7 @@
 .badge-teal { background: #f0fdfa; color: #0d9488; }
 .badge-orange { background: #fff7ed; color: #ea580c; }
 .badge-rose { background: #fff1f2; color: #e11d48; }
+.badge-green { background: #f0fdf4; color: #16a34a; }
 
 .badge-modified {
   outline: 2px solid #f59e0b;
@@ -628,6 +629,130 @@
   flex-shrink: 0;
 }
 
+/* Texte rose (heures supp) */
+.text-rose {
+  color: #e11d48 !important;
+}
+
+/* Prime exceptionnelle */
+.prime-fields {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.prime-type-toggle {
+  display: flex;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.prime-type-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.prime-type-btn:first-child {
+  border-right: 1px solid #e2e8f0;
+}
+
+.prime-type-btn.active {
+  background: #6366f1;
+  color: white;
+}
+
+.prime-type-btn:hover:not(.active) {
+  background: #f1f5f9;
+}
+
+/* Zones de déplacement */
+.zone-breakdown {
+  margin-top: 0.5rem;
+}
+
+.zone-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+}
+
+.zone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.zone-chip strong {
+  font-weight: 700;
+}
+
+/* Détail chantier */
+.chantier-details {
+  margin-top: 0.5rem;
+}
+
+.chantier-table {
+  margin-top: 0.375rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.chantier-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 0.7fr 1fr;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: #6366f1;
+  color: white;
+  font-weight: 600;
+  font-size: 0.6875rem;
+}
+
+.chantier-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 0.7fr 1fr;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  color: #1e293b;
+  font-size: 0.6875rem;
+}
+
+.chantier-row.alt {
+  background: #f8fafc;
+}
+
+.chantier-addr {
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chantier-km {
+  font-weight: 700;
+}
+
+.chantier-zone {
+  color: #6d28d9;
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .monthly-export {
@@ -692,6 +817,17 @@
   .month-label {
     min-width: 160px;
     font-size: 1rem;
+  }
+
+  .prime-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chantier-header,
+  .chantier-row {
+    grid-template-columns: 1fr 1fr 0.6fr 0.8fr;
+    font-size: 0.625rem;
   }
 }
 

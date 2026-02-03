@@ -6,6 +6,31 @@ import { supabase } from '../lib/supabaseClient';
 import { jsPDF } from 'jspdf';
 import logger from '../utils/logger';
 
+// Adresse de départ de l'entreprise
+const COMPANY_HQ = '422 route de Digne, 04660 Champtercier';
+
+// Base horaire légale : 35h/semaine = 7h/jour
+const HEURES_PAR_JOUR = 7;
+
+// Zones de déplacement BTP (distance aller depuis le siège en km)
+const ZONE_THRESHOLDS = [
+  { maxKm: 10, label: 'Zone 1 (0-10 km)' },
+  { maxKm: 20, label: 'Zone 2 (10-20 km)' },
+  { maxKm: 30, label: 'Zone 3 (20-30 km)' },
+  { maxKm: 50, label: 'Zone 4 (30-50 km)' },
+  { maxKm: Infinity, label: 'Zone 5 (50+ km)' },
+];
+
+/**
+ * Détermine la zone de déplacement en fonction de la distance aller (km)
+ */
+function getZone(distanceKm) {
+  for (const z of ZONE_THRESHOLDS) {
+    if (distanceKm <= z.maxKm) return z.label;
+  }
+  return ZONE_THRESHOLDS[ZONE_THRESHOLDS.length - 1].label;
+}
+
 /**
  * Récupère toutes les données nécessaires pour l'export mensuel
  * @param {number} year - Année (ex: 2026)
@@ -109,7 +134,7 @@ export async function getMonthlyExportData(year, month) {
           }
         });
 
-        // Calculer les heures depuis les reports (arrivalTime / departureTime)
+        // Calculer les heures réelles depuis les reports (arrivalTime / departureTime)
         let totalMinutesWorked = 0;
         userInterventions.forEach(iv => {
           if (iv.report?.arrivalTime && iv.report?.departureTime) {
@@ -122,25 +147,54 @@ export async function getMonthlyExportData(year, month) {
           }
         });
 
-        // Kilomètres
+        const totalHoursReal = Math.round(totalMinutesWorked / 60 * 100) / 100;
+
+        // Heures base 35h : 7h par jour travaillé
+        const workedDays = workedDatesSet.size;
+        const baseHours = workedDays * HEURES_PAR_JOUR;
+        const heuresSupp = Math.max(0, Math.round((totalHoursReal - baseHours) * 100) / 100);
+
+        // Kilomètres totaux et calcul zones par intervention
         let totalKm = 0;
+        const interventionDetails = [];
+        const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
+
         userInterventions.forEach(iv => {
           const kmStart = iv.km_start || iv.report?.km_start;
           const kmEnd = iv.km_end || iv.report?.km_end;
+          let interventionKm = 0;
+          let distanceAller = 0;
+
           if (kmStart && kmEnd && kmEnd > kmStart) {
-            totalKm += (kmEnd - kmStart);
+            interventionKm = kmEnd - kmStart;
+            totalKm += interventionKm;
+            // Distance aller = km total / 2 (aller-retour depuis Champtercier)
+            distanceAller = Math.round(interventionKm / 2);
           }
+
+          const city = extractCity(iv.address);
+          const zone = distanceAller > 0 ? getZone(distanceAller) : null;
+
+          if (zone) {
+            zoneCount[zone] = (zoneCount[zone] || 0) + 1;
+          }
+
+          interventionDetails.push({
+            id: iv.id,
+            client: iv.client,
+            address: iv.address || '',
+            city: city || '',
+            kmTotal: interventionKm,
+            distanceAller,
+            zone: zone || 'Non calculée',
+            status: iv.status,
+          });
         });
 
-        // Zones de déplacement (extraire les villes uniques des adresses)
-        const zones = new Set();
-        userInterventions.forEach(iv => {
-          if (iv.address) {
-            // Extraire la ville (après le code postal ou dernière partie)
-            const city = extractCity(iv.address);
-            if (city) zones.add(city);
-          }
-        });
+        // Zones uniques triées par fréquence
+        const zones = Object.entries(zoneCount)
+          .sort(([, a], [, b]) => b - a)
+          .map(([zone, count]) => ({ zone, count }));
 
         // Paniers repas = nombre de jours travaillés avec intervention
         // (convention : 1 panier repas par jour d'intervention sur site)
@@ -178,14 +232,19 @@ export async function getMonthlyExportData(year, month) {
           email: profile.email,
 
           // Jours et heures
-          workedDays: workedDatesSet.size,
+          workedDays,
           workedDates: Array.from(workedDatesSet).sort(),
-          totalHours: Math.round(totalMinutesWorked / 60 * 100) / 100,
+          totalHours: totalHoursReal,
+          baseHours,
+          heuresSupp,
 
-          // Déplacements
+          // Déplacements avec zones
           totalKm,
-          zones: Array.from(zones).sort(),
+          zones,           // [{ zone: "Zone 2 (10-20 km)", count: 5 }, ...]
+          zoneCount,        // { "Zone 2 (10-20 km)": 5, ... }
+          interventionDetails,
           paniersRepas,
+          companyHQ: COMPANY_HQ,
 
           // Congés
           leaveDays,
@@ -210,6 +269,10 @@ export async function getMonthlyExportData(year, month) {
             description: e.description,
             status: e.status,
           })),
+
+          // Prime exceptionnelle (défaut vide, modifiable par l'admin)
+          primeExceptionnelle: 0,
+          primeType: 'brut', // 'brut' ou 'net'
         };
       });
 
@@ -250,13 +313,18 @@ export function generateCSV(employeeData, year, month) {
     'Employé',
     'Email',
     'Jours travaillés',
-    'Heures totales',
+    'Heures base (7h/j)',
+    'Heures réelles',
+    'Heures supplémentaires',
     'Interventions',
     'Terminées',
     'Km parcourus',
     'Zones de déplacement',
+    'Détail zones (depuis Champtercier)',
     'Paniers repas',
     'Jours de congé',
+    'Prime exceptionnelle (€)',
+    'Type prime (brut/net)',
     'Dépenses transport (€)',
     'Dépenses repas (€)',
     'Dépenses carburant (€)',
@@ -268,30 +336,45 @@ export function generateCSV(employeeData, year, month) {
     'Total dépenses (€)',
   ];
 
-  const rows = employeeData.map(emp => [
-    emp.fullName,
-    emp.email,
-    emp.workedDays,
-    emp.totalHours,
-    emp.interventionCount,
-    emp.completedCount,
-    emp.totalKm,
-    emp.zones.join(' / '),
-    emp.paniersRepas,
-    emp.leaveDays,
-    (emp.expensesByCategory.transport || 0).toFixed(2),
-    (emp.expensesByCategory.meals || 0).toFixed(2),
-    (emp.expensesByCategory.fuel || 0).toFixed(2),
-    (emp.expensesByCategory.parking || 0).toFixed(2),
-    (emp.expensesByCategory.phone || 0).toFixed(2),
-    (emp.expensesByCategory.supplies || 0).toFixed(2),
-    (emp.expensesByCategory.accommodation || 0).toFixed(2),
-    (emp.expensesByCategory.other || 0).toFixed(2),
-    emp.totalExpenses.toFixed(2),
-  ]);
+  const rows = employeeData.map(emp => {
+    const zonesStr = (emp.zones || []).map(z => `${z.zone} (x${z.count})`).join(' / ');
+    const zoneDetailStr = (emp.interventionDetails || [])
+      .filter(d => d.distanceAller > 0)
+      .map(d => `${d.city || d.address}: ${d.distanceAller}km → ${d.zone}`)
+      .join(' | ');
+
+    return [
+      emp.fullName,
+      emp.email,
+      emp.workedDays,
+      emp.baseHours,
+      emp.totalHours,
+      emp.heuresSupp,
+      emp.interventionCount,
+      emp.completedCount,
+      emp.totalKm,
+      zonesStr,
+      zoneDetailStr,
+      emp.paniersRepas,
+      emp.leaveDays,
+      (emp.primeExceptionnelle || 0).toFixed(2),
+      emp.primeType || 'brut',
+      (emp.expensesByCategory.transport || 0).toFixed(2),
+      (emp.expensesByCategory.meals || 0).toFixed(2),
+      (emp.expensesByCategory.fuel || 0).toFixed(2),
+      (emp.expensesByCategory.parking || 0).toFixed(2),
+      (emp.expensesByCategory.phone || 0).toFixed(2),
+      (emp.expensesByCategory.supplies || 0).toFixed(2),
+      (emp.expensesByCategory.accommodation || 0).toFixed(2),
+      (emp.expensesByCategory.other || 0).toFixed(2),
+      emp.totalExpenses.toFixed(2),
+    ];
+  });
 
   const csvContent = [
     `Export comptable - ${monthName}`,
+    `Adresse de départ : ${COMPANY_HQ}`,
+    `Base horaire : ${HEURES_PAR_JOUR}h/jour (35h/semaine)`,
     '',
     headers.join(';'),
     ...rows.map(r => r.join(';')),
@@ -359,6 +442,7 @@ export function generatePDF(employeeData, year, month) {
   const greenText = [22, 101, 52];
   const orangeBg = [255, 247, 237];
   const orangeText = [234, 88, 12];
+  const amberBg = [255, 251, 235];
 
   // ============= PAGE DE GARDE =============
   // Bande bleue en haut
@@ -378,8 +462,17 @@ export function generatePDF(employeeData, year, month) {
   const dateStr = `Généré le ${new Date().toLocaleDateString('fr-FR')}`;
   pdf.text(dateStr, pageW - mx - pdf.getTextWidth(dateStr), 38);
 
+  // Info entreprise
+  let y = 58;
+  pdf.setTextColor(...gray);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Adresse de départ : ${COMPANY_HQ}`, mx, y);
+  y += 4;
+  pdf.text(`Base horaire : ${HEURES_PAR_JOUR}h/jour (35h/semaine)`, mx, y);
+  y += 10;
+
   // Résumé global
-  let y = 65;
   pdf.setTextColor(...darkText);
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
@@ -389,26 +482,31 @@ export function generatePDF(employeeData, year, month) {
   const totals = employeeData.reduce((acc, e) => ({
     employees: acc.employees + 1,
     workedDays: acc.workedDays + e.workedDays,
+    baseHours: acc.baseHours + (e.baseHours || 0),
     totalHours: acc.totalHours + e.totalHours,
+    heuresSupp: acc.heuresSupp + (e.heuresSupp || 0),
     totalKm: acc.totalKm + e.totalKm,
     paniersRepas: acc.paniersRepas + e.paniersRepas,
     leaveDays: acc.leaveDays + e.leaveDays,
     interventions: acc.interventions + e.interventionCount,
     totalExpenses: acc.totalExpenses + e.totalExpenses,
-  }), { employees: 0, workedDays: 0, totalHours: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, interventions: 0, totalExpenses: 0 });
+    totalPrimes: acc.totalPrimes + (e.primeExceptionnelle || 0),
+  }), { employees: 0, workedDays: 0, baseHours: 0, totalHours: 0, heuresSupp: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, interventions: 0, totalExpenses: 0, totalPrimes: 0 });
 
   const summaryItems = [
     ['Employés', `${totals.employees}`],
     ['Jours travaillés', `${totals.workedDays}`],
-    ['Heures totales', `${totals.totalHours}h`],
-    ['Interventions', `${totals.interventions}`],
+    ['Heures base (35h/sem)', `${totals.baseHours}h`],
+    ['Heures réelles', `${totals.totalHours}h`],
+    ['Heures supplémentaires', `${totals.heuresSupp}h`],
     ['Km parcourus', `${totals.totalKm} km`],
     ['Paniers repas', `${totals.paniersRepas}`],
     ['Jours de congé', `${totals.leaveDays}`],
     ['Total dépenses', `${totals.totalExpenses.toFixed(2)} €`],
+    ['Total primes', `${totals.totalPrimes.toFixed(2)} €`],
   ];
 
-  // Grille résumé (2 colonnes x 4 lignes)
+  // Grille résumé (2 colonnes)
   const cellW = contentW / 2;
   const cellH = 10;
   summaryItems.forEach((item, i) => {
@@ -442,20 +540,22 @@ export function generatePDF(employeeData, year, month) {
 
   // En-tête du tableau
   const cols = [
-    { label: 'Employé', w: 42 },
-    { label: 'Jours', w: 16 },
-    { label: 'Heures', w: 18 },
-    { label: 'Km', w: 18 },
-    { label: 'Zones', w: 32 },
-    { label: 'Repas', w: 16 },
-    { label: 'Congés', w: 16 },
-    { label: 'Dépenses', w: 22 },
+    { label: 'Employé', w: 34 },
+    { label: 'Jours', w: 14 },
+    { label: 'Base', w: 14 },
+    { label: 'Réel', w: 14 },
+    { label: 'H.Sup', w: 14 },
+    { label: 'Km', w: 14 },
+    { label: 'Zone princ.', w: 26 },
+    { label: 'Repas', w: 14 },
+    { label: 'Prime', w: 18 },
+    { label: 'Dépenses', w: 18 },
   ];
 
   pdf.setFillColor(...blue);
   pdf.rect(mx, y, contentW, 8, 'F');
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(7.5);
+  pdf.setFontSize(6.5);
   pdf.setFont('helvetica', 'bold');
 
   let colX = mx;
@@ -477,23 +577,27 @@ export function generatePDF(employeeData, year, month) {
     pdf.rect(mx, y, contentW, 7, 'F');
 
     pdf.setTextColor(...darkText);
-    pdf.setFontSize(7);
+    pdf.setFontSize(6.5);
     pdf.setFont('helvetica', 'normal');
+
+    const mainZone = emp.zones && emp.zones.length > 0 ? emp.zones[0].zone.replace(/\(.+\)/, '').trim() : '-';
+    const primeStr = emp.primeExceptionnelle > 0 ? `${emp.primeExceptionnelle}€ ${emp.primeType}` : '-';
 
     colX = mx;
     const rowData = [
       emp.fullName || '',
       `${emp.workedDays}`,
+      `${emp.baseHours || 0}h`,
       `${emp.totalHours}h`,
+      `${emp.heuresSupp || 0}h`,
       `${emp.totalKm}`,
-      emp.zones.slice(0, 3).join(', ') + (emp.zones.length > 3 ? '...' : ''),
+      mainZone,
       `${emp.paniersRepas}`,
-      `${emp.leaveDays}`,
+      primeStr,
       `${emp.totalExpenses.toFixed(2)}€`,
     ];
 
     rowData.forEach((text, ci) => {
-      // Tronquer si trop long
       const maxW = cols[ci].w - 4;
       let displayText = text;
       while (pdf.getTextWidth(displayText) > maxW && displayText.length > 3) {
@@ -530,12 +634,14 @@ export function generatePDF(employeeData, year, month) {
 
     y = 45;
 
-    // --- Section Activité ---
-    y = drawSectionTitle(pdf, 'Activité & Temps de travail', mx, y, contentW);
+    // --- Section Activité & Heures ---
+    y = drawSectionTitle(pdf, 'Activité & Temps de travail (base 35h/semaine)', mx, y, contentW);
 
     const activityRows = [
       ['Jours travaillés', `${emp.workedDays}`],
-      ['Heures totales', `${emp.totalHours}h`],
+      ['Heures base (7h/jour)', `${emp.baseHours || 0}h`],
+      ['Heures réelles', `${emp.totalHours}h`],
+      ['Heures supplémentaires', `${emp.heuresSupp || 0}h`],
       ['Interventions réalisées', `${emp.interventionCount}`],
       ['Interventions terminées', `${emp.completedCount}`],
     ];
@@ -557,7 +663,6 @@ export function generatePDF(employeeData, year, month) {
         new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
       ).join('  |  ');
 
-      // Split en lignes si trop long
       const lines = pdf.splitTextToSize(datesText, contentW);
       lines.forEach(line => {
         if (y > pageH - 20) { pdf.addPage(); y = 20; }
@@ -568,17 +673,107 @@ export function generatePDF(employeeData, year, month) {
 
     y += 6;
 
-    // --- Section Déplacements ---
-    if (y > pageH - 50) { pdf.addPage(); y = 20; }
-    y = drawSectionTitle(pdf, 'Déplacements & Paniers repas', mx, y, contentW);
+    // --- Section Déplacements & Zones ---
+    if (y > pageH - 60) { pdf.addPage(); y = 20; }
+    y = drawSectionTitle(pdf, `Déplacements depuis ${COMPANY_HQ}`, mx, y, contentW);
 
     const deplRows = [
       ['Kilomètres parcourus', `${emp.totalKm} km`],
       ['Paniers repas', `${emp.paniersRepas}`],
-      ['Zones de déplacement', emp.zones.length > 0 ? emp.zones.join(', ') : 'Aucune'],
     ];
     y = drawKeyValueTable(pdf, deplRows, mx, y, contentW);
+
+    // Détail zones
+    if (emp.zones && emp.zones.length > 0) {
+      y += 3;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...gray);
+      pdf.text('Zones de déplacement :', mx, y);
+      y += 5;
+
+      emp.zones.forEach(z => {
+        if (y > pageH - 15) { pdf.addPage(); y = 20; }
+        pdf.setFillColor(...lightBg);
+        pdf.roundedRect(mx, y, contentW, 7, 1, 1, 'F');
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...darkText);
+        pdf.text(z.zone, mx + 3, y + 5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...gray);
+        pdf.text(`${z.count} intervention${z.count > 1 ? 's' : ''}`, pageW - mx - 3, y + 5, { align: 'right' });
+        y += 8;
+      });
+    }
+
+    // Détail par chantier
+    if (emp.interventionDetails && emp.interventionDetails.length > 0) {
+      const detailsWithKm = emp.interventionDetails.filter(d => d.distanceAller > 0);
+      if (detailsWithKm.length > 0) {
+        y += 3;
+        if (y > pageH - 30) { pdf.addPage(); y = 20; }
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...gray);
+        pdf.text('Détail par chantier :', mx, y);
+        y += 5;
+
+        // Mini tableau
+        pdf.setFillColor(...blue);
+        pdf.rect(mx, y, contentW, 6, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(6.5);
+        pdf.text('Client', mx + 2, y + 4);
+        pdf.text('Adresse', mx + 35, y + 4);
+        pdf.text('Dist. aller', mx + 110, y + 4);
+        pdf.text('Zone', mx + 135, y + 4);
+        y += 6;
+
+        detailsWithKm.forEach((d, di) => {
+          if (y > pageH - 12) { pdf.addPage(); y = 20; }
+          pdf.setFillColor(...(di % 2 === 0 ? lightBg : white));
+          pdf.rect(mx, y, contentW, 5.5, 'F');
+
+          pdf.setTextColor(...darkText);
+          pdf.setFontSize(6.5);
+          pdf.setFont('helvetica', 'normal');
+
+          const clientText = (d.client || '').substring(0, 20);
+          pdf.text(clientText, mx + 2, y + 3.8);
+
+          const addrText = (d.address || '').substring(0, 45);
+          pdf.text(addrText, mx + 35, y + 3.8);
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${d.distanceAller} km`, mx + 110, y + 3.8);
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(d.zone, mx + 135, y + 3.8);
+
+          y += 5.5;
+        });
+      }
+    }
+
     y += 6;
+
+    // --- Section Prime exceptionnelle ---
+    if (emp.primeExceptionnelle > 0) {
+      if (y > pageH - 30) { pdf.addPage(); y = 20; }
+      y = drawSectionTitle(pdf, 'Prime exceptionnelle', mx, y, contentW);
+
+      pdf.setFillColor(...amberBg);
+      pdf.roundedRect(mx, y, contentW, 10, 1.5, 1.5, 'F');
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...darkText);
+      pdf.text(`${emp.primeExceptionnelle.toFixed(2)} €`, mx + 4, y + 7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...gray);
+      pdf.text(`(${emp.primeType === 'net' ? 'Net' : 'Brut'})`, mx + 4 + pdf.getTextWidth(`${emp.primeExceptionnelle.toFixed(2)} €`) + 3, y + 7);
+      y += 14;
+    }
 
     // --- Section Congés ---
     if (emp.leaveDays > 0) {
@@ -628,23 +823,19 @@ export function generatePDF(employeeData, year, month) {
         const pct = Math.min((amount / emp.totalExpenses) * 100, 100);
         const barMaxW = contentW - 70;
 
-        // Label
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(...gray);
         pdf.text(label, mx, y + 4.5);
 
-        // Fond de barre
         const barX = mx + 35;
         pdf.setFillColor(241, 245, 249);
         pdf.roundedRect(barX, y + 1, barMaxW, 4, 1.5, 1.5, 'F');
 
-        // Barre remplie
         const fillW = Math.max((pct / 100) * barMaxW, 2);
         pdf.setFillColor(...blue);
         pdf.roundedRect(barX, y + 1, fillW, 4, 1.5, 1.5, 'F');
 
-        // Montant
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...darkText);
         pdf.text(`${amount.toFixed(2)} €`, pageW - mx, y + 4.5, { align: 'right' });
@@ -663,7 +854,6 @@ export function generatePDF(employeeData, year, month) {
         pdf.text('Détail des dépenses :', mx, y);
         y += 5;
 
-        // Mini tableau
         pdf.setFillColor(...blue);
         pdf.rect(mx, y, contentW, 6, 'F');
         pdf.setTextColor(255, 255, 255);
@@ -709,7 +899,7 @@ export function generatePDF(employeeData, year, month) {
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...gray);
-    pdf.text(`SRP — Export comptable ${monthLabel}`, mx, footerY);
+    pdf.text(`SRP — Export comptable ${monthLabel} — Départ : ${COMPANY_HQ}`, mx, footerY);
     pdf.text(`${emp.fullName}`, pageW - mx, footerY, { align: 'right' });
   });
 
@@ -746,7 +936,6 @@ function drawSectionTitle(pdf, title, x, y, w) {
 }
 
 function drawKeyValueTable(pdf, rows, x, y, w) {
-  const halfW = w / 2;
   const rowH = 7.5;
 
   rows.forEach((row, i) => {
