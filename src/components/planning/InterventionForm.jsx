@@ -164,7 +164,7 @@ const InterventionForm = ({
     }
   }, [handleFileChange]);
 
-  const employees = users.filter(u => !u.is_admin);
+  const employees = users;
 
   return (
     <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>

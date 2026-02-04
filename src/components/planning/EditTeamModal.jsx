@@ -124,7 +124,7 @@ const EditTeamModal = ({
     }
   };
 
-  const employees = users.filter(u => !u.is_admin);
+  const employees = users;
   const employeesMap = {};
   employees.forEach(u => { employeesMap[u.id] = u; });
 
