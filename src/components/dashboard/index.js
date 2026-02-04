@@ -11,5 +11,9 @@ export {
   WorkloadChart,
   LeaveStatusChart,
   WeeklyActivityChart,
-  KPIGauges
+  KPIGauges,
+  MonthlyExpensesChart,
+  ExpenseCategoryChart,
+  ContractsChart,
+  SummaryInfoGraphic
 } from './DashboardCharts';

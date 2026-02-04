@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   StatCard, RecentActivity, QuickActions, AlertCard,
   InterventionStatusChart, MonthlyInterventionsChart,
-  WorkloadChart, LeaveStatusChart, WeeklyActivityChart, KPIGauges
+  WorkloadChart, LeaveStatusChart, WeeklyActivityChart, KPIGauges,
+  MonthlyExpensesChart, ExpenseCategoryChart, ContractsChart, SummaryInfoGraphic
 } from '../components/dashboard';
 import {
   BriefcaseIcon,
@@ -23,8 +24,11 @@ export default function AdminDashboard({
   interventions = [],
   leaveRequests = [],
   users = [],
+  expenses = [],
+  contracts = [],
   expiringContracts = [],
-  upcomingVisits = []
+  upcomingVisits = [],
+  cerfaCount = 0
 }) {
   const navigate = useNavigate();
 
@@ -293,22 +297,42 @@ export default function AdminDashboard({
         />
       </div>
 
+      {/* Résumé infographique du mois */}
+      <SummaryInfoGraphic
+        interventions={interventions}
+        expenses={expenses}
+        contracts={contracts}
+        leaveRequests={leaveRequests}
+        cerfaCount={cerfaCount}
+      />
+
       {/* KPI Gauges */}
       <div className="dashboard-kpi-row">
-        <KPIGauges interventions={interventions} leaveRequests={leaveRequests} users={users} />
+        <KPIGauges interventions={interventions} leaveRequests={leaveRequests} users={users} expenses={expenses} contracts={contracts} />
       </div>
 
-      {/* Charts Grid */}
+      {/* Charts Grid - Interventions */}
       <div className="dashboard-charts-grid">
         <InterventionStatusChart interventions={interventions} />
         <MonthlyInterventionsChart interventions={interventions} />
         <WorkloadChart interventions={interventions} users={users} />
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Charts Row - Dépenses */}
+      <div className="dashboard-charts-row-wide">
+        <MonthlyExpensesChart expenses={expenses} />
+        <ExpenseCategoryChart expenses={expenses} />
+      </div>
+
+      {/* Charts Row - Contrats & Congés */}
+      <div className="dashboard-charts-row-wide">
+        <ContractsChart contracts={contracts} />
+        <LeaveStatusChart leaveRequests={leaveRequests} />
+      </div>
+
+      {/* Charts Row - Activité */}
       <div className="dashboard-charts-row-wide">
         <WeeklyActivityChart interventions={interventions} />
-        <LeaveStatusChart leaveRequests={leaveRequests} />
       </div>
 
       {/* Content Grid */}

@@ -219,6 +219,118 @@
   }
 }
 
+/* ==================== CHART TITLE BADGE ==================== */
+.chart-title-badge {
+  display: inline-block;
+  margin-left: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ==================== CONTRACTS MINI STATS ==================== */
+.contract-stats-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.mini-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.mini-stat-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ==================== SUMMARY INFOGRAPHIC ==================== */
+.summary-card {
+  margin-bottom: 2rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .summary-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.06);
+  transition: all 0.2s ease;
+}
+
+.summary-item:hover {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(148, 163, 184, 0.12);
+  transform: translateY(-2px);
+}
+
+.summary-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.summary-data {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.summary-sublabel {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.summary-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ==================== ANIMATIONS ==================== */
 @keyframes fadeInUp {
   from {
@@ -243,8 +355,12 @@
   }
 
   .kpi-gauges {
-    flex-direction: column;
-    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .contract-stats-row {
+    flex-wrap: wrap;
   }
 
   .kpi-ring {
