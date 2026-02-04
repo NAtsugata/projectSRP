@@ -2,12 +2,14 @@
 import React from 'react';
 import { useInterventions } from '../hooks/useInterventions';
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
+import { useUsers } from '../hooks/useUsers';
 import { useExpiringContracts, useUpcomingVisits } from '../hooks/useMaintenanceContracts';
 import AdminDashboard from './AdminDashboard';
 
 const AdminDashboardContainer = () => {
     const { interventions, isLoading: interventionsLoading } = useInterventions();
     const { leaveRequests, isLoading: leaveRequestsLoading } = useLeaveRequests();
+    const { users } = useUsers();
     const { data: expiringContracts = [] } = useExpiringContracts(30);
     const { data: upcomingVisits = [] } = useUpcomingVisits(7);
 
@@ -23,6 +25,7 @@ const AdminDashboardContainer = () => {
         <AdminDashboard
             interventions={interventions}
             leaveRequests={leaveRequests}
+            users={users}
             expiringContracts={expiringContracts}
             upcomingVisits={upcomingVisits}
         />

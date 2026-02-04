@@ -5,3 +5,11 @@ export { default as StatCard } from './StatCard';
 export { default as RecentActivity } from './RecentActivity';
 export { default as QuickActions } from './QuickActions';
 export { default as AlertCard } from './AlertCard';
+export {
+  InterventionStatusChart,
+  MonthlyInterventionsChart,
+  WorkloadChart,
+  LeaveStatusChart,
+  WeeklyActivityChart,
+  KPIGauges
+} from './DashboardCharts';

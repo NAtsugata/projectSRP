@@ -3,7 +3,11 @@
 
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StatCard, RecentActivity, QuickActions, AlertCard } from '../components/dashboard';
+import {
+  StatCard, RecentActivity, QuickActions, AlertCard,
+  InterventionStatusChart, MonthlyInterventionsChart,
+  WorkloadChart, LeaveStatusChart, WeeklyActivityChart, KPIGauges
+} from '../components/dashboard';
 import {
   BriefcaseIcon,
   CalendarIcon,
@@ -18,6 +22,7 @@ import './AdminDashboard.css';
 export default function AdminDashboard({
   interventions = [],
   leaveRequests = [],
+  users = [],
   expiringContracts = [],
   upcomingVisits = []
 }) {
@@ -286,6 +291,24 @@ export default function AdminDashboard({
           variant="success"
           onClick={() => navigate('/leaves')}
         />
+      </div>
+
+      {/* KPI Gauges */}
+      <div className="dashboard-kpi-row">
+        <KPIGauges interventions={interventions} leaveRequests={leaveRequests} users={users} />
+      </div>
+
+      {/* Charts Grid */}
+      <div className="dashboard-charts-grid">
+        <InterventionStatusChart interventions={interventions} />
+        <MonthlyInterventionsChart interventions={interventions} />
+        <WorkloadChart interventions={interventions} users={users} />
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="dashboard-charts-row-wide">
+        <WeeklyActivityChart interventions={interventions} />
+        <LeaveStatusChart leaveRequests={leaveRequests} />
       </div>
 
       {/* Content Grid */}

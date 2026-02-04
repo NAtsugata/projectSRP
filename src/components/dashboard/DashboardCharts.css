@@ -1,0 +1,258 @@
+/* ============================================
+   DASHBOARD CHARTS - DARK MODE
+   ============================================ */
+
+/* ==================== CARTE GRAPHIQUE ==================== */
+.chart-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.chart-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.chart-container {
+  width: 100%;
+  position: relative;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* ==================== PIE CHART CENTER LABEL ==================== */
+.pie-container {
+  position: relative;
+}
+
+.pie-center-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.pie-center-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.pie-center-text {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* ==================== LÉGENDE ==================== */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  color: #94a3b8;
+}
+
+.legend-value {
+  color: #ffffff;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+/* ==================== TOOLTIP ==================== */
+.chart-tooltip {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.chart-tooltip-label {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin: 0 0 0.4rem 0;
+}
+
+.chart-tooltip-value {
+  font-size: 0.8rem;
+  margin: 0.15rem 0;
+}
+
+.chart-tooltip-value strong {
+  color: #ffffff;
+}
+
+/* ==================== KPI GAUGES ==================== */
+.kpi-gauges {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.kpi-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kpi-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.kpi-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.kpi-bg {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.1);
+  stroke-width: 3;
+}
+
+.kpi-fill {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 1s ease;
+}
+
+.kpi-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  max-width: 90px;
+}
+
+/* ==================== GRILLE CHARTS DASHBOARD ==================== */
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@media (min-width: 768px) {
+  .dashboard-charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-charts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Row large pour graphiques pleine largeur */
+.dashboard-charts-row-wide {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-charts-row-wide {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 640px) {
+  .chart-card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .chart-title {
+    font-size: 1rem;
+  }
+
+  .kpi-gauges {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .kpi-ring {
+    width: 70px;
+    height: 70px;
+  }
+
+  .pie-center-value {
+    font-size: 1.4rem;
+  }
+}

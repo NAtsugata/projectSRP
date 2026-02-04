@@ -48,6 +48,11 @@
   }
 }
 
+/* ==================== KPI ROW ==================== */
+.dashboard-kpi-row {
+  margin-bottom: 2rem;
+}
+
 /* ==================== SECTION COMMUNE ==================== */
 .dashboard-section {
   background: rgba(15, 23, 42, 0.6);
