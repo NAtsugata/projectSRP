@@ -5,8 +5,7 @@ import React, { useMemo } from 'react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  AreaChart, Area,
-  RadialBarChart, RadialBar, Legend
+  AreaChart, Area
 } from 'recharts';
 import './DashboardCharts.css';
 
@@ -52,8 +51,8 @@ export const InterventionStatusChart = ({ interventions = [] }) => {
     const active = interventions.filter(i => !i.is_archived);
     const archived = interventions.filter(i => i.is_archived);
     const urgent = active.filter(i => i.additional_needs?.some(n => n.isUrgent));
-    const withTeam = active.filter(i => i.assignments?.length > 0);
-    const noTeam = active.filter(i => !i.assignments?.length);
+    const withTeam = active.filter(i => i.intervention_assignments?.length > 0);
+    const noTeam = active.filter(i => !i.intervention_assignments?.length);
 
     return [
       { name: 'Avec équipe', value: withTeam.length, color: COLORS.success },
@@ -174,7 +173,7 @@ export const WorkloadChart = ({ interventions = [], users = [] }) => {
     const counts = {};
 
     active.forEach(i => {
-      (i.assignments || []).forEach(a => {
+      (i.intervention_assignments || []).forEach(a => {
         if (a.user_id) {
           counts[a.user_id] = (counts[a.user_id] || 0) + 1;
         }
@@ -356,12 +355,12 @@ export const WeeklyActivityChart = ({ interventions = [] }) => {
 export const KPIGauges = ({ interventions = [], leaveRequests = [], users = [] }) => {
   const kpis = useMemo(() => {
     const active = interventions.filter(i => !i.is_archived);
-    const withTeam = active.filter(i => i.assignments?.length > 0).length;
+    const withTeam = active.filter(i => i.intervention_assignments?.length > 0).length;
     const teamRate = active.length > 0 ? Math.round((withTeam / active.length) * 100) : 0;
 
     const totalEmployees = users.length;
     const assignedEmployees = new Set();
-    active.forEach(i => (i.assignments || []).forEach(a => { if (a.user_id) assignedEmployees.add(a.user_id); }));
+    active.forEach(i => (i.intervention_assignments || []).forEach(a => { if (a.user_id) assignedEmployees.add(a.user_id); }));
     const utilRate = totalEmployees > 0 ? Math.round((assignedEmployees.size / totalEmployees) * 100) : 0;
 
     const pendingLeaves = leaveRequests.filter(r => r.status === 'En attente').length;
