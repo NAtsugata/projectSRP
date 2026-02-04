@@ -129,13 +129,14 @@ export default function AdminPlanningView({
     setEditTeamIntervention(intervention);
   }, []);
 
-  const handleSaveTeam = useCallback(async (selectedUserIds) => {
+  const handleSaveTeam = useCallback(async (selectedUserIds, dailyAssignments) => {
     if (editTeamIntervention && onUpdateTeam) {
       logger.log('AdminPlanningView: Sauvegarde équipe', {
         interventionId: editTeamIntervention.id,
-        userIds: selectedUserIds
+        userIds: selectedUserIds,
+        hasDailyAssignments: !!dailyAssignments
       });
-      await onUpdateTeam(editTeamIntervention.id, selectedUserIds);
+      await onUpdateTeam(editTeamIntervention.id, selectedUserIds, dailyAssignments);
       setEditTeamIntervention(null);
     }
   }, [editTeamIntervention, onUpdateTeam]);

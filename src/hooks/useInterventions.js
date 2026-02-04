@@ -87,6 +87,18 @@ export function useInterventions(userId = null, isArchived = false) {
         },
     });
 
+    // Mutation pour mettre à jour les assignations journalières
+    const updateDailyAssignmentsMutation = useMutation({
+        mutationFn: async ({ interventionId, dailyAssignments }) => {
+            const result = await interventionService.updateDailyAssignments(interventionId, dailyAssignments);
+            if (result.error) throw result.error;
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        },
+    });
+
     return {
         // Données
         interventions,
@@ -107,6 +119,8 @@ export function useInterventions(userId = null, isArchived = false) {
 
         // Nouvelle fonction pour mettre à jour les assignations
         updateAssignments: updateAssignmentsMutation.mutate,
+        updateDailyAssignments: updateDailyAssignmentsMutation.mutateAsync,
+        isUpdatingDailyAssignments: updateDailyAssignmentsMutation.isPending,
     };
 }
 

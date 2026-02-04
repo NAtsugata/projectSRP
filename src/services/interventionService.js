@@ -133,6 +133,26 @@ export const interventionService = {
     return { error: null };
   },
 
+  /**
+   * Met à jour les assignations journalières d'une intervention multi-jours
+   * @param {string} interventionId
+   * @param {Object} dailyAssignments - { "2026-02-03": ["userId1","userId2"], ... }
+   */
+  async updateDailyAssignments(interventionId, dailyAssignments) {
+    const { error } = await supabase
+      .from('interventions')
+      .update({ daily_assignments: dailyAssignments })
+      .eq('id', interventionId);
+
+    if (error) {
+      logger.error('❌ Erreur MAJ assignations journalières:', error);
+      return { error };
+    }
+
+    logger.log('✅ Assignations journalières mises à jour pour', interventionId);
+    return { error: null };
+  },
+
   async addBriefingDocuments(id, files) {
     // Placeholder
     return { error: null };

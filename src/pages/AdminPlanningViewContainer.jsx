@@ -10,7 +10,7 @@ import AdminPlanningView from './AdminPlanningView';
 const AdminPlanningViewContainer = () => {
     const navigate = useNavigate();
     const toast = useToast();
-    const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention, updateAssignments, isUpdatingAssignments } = useInterventions();
+    const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention, updateAssignments, updateDailyAssignments, isUpdatingAssignments } = useInterventions();
     const { users } = useUsers();
     const { templates, assignChecklist } = useChecklists();
 
@@ -74,9 +74,13 @@ const AdminPlanningViewContainer = () => {
         }
     };
 
-    const handleUpdateTeam = async (interventionId, userIds) => {
+    const handleUpdateTeam = async (interventionId, userIds, dailyAssignments) => {
         try {
             await updateAssignments({ interventionId, userIds });
+            // Si des assignations journalières sont fournies, les sauvegarder aussi
+            if (dailyAssignments) {
+                await updateDailyAssignments({ interventionId, dailyAssignments });
+            }
             toast?.success('Équipe mise à jour !');
         } catch (error) {
             toast?.error('Erreur lors de la mise à jour de l\'équipe');
