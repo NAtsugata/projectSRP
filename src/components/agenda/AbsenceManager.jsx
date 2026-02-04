@@ -370,6 +370,7 @@ const AbsenceManager = ({
                       <option value="Congés">Congés</option>
                       <option value="Maladie">Maladie</option>
                       <option value="Formation">Formation</option>
+                      <option value="École">École (apprenti)</option>
                       <option value="Autre">Autre</option>
                     </select>
                   </div>

@@ -183,6 +183,7 @@ const AbsenceBar = ({ absence, employeeName }) => {
     'Congés': '🏖️',
     'Maladie': '🏥',
     'Formation': '📚',
+    'École': '🎓',
     'Autre': '📋'
   };
   const icon = reasonLabels[absence.reason] || '📋';

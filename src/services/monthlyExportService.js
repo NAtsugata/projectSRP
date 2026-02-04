@@ -144,7 +144,7 @@ export async function getMonthlyExportData(year, month) {
           iv.intervention_assignments?.some(a => a.user_id === userId)
         );
 
-        // Compter les jours travaillés (dates uniques d'intervention)
+        // Collecter les dates d'intervention
         const workedDatesSet = new Set();
         userInterventions.forEach(iv => {
           if (iv.scheduled_dates && Array.isArray(iv.scheduled_dates)) {
@@ -158,6 +158,26 @@ export async function getMonthlyExportData(year, month) {
             workedDatesSet.add(iv.date);
           }
         });
+
+        // --- Pré-traitement absences École (apprentis) ---
+        // On retire les jours école des jours travaillés AVANT le calcul zones/paniers
+        const userAbsencesAll = allAbsences.filter(a => a.employee_id === userId);
+        const schoolDatesSet = new Set();
+        userAbsencesAll.forEach(absence => {
+          if (absence.reason !== 'École') return;
+          const as = new Date(Math.max(new Date(absence.start_date), new Date(startDate)));
+          const ae = new Date(Math.min(new Date(absence.end_date), new Date(endDate)));
+          let current = new Date(as);
+          while (current <= ae) {
+            const day = current.getDay();
+            if (day !== 0 && day !== 6) {
+              schoolDatesSet.add(current.toISOString().split('T')[0]);
+            }
+            current.setDate(current.getDate() + 1);
+          }
+        });
+        // Retirer les jours école des jours travaillés → pas de zone ni panier repas
+        schoolDatesSet.forEach(d => workedDatesSet.delete(d));
 
         // Calculer les heures réelles depuis les reports (arrivalTime / departureTime)
         let totalMinutesWorked = 0;
@@ -174,7 +194,7 @@ export async function getMonthlyExportData(year, month) {
 
         const totalHoursReal = Math.round(totalMinutesWorked / 60 * 100) / 100;
 
-        // Heures base 35h : 7h par jour travaillé
+        // Heures base 35h : 7h par jour travaillé (hors jours école)
         const workedDays = workedDatesSet.size;
         const baseHours = workedDays * HEURES_PAR_JOUR;
         const heuresSupp = Math.max(0, Math.round((totalHoursReal - baseHours) * 100) / 100);
@@ -251,10 +271,12 @@ export async function getMonthlyExportData(year, month) {
         });
 
         // --- Absences (employee_absences) ---
-        const userAbsences = allAbsences.filter(a => a.employee_id === userId);
         let absenceDays = 0;
+        let schoolDays = schoolDatesSet.size;
         const absenceDetails = [];
-        userAbsences.forEach(absence => {
+        const schoolDetails = [];
+
+        userAbsencesAll.forEach(absence => {
           const as = new Date(Math.max(new Date(absence.start_date), new Date(startDate)));
           const ae = new Date(Math.min(new Date(absence.end_date), new Date(endDate)));
           let days = 0;
@@ -264,14 +286,25 @@ export async function getMonthlyExportData(year, month) {
             if (day !== 0 && day !== 6) days++;
             current.setDate(current.getDate() + 1);
           }
-          absenceDays += days;
-          absenceDetails.push({
-            startDate: absence.start_date,
-            endDate: absence.end_date,
-            reason: absence.reason || 'Absence',
-            notes: absence.notes || '',
-            days,
-          });
+
+          if (absence.reason === 'École') {
+            schoolDetails.push({
+              startDate: absence.start_date,
+              endDate: absence.end_date,
+              reason: 'École',
+              notes: absence.notes || '',
+              days,
+            });
+          } else {
+            absenceDays += days;
+            absenceDetails.push({
+              startDate: absence.start_date,
+              endDate: absence.end_date,
+              reason: absence.reason || 'Absence',
+              notes: absence.notes || '',
+              days,
+            });
+          }
         });
 
         // --- Dépenses ---
@@ -317,6 +350,10 @@ export async function getMonthlyExportData(year, month) {
           // Absences (employee_absences)
           absenceDays,
           absenceDetails,
+
+          // Jours école (apprentis)
+          schoolDays,
+          schoolDetails,
 
           // Interventions
           interventionCount: userInterventions.length,
@@ -388,6 +425,7 @@ export function generateCSV(employeeData, year, month) {
     'Jours de congé',
     'Jours d\'absence',
     'Détail absences',
+    'Jours école (apprenti)',
     'Prime exceptionnelle (€)',
     'Type prime (brut/net)',
     'Dépenses transport (€)',
@@ -424,6 +462,7 @@ export function generateCSV(employeeData, year, month) {
       emp.leaveDays,
       emp.absenceDays || 0,
       (emp.absenceDetails || []).map(a => `${a.reason}: ${a.startDate} → ${a.endDate} (${a.days}j)`).join(' | '),
+      emp.schoolDays || 0,
       (emp.primeExceptionnelle || 0).toFixed(2),
       emp.primeType || 'brut',
       (emp.expensesByCategory.transport || 0).toFixed(2),
@@ -557,9 +596,10 @@ export function generatePDF(employeeData, year, month) {
     leaveDays: acc.leaveDays + e.leaveDays,
     interventions: acc.interventions + e.interventionCount,
     absenceDays: acc.absenceDays + (e.absenceDays || 0),
+    schoolDays: acc.schoolDays + (e.schoolDays || 0),
     totalExpenses: acc.totalExpenses + e.totalExpenses,
     totalPrimes: acc.totalPrimes + (e.primeExceptionnelle || 0),
-  }), { employees: 0, workedDays: 0, baseHours: 0, totalHours: 0, heuresSupp: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, absenceDays: 0, interventions: 0, totalExpenses: 0, totalPrimes: 0 });
+  }), { employees: 0, workedDays: 0, baseHours: 0, totalHours: 0, heuresSupp: 0, totalKm: 0, paniersRepas: 0, leaveDays: 0, absenceDays: 0, schoolDays: 0, interventions: 0, totalExpenses: 0, totalPrimes: 0 });
 
   const summaryItems = [
     ['Employés', `${totals.employees}`],
@@ -571,6 +611,7 @@ export function generatePDF(employeeData, year, month) {
     ['Paniers repas', `${totals.paniersRepas}`],
     ['Jours de congé', `${totals.leaveDays}`],
     ['Jours d\'absence', `${totals.absenceDays}`],
+    ['Jours école (apprentis)', `${totals.schoolDays}`],
     ['Total dépenses', `${totals.totalExpenses.toFixed(2)} €`],
     ['Total primes', `${totals.totalPrimes.toFixed(2)} €`],
   ];
@@ -712,6 +753,7 @@ export function generatePDF(employeeData, year, month) {
       ['Heures réelles', `${emp.totalHours}h`],
       ['Heures supplémentaires', `${emp.heuresSupp || 0}h`],
       ['Jours d\'absence', `${emp.absenceDays || 0}`],
+      ['Jours école (apprenti)', `${emp.schoolDays || 0}`],
       ['Interventions réalisées', `${emp.interventionCount}`],
       ['Interventions terminées', `${emp.completedCount}`],
     ];
