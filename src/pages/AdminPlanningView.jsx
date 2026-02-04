@@ -164,7 +164,7 @@ export default function AdminPlanningView({
 
           {/* Gestionnaire absences */}
           <AbsenceManager
-            employees={users.filter(u => !u.is_admin)}
+            employees={users}
             onAbsencesChange={handleAbsencesChange}
           />
 
