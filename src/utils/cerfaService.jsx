@@ -1052,42 +1052,37 @@ export const fillCerfa1301 = async (data) => {
         fillTextField('a5', data.clientCodePostal || '');
         fillTextField('a4', data.clientVille || '');
 
-        // --- ADRESSE DE L'IMMEUBLE ---
+        // --- ADRESSE DE L'IMMEUBLE (si différente) ---
         // cac1 (y=621): Case "même adresse"
-        // a5a (y=606): Adresse immeuble si différente
+        // a5a (y=606): Adresse immeuble si différente de l'adresse du client
+        // a7 (y=534, x=91): Adresse 2
+        // a8 (y=534, x=293): Commune 2
+        // a9 (y=534, x=450): Code postal 2
         if (data.memeAdresse) {
             checkBox('cac1', true);
         } else {
-            // Si adresse différente, remplir a5a avec l'adresse complète
-            const immeubleAdresseComplete = [
-                data.immeubleAdresse,
-                data.immeubleCodePostal,
-                data.immeubleVille
-            ].filter(Boolean).join(' ');
-            fillTextField('a5a', immeubleAdresseComplete);
+            // Adresse différente - remplir les champs a5a, a7, a8, a9
+            fillTextField('a5a', data.immeubleAdresse || '');
+            fillTextField('a7', data.immeubleAdresse || '');
+            fillTextField('a8', data.immeubleVille || '');
+            fillTextField('a9', data.immeubleCodePostal || '');
         }
 
-        // --- ATTESTATION DU STATUT ---
-        // cac2 (y=590): Propriétaire/locataire
-        checkBox('cac2', true); // Par défaut coché
+        // --- QUALITÉ DU CLIENT ---
+        // cac2 (y=590): Local affecté à l'habitation (toujours coché pour TVA 10%)
+        // a10 (y=524): Qualité "autre" si ni propriétaire ni locataire
+        checkBox('cac2', true); // Local à usage d'habitation
 
-        // --- NATURE DES LOCAUX ---
-        // a6 (y=567): Nature du local
-        const natureLocal = data.natureMaison ? 'Maison individuelle' :
-                           data.natureAppartement ? 'Appartement' :
-                           data.autreNatureTexte || 'Logement';
-        fillTextField('a6', natureLocal);
+        // Qualité: propriétaire, locataire ou autre
+        if (data.qualiteAutre && data.qualiteAutreTexte) {
+            fillTextField('a10', data.qualiteAutreTexte);
+        }
 
-        // --- DÉTAILS DES TRAVAUX ---
-        // a7 (y=534, x=91): Description travaux ligne 1
-        // a8 (y=534, x=293): Description travaux ligne 2
-        // a9 (y=534, x=450): Description travaux ligne 3
-        // a10 (y=524): Détails supplémentaires
-        const descParts = (data.descriptionTravaux || '').split('\n');
-        fillTextField('a7', descParts[0] || '');
-        fillTextField('a8', descParts[1] || '');
-        fillTextField('a9', descParts[2] || '');
-        fillTextField('a10', descParts.slice(3).join(' ') || '');
+        // --- MILLIÈMES (parties communes) ---
+        // a6 (y=567): Proportion en millièmes (si applicable)
+        if (data.milliemes) {
+            fillTextField('a6', data.milliemes);
+        }
 
         // --- ATTESTATIONS OBLIGATOIRES ---
         // cac3 (y=528): Immeuble achevé depuis plus de 2 ans
@@ -1140,20 +1135,21 @@ export const fillCerfa1301 = async (data) => {
 
                 const { width: imgWidth, height: imgHeight } = signatureImage;
                 const maxWidth = 140;
-                const maxHeight = 45;
+                const maxHeight = 40;
                 const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
                 const scaledWidth = imgWidth * scale;
                 const scaledHeight = imgHeight * scale;
 
-                // Position: 10 pixels en dessous de a11 (y=160), donc y=150
-                // x=440 pour être à droite de la date
+                // Position: en bas à droite, sous le lieu et la date
+                // a11 (Lieu) est à y=160, a12 (Date) est à y=160
+                // On place la signature juste en dessous, à y=110 (comme CERFA 15497 qui utilise y~42)
                 page.drawImage(signatureImage, {
-                    x: 440,
-                    y: 150,
+                    x: 420,
+                    y: 110,
                     width: scaledWidth,
                     height: scaledHeight,
                 });
-                logger.log('[CERFA 1301] ✓ Signature dessinée à x=440, y=150');
+                logger.log('[CERFA 1301] ✓ Signature dessinée à x=420, y=110');
             } catch (e) {
                 logger.warn('[CERFA 1301] ✗ Erreur intégration signature:', e.message);
             }

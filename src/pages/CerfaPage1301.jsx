@@ -37,6 +37,12 @@ function CerfaPage1301() {
         immeubleVille: '',
         memeAdresse: true, // Si l'adresse est la même que le client
 
+        // QUALITÉ DU CLIENT
+        qualiteProprietaire: true,
+        qualiteLocataire: false,
+        qualiteAutre: false,
+        qualiteAutreTexte: '',
+
         // NATURE DES LOCAUX
         natureMaison: true,
         natureAppartement: false,
@@ -309,6 +315,10 @@ function CerfaPage1301() {
                 immeubleCodePostal: '',
                 immeubleVille: '',
                 memeAdresse: true,
+                qualiteProprietaire: true,
+                qualiteLocataire: false,
+                qualiteAutre: false,
+                qualiteAutreTexte: '',
                 natureMaison: true,
                 natureAppartement: false,
                 natureAutreLocal: false,
@@ -495,6 +505,67 @@ function CerfaPage1301() {
                                 </div>
                             </div>
                         </>
+                    )}
+
+                    {/* Qualité du client */}
+                    <h3 style={{marginTop: '1rem', marginBottom: '0.5rem'}}>Qualité</h3>
+                    <div className="checkbox-grid">
+                        <label className="checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={formData.qualiteProprietaire}
+                                onChange={(e) => {
+                                    updateField('qualiteProprietaire', e.target.checked);
+                                    if (e.target.checked) {
+                                        updateField('qualiteLocataire', false);
+                                        updateField('qualiteAutre', false);
+                                    }
+                                }}
+                            />
+                            <span>Propriétaire</span>
+                        </label>
+
+                        <label className="checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={formData.qualiteLocataire}
+                                onChange={(e) => {
+                                    updateField('qualiteLocataire', e.target.checked);
+                                    if (e.target.checked) {
+                                        updateField('qualiteProprietaire', false);
+                                        updateField('qualiteAutre', false);
+                                    }
+                                }}
+                            />
+                            <span>Locataire</span>
+                        </label>
+
+                        <label className="checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={formData.qualiteAutre}
+                                onChange={(e) => {
+                                    updateField('qualiteAutre', e.target.checked);
+                                    if (e.target.checked) {
+                                        updateField('qualiteProprietaire', false);
+                                        updateField('qualiteLocataire', false);
+                                    }
+                                }}
+                            />
+                            <span>Autre</span>
+                        </label>
+                    </div>
+
+                    {formData.qualiteAutre && (
+                        <div className="form-group">
+                            <label>Précisez votre qualité</label>
+                            <input
+                                type="text"
+                                value={formData.qualiteAutreTexte}
+                                onChange={(e) => updateField('qualiteAutreTexte', e.target.value)}
+                                placeholder="Ex: Mandataire, Syndic..."
+                            />
+                        </div>
                     )}
                 </section>
 
