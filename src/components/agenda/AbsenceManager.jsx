@@ -25,6 +25,8 @@ const AbsenceManager = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
   const [newAbsence, setNewAbsence] = useState({
     employeeId: '',
     startDate: '',
@@ -68,15 +70,81 @@ const AbsenceManager = ({
     loadAbsences();
   }, [loadAbsences]);
 
-  // Ajouter une absence
+  // Ajouter une absence (ou plusieurs en mode multi-sélection)
   const handleAddAbsence = async () => {
-    if (!newAbsence.employeeId || !newAbsence.startDate || !newAbsence.endDate) {
-      toast.warning('Veuillez remplir tous les champs obligatoires');
+    // Validation des dates
+    if (!newAbsence.startDate || !newAbsence.endDate) {
+      toast.warning('Veuillez remplir les dates');
       return;
     }
 
     if (newAbsence.startDate > newAbsence.endDate) {
       toast.error('La date de fin doit être après la date de début');
+      return;
+    }
+
+    // Mode multi-sélection (pour École)
+    if (multiSelectMode) {
+      if (selectedEmployeeIds.length === 0) {
+        toast.warning('Veuillez sélectionner au moins un employé');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Créer une absence pour chaque employé sélectionné
+        for (const empId of selectedEmployeeIds) {
+          const { error } = await absenceService.createAbsence({
+            employeeId: empId,
+            startDate: newAbsence.startDate,
+            endDate: newAbsence.endDate,
+            reason: newAbsence.reason,
+            notes: newAbsence.notes
+          });
+          if (error) {
+            errorCount++;
+            logger.error('Erreur ajout absence pour', empId, error);
+          } else {
+            successCount++;
+          }
+        }
+
+        if (successCount > 0) {
+          toast.success(`${successCount} absence(s) enregistrée(s) avec succès`);
+        }
+        if (errorCount > 0) {
+          toast.warning(`${errorCount} erreur(s) lors de l'enregistrement`);
+        }
+
+        // Reset form
+        setNewAbsence({
+          employeeId: '',
+          startDate: '',
+          endDate: '',
+          reason: 'Congés',
+          notes: ''
+        });
+        setSelectedEmployeeIds([]);
+        setMultiSelectMode(false);
+        setIsAdding(false);
+
+        // Reload absences
+        await loadAbsences();
+      } catch (error) {
+        logger.error('Erreur ajout absences multiples:', error);
+        toast.error('Impossible d\'enregistrer les absences');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Mode normal (un seul employé)
+    if (!newAbsence.employeeId) {
+      toast.warning('Veuillez sélectionner un employé');
       return;
     }
 
@@ -105,6 +173,15 @@ const AbsenceManager = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // Toggle employee selection in multi-select mode
+  const toggleEmployeeSelection = (empId) => {
+    setSelectedEmployeeIds(prev =>
+      prev.includes(empId)
+        ? prev.filter(id => id !== empId)
+        : [...prev, empId]
+    );
   };
 
   // Supprimer une absence
@@ -319,21 +396,66 @@ const AbsenceManager = ({
                   <h5 className="absence-form-title">Nouvelle absence</h5>
 
                   <div className="form-group">
-                    <label htmlFor="absence-employee">Employé *</label>
+                    <label htmlFor="absence-reason">Motif</label>
                     <select
-                      id="absence-employee"
+                      id="absence-reason"
                       className="form-control"
-                      value={newAbsence.employeeId}
-                      onChange={(e) => setNewAbsence({ ...newAbsence, employeeId: e.target.value })}
+                      value={newAbsence.reason}
+                      onChange={(e) => {
+                        const reason = e.target.value;
+                        setNewAbsence({ ...newAbsence, reason });
+                        // Activer automatiquement le mode multi-sélection pour École
+                        if (reason === 'École') {
+                          setMultiSelectMode(true);
+                        } else {
+                          setMultiSelectMode(false);
+                          setSelectedEmployeeIds([]);
+                        }
+                      }}
                     >
-                      <option value="">Sélectionner un employé</option>
-                      {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.full_name || emp.name}
-                        </option>
-                      ))}
+                      <option value="Congés">Congés</option>
+                      <option value="Maladie">Maladie</option>
+                      <option value="Formation">Formation</option>
+                      <option value="École">🎓 École (apprenti) - Multi-sélection</option>
+                      <option value="Autre">Autre</option>
                     </select>
                   </div>
+
+                  {/* Mode multi-sélection pour École */}
+                  {multiSelectMode ? (
+                    <div className="form-group">
+                      <label>Sélectionner les apprentis * ({selectedEmployeeIds.length} sélectionné{selectedEmployeeIds.length > 1 ? 's' : ''})</label>
+                      <div className="employee-checkbox-list">
+                        {employees.map(emp => (
+                          <label key={emp.id} className="employee-checkbox-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedEmployeeIds.includes(emp.id)}
+                              onChange={() => toggleEmployeeSelection(emp.id)}
+                            />
+                            <span className="employee-checkbox-name">{emp.full_name || emp.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label htmlFor="absence-employee">Employé *</label>
+                      <select
+                        id="absence-employee"
+                        className="form-control"
+                        value={newAbsence.employeeId}
+                        onChange={(e) => setNewAbsence({ ...newAbsence, employeeId: e.target.value })}
+                      >
+                        <option value="">Sélectionner un employé</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.full_name || emp.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-row">
                     <div className="form-group">
@@ -360,22 +482,6 @@ const AbsenceManager = ({
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="absence-reason">Motif</label>
-                    <select
-                      id="absence-reason"
-                      className="form-control"
-                      value={newAbsence.reason}
-                      onChange={(e) => setNewAbsence({ ...newAbsence, reason: e.target.value })}
-                    >
-                      <option value="Congés">Congés</option>
-                      <option value="Maladie">Maladie</option>
-                      <option value="Formation">Formation</option>
-                      <option value="École">École (apprenti)</option>
-                      <option value="Autre">Autre</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor="absence-notes">Notes (optionnel)</label>
                     <textarea
                       id="absence-notes"
@@ -392,6 +498,8 @@ const AbsenceManager = ({
                       variant="secondary"
                       onClick={() => {
                         setIsAdding(false);
+                        setMultiSelectMode(false);
+                        setSelectedEmployeeIds([]);
                         setNewAbsence({
                           employeeId: '',
                           startDate: '',
@@ -407,7 +515,9 @@ const AbsenceManager = ({
                       variant="primary"
                       onClick={handleAddAbsence}
                     >
-                      Enregistrer
+                      {multiSelectMode && selectedEmployeeIds.length > 1
+                        ? `Enregistrer (${selectedEmployeeIds.length})`
+                        : 'Enregistrer'}
                     </Button>
                   </div>
                 </div>

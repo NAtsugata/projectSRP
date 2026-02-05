@@ -299,6 +299,52 @@
   margin-top: 4px;
 }
 
+/* ==================== CHECKBOX LIST (Multi-select) ==================== */
+.employee-checkbox-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.employee-checkbox-item:hover {
+  background: #f1f5f9;
+}
+
+.employee-checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.employee-checkbox-item input[type="checkbox"]:checked + .employee-checkbox-name {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.employee-checkbox-name {
+  font-size: 14px;
+  color: #374151;
+}
+
 /* ==================== ADD BUTTON ==================== */
 .absence-add-btn {
   display: flex;
@@ -576,6 +622,29 @@
 
   .absence-empty p {
     margin: 0;
+  }
+
+  /* Checkbox list mobile */
+  .employee-checkbox-list {
+    max-height: 250px;
+    padding: 10px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .employee-checkbox-item {
+    padding: 14px;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+
+  .employee-checkbox-item input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .employee-checkbox-name {
+    font-size: 16px;
   }
 }
 
