@@ -1124,37 +1124,40 @@ export const fillCerfa1301 = async (data) => {
         fillTextField('a11', data.lieu || '');
         fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
 
-        // ===== CRÉATION DU CHAMP SIGNATURE INTERACTIF (AVANT flatten) =====
-        // Créer un champ bouton pour la signature, 10 pixels en dessous de a11 (y=160-10=150)
+        // Aplatir le formulaire pour figer les données
+        form.flatten();
+
+        // ===== INTÉGRATION DE LA SIGNATURE (après flatten, comme CERFA 15497) =====
         const pages = pdfDoc.getPages();
         const page = pages[0];
 
+        // Dessiner la signature directement sur la page (même méthode que CERFA 15497)
         if (data.signatureClient && data.signatureClient.startsWith('data:image/png')) {
             try {
-                // Créer un bouton interactif pour la signature
-                const signatureButton = form.createButton('signature_client');
-                signatureButton.addToPage(page, {
-                    x: 440,      // À droite de la date
-                    y: 150,      // 10 pixels en dessous de a11 (y=160)
-                    width: 140,
-                    height: 45,
-                    borderWidth: 0,
-                });
-
-                // Intégrer l'image de signature dans le bouton
                 const base64Data = data.signatureClient.split(',')[1];
                 const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
                 const signatureImage = await pdfDoc.embedPng(imageBytes);
-                signatureButton.setImage(signatureImage);
 
-                logger.log('[CERFA 1301] ✓ Champ signature interactif créé à y=150');
+                const { width: imgWidth, height: imgHeight } = signatureImage;
+                const maxWidth = 140;
+                const maxHeight = 45;
+                const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+
+                // Position: 10 pixels en dessous de a11 (y=160), donc y=150
+                // x=440 pour être à droite de la date
+                page.drawImage(signatureImage, {
+                    x: 440,
+                    y: 150,
+                    width: scaledWidth,
+                    height: scaledHeight,
+                });
+                logger.log('[CERFA 1301] ✓ Signature dessinée à x=440, y=150');
             } catch (e) {
-                logger.warn('[CERFA 1301] ✗ Erreur création champ signature:', e.message);
+                logger.warn('[CERFA 1301] ✗ Erreur intégration signature:', e.message);
             }
         }
-
-        // Aplatir le formulaire pour figer les données (y compris la signature)
-        form.flatten();
 
         // Générer le PDF
         const filledPdfBytes = await pdfDoc.save();
