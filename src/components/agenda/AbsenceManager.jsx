@@ -94,21 +94,30 @@ const AbsenceManager = ({
       try {
         let successCount = 0;
         let errorCount = 0;
+        const failedNames = [];
 
         // Créer une absence pour chaque employé sélectionné
         for (const empId of selectedEmployeeIds) {
-          const { error } = await absenceService.createAbsence({
+          const emp = employees.find(e => e.id === empId);
+          const empName = emp?.full_name || emp?.name || empId;
+
+          logger.log('🔄 Création absence pour:', empName, empId);
+
+          const { data, error } = await absenceService.createAbsence({
             employeeId: empId,
             startDate: newAbsence.startDate,
             endDate: newAbsence.endDate,
             reason: newAbsence.reason,
             notes: newAbsence.notes
           });
+
           if (error) {
             errorCount++;
-            logger.error('Erreur ajout absence pour', empId, error);
+            failedNames.push(empName);
+            logger.error('❌ Erreur ajout absence pour', empName, ':', error.message || error);
           } else {
             successCount++;
+            logger.log('✅ Absence créée pour', empName, data);
           }
         }
 
@@ -116,7 +125,7 @@ const AbsenceManager = ({
           toast.success(`${successCount} absence(s) enregistrée(s) avec succès`);
         }
         if (errorCount > 0) {
-          toast.warning(`${errorCount} erreur(s) lors de l'enregistrement`);
+          toast.error(`Échec pour: ${failedNames.join(', ')}`);
         }
 
         // Reset form
