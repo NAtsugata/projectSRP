@@ -1155,9 +1155,12 @@ export const fillCerfa1301 = async (data) => {
             }
         };
 
-        // Signature du client (en bas du formulaire, près de a11/a12)
+        // Signature du client (en bas du formulaire, à droite de la date)
+        // a11 (Lieu) est à x=263, a12 (Date) est à x=370, les deux à y=160
+        // La signature doit être placée à droite, vers y=120-180 pour être visible
         if (data.signatureClient) {
-            await embedSignature(data.signatureClient, 450, 140, 120, 35);
+            // Position: à droite de la date (x=440), même hauteur (y=145), taille généreuse
+            await embedSignature(data.signatureClient, 440, 115, 140, 50);
         }
 
         // Générer le PDF
