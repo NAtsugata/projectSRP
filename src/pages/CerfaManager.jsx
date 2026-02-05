@@ -21,14 +21,24 @@ const CERFA_TEMPLATES = [
         name: 'CERFA 15497-04',
         description: 'Fiche d\'intervention - Fluides frigorigènes',
         path: '/cerfa-form',  // Formulaire HTML mobile-friendly
-        pdfPath: '/cerfa/cerfa_15497-04.pdf'  // PDF pour référence
+        pdfPath: '/cerfa/cerfa_15497-04.pdf',  // PDF pour référence
+        category: 'clim'
     },
     {
         id: 'cerfa_15498',
         name: 'CERFA 15498',
         description: 'Attestation d\'acquisition de fluides frigorigènes',
         path: '/cerfa-form-15498',  // Formulaire HTML mobile-friendly
-        pdfPath: '/cerfa/CERFA_15498_Interactif_V2_PRO.pdf'  // PDF pour référence
+        pdfPath: '/cerfa/CERFA_15498_Interactif_V2_PRO.pdf',  // PDF pour référence
+        category: 'clim'
+    },
+    {
+        id: 'cerfa_1301-sd',
+        name: 'CERFA 1301-SD',
+        description: 'Attestation simplifiée TVA taux réduit 10%',
+        path: '/cerfa-form-1301',  // Formulaire HTML mobile-friendly
+        pdfPath: '/cerfa/cerfa_1301-sd.pdf',  // PDF pour référence
+        category: 'tva'
     },
 ];
 

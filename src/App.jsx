@@ -51,6 +51,7 @@ const MobileMenu = lazy(() => import('./pages/MobileMenu'));
 const CerfaManager = lazy(() => import('./pages/CerfaManager'));
 const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 const CerfaPage15498 = lazy(() => import('./pages/CerfaPage15498'));
+const CerfaPage1301 = lazy(() => import('./pages/CerfaPage1301'));
 
 
 
@@ -341,6 +342,13 @@ function App() {
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
+                  <Route path="cerfa-form-1301" element={
+                    <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CerfaPage1301 />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </>
               ) : (
@@ -426,6 +434,13 @@ function App() {
                     <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage15498 />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
+                  <Route path="cerfa-form-1301" element={
+                    <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CerfaPage1301 />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />

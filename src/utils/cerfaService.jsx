@@ -9,6 +9,7 @@ import logger from './logger';
 // Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
 import cerfa15498PdfAsset from '../assets/cerfa_15498.pdf';
+import cerfa1301PdfAsset from '../assets/cerfa_1301-sd.pdf';
 
 // =============================
 // CONSTANTS
@@ -941,5 +942,245 @@ export const prepareCerfaDataFromContract = (contract, profile = {}) => {
 
         // Métadonnées
         contractId: contract.id
+    };
+};
+
+// =============================
+// CERFA 1301-SD - Attestation simplifiée TVA taux réduit (10%)
+// =============================
+
+/**
+ * Remplit le CERFA 1301-SD (Attestation simplifiée TVA taux réduit 10%)
+ * Ce formulaire atteste que les travaux de rénovation sont éligibles à la TVA à 10%
+ * @param {Object} data - Données pour remplir le formulaire
+ * @returns {Promise<Blob>} PDF rempli en Blob
+ */
+export const fillCerfa1301 = async (data) => {
+    try {
+        const ficheNumber = data.ficheNo || data.ficheNumber || '';
+        logger.log('[CERFA 1301] Génération attestation TVA 10%:', ficheNumber);
+
+        // Charger le PDF template
+        logger.log('[CERFA 1301] Chargement du PDF depuis:', cerfa1301PdfAsset);
+
+        let pdfResponse = await fetch(cerfa1301PdfAsset);
+
+        if (!pdfResponse.ok) {
+            // Fallback: essayer depuis le dossier public
+            logger.warn('[CERFA 1301] Asset non trouvé, tentative depuis /cerfa/...');
+            const fallbackPath = `${window.location.origin}/cerfa/cerfa_1301-sd.pdf`;
+            pdfResponse = await fetch(fallbackPath);
+            if (!pdfResponse.ok) {
+                throw new Error(`Impossible de charger le formulaire CERFA 1301-SD (${pdfResponse.status})`);
+            }
+        }
+
+        logger.log('[CERFA 1301] PDF chargé avec succès');
+        const pdfBytes = await pdfResponse.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const form = pdfDoc.getForm();
+
+        // Helper pour remplir un champ texte de manière sécurisée
+        const fillTextField = (fieldName, value) => {
+            try {
+                const field = form.getTextField(fieldName);
+                if (field) {
+                    const textValue = value ? String(value) : '';
+                    field.setText(textValue);
+                    if (textValue) {
+                        logger.log(`[CERFA 1301] ✓ Rempli: ${fieldName} = "${textValue}"`);
+                    }
+                } else {
+                    logger.log(`[CERFA 1301] ✗ Champ introuvable: ${fieldName}`);
+                }
+            } catch (e) {
+                logger.log(`[CERFA 1301] ✗ Erreur ${fieldName}: ${e.message}`);
+            }
+        };
+
+        // Helper pour cocher une case
+        const checkBox = (fieldName, shouldCheck) => {
+            try {
+                if (shouldCheck) {
+                    const field = form.getCheckBox(fieldName);
+                    if (field) {
+                        field.check();
+                        logger.log(`[CERFA 1301] ✓ Coché: ${fieldName}`);
+                    }
+                }
+            } catch (e) {
+                logger.log(`[CERFA 1301] ✗ Checkbox non trouvée: ${fieldName}`);
+            }
+        };
+
+        // ===== REMPLISSAGE DES CHAMPS =====
+        // Note: Les noms des champs doivent correspondre au PDF CERFA 1301-SD
+        // Ces noms seront à ajuster après inspection du PDF réel
+
+        // --- IDENTITÉ DU CLIENT / DONNEUR D'ORDRE ---
+        fillTextField('client_nom', data.clientNom || '');
+        fillTextField('client_prenom', data.clientPrenom || '');
+        fillTextField('client_adresse', data.clientAdresse || '');
+        fillTextField('client_code_postal', data.clientCodePostal || '');
+        fillTextField('client_ville', data.clientVille || '');
+
+        // --- ADRESSE DE L'IMMEUBLE / LOCAUX ---
+        fillTextField('immeuble_adresse', data.immeubleAdresse || '');
+        fillTextField('immeuble_code_postal', data.immeubleCodePostal || '');
+        fillTextField('immeuble_ville', data.immeubleVille || '');
+
+        // --- NATURE DES LOCAUX ---
+        checkBox('case_maison', data.natureMaison);
+        checkBox('case_appartement', data.natureAppartement);
+        checkBox('case_autre_local', data.natureAutreLocal);
+        fillTextField('autre_nature', data.autreNatureTexte || '');
+
+        // --- NATURE DES TRAVAUX ---
+        // Travaux d'amélioration, transformation, aménagement, entretien
+        checkBox('case_amelioration', data.travauxAmelioration);
+        checkBox('case_transformation', data.travauxTransformation);
+        checkBox('case_amenagement', data.travauxAmenagement);
+        checkBox('case_entretien', data.travauxEntretien);
+
+        // --- ATTESTATIONS ---
+        // L'immeuble est achevé depuis plus de 2 ans
+        checkBox('case_plus_2_ans', data.immeubleplus2ans !== false); // Par défaut coché
+
+        // Les travaux n'aboutissent pas à la production d'un immeuble neuf
+        checkBox('case_pas_immeuble_neuf', data.pasImmeubleNeuf !== false);
+
+        // Les travaux ne concernent pas plus de 5 des 6 éléments de second œuvre
+        checkBox('case_moins_6_elements', data.moins6Elements !== false);
+
+        // Travaux portant sur des éléments de second œuvre
+        checkBox('case_planchers', data.elemPlanchers);
+        checkBox('case_huisseries', data.elemHuisseries);
+        checkBox('case_cloisons', data.elemCloisons);
+        checkBox('case_installations_sanitaires', data.elemSanitaires);
+        checkBox('case_installations_plomberie', data.elemPlomberie);
+        checkBox('case_installations_electriques', data.elemElectriques);
+        checkBox('case_chauffage', data.elemChauffage);
+
+        // --- ENTREPRISE / PRESTATAIRE ---
+        fillTextField('entreprise_nom', data.entrepriseNom || 'SRP - Services Réparation Plomberie');
+        fillTextField('entreprise_adresse', data.entrepriseAdresse || '');
+        fillTextField('entreprise_siret', data.entrepriseSiret || '');
+
+        // --- DESCRIPTION DES TRAVAUX ---
+        fillTextField('description_travaux', data.descriptionTravaux || '');
+        fillTextField('montant_ht', data.montantHT || '');
+        fillTextField('montant_tva', data.montantTVA || '');
+        fillTextField('montant_ttc', data.montantTTC || '');
+
+        // --- DATE ET SIGNATURE ---
+        const dateAttestation = data.dateAttestation || new Date().toLocaleDateString('fr-FR');
+        fillTextField('date_attestation', dateAttestation);
+        fillTextField('lieu', data.lieu || '');
+
+        // Aplatir le formulaire pour figer les données
+        form.flatten();
+
+        // ===== INTÉGRATION DE LA SIGNATURE CLIENT (après flatten) =====
+        const pages = pdfDoc.getPages();
+        const page = pages[0];
+
+        const embedSignature = async (signatureDataUrl, x, y, maxWidth, maxHeight) => {
+            if (!signatureDataUrl || !signatureDataUrl.startsWith('data:image/png')) {
+                return;
+            }
+            try {
+                const base64Data = signatureDataUrl.split(',')[1];
+                const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                const signatureImage = await pdfDoc.embedPng(imageBytes);
+                const { width: imgWidth, height: imgHeight } = signatureImage;
+                const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                const scaledWidth = imgWidth * scale;
+                const scaledHeight = imgHeight * scale;
+                page.drawImage(signatureImage, {
+                    x: x,
+                    y: y,
+                    width: scaledWidth,
+                    height: scaledHeight,
+                });
+                logger.log(`[CERFA 1301] ✓ Signature intégrée à x=${x}, y=${y}`);
+            } catch (e) {
+                logger.warn('[CERFA 1301] ✗ Erreur intégration signature:', e.message);
+            }
+        };
+
+        // Signature du client (position à ajuster selon le PDF)
+        if (data.signatureClient) {
+            await embedSignature(data.signatureClient, 400, 100, 150, 40);
+        }
+
+        // Générer le PDF
+        const filledPdfBytes = await pdfDoc.save();
+
+        // Créer et retourner le Blob
+        return new Blob([filledPdfBytes], { type: 'application/pdf' });
+    } catch (e) {
+        logger.error('Erreur remplissage CERFA 1301:', e);
+        throw e;
+    }
+};
+
+/**
+ * Prépare les données CERFA 1301 depuis une intervention
+ * @param {Object} intervention - Données de l'intervention
+ * @returns {Object} Données formatées pour CERFA 1301
+ */
+export const prepareCerfa1301DataFromIntervention = (intervention) => {
+    const companyInfo = getCompanyInfo();
+
+    // Parser le nom client
+    const clientParts = (intervention.client || '').split(' ');
+    const clientPrenom = clientParts.shift() || '';
+    const clientNom = clientParts.join(' ') || clientPrenom;
+
+    // Parser l'adresse
+    const addressMatch = (intervention.address || '').match(/^(.+?),?\s*(\d{5})?\s*(.+)?$/);
+
+    return {
+        // Client
+        clientNom: clientNom,
+        clientPrenom: clientPrenom,
+        clientAdresse: addressMatch ? addressMatch[1] : intervention.address || '',
+        clientCodePostal: addressMatch?.[2] || '',
+        clientVille: addressMatch?.[3] || '',
+
+        // Immeuble (même adresse par défaut)
+        immeubleAdresse: addressMatch ? addressMatch[1] : intervention.address || '',
+        immeubleCodePostal: addressMatch?.[2] || '',
+        immeubleVille: addressMatch?.[3] || '',
+
+        // Nature des locaux
+        natureMaison: true,
+        natureAppartement: false,
+        natureAutreLocal: false,
+
+        // Travaux (plomberie par défaut)
+        travauxEntretien: true,
+        elemPlomberie: true,
+        elemSanitaires: true,
+
+        // Attestations obligatoires
+        immeubleplus2ans: true,
+        pasImmeubleNeuf: true,
+        moins6Elements: true,
+
+        // Entreprise
+        entrepriseNom: companyInfo.companyName,
+        entrepriseAdresse: companyInfo.address,
+        entrepriseSiret: companyInfo.siret,
+
+        // Description
+        descriptionTravaux: intervention.description || intervention.notes || '',
+
+        // Date
+        dateAttestation: new Date().toLocaleDateString('fr-FR'),
+        lieu: 'Champtercier',
+
+        // Métadonnées
+        interventionId: intervention.id
     };
 };
