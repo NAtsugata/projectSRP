@@ -189,13 +189,15 @@ export const saveEquipmentInfo = (clientId, info) => {
 /**
  * Inspecte les champs du PDF CERFA pour trouver leurs noms
  * Utile pour le debug/mapping initial
+ * @param {string} pdfAsset - Asset PDF à inspecter (optionnel, défaut: CERFA_PATH)
  * @returns {Promise<Array>} Liste des noms de champs
  */
-export const inspectCerfaFields = async () => {
+export const inspectCerfaFields = async (pdfAsset = null) => {
     try {
-        const response = await fetch(CERFA_PATH);
+        const assetPath = pdfAsset || CERFA_PATH;
+        const response = await fetch(assetPath);
         const pdfBytes = await response.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
         const fields = form.getFields();
 
@@ -205,11 +207,22 @@ export const inspectCerfaFields = async () => {
         }));
 
         logger.log('CERFA Fields:', fieldInfo);
+        console.log('=== CERFA PDF FIELDS ===');
+        fieldInfo.forEach(f => console.log(`${f.type}: "${f.name}"`));
+        console.log('========================');
         return fieldInfo;
     } catch (e) {
         logger.error('Erreur inspection CERFA:', e);
         return [];
     }
+};
+
+/**
+ * Inspecte les champs du CERFA 1301-SD
+ * @returns {Promise<Array>} Liste des noms de champs
+ */
+export const inspectCerfa1301Fields = async () => {
+    return inspectCerfaFields(cerfa1301PdfAsset);
 };
 
 /**
@@ -952,6 +965,17 @@ export const prepareCerfaDataFromContract = (contract, profile = {}) => {
 /**
  * Remplit le CERFA 1301-SD (Attestation simplifiée TVA taux réduit 10%)
  * Ce formulaire atteste que les travaux de rénovation sont éligibles à la TVA à 10%
+ *
+ * Champs du PDF (inspectés):
+ * - a1: Nom client | a2: Prénom | a3: Adresse | a5: CP | a4: Ville
+ * - cac1: Même adresse | a5a: Adresse immeuble (si différente)
+ * - cac2: Attestation propriétaire/locataire
+ * - a6: Nature des travaux | a7, a8, a9: Détails | a10: Autre
+ * - cac3-cac5: Attestations travaux
+ * - cac6-cac10: Éléments second œuvre (planchers, huisseries, etc.)
+ * - cac11-cac15: Autres attestations
+ * - a11: Lieu | a12: Date
+ *
  * @param {Object} data - Données pour remplir le formulaire
  * @returns {Promise<Blob>} PDF rempli en Blob
  */
@@ -1014,68 +1038,91 @@ export const fillCerfa1301 = async (data) => {
         };
 
         // ===== REMPLISSAGE DES CHAMPS =====
-        // Note: Les noms des champs doivent correspondre au PDF CERFA 1301-SD
-        // Ces noms seront à ajuster après inspection du PDF réel
+        // Noms réels des champs du PDF CERFA 1301-SD
 
         // --- IDENTITÉ DU CLIENT / DONNEUR D'ORDRE ---
-        fillTextField('client_nom', data.clientNom || '');
-        fillTextField('client_prenom', data.clientPrenom || '');
-        fillTextField('client_adresse', data.clientAdresse || '');
-        fillTextField('client_code_postal', data.clientCodePostal || '');
-        fillTextField('client_ville', data.clientVille || '');
+        // a1 (y=680, x=78): Nom
+        // a2 (y=680, x=309): Prénom
+        // a3 (y=670, x=90): Adresse
+        // a5 (y=669, x=324): Code postal
+        // a4 (y=669, x=400): Ville
+        fillTextField('a1', data.clientNom || '');
+        fillTextField('a2', data.clientPrenom || '');
+        fillTextField('a3', data.clientAdresse || '');
+        fillTextField('a5', data.clientCodePostal || '');
+        fillTextField('a4', data.clientVille || '');
 
-        // --- ADRESSE DE L'IMMEUBLE / LOCAUX ---
-        fillTextField('immeuble_adresse', data.immeubleAdresse || '');
-        fillTextField('immeuble_code_postal', data.immeubleCodePostal || '');
-        fillTextField('immeuble_ville', data.immeubleVille || '');
+        // --- ADRESSE DE L'IMMEUBLE ---
+        // cac1 (y=621): Case "même adresse"
+        // a5a (y=606): Adresse immeuble si différente
+        if (data.memeAdresse) {
+            checkBox('cac1', true);
+        } else {
+            // Si adresse différente, remplir a5a avec l'adresse complète
+            const immeubleAdresseComplete = [
+                data.immeubleAdresse,
+                data.immeubleCodePostal,
+                data.immeubleVille
+            ].filter(Boolean).join(' ');
+            fillTextField('a5a', immeubleAdresseComplete);
+        }
+
+        // --- ATTESTATION DU STATUT ---
+        // cac2 (y=590): Propriétaire/locataire
+        checkBox('cac2', true); // Par défaut coché
 
         // --- NATURE DES LOCAUX ---
-        checkBox('case_maison', data.natureMaison);
-        checkBox('case_appartement', data.natureAppartement);
-        checkBox('case_autre_local', data.natureAutreLocal);
-        fillTextField('autre_nature', data.autreNatureTexte || '');
+        // a6 (y=567): Nature du local
+        const natureLocal = data.natureMaison ? 'Maison individuelle' :
+                           data.natureAppartement ? 'Appartement' :
+                           data.autreNatureTexte || 'Logement';
+        fillTextField('a6', natureLocal);
 
-        // --- NATURE DES TRAVAUX ---
-        // Travaux d'amélioration, transformation, aménagement, entretien
-        checkBox('case_amelioration', data.travauxAmelioration);
-        checkBox('case_transformation', data.travauxTransformation);
-        checkBox('case_amenagement', data.travauxAmenagement);
-        checkBox('case_entretien', data.travauxEntretien);
+        // --- DÉTAILS DES TRAVAUX ---
+        // a7 (y=534, x=91): Description travaux ligne 1
+        // a8 (y=534, x=293): Description travaux ligne 2
+        // a9 (y=534, x=450): Description travaux ligne 3
+        // a10 (y=524): Détails supplémentaires
+        const descParts = (data.descriptionTravaux || '').split('\n');
+        fillTextField('a7', descParts[0] || '');
+        fillTextField('a8', descParts[1] || '');
+        fillTextField('a9', descParts[2] || '');
+        fillTextField('a10', descParts.slice(3).join(' ') || '');
 
-        // --- ATTESTATIONS ---
-        // L'immeuble est achevé depuis plus de 2 ans
-        checkBox('case_plus_2_ans', data.immeubleplus2ans !== false); // Par défaut coché
+        // --- ATTESTATIONS OBLIGATOIRES ---
+        // cac3 (y=528): Immeuble achevé depuis plus de 2 ans
+        // cac4 (y=478): Les travaux n'aboutissent pas à un immeuble neuf
+        // cac5 (y=458): Pas plus de 5 des 6 éléments
+        checkBox('cac3', data.immeubleplus2ans !== false);
+        checkBox('cac4', data.pasImmeubleNeuf !== false);
+        checkBox('cac5', data.moins6Elements !== false);
 
-        // Les travaux n'aboutissent pas à la production d'un immeuble neuf
-        checkBox('case_pas_immeuble_neuf', data.pasImmeubleNeuf !== false);
+        // --- ÉLÉMENTS DE SECOND ŒUVRE ---
+        // cac6-cac10 sont sur la même ligne (y=437-448)
+        // cac6 (x=274): Planchers non porteurs
+        // cac7 (x=97): Huisseries extérieures
+        // cac8 (x=191): Cloisons intérieures
+        // cac9 (x=278): Installations sanitaires et plomberie
+        // cac10 (x=439): Installations électriques
+        checkBox('cac6', data.elemPlanchers);
+        checkBox('cac7', data.elemHuisseries);
+        checkBox('cac8', data.elemCloisons);
+        checkBox('cac9', data.elemSanitaires || data.elemPlomberie);
+        checkBox('cac10', data.elemElectriques);
 
-        // Les travaux ne concernent pas plus de 5 des 6 éléments de second œuvre
-        checkBox('case_moins_6_elements', data.moins6Elements !== false);
+        // cac11 (y=427): Chauffage
+        // cac12-cac15: Autres attestations
+        checkBox('cac11', data.elemChauffage);
+        checkBox('cac12', data.travauxEntretien);
+        checkBox('cac13', data.travauxAmelioration);
+        checkBox('cac14', data.travauxTransformation);
+        checkBox('cac15', data.travauxAmenagement);
 
-        // Travaux portant sur des éléments de second œuvre
-        checkBox('case_planchers', data.elemPlanchers);
-        checkBox('case_huisseries', data.elemHuisseries);
-        checkBox('case_cloisons', data.elemCloisons);
-        checkBox('case_installations_sanitaires', data.elemSanitaires);
-        checkBox('case_installations_plomberie', data.elemPlomberie);
-        checkBox('case_installations_electriques', data.elemElectriques);
-        checkBox('case_chauffage', data.elemChauffage);
-
-        // --- ENTREPRISE / PRESTATAIRE ---
-        fillTextField('entreprise_nom', data.entrepriseNom || 'SRP - Services Réparation Plomberie');
-        fillTextField('entreprise_adresse', data.entrepriseAdresse || '');
-        fillTextField('entreprise_siret', data.entrepriseSiret || '');
-
-        // --- DESCRIPTION DES TRAVAUX ---
-        fillTextField('description_travaux', data.descriptionTravaux || '');
-        fillTextField('montant_ht', data.montantHT || '');
-        fillTextField('montant_tva', data.montantTVA || '');
-        fillTextField('montant_ttc', data.montantTTC || '');
-
-        // --- DATE ET SIGNATURE ---
-        const dateAttestation = data.dateAttestation || new Date().toLocaleDateString('fr-FR');
-        fillTextField('date_attestation', dateAttestation);
-        fillTextField('lieu', data.lieu || '');
+        // --- DATE ET LIEU ---
+        // a11 (y=160, x=263): Lieu
+        // a12 (y=160, x=370): Date
+        fillTextField('a11', data.lieu || '');
+        fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
 
         // Aplatir le formulaire pour figer les données
         form.flatten();
@@ -1108,9 +1155,9 @@ export const fillCerfa1301 = async (data) => {
             }
         };
 
-        // Signature du client (position à ajuster selon le PDF)
+        // Signature du client (en bas du formulaire, près de a11/a12)
         if (data.signatureClient) {
-            await embedSignature(data.signatureClient, 400, 100, 150, 40);
+            await embedSignature(data.signatureClient, 450, 140, 120, 35);
         }
 
         // Générer le PDF
