@@ -29,17 +29,24 @@ export const createAbsence = async (absence) => {
 
     if (error) {
       logger.error('❌ Erreur création absence:', error);
+      logger.error('Code erreur:', error.code, 'Message:', error.message, 'Details:', error.details);
 
       // Fallback localStorage si table n'existe pas
-      if (error.code === '42P01') {
+      if (error.code === '42P01' || error.code === 'PGRST116') {
         logger.warn('⚠️ Table absences non trouvée, utilisation localStorage');
         return createAbsenceFallback(absence);
+      }
+
+      // Erreur de contrainte unique (si elle existe)
+      if (error.code === '23505') {
+        logger.error('⚠️ Contrainte unique violée - une absence similaire existe déjà');
+        return { data: null, error: { message: 'Une absence similaire existe déjà pour cet employé' } };
       }
 
       throw error;
     }
 
-    logger.log('✅ Absence créée avec succès');
+    logger.log('✅ Absence créée avec succès, data:', data);
     return { data, error: null };
 
   } catch (error) {
@@ -181,19 +188,37 @@ export const getAbsentEmployees = async (date) => {
 // (Utilisé si la table n'existe pas encore dans Supabase)
 
 const createAbsenceFallback = (absence) => {
-  const absences = safeStorage.getJSON(STORAGE_KEY, []);
-  const newAbsence = {
-    id: `absence-${Date.now()}`,
-    employee_id: absence.employeeId,
-    start_date: absence.startDate,
-    end_date: absence.endDate,
-    reason: absence.reason,
-    notes: absence.notes,
-    created_at: new Date().toISOString()
-  };
-  absences.push(newAbsence);
-  safeStorage.setJSON(STORAGE_KEY, absences);
-  return { data: [newAbsence], error: null };
+  try {
+    const absences = safeStorage.getJSON(STORAGE_KEY, []);
+    logger.log('📦 Fallback localStorage - absences existantes:', absences.length);
+
+    // Générer un ID unique avec timestamp + random pour éviter les collisions
+    const uniqueId = `absence-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const newAbsence = {
+      id: uniqueId,
+      employee_id: absence.employeeId,
+      start_date: absence.startDate,
+      end_date: absence.endDate,
+      reason: absence.reason,
+      notes: absence.notes,
+      created_at: new Date().toISOString()
+    };
+
+    absences.push(newAbsence);
+    const saved = safeStorage.setJSON(STORAGE_KEY, absences);
+
+    if (!saved) {
+      logger.error('❌ Fallback: échec sauvegarde localStorage');
+      return { data: null, error: { message: 'Erreur sauvegarde localStorage' } };
+    }
+
+    logger.log('✅ Fallback: absence sauvegardée, total:', absences.length);
+    return { data: [newAbsence], error: null };
+  } catch (error) {
+    logger.error('❌ Fallback: erreur création absence:', error);
+    return { data: null, error };
+  }
 };
 
 const getAllAbsencesFallback = () => {
