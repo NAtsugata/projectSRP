@@ -1124,44 +1124,37 @@ export const fillCerfa1301 = async (data) => {
         fillTextField('a11', data.lieu || '');
         fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
 
-        // Aplatir le formulaire pour figer les données
-        form.flatten();
-
-        // ===== INTÉGRATION DE LA SIGNATURE CLIENT (après flatten) =====
+        // ===== CRÉATION DU CHAMP SIGNATURE INTERACTIF (AVANT flatten) =====
+        // Créer un champ bouton pour la signature, 10 pixels en dessous de a11 (y=160-10=150)
         const pages = pdfDoc.getPages();
         const page = pages[0];
 
-        const embedSignature = async (signatureDataUrl, x, y, maxWidth, maxHeight) => {
-            if (!signatureDataUrl || !signatureDataUrl.startsWith('data:image/png')) {
-                return;
-            }
+        if (data.signatureClient && data.signatureClient.startsWith('data:image/png')) {
             try {
-                const base64Data = signatureDataUrl.split(',')[1];
+                // Créer un bouton interactif pour la signature
+                const signatureButton = form.createButton('signature_client');
+                signatureButton.addToPage(page, {
+                    x: 440,      // À droite de la date
+                    y: 150,      // 10 pixels en dessous de a11 (y=160)
+                    width: 140,
+                    height: 45,
+                    borderWidth: 0,
+                });
+
+                // Intégrer l'image de signature dans le bouton
+                const base64Data = data.signatureClient.split(',')[1];
                 const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
                 const signatureImage = await pdfDoc.embedPng(imageBytes);
-                const { width: imgWidth, height: imgHeight } = signatureImage;
-                const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-                const scaledWidth = imgWidth * scale;
-                const scaledHeight = imgHeight * scale;
-                page.drawImage(signatureImage, {
-                    x: x,
-                    y: y,
-                    width: scaledWidth,
-                    height: scaledHeight,
-                });
-                logger.log(`[CERFA 1301] ✓ Signature intégrée à x=${x}, y=${y}`);
-            } catch (e) {
-                logger.warn('[CERFA 1301] ✗ Erreur intégration signature:', e.message);
-            }
-        };
+                signatureButton.setImage(signatureImage);
 
-        // Signature du client (en bas du formulaire, à droite de la date)
-        // a11 (Lieu) est à x=263, a12 (Date) est à x=370, les deux à y=160
-        // La signature doit être placée à droite, vers y=120-180 pour être visible
-        if (data.signatureClient) {
-            // Position: à droite de la date (x=440), même hauteur (y=145), taille généreuse
-            await embedSignature(data.signatureClient, 440, 115, 140, 50);
+                logger.log('[CERFA 1301] ✓ Champ signature interactif créé à y=150');
+            } catch (e) {
+                logger.warn('[CERFA 1301] ✗ Erreur création champ signature:', e.message);
+            }
         }
+
+        // Aplatir le formulaire pour figer les données (y compris la signature)
+        form.flatten();
 
         // Générer le PDF
         const filledPdfBytes = await pdfDoc.save();
