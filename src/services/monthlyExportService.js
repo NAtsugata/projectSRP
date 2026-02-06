@@ -199,6 +199,11 @@ export async function getMonthlyExportData(year, month) {
         const baseHours = workedDays * HEURES_PAR_JOUR;
         const heuresSupp = Math.max(0, Math.round((totalHoursReal - baseHours) * 100) / 100);
 
+        // Heures affichées : base (35h/sem) sauf si heures supplémentaires
+        // Si l'employé a fait des heures supp → on affiche les heures réelles
+        // Sinon → on affiche les heures base (7h × jours travaillés)
+        const totalHours = heuresSupp > 0 ? totalHoursReal : baseHours;
+
         // Kilomètres totaux et calcul zones par intervention
         let totalKm = 0;
         const interventionDetails = [];
@@ -326,7 +331,7 @@ export async function getMonthlyExportData(year, month) {
           // Jours et heures
           workedDays,
           workedDates: Array.from(workedDatesSet).sort(),
-          totalHours: totalHoursReal,
+          totalHours,  // = baseHours sauf si heures supp
           baseHours,
           heuresSupp,
 
