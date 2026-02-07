@@ -94,7 +94,16 @@ const checklistService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { data, error: null };
+
+      // Parser les items JSON si nécessaire
+      const parsedData = (data || []).map(template => ({
+        ...template,
+        items: typeof template.items === 'string'
+          ? JSON.parse(template.items)
+          : (template.items || [])
+      }));
+
+      return { data: parsedData, error: null };
     } catch (error) {
       logger.error('❌ Erreur getAllTemplates:', error);
       return { data: null, error };
