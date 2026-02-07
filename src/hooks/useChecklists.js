@@ -32,6 +32,7 @@ export function useChecklists(userId = null) {
         data: templates = [],
         isLoading: templatesLoading,
         error: templatesError,
+        refetch: refetchTemplates,
     } = useQuery({
         queryKey: ['checklistTemplates'],
         queryFn: async () => {
@@ -102,6 +103,7 @@ export function useChecklists(userId = null) {
         createTemplate: createTemplateMutation.mutate,
         updateTemplate: updateTemplateMutation.mutate,
         deleteTemplate: deleteTemplateMutation.mutate,
+        refetchTemplates,
 
         // États des mutations
         isUpdating: updateMutation.isPending,

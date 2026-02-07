@@ -8,9 +8,28 @@ import {
 } from '../components/SharedUI';
 import logger from '../utils/logger';
 
-export default function AdminChecklistTemplatesView({ templates = [], onCreateTemplate, onUpdateTemplate, onDeleteTemplate }) {
+export default function AdminChecklistTemplatesView({ templates = [], onCreateTemplate, onUpdateTemplate, onDeleteTemplate, onImportPredefined }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Importer les templates prédéfinis
+  const handleImportPredefined = async () => {
+    if (!onImportPredefined) return;
+
+    setIsImporting(true);
+    try {
+      const result = await onImportPredefined();
+      if (result) {
+        alert(`Import terminé !\n✅ ${result.imported} templates importés\n⏭️ ${result.skipped} templates déjà existants`);
+      }
+    } catch (error) {
+      logger.error('Erreur import:', error);
+      alert('Erreur lors de l\'import');
+    } finally {
+      setIsImporting(false);
+    }
+  };
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -228,15 +247,27 @@ export default function AdminChecklistTemplatesView({ templates = [], onCreateTe
 
       <h2 className="view-title">📋 Templates de Checklist</h2>
 
-      {/* Bouton créer */}
+      {/* Boutons actions */}
       {!isCreating && (
-        <button
-          className="btn btn-primary w-full"
-          onClick={() => setIsCreating(true)}
-          style={{ marginBottom: '1.5rem' }}
-        >
-          <PlusIcon /> Nouveau Template
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setIsCreating(true)}
+            style={{ flex: 1 }}
+          >
+            <PlusIcon /> Nouveau Template
+          </button>
+          {onImportPredefined && (
+            <button
+              className="btn btn-secondary"
+              onClick={handleImportPredefined}
+              disabled={isImporting}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {isImporting ? '⏳ Import...' : '📥 Importer les templates métier'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Formulaire création/édition */}

@@ -10,8 +10,78 @@ import logger from '../utils/logger';
  * - checklists: Instances assignées aux employés
  */
 
+// Import des templates prédéfinis
+import { CHECKLIST_TEMPLATES } from '../config/checklistTemplates';
+
 const checklistService = {
   // ==================== TEMPLATES ====================
+
+  /**
+   * Récupérer les templates prédéfinis (depuis le fichier config)
+   */
+  getPredefinedTemplates() {
+    return Object.values(CHECKLIST_TEMPLATES).map(template => {
+      // Convertir le format sections/items vers le format items plat
+      const items = [];
+      template.sections.forEach(section => {
+        section.items.forEach(item => {
+          items.push({
+            id: item.id,
+            text: item.label,
+            required: false,
+            photoRequired: false,
+            category: section.title
+          });
+        });
+      });
+
+      return {
+        configId: template.id,
+        name: template.title,
+        description: `Template prédéfini - ${template.sections.length} sections`,
+        category: 'installation',
+        items
+      };
+    });
+  },
+
+  /**
+   * Importer les templates prédéfinis dans la base de données
+   */
+  async importPredefinedTemplates() {
+    try {
+      const predefinedTemplates = this.getPredefinedTemplates();
+
+      // Récupérer les templates existants pour éviter les doublons
+      const { data: existingTemplates } = await this.getAllTemplates();
+      const existingNames = (existingTemplates || []).map(t => t.name);
+
+      const templatesToImport = predefinedTemplates.filter(
+        t => !existingNames.includes(t.name)
+      );
+
+      if (templatesToImport.length === 0) {
+        return { data: [], imported: 0, skipped: predefinedTemplates.length, error: null };
+      }
+
+      const results = [];
+      for (const template of templatesToImport) {
+        const { data, error } = await this.createTemplate(template);
+        if (data) results.push(data);
+        if (error) console.error('Erreur import template:', template.name, error);
+      }
+
+      return {
+        data: results,
+        imported: results.length,
+        skipped: predefinedTemplates.length - templatesToImport.length,
+        error: null
+      };
+    } catch (error) {
+      console.error('❌ Erreur importPredefinedTemplates:', error);
+      return { data: null, imported: 0, skipped: 0, error };
+    }
+  },
 
   /**
    * Récupérer tous les templates (admin)
