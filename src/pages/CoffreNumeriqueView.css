@@ -431,6 +431,156 @@
   background: var(--vault-gray-light);
 }
 
+/* ==================== SELECTION BAR ==================== */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--vault-copper);
+  color: var(--vault-white);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.selection-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.selection-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.selection-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.selection-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.selection-btn-download {
+  background: var(--vault-white);
+  color: var(--vault-black);
+}
+
+.selection-btn-download:hover:not(:disabled) {
+  background: var(--vault-gray-light);
+}
+
+.selection-btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.selection-btn-clear {
+  background: transparent;
+  color: var(--vault-white);
+  border: 1px solid var(--vault-white);
+}
+
+.selection-btn-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Select all button */
+.select-all-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: var(--vault-white);
+  color: var(--vault-black);
+  border: 1px solid var(--vault-black);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.select-all-btn:hover {
+  background: var(--vault-gray-light);
+}
+
+/* ==================== CHECKBOX ==================== */
+.doc-checkbox-wrapper {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.doc-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.doc-checkbox-custom {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--vault-white);
+  border: 2px solid var(--vault-gray);
+  transition: all 0.15s ease;
+}
+
+.doc-checkbox:checked + .doc-checkbox-custom {
+  background: var(--vault-copper);
+  border-color: var(--vault-copper);
+}
+
+.doc-checkbox:checked + .doc-checkbox-custom::after {
+  content: '';
+  display: block;
+  width: 0.375rem;
+  height: 0.625rem;
+  border: solid var(--vault-white);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin: 0.125rem auto 0;
+}
+
+.doc-checkbox-wrapper:hover .doc-checkbox-custom {
+  border-color: var(--vault-copper);
+}
+
+/* Document card selected state */
+.document-card {
+  position: relative;
+}
+
+.document-card.selected {
+  border-color: var(--vault-copper);
+  border-width: 2px;
+  background: var(--vault-gray-light);
+}
+
+.document-card.selected .document-preview {
+  background: var(--vault-copper-light);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .coffre-view {

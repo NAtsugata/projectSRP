@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   DownloadIcon,
   SearchIcon,
   FilterIcon,
   CalendarIcon,
   ExternalLinkIcon,
-  FolderIcon
+  FolderIcon,
+  CheckCircleIcon
 } from '../components/SharedUI';
 import './CoffreNumeriqueView.css';
 import logger from '../utils/logger';
@@ -97,13 +98,14 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
+  const [selectedDocs, setSelectedDocs] = useState(new Set());
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Enrichir les documents avec catégorie et métadonnées
   const enrichedDocuments = useMemo(() => {
     try {
       return vaultDocuments.map(doc => ({
         ...doc,
-        // Garantir que toutes les propriétés existent avec des valeurs par défaut
         file_size: doc.file_size || null,
         description: doc.description || '',
         tags: Array.isArray(doc.tags) ? doc.tags : [],
@@ -129,7 +131,7 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     }
   }, [enrichedDocuments]);
 
-  // Liste des périodes uniques (mois/année) - VERSION SIMPLIFIÉE
+  // Liste des périodes uniques
   const periods = useMemo(() => {
     try {
       const periodSet = new Set(enrichedDocuments.map(d => d.period.monthName).filter(p => p !== 'Inconnu'));
@@ -166,7 +168,6 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     try {
       let filtered = enrichedDocuments;
 
-      // Filtrer par recherche (nom, description, tags)
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         filtered = filtered.filter(doc =>
@@ -177,17 +178,14 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
         );
       }
 
-      // Filtrer par catégorie
       if (selectedCategory !== 'all') {
         filtered = filtered.filter(doc => doc.category === selectedCategory);
       }
 
-      // Filtrer par période
       if (selectedPeriod !== 'all') {
         filtered = filtered.filter(doc => doc.period.monthName === selectedPeriod);
       }
 
-      // Trier
       const sorted = [...filtered];
       switch (sortBy) {
         case 'date-desc':
@@ -229,6 +227,68 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     }
   }, [filteredAndSortedDocuments]);
 
+  // Toggle sélection d'un document
+  const toggleDocSelection = useCallback((docId) => {
+    setSelectedDocs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Sélectionner/Désélectionner tout
+  const toggleSelectAll = useCallback(() => {
+    if (selectedDocs.size === filteredAndSortedDocuments.length) {
+      setSelectedDocs(new Set());
+    } else {
+      setSelectedDocs(new Set(filteredAndSortedDocuments.map(d => d.id)));
+    }
+  }, [filteredAndSortedDocuments, selectedDocs.size]);
+
+  // Effacer la sélection
+  const clearSelection = useCallback(() => {
+    setSelectedDocs(new Set());
+  }, []);
+
+  // Télécharger les documents sélectionnés
+  const downloadSelected = useCallback(async () => {
+    if (selectedDocs.size === 0) return;
+
+    setIsDownloading(true);
+    const docsToDownload = enrichedDocuments.filter(d => selectedDocs.has(d.id));
+
+    try {
+      // Télécharger chaque fichier avec un délai
+      for (let i = 0; i < docsToDownload.length; i++) {
+        const doc = docsToDownload[i];
+
+        // Créer un lien temporaire et cliquer dessus
+        const link = document.createElement('a');
+        link.href = doc.file_url;
+        link.download = doc.file_name || 'document';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Petit délai entre chaque téléchargement pour éviter les blocages
+        if (i < docsToDownload.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      logger.log(`${docsToDownload.length} document(s) téléchargé(s)`);
+    } catch (error) {
+      logger.error('Erreur lors du téléchargement:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [selectedDocs, enrichedDocuments]);
+
   return (
     <div className="coffre-view">
       <div className="coffre-header">
@@ -254,7 +314,7 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
           </div>
           <div className="stat-card stat-card-favorite">
             <span className="stat-number">{favoritesCount}</span>
-            <span className="stat-label">Favoris ⭐</span>
+            <span className="stat-label">Favoris</span>
           </div>
         </div>
       </div>
@@ -267,6 +327,32 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
         </div>
       ) : (
         <>
+          {/* Barre de sélection */}
+          {selectedDocs.size > 0 && (
+            <div className="selection-bar">
+              <div className="selection-info">
+                <CheckCircleIcon className="selection-icon" />
+                <span>{selectedDocs.size} document{selectedDocs.size > 1 ? 's' : ''} sélectionné{selectedDocs.size > 1 ? 's' : ''}</span>
+              </div>
+              <div className="selection-actions">
+                <button
+                  className="selection-btn selection-btn-download"
+                  onClick={downloadSelected}
+                  disabled={isDownloading}
+                >
+                  <DownloadIcon />
+                  {isDownloading ? 'Téléchargement...' : 'Télécharger la sélection'}
+                </button>
+                <button
+                  className="selection-btn selection-btn-clear"
+                  onClick={clearSelection}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Barre de recherche et filtres */}
           <div className="coffre-controls">
             <div className="search-box">
@@ -281,6 +367,16 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
             </div>
 
             <div className="filters">
+              {/* Bouton sélectionner tout */}
+              <button
+                className="select-all-btn"
+                onClick={toggleSelectAll}
+              >
+                {selectedDocs.size === filteredAndSortedDocuments.length && filteredAndSortedDocuments.length > 0
+                  ? 'Tout désélectionner'
+                  : 'Tout sélectionner'}
+              </button>
+
               <div className="filter-group">
                 <FilterIcon className="filter-icon" />
                 <select
@@ -349,7 +445,21 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
 
                   <div className="documents-grid">
                     {docs.map(doc => (
-                      <div key={doc.id} className={`document-card ${doc.is_favorite ? 'favorite' : ''}`}>
+                      <div
+                        key={doc.id}
+                        className={`document-card ${doc.is_favorite ? 'favorite' : ''} ${selectedDocs.has(doc.id) ? 'selected' : ''}`}
+                      >
+                        {/* Checkbox de sélection */}
+                        <label className="doc-checkbox-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={selectedDocs.has(doc.id)}
+                            onChange={() => toggleDocSelection(doc.id)}
+                            className="doc-checkbox"
+                          />
+                          <span className="doc-checkbox-custom"></span>
+                        </label>
+
                         <div className="document-preview">
                           <span className="file-icon">{doc.icon}</span>
                           <span className="file-ext">{doc.fileExt}</span>
