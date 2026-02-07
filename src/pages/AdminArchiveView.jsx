@@ -15,6 +15,7 @@ export default function AdminArchiveView({
   onRestore
 }) {
   const [exportingId, setExportingId] = useState(null);
+  const [isBulkExporting, setIsBulkExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMonth, setFilterMonth] = useState('all');
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -174,6 +175,159 @@ export default function AdminArchiveView({
       }
     });
   }, [selectedIds, showConfirmationModal, onRestore, showToast]);
+
+  // Export en masse
+  const handleBulkExport = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedArchives = filteredArchives.filter(a => selectedIds.has(a.id));
+    if (selectedArchives.length === 0) return;
+
+    setIsBulkExporting(true);
+    showToast(`Export de ${selectedArchives.length} archive(s) en cours...`);
+
+    let successCount = 0;
+    for (const intervention of selectedArchives) {
+      try {
+        await handleExportSingle(intervention);
+        successCount++;
+        // Petit délai entre chaque export pour éviter les problèmes
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Erreur export ${intervention.id}:`, error);
+      }
+    }
+
+    setIsBulkExporting(false);
+    showToast(`${successCount}/${selectedArchives.length} archive(s) exportée(s)`, 'success');
+  }, [selectedIds, filteredArchives, showToast]);
+
+  // Export ZIP (version interne sans toast de fin)
+  const handleExportSingle = async (intervention) => {
+    if (typeof window.jspdf === 'undefined' || typeof window.JSZip === 'undefined') {
+      throw new Error("Librairies d'exportation manquantes");
+    }
+
+    const isDataUrl = (u) => typeof u === 'string' && u.startsWith('data:');
+    const safeName = (name) => {
+      const base = (name || 'fichier').split('?')[0].replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-120);
+      return base || 'fichier';
+    };
+    const uniquify = (() => {
+      const seen = new Map();
+      return (name) => {
+        const base = safeName(name);
+        const count = seen.get(base) || 0;
+        seen.set(base, count + 1);
+        if (count === 0) return base;
+        const dot = base.lastIndexOf('.');
+        return dot > 0 ? `${base.slice(0, dot)}_${count}${base.slice(dot)}` : `${base}_${count}`;
+      };
+    })();
+    const extractUrl = (item) => {
+      if (!item) return null;
+      if (typeof item === 'string') return item;
+      return item.url || item.file_url || item.path || null;
+    };
+    const isImg = (u) => typeof u === 'string' && (u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u));
+
+    const getFileContent = async (urlOrData, fallbackName = 'fichier') => {
+      if (!urlOrData) return null;
+      if (isDataUrl(urlOrData)) {
+        try {
+          const [, meta, data] = urlOrData.match(/^data:([^;]+);base64,(.+)$/) || [];
+          if (!data) throw new Error('Data URL invalide');
+          const mime = meta || 'application/octet-stream';
+          return { isBase64: true, base64Data: data, mime, name: uniquify(fallbackName) };
+        } catch (e) {
+          return null;
+        }
+      }
+      try {
+        const res = await fetch(urlOrData, { method: 'GET', cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const name = uniquify(urlOrData.split('/').pop() || fallbackName);
+        return { blob, name };
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const { jsPDF } = window.jspdf;
+    const JSZip = window.JSZip;
+    const doc = new jsPDF();
+
+    const title = `Rapport d'intervention - ${intervention.client || ''}`;
+    doc.setFontSize(14);
+    doc.text(title, 10, 10);
+    doc.setFontSize(11);
+    doc.text('Date: ' + (intervention.date || ''), 10, 20);
+    doc.text('Service: ' + (intervention.service || ''), 10, 27);
+    if (intervention.address) {
+      doc.text('Adresse: ' + intervention.address, 10, 34);
+    }
+
+    let y = intervention.address ? 44 : 36;
+    doc.text('Notes:', 10, y);
+    y += 6;
+    const notes = doc.splitTextToSize(intervention.report?.notes || 'Aucune', 180);
+    doc.text(notes, 10, y);
+    y += notes.length * 6 + 2;
+
+    if (intervention.report?.signature && isDataUrl(intervention.report.signature)) {
+      if (y > 200) { doc.addPage(); y = 10; }
+      doc.text('Signature du client', 10, y);
+      const sigMime = (intervention.report.signature.split(';')[0] || 'image/png').replace('data:', '');
+      const fmt = /jpeg|jpg/i.test(sigMime) ? 'JPEG' : 'PNG';
+      doc.addImage(intervention.report.signature, fmt, 10, y + 5, 180, 80);
+    }
+
+    const zip = new JSZip();
+    zip.file('Rapport.pdf', doc.output('blob'));
+
+    const tasks = [];
+
+    // Documents de préparation
+    const briefingFolder = zip.folder('documents_preparation');
+    if (Array.isArray(intervention.intervention_briefing_documents)) {
+      for (const d of intervention.intervention_briefing_documents) {
+        const name = d?.file_name || 'document';
+        const url = d?.file_url;
+        tasks.push((async () => {
+          const file = await getFileContent(url, name);
+          if (!file) return;
+          if (file.isBase64) briefingFolder.file(file.name, file.base64Data, { base64: true });
+          else briefingFolder.file(file.name, file.blob);
+        })());
+      }
+    }
+
+    // Photos chantier
+    const photosFolder = zip.folder('photos_chantier');
+    const reportImages = Array.isArray(intervention?.report?.files)
+      ? intervention.report.files.map(extractUrl).filter(u => u && isImg(u))
+      : [];
+    for (const imageUrl of reportImages) {
+      const fallbackName = (typeof imageUrl === 'string' && imageUrl.split('/').pop()) || 'photo.jpg';
+      tasks.push((async () => {
+        const file = await getFileContent(imageUrl, fallbackName);
+        if (!file) return;
+        if (file.isBase64) photosFolder.file(file.name, file.base64Data, { base64: true });
+        else photosFolder.file(file.name, file.blob);
+      })());
+    }
+
+    await Promise.all(tasks);
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = `Archive-${safeName(intervention.client || 'Intervention')}-${intervention.date || intervention.id}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
 
   // Export ZIP
   const handleExport = async (intervention) => {
@@ -455,6 +609,13 @@ export default function AdminArchiveView({
             {selectedIds.size} archive(s) sélectionnée(s)
           </span>
           <div className="archive-selection-actions">
+            <button
+              className="archive-selection-btn"
+              onClick={handleBulkExport}
+              disabled={isBulkExporting}
+            >
+              {isBulkExporting ? 'Export...' : 'Exporter'}
+            </button>
             {onRestore && (
               <button className="archive-selection-btn" onClick={handleBulkRestore}>
                 Restaurer
