@@ -106,8 +106,8 @@ export const useDocumentDetection = (options = {}) => {
     stableCornerRef.current = null;
     noDetectionCountRef.current = 0;
 
-    // Intervalle adapté : YOLO est plus lent, augmenter l'intervalle
-    const actualInterval = isYoloReady() ? Math.max(interval, 300) : interval;
+    // Intervalle adapté : résolution 800px = plus de temps nécessaire
+    const actualInterval = isYoloReady() ? Math.max(interval, 350) : Math.max(interval, 200);
 
     const detectLive = async () => {
       if (isDetectingRef.current) return;
@@ -122,7 +122,8 @@ export const useDocumentDetection = (options = {}) => {
       isDetectingRef.current = true;
 
       try {
-        const processWidth = 500;
+        // Résolution augmentée pour meilleure détection (800px au lieu de 500px)
+        const processWidth = 800;
         const scale = video.videoWidth / processWidth;
         const processHeight = Math.round(video.videoHeight / scale);
 
@@ -235,10 +236,10 @@ export const useDocumentDetection = (options = {}) => {
       }));
 
       overlayCtx.beginPath();
-      overlayCtx.strokeStyle = '#10b981';
-      overlayCtx.lineWidth = 3;
-      overlayCtx.shadowColor = '#10b981';
-      overlayCtx.shadowBlur = 15;
+      overlayCtx.strokeStyle = '#b87333';
+      overlayCtx.lineWidth = 4;
+      overlayCtx.shadowColor = '#b87333';
+      overlayCtx.shadowBlur = 20;
       overlayCtx.moveTo(displayCorners[0].x, displayCorners[0].y);
       for (let i = 1; i < 4; i++) {
         overlayCtx.lineTo(displayCorners[i].x, displayCorners[i].y);
@@ -249,12 +250,12 @@ export const useDocumentDetection = (options = {}) => {
       overlayCtx.shadowBlur = 0;
       displayCorners.forEach(p => {
         overlayCtx.beginPath();
-        overlayCtx.fillStyle = '#10b981';
-        overlayCtx.arc(p.x, p.y, 12, 0, 2 * Math.PI);
+        overlayCtx.fillStyle = '#b87333';
+        overlayCtx.arc(p.x, p.y, 14, 0, 2 * Math.PI);
         overlayCtx.fill();
         overlayCtx.beginPath();
         overlayCtx.fillStyle = '#ffffff';
-        overlayCtx.arc(p.x, p.y, 6, 0, 2 * Math.PI);
+        overlayCtx.arc(p.x, p.y, 7, 0, 2 * Math.PI);
         overlayCtx.fill();
       });
     };
