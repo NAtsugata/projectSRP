@@ -1,5 +1,5 @@
-// src/pages/DocumentScannerView.js
-// Scanner de documents style ClearScanner - Interface moderne et épurée
+// src/pages/DocumentScannerView.jsx
+// Scanner de documents - Design moderne blanc/noir/cuivre
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   CameraIcon,
@@ -7,8 +7,7 @@ import {
   XCircleIcon,
   ChevronLeftIcon,
   RotateCwIcon,
-  DownloadIcon,
-  FileIcon
+  DownloadIcon
 } from '../components/SharedUI';
 import { createAndDownloadPdf, downloadImagesAsZip } from '../utils/pdfGenerator';
 import {
@@ -18,24 +17,32 @@ import {
   isOpenCvReady,
   applyPerspectiveTransform
 } from '../utils/documentScanner';
-import { preloadOpenCV } from '../utils/jscanifyDetector'; // AJOUT: Import preloadOpenCV
+import { preloadOpenCV } from '../utils/jscanifyDetector';
 import { useDocumentDetection } from '../hooks/useDocumentDetection';
 import { useCornerDrag } from '../hooks/useCornerDrag';
 import logger from '../utils/logger';
 import '../components/scanner/ScannerStyles.css';
+
+// Filtres disponibles
+const FILTERS = [
+  { id: 'bw', label: 'Document', icon: '📄', desc: 'Noir & Blanc optimisé' },
+  { id: 'original', label: 'Original', icon: '🖼️', desc: 'Sans modification' },
+  { id: 'gray', label: 'Gris', icon: '⬜', desc: 'Niveaux de gris' },
+  { id: 'color', label: 'Couleur+', icon: '🎨', desc: 'Couleurs améliorées' }
+];
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [mode, setMode] = useState('capture'); // capture, scanning, adjust, preview, export
   const [isProcessing, setIsProcessing] = useState(false);
-  const [enhanceMode, setEnhanceMode] = useState('original');
+  const [enhanceMode, setEnhanceMode] = useState('bw'); // B&W par défaut pour les documents
   const [scanProgress, setScanProgress] = useState(0);
   const [corners, setCorners] = useState(null);
   const [originalImage, setOriginalImage] = useState(null);
   const [stream, setStream] = useState(null);
   const [cvReady, setCvReady] = useState(false);
-  const [exportFormat, setExportFormat] = useState('pdf'); // pdf, images, cloud
+  const [exportFormat, setExportFormat] = useState('pdf');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -45,11 +52,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Hooks personnalisés
   const {
-    detectorType,
-    yoloModelLoaded,
     liveCorners,
     detectionConfidence,
-    setDetectorType,
     detectDocument,
     startLiveDetection,
     stopLiveDetection
@@ -83,25 +87,20 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [originalImage]);
 
-  // Charger et vérifier OpenCV
+  // Charger OpenCV
   useEffect(() => {
-    logger.log('[OpenCV] Lancement du préchargement...');
-
-    // Lancer le chargement d'OpenCV
     preloadOpenCV()
       .then(() => {
-        logger.log('[OpenCV] Chargé avec succès !');
+        logger.log('[OpenCV] Chargé avec succès');
         setCvReady(true);
       })
       .catch((err) => {
-        logger.error('[OpenCV] Erreur de chargement:', err);
+        logger.error('[OpenCV] Erreur:', err);
       });
 
-    // Vérification de backup au cas où
     const checkCv = setInterval(() => {
       if (isOpenCvReady()) {
         setCvReady(true);
-        logger.log('[OpenCV] Détecté via polling');
         clearInterval(checkCv);
       }
     }, 1000);
@@ -111,7 +110,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Détection en temps réel
   useEffect(() => {
-    // Ne rien faire si : pas en mode capture, pas de stream, ou OpenCV pas prêt
     if (mode !== 'capture' || !stream || !videoRef.current || !overlayCanvasRef.current || !cvReady) {
       stopLiveDetection();
       return;
@@ -121,18 +119,15 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
     const start = () => {
       if (video.readyState >= 2) {
-        // S'assurer que le canvas overlay a la même taille que la vidéo
         if (overlayCanvasRef.current) {
           overlayCanvasRef.current.width = video.videoWidth;
           overlayCanvasRef.current.height = video.videoHeight;
         }
-        logger.log('[LIVE DETECTION] Démarrage détection (interval: 150ms)');
         startLiveDetection(videoRef, overlayCanvasRef, 150);
       }
     };
 
     video.addEventListener('loadeddata', start);
-    // Cas où la vidéo est déjà chargée
     if (video.readyState >= 2) start();
 
     return () => {
@@ -154,7 +149,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setStream(mediaStream);
     } catch (error) {
       logger.error('Erreur caméra:', error);
-      alert('Impossible d\'accéder à la caméra');
+      alert("Impossible d'accéder à la caméra");
     }
   }, []);
 
@@ -182,17 +177,17 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setScanProgress(0);
     stopCamera();
 
-    // Animation de scan
+    // Animation de scan rapide
     await new Promise((resolve) => {
       let progress = 0;
       const interval = setInterval(() => {
-        progress += 5;
+        progress += 8;
         setScanProgress(progress);
         if (progress >= 100) {
           clearInterval(interval);
           resolve();
         }
-      }, 20);
+      }, 15);
     });
 
     setIsProcessing(true);
@@ -201,16 +196,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
       setOriginalImage(imgUrl);
 
-      // TOUJOURS relancer la détection sur l'image capturée
-      // (plus précis car haute résolution + pas de mouvement)
-      logger.log('[CAPTURE] Détection précise sur image HD...');
-
       if (!isOpenCvReady()) {
-        logger.log('Waiting for OpenCV...');
         await new Promise(r => setTimeout(r, 500));
       }
 
-      // Détection sur image plus grande (1000px) pour plus de précision
+      // Détection sur image HD
       const detectionWidth = 1000;
       const scaleFactor = canvas.width / detectionWidth;
       const detectionHeight = Math.round(canvas.height / scaleFactor);
@@ -231,7 +221,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
           x: (point.x / detectionWidth) * 100,
           y: (point.y / detectionHeight) * 100
         }));
-        logger.log('[CAPTURE] Coins détectés avec précision');
       }
 
       setCorners(cornersData || [
@@ -244,7 +233,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setMode('adjust');
 
     } catch (error) {
-      logger.error('Erreur capture/détection:', error);
+      logger.error('Erreur capture:', error);
       setCorners([
         { x: 10, y: 10 },
         { x: 90, y: 10 },
@@ -257,8 +246,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stopCamera, detectDocument]);
 
-  // Appliquer un mode d'amélioration
-  const applyEnhanceMode = useCallback((targetMode) => {
+  // Appliquer un filtre
+  const applyFilter = useCallback((filterId) => {
     if (!currentDoc || !canvasRef.current) return;
 
     setIsProcessing(true);
@@ -273,7 +262,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      switch (targetMode) {
+      switch (filterId) {
         case 'bw':
           imageData = enhanceBlackAndWhite(imageData);
           break;
@@ -295,9 +284,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
           ...prev,
           url,
           blob,
-          enhanceMode: targetMode
+          enhanceMode: filterId
         }));
-        setEnhanceMode(targetMode);
+        setEnhanceMode(filterId);
         setIsProcessing(false);
       }, 'image/jpeg', 0.92);
     };
@@ -305,114 +294,81 @@ export default function DocumentScannerView({ onSave, onClose }) {
     img.src = currentDoc.originalUrl || currentDoc.url;
   }, [currentDoc]);
 
-  // Valider l'ajustement
+  // Valider l'ajustement et appliquer le filtre B&W automatiquement
   const validateAdjustment = useCallback(async () => {
-    if (!corners || !originalImage) {
-      logger.error('Validation impossible: corners ou originalImage manquant');
-      return;
-    }
+    if (!corners || !originalImage) return;
 
     setIsProcessing(true);
-    logger.log('[VALIDATE] Début de la validation...');
 
     try {
-      // 1. Charger l'image avec timeout
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Image load timeout')), 10000);
-        img.onload = () => {
-          clearTimeout(timeout);
-          resolve();
-        };
-        img.onerror = (e) => {
-          clearTimeout(timeout);
-          reject(new Error('Image load error'));
-        };
+        const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+        img.onload = () => { clearTimeout(timeout); resolve(); };
+        img.onerror = () => { clearTimeout(timeout); reject(new Error('Erreur image')); };
         img.src = originalImage;
       });
 
-      logger.log('[VALIDATE] Image chargée:', img.width, 'x', img.height);
-
-      // 2. Créer le canvas temporaire
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
       const ctx = tempCanvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
 
-      // 3. Convertir les coins en pixels absolus
       const absoluteCorners = corners.map(corner => ({
         x: (corner.x / 100) * img.width,
         y: (corner.y / 100) * img.height
       }));
 
-      logger.log('[VALIDATE] Coins absolus:', absoluteCorners);
-
-      // 4. Vérifier si OpenCV est prêt
       if (!isOpenCvReady()) {
-        logger.log('[VALIDATE] OpenCV pas prêt, attente...');
         await new Promise(r => setTimeout(r, 1000));
-        if (!isOpenCvReady()) {
-          throw new Error('OpenCV non disponible');
-        }
       }
 
-      // 5. Appliquer la transformation
       const outputCanvas = applyPerspectiveTransform(tempCanvas, absoluteCorners);
 
-      if (!outputCanvas || outputCanvas.width === 0 || outputCanvas.height === 0) {
-        throw new Error('Canvas de sortie invalide');
+      if (!outputCanvas || outputCanvas.width === 0) {
+        throw new Error('Transformation échouée');
       }
 
-      logger.log('[VALIDATE] Transformation appliquée:', outputCanvas.width, 'x', outputCanvas.height);
+      // Appliquer automatiquement le filtre B&W (mode document)
+      const outCtx = outputCanvas.getContext('2d');
+      let imageData = outCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+      imageData = enhanceBlackAndWhite(imageData);
+      outCtx.putImageData(imageData, 0, 0);
 
-      // 6. Convertir en blob avec timeout
       const transformedBlob = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('toBlob timeout')), 10000);
-        try {
-          outputCanvas.toBlob(
-            (blob) => {
-              clearTimeout(timeout);
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error('Blob création échouée'));
-              }
-            },
-            'image/jpeg',
-            0.95
-          );
-        } catch (e) {
-          clearTimeout(timeout);
-          reject(e);
-        }
+        const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
+        outputCanvas.toBlob(
+          (blob) => {
+            clearTimeout(timeout);
+            blob ? resolve(blob) : reject(new Error('Blob échoué'));
+          },
+          'image/jpeg',
+          0.95
+        );
       });
 
       const url = URL.createObjectURL(transformedBlob);
-      logger.log('[VALIDATE] Blob créé, URL:', url);
 
-      // 7. Mettre à jour l'état
       setCurrentDoc({
         id: Date.now(),
         url,
         originalUrl: url,
         blob: transformedBlob,
         timestamp: new Date().toISOString(),
-        enhanceMode: 'original',
+        enhanceMode: 'bw',
         rotation: 0,
         wasDetected: true
       });
+      setEnhanceMode('bw');
       setMode('preview');
       setCorners(null);
       setOriginalImage(null);
 
-      logger.log('[VALIDATE] Validation terminée avec succès');
-
     } catch (error) {
       logger.error('Erreur transformation:', error);
-      logger.error('[VALIDATE] Erreur:', error.message);
       alert('Erreur: ' + error.message);
     } finally {
       setIsProcessing(false);
@@ -421,17 +377,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Annuler l'ajustement
   const cancelAdjustment = useCallback(() => {
-    // Arrêter d'abord la détection pour éviter les conflits
     stopLiveDetection();
-
-    // Nettoyer l'état avant de redémarrer
     setCorners(null);
     setOriginalImage(null);
-
-    // Changer le mode en dernier pour éviter les re-renders intermédiaires
     setMode('capture');
-
-    // Démarrer la caméra de manière asynchrone
     startCamera();
   }, [startCamera, stopLiveDetection]);
 
@@ -477,25 +426,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
     img.src = currentDoc.url;
   }, [currentDoc]);
 
-  // Valider le document et continuer (mode lot)
+  // Valider et continuer (scanner un autre)
   const confirmAndContinue = useCallback(() => {
     if (!currentDoc) return;
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
-    setEnhanceMode('original');
+    setEnhanceMode('bw');
     setMode('capture');
-    // Redémarrer immédiatement la caméra pour le prochain scan
     startCamera();
   }, [currentDoc, startCamera]);
 
-  // Valider le document et terminer
+  // Valider et terminer
   const confirmDocument = useCallback(() => {
     if (!currentDoc) return;
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
-    setEnhanceMode('original');
+    setEnhanceMode('bw');
     setMode('capture');
-    // Ne pas redémarrer la caméra - afficher le bouton sauvegarder
   }, [currentDoc]);
 
   // Retirer un document
@@ -511,19 +458,20 @@ export default function DocumentScannerView({ onSave, onClose }) {
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const url = event.target.result;
-        const newDoc = {
-          id: Date.now() + Math.random(),
-          url,
-          blob: file,
-          timestamp: new Date().toISOString(),
-          enhanced: false,
-          rotation: 0
-        };
-        setScannedDocs(prev => [...prev, newDoc]);
+        setOriginalImage(event.target.result);
+        setCorners([
+          { x: 5, y: 5 },
+          { x: 95, y: 5 },
+          { x: 95, y: 95 },
+          { x: 5, y: 95 }
+        ]);
+        setMode('adjust');
       };
       reader.readAsDataURL(file);
     });
+
+    // Reset input
+    e.target.value = '';
   }, []);
 
   // Ouvrir le panneau d'export
@@ -535,7 +483,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setMode('export');
   }, [scannedDocs]);
 
-  // Export en PDF (téléchargement local)
+  // Export PDF
   const exportAsPdf = useCallback(async () => {
     if (scannedDocs.length === 0) return;
 
@@ -547,16 +495,15 @@ export default function DocumentScannerView({ onSave, onClose }) {
         pageSize: 'a4',
         orientation: 'portrait'
       });
-      logger.log('[EXPORT] PDF téléchargé avec succès');
     } catch (error) {
-      logger.error('[EXPORT] Erreur PDF:', error);
+      logger.error('Erreur PDF:', error);
       alert('Erreur lors de la création du PDF');
     } finally {
       setIsProcessing(false);
     }
   }, [scannedDocs]);
 
-  // Export en images individuelles
+  // Export images
   const exportAsImages = useCallback(async () => {
     if (scannedDocs.length === 0) return;
 
@@ -564,83 +511,51 @@ export default function DocumentScannerView({ onSave, onClose }) {
     try {
       const baseName = `scan_${new Date().toISOString().slice(0, 10)}`;
       await downloadImagesAsZip(scannedDocs, baseName);
-      logger.log('[EXPORT] Images téléchargées avec succès');
     } catch (error) {
-      logger.error('[EXPORT] Erreur images:', error);
-      alert('Erreur lors du téléchargement des images');
+      logger.error('Erreur images:', error);
+      alert('Erreur lors du téléchargement');
     } finally {
       setIsProcessing(false);
     }
   }, [scannedDocs]);
 
-  // Sauvegarder dans le cloud (comportement original)
+  // Sauvegarder dans le cloud
   const saveToCloud = useCallback(() => {
-    if (scannedDocs.length === 0) {
-      alert('Aucun document à sauvegarder');
-      return;
-    }
-    if (onSave) {
-      onSave(scannedDocs);
-    }
+    if (scannedDocs.length === 0) return;
+    if (onSave) onSave(scannedDocs);
   }, [scannedDocs, onSave]);
 
-  // Fonction générique d'export selon le format sélectionné
+  // Export selon format
   const handleExport = useCallback(async () => {
     switch (exportFormat) {
-      case 'pdf':
-        await exportAsPdf();
-        break;
-      case 'images':
-        await exportAsImages();
-        break;
-      case 'cloud':
-        saveToCloud();
-        break;
-      default:
-        await exportAsPdf();
+      case 'pdf': await exportAsPdf(); break;
+      case 'images': await exportAsImages(); break;
+      case 'cloud': saveToCloud(); break;
+      default: await exportAsPdf();
     }
   }, [exportFormat, exportAsPdf, exportAsImages, saveToCloud]);
 
-  // Rendu des différentes vues
-  const renderCaptureStartView = () => (
-    <div className="start-view">
-      <CameraIcon style={{ width: '64px', height: '64px', margin: '0 auto 1rem' }} />
-      <p style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
-        Prêt à scanner un document
-      </p>
+  // === RENDUS ===
 
-      <div className="detector-selector">
-        <button
-          className={`scanner-btn ${detectorType === 'opencv' ? 'primary' : ''}`}
-          onClick={() => setDetectorType('opencv')}
-          style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem 1rem', opacity: detectorType === 'opencv' ? 1 : 0.5 }}
-        >
-          OpenCV (Rapide)
+  const renderStartView = () => (
+    <div className="start-view">
+      <h2>Scanner de Documents</h2>
+      <p>Numérisez vos documents en haute qualité</p>
+
+      <div className="start-actions">
+        <button className="scanner-btn primary" onClick={startCamera}>
+          <CameraIcon style={{ width: 20, height: 20 }} />
+          Ouvrir la caméra
         </button>
-        <button
-          className={`scanner-btn ${detectorType === 'yolo' ? 'primary' : ''}`}
-          onClick={() => setDetectorType('yolo')}
-          style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem 1rem', opacity: detectorType === 'yolo' ? 1 : 0.5 }}
-        >
-          YOLO (IA) {yoloModelLoaded && '✓'}
+
+        <span className="start-divider">ou</span>
+
+        <button className="scanner-btn" onClick={() => fileInputRef.current?.click()}>
+          <DownloadIcon style={{ width: 20, height: 20 }} />
+          Choisir une image
         </button>
       </div>
 
-      <button
-        className="scanner-btn primary"
-        onClick={startCamera}
-        style={{ fontSize: '1rem', padding: '1rem 2rem' }}
-      >
-        <CameraIcon /> Démarrer la caméra
-      </button>
-      <p style={{ margin: '1rem 0', opacity: 0.7 }}>ou</p>
-      <button
-        className="scanner-btn"
-        onClick={() => fileInputRef.current?.click()}
-        style={{ fontSize: '1rem', padding: '1rem 2rem' }}
-      >
-        <DownloadIcon /> Choisir une image
-      </button>
       <input
         ref={fileInputRef}
         type="file"
@@ -652,67 +567,29 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </div>
   );
 
-  const renderCameraLiveView = () => (
+  const renderCameraView = () => (
     <>
       <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
       <canvas ref={overlayCanvasRef} className="camera-overlay-canvas" />
       {!liveCorners && <div className="guide-frame" />}
 
-      <div className={`detector-badge ${detectorType === 'yolo' && yoloModelLoaded ? 'yolo' : 'opencv'}`}>
-        {detectorType === 'yolo' && yoloModelLoaded ? '🤖 YOLO' : '📐 OpenCV'}
-      </div>
+      <div className="detector-badge opencv">OpenCV</div>
 
-      {/* Mini-galerie du lot en haut à droite */}
       {scannedDocs.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          background: 'rgba(0, 0, 0, 0.7)',
-          padding: '0.4rem 0.6rem',
-          borderRadius: '0.5rem',
-          zIndex: 20
-        }}>
-          {/* Miniatures des derniers docs (max 3) */}
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            {scannedDocs.slice(-3).map((doc, idx) => (
-              <img
-                key={doc.id}
-                src={doc.url}
-                alt=""
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  objectFit: 'cover',
-                  borderRadius: '4px',
-                  border: '2px solid #10b981'
-                }}
-              />
+        <div className="mini-gallery">
+          <div className="mini-gallery-thumbs">
+            {scannedDocs.slice(-3).map((doc) => (
+              <img key={doc.id} src={doc.url} alt="" />
             ))}
           </div>
-          {/* Badge compteur */}
-          <div style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '1rem',
-            fontSize: '0.8rem',
-            fontWeight: '600',
-            minWidth: '24px',
-            textAlign: 'center'
-          }}>
-            {scannedDocs.length}
-          </div>
+          <div className="mini-gallery-count">{scannedDocs.length}</div>
         </div>
       )}
 
       {liveCorners && detectionConfidence > 0 && (
         <div className="detection-indicator">
-          <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
-          Document détecté !
+          <CheckCircleIcon style={{ width: 18, height: 18 }} />
+          Document détecté
         </div>
       )}
     </>
@@ -722,7 +599,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     <div className="scanning-view">
       <canvas ref={canvasRef} className="scanning-canvas" />
       <div className="scan-line" style={{ top: `${scanProgress}%` }} />
-      <div className="scanning-text">📄 Scan en cours...</div>
+      <div className="scanning-text">Analyse en cours...</div>
     </div>
   );
 
@@ -738,7 +615,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       <img
         ref={previewCanvasRef}
         src={originalImage}
-        alt="Document à ajuster"
+        alt="Document"
         className="adjust-image"
       />
       <svg className="adjust-overlay" preserveAspectRatio="none" viewBox="0 0 100 100">
@@ -752,25 +629,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
         <polygon
           points={corners.map(c => `${c.x},${c.y}`).join(' ')}
           fill="none"
-          stroke="#10b981"
+          stroke="#b87333"
           strokeWidth="0.5"
           strokeLinejoin="round"
-          filter="drop-shadow(0 0 2px #10b981)"
         />
-        {corners.map((corner, i) => {
-          const nextCorner = corners[(i + 1) % corners.length];
-          return (
-            <line
-              key={i}
-              x1={corner.x}
-              y1={corner.y}
-              x2={nextCorner.x}
-              y2={nextCorner.y}
-              stroke="#10b981"
-              strokeWidth="0.3"
-            />
-          );
-        })}
       </svg>
 
       {corners.map((corner, index) => (
@@ -783,77 +645,50 @@ export default function DocumentScannerView({ onSave, onClose }) {
         />
       ))}
 
-      {/* Loupe - affichée uniquement lors du drag */}
+      {/* Loupe lors du drag */}
       {draggedCorner !== null && corners && originalImage && (
         <div style={{
           position: 'absolute',
           top: '20px',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: '120px',
-          height: '120px',
+          width: '100px',
+          height: '100px',
           borderRadius: '50%',
-          border: '4px solid #fff',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+          border: '4px solid #b87333',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           overflow: 'hidden',
           zIndex: 100,
           backgroundColor: '#000',
           pointerEvents: 'none'
         }}>
+          <img
+            src={originalImage}
+            alt=""
+            style={{
+              position: 'absolute',
+              width: '300%',
+              height: '300%',
+              left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
+              top: `calc(50% - ${corners[draggedCorner].y * 3}%)`,
+              objectFit: 'cover',
+              pointerEvents: 'none'
+            }}
+          />
           <div style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden'
-          }}>
-            <img
-              src={originalImage}
-              alt=""
-              style={{
-                position: 'absolute',
-                width: '300%',
-                height: '300%',
-                left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
-                top: `calc(50% - ${corners[draggedCorner].y * 3}%)`,
-                objectFit: 'cover',
-                pointerEvents: 'none'
-              }}
-            />
-            {/* Croix centrale */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '20px',
-              height: '20px',
-              border: '2px solid #10b981',
-              borderRadius: '50%',
-              boxShadow: '0 0 5px #10b981'
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '2px',
-              height: '12px',
-              backgroundColor: '#10b981'
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '12px',
-              height: '2px',
-              backgroundColor: '#10b981'
-            }} />
-          </div>
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '16px',
+            height: '16px',
+            border: '2px solid #b87333',
+            borderRadius: '50%'
+          }} />
         </div>
       )}
 
-      <div className="adjust-hint">✋ Déplacez les coins pour ajuster la zone</div>
+      <div className="adjust-hint">Ajustez les coins du document</div>
     </div>
   );
 
@@ -861,7 +696,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
     <img src={currentDoc.url} alt="Document scanné" className="document-preview" />
   );
 
-  const renderDocumentGallery = () => (
+  const renderFilterBar = () => (
+    <div className="enhance-mode-bar">
+      {FILTERS.map(filter => (
+        <button
+          key={filter.id}
+          className={`filter-btn ${enhanceMode === filter.id ? 'active' : ''}`}
+          onClick={() => applyFilter(filter.id)}
+          disabled={isProcessing}
+        >
+          <span className="filter-icon">{filter.icon}</span>
+          <span>{filter.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderGallery = () => (
     <div className="docs-gallery">
       {scannedDocs.map(doc => (
         <div key={doc.id} className="doc-thumbnail">
@@ -872,229 +723,103 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </div>
   );
 
-  // Vue d'export avec options PDF/Images/Cloud
   const renderExportView = () => (
-    <div className="export-view" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '2rem',
-      gap: '1.5rem',
-      height: '100%',
-      background: 'var(--bg-secondary, #f3f4f6)'
-    }}>
-      {/* Aperçu des documents */}
-      <div style={{
-        display: 'flex',
-        gap: '0.5rem',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        maxWidth: '100%',
-        padding: '1rem',
-        background: 'white',
-        borderRadius: '0.75rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
+    <div className="export-view">
+      <div className="export-preview">
         {scannedDocs.map((doc, idx) => (
-          <div key={doc.id} style={{ position: 'relative' }}>
-            <img
-              src={doc.url}
-              alt={`Page ${idx + 1}`}
-              style={{
-                width: '80px',
-                height: '100px',
-                objectFit: 'cover',
-                borderRadius: '0.5rem',
-                border: '2px solid #e5e7eb'
-              }}
-            />
-            <span style={{
-              position: 'absolute',
-              bottom: '4px',
-              right: '4px',
-              background: '#667eea',
-              color: 'white',
-              fontSize: '0.7rem',
-              padding: '2px 6px',
-              borderRadius: '0.25rem',
-              fontWeight: '600'
-            }}>
-              {idx + 1}
-            </span>
+          <div key={doc.id} className="export-preview-item">
+            <img src={doc.url} alt={`Page ${idx + 1}`} />
+            <span className="page-number">{idx + 1}</span>
           </div>
         ))}
       </div>
 
-      <h3 style={{ margin: 0, color: 'var(--text-primary, #1f2937)' }}>
+      <h3 className="export-title">
         {scannedDocs.length} document{scannedDocs.length > 1 ? 's' : ''} prêt{scannedDocs.length > 1 ? 's' : ''}
       </h3>
 
-      {/* Options d'export */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        width: '100%',
-        maxWidth: '320px'
-      }}>
-        {/* PDF */}
-        <button
-          className={`scanner-btn ${exportFormat === 'pdf' ? 'primary' : ''}`}
+      <div className="export-options">
+        <div
+          className={`export-option ${exportFormat === 'pdf' ? 'selected' : ''}`}
           onClick={() => setExportFormat('pdf')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '1rem',
-            justifyContent: 'flex-start',
-            border: exportFormat === 'pdf' ? '2px solid #667eea' : '2px solid #e5e7eb',
-            background: exportFormat === 'pdf' ? 'rgba(102, 126, 234, 0.1)' : 'white'
-          }}
         >
-          <span style={{ fontSize: '1.5rem' }}>📄</span>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontWeight: '600' }}>PDF</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Un seul fichier multi-pages</div>
+          <span className="option-icon">📄</span>
+          <div className="option-info">
+            <div className="option-title">PDF</div>
+            <div className="option-desc">Un seul fichier multi-pages</div>
           </div>
-          {exportFormat === 'pdf' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#667eea' }} />}
-        </button>
+          <div className="option-check">{exportFormat === 'pdf' ? '✓' : ''}</div>
+        </div>
 
-        {/* Images */}
-        <button
-          className={`scanner-btn ${exportFormat === 'images' ? 'primary' : ''}`}
+        <div
+          className={`export-option ${exportFormat === 'images' ? 'selected' : ''}`}
           onClick={() => setExportFormat('images')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '1rem',
-            justifyContent: 'flex-start',
-            border: exportFormat === 'images' ? '2px solid #667eea' : '2px solid #e5e7eb',
-            background: exportFormat === 'images' ? 'rgba(102, 126, 234, 0.1)' : 'white'
-          }}
         >
-          <span style={{ fontSize: '1.5rem' }}>🖼️</span>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontWeight: '600' }}>Images JPG</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>{scannedDocs.length} fichier{scannedDocs.length > 1 ? 's' : ''} séparé{scannedDocs.length > 1 ? 's' : ''}</div>
+          <span className="option-icon">🖼️</span>
+          <div className="option-info">
+            <div className="option-title">Images JPG</div>
+            <div className="option-desc">{scannedDocs.length} fichier{scannedDocs.length > 1 ? 's' : ''} séparé{scannedDocs.length > 1 ? 's' : ''}</div>
           </div>
-          {exportFormat === 'images' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#667eea' }} />}
-        </button>
+          <div className="option-check">{exportFormat === 'images' ? '✓' : ''}</div>
+        </div>
 
-        {/* Cloud */}
         {onSave && (
-          <button
-            className={`scanner-btn ${exportFormat === 'cloud' ? 'primary' : ''}`}
+          <div
+            className={`export-option ${exportFormat === 'cloud' ? 'selected' : ''}`}
             onClick={() => setExportFormat('cloud')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '1rem',
-              justifyContent: 'flex-start',
-              border: exportFormat === 'cloud' ? '2px solid #10b981' : '2px solid #e5e7eb',
-              background: exportFormat === 'cloud' ? 'rgba(16, 185, 129, 0.1)' : 'white'
-            }}
           >
-            <span style={{ fontSize: '1.5rem' }}>☁️</span>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: '600' }}>Sauvegarder</div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Dans vos documents</div>
+            <span className="option-icon">☁️</span>
+            <div className="option-info">
+              <div className="option-title">Sauvegarder</div>
+              <div className="option-desc">Dans vos documents</div>
             </div>
-            {exportFormat === 'cloud' && <CheckCircleIcon style={{ marginLeft: 'auto', color: '#10b981' }} />}
-          </button>
+            <div className="option-check">{exportFormat === 'cloud' ? '✓' : ''}</div>
+          </div>
         )}
       </div>
 
-      {/* Boutons d'action */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        width: '100%',
-        maxWidth: '320px',
-        marginTop: 'auto'
-      }}>
+      <div className="export-actions">
         <button
           className="scanner-btn"
-          onClick={() => {
-            setMode('capture');
-            startCamera();
-          }}
-          style={{ flex: 1 }}
+          onClick={() => { setMode('capture'); startCamera(); }}
           disabled={isProcessing}
         >
-          <CameraIcon /> + Ajouter
+          + Ajouter
         </button>
         <button
-          className="scanner-btn success"
+          className="scanner-btn primary"
           onClick={handleExport}
-          style={{ flex: 1.5 }}
           disabled={isProcessing}
         >
-          {isProcessing ? '⏳ Export...' : (
-            <>
-              {exportFormat === 'pdf' && '📄 Créer PDF'}
-              {exportFormat === 'images' && '🖼️ Télécharger'}
-              {exportFormat === 'cloud' && '☁️ Sauvegarder'}
-            </>
-          )}
+          {isProcessing ? 'Export...' : 'Exporter'}
         </button>
       </div>
     </div>
   );
 
-  const renderEnhanceModeBar = () => (
-    <div className="enhance-mode-bar">
-      {[
-        { value: 'original', label: '📄 Original' },
-        { value: 'bw', label: '⬛ N&B' },
-        { value: 'gray', label: '⚪ Gris' },
-        { value: 'color', label: '🎨 Couleur+' }
-      ].map(modeOption => (
-        <button
-          key={modeOption.value}
-          className={`scanner-btn ${enhanceMode === modeOption.value ? 'primary' : ''}`}
-          onClick={() => applyEnhanceMode(modeOption.value)}
-          disabled={isProcessing}
-          style={{ flex: '1', minWidth: '100px', opacity: enhanceMode === modeOption.value ? 1 : 0.7 }}
-        >
-          {modeOption.label}
-        </button>
-      ))}
-    </div>
-  );
-
-  const renderControlButtons = () => (
+  const renderControls = () => (
     <div className="control-buttons">
       {mode === 'capture' && stream && (
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
-          {/* Bouton terminer le lot (si documents déjà scannés) */}
           {scannedDocs.length > 0 && (
-            <button
-              className="scanner-btn success"
-              onClick={() => {
-                stopCamera();
-                // Le bouton sauvegarder apparaîtra automatiquement
-              }}
-              style={{ padding: '0.75rem 1.5rem' }}
-            >
-              <CheckCircleIcon /> Terminer ({scannedDocs.length})
+            <button className="scanner-btn success" onClick={() => { stopCamera(); }}>
+              <CheckCircleIcon style={{ width: 18, height: 18 }} />
+              Terminer ({scannedDocs.length})
             </button>
           )}
-          {/* Bouton capture principal */}
-          <button className="capture-button" onClick={capturePhoto} disabled={isProcessing}>
-            <CameraIcon style={{ width: '32px', height: '32px', color: '#667eea' }} />
-          </button>
+          <button className="capture-button" onClick={capturePhoto} disabled={isProcessing} />
         </div>
       )}
 
       {mode === 'adjust' && corners && (
         <>
-          <button className="scanner-btn danger" onClick={cancelAdjustment} disabled={isProcessing} style={{ flex: 1 }}>
-            <XCircleIcon /> Annuler
+          <button className="scanner-btn danger" onClick={cancelAdjustment} disabled={isProcessing}>
+            <XCircleIcon style={{ width: 18, height: 18 }} />
+            Annuler
           </button>
-          <button className="scanner-btn success" onClick={validateAdjustment} disabled={isProcessing} style={{ flex: 1 }}>
-            <CheckCircleIcon /> Valider & Recadrer
+          <button className="scanner-btn success" onClick={validateAdjustment} disabled={isProcessing}>
+            <CheckCircleIcon style={{ width: 18, height: 18 }} />
+            Valider
           </button>
         </>
       )}
@@ -1102,47 +827,34 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {mode === 'preview' && currentDoc && (
         <>
           <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
-            <RotateCwIcon />
+            <RotateCwIcon style={{ width: 18, height: 18 }} />
           </button>
           <button
             className="scanner-btn danger"
             onClick={() => {
               stopLiveDetection();
               setCurrentDoc(null);
-              setEnhanceMode('original');
               setMode('capture');
               startCamera();
             }}
-            style={{ flex: 0.8 }}
           >
-            <XCircleIcon />
+            <XCircleIcon style={{ width: 18, height: 18 }} />
           </button>
-          <button
-            className="scanner-btn primary"
-            onClick={confirmAndContinue}
-            style={{ flex: 1.2 }}
-            title="Valider et scanner un autre document"
-          >
-            <CameraIcon /> +1
+          <button className="scanner-btn primary" onClick={confirmAndContinue}>
+            <CameraIcon style={{ width: 18, height: 18 }} />
+            +1
           </button>
-          <button
-            className="scanner-btn success"
-            onClick={confirmDocument}
-            style={{ flex: 1 }}
-            title="Valider et terminer"
-          >
-            <CheckCircleIcon /> Fin
+          <button className="scanner-btn success" onClick={confirmDocument}>
+            <CheckCircleIcon style={{ width: 18, height: 18 }} />
+            OK
           </button>
         </>
       )}
 
       {mode === 'capture' && !stream && scannedDocs.length > 0 && (
-        <button
-          className="scanner-btn success"
-          onClick={openExportPanel}
-          style={{ fontSize: '1rem', padding: '1rem 2rem', flex: 1 }}
-        >
-          <DownloadIcon /> Exporter ({scannedDocs.length})
+        <button className="scanner-btn primary" onClick={openExportPanel}>
+          <DownloadIcon style={{ width: 18, height: 18 }} />
+          Exporter ({scannedDocs.length})
         </button>
       )}
     </div>
@@ -1155,11 +867,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
         <button
           className="scanner-btn"
           onClick={() => { stopCamera(); if (onClose) onClose(); }}
-          style={{ padding: '0.5rem' }}
         >
-          <ChevronLeftIcon /> Retour
+          <ChevronLeftIcon style={{ width: 18, height: 18 }} />
+          Retour
         </button>
-        <h1 className="scanner-title">📄 ClearScanner</h1>
+        <h1 className="scanner-title">Scanner</h1>
         <div className="scanner-counter">
           {scannedDocs.length} doc{scannedDocs.length !== 1 ? 's' : ''}
         </div>
@@ -1167,22 +879,24 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       {/* Vue principale */}
       <div className="camera-view">
-        {mode === 'capture' && !stream && renderCaptureStartView()}
-        {mode === 'capture' && stream && renderCameraLiveView()}
+        {mode === 'capture' && !stream && renderStartView()}
+        {mode === 'capture' && stream && renderCameraView()}
         {mode === 'scanning' && renderScanningView()}
         {mode === 'adjust' && originalImage && corners && renderAdjustView()}
         {mode === 'preview' && currentDoc && renderPreviewView()}
         {mode === 'export' && renderExportView()}
-        {isProcessing && mode !== 'export' && <div className="processing-overlay">⚙️ Détection en cours...</div>}
+        {isProcessing && mode !== 'export' && (
+          <div className="processing-overlay">Traitement...</div>
+        )}
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
 
-      {/* Contrôles (masqués en mode export) */}
+      {/* Contrôles */}
       {mode !== 'export' && (
         <div className="scanner-controls">
-          {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'adjust' && mode !== 'scanning' && renderDocumentGallery()}
-          {mode === 'preview' && currentDoc && renderEnhanceModeBar()}
-          {renderControlButtons()}
+          {scannedDocs.length > 0 && mode !== 'preview' && mode !== 'adjust' && mode !== 'scanning' && renderGallery()}
+          {mode === 'preview' && currentDoc && renderFilterBar()}
+          {renderControls()}
         </div>
       )}
     </div>
