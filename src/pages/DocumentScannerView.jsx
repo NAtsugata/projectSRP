@@ -193,7 +193,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setIsProcessing(true);
 
     try {
-      const imgUrl = canvas.toDataURL('image/jpeg', 0.92);
+      // PNG pour garder la qualité maximale (pas de compression lossy)
+      const imgUrl = canvas.toDataURL('image/png');
       setOriginalImage(imgUrl);
 
       if (!isOpenCvReady()) {
@@ -210,8 +211,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
       detectionCanvas.height = detectionHeight;
       detectionCanvas.getContext('2d').drawImage(canvas, 0, 0, detectionWidth, detectionHeight);
 
-      const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/jpeg', 0.9));
-      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+      // PNG pour la détection aussi (meilleure précision des bords)
+      const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/png'));
+      const file = new File([blob], 'capture.png', { type: 'image/png' });
 
       const result = await detectDocument(file);
 
@@ -278,6 +280,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       ctx.putImageData(imageData, 0, 0);
 
+      // Qualité maximale pour le rendu final
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => ({
@@ -288,7 +291,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         }));
         setEnhanceMode(filterId);
         setIsProcessing(false);
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.98);
     };
 
     img.src = currentDoc.originalUrl || currentDoc.url;
@@ -338,6 +341,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       imageData = enhanceBlackAndWhite(imageData);
       outCtx.putImageData(imageData, 0, 0);
 
+      // Qualité maximale 0.98 pour l'export final
       const transformedBlob = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
         outputCanvas.toBlob(
@@ -346,7 +350,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
             blob ? resolve(blob) : reject(new Error('Blob échoué'));
           },
           'image/jpeg',
-          0.95
+          0.98
         );
       });
 
@@ -411,6 +415,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
       ctx.restore();
 
+      // Qualité maximale pour la rotation
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => ({
@@ -420,7 +425,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           rotation: newRotation
         }));
         setIsProcessing(false);
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.98);
     };
 
     img.src = currentDoc.url;

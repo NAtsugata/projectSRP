@@ -14,7 +14,7 @@ export async function createPdfFromDocuments(documents, options = {}) {
     title = 'Document scanné',
     pageSize = 'a4',
     orientation = 'portrait',
-    quality = 0.92,
+    quality = 0.98, // Qualité maximale
     margin = 10 // mm
   } = options;
 
@@ -66,8 +66,8 @@ export async function createPdfFromDocuments(documents, options = {}) {
         margin
       );
 
-      // Ajouter l'image au PDF
-      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height, undefined, 'MEDIUM');
+      // Ajouter l'image au PDF - FAST = meilleure qualité (moins de compression)
+      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height, undefined, 'FAST');
 
       logger.log(`[PDF] Page ${i + 1}/${documents.length} ajoutée`);
     } catch (err) {
@@ -139,7 +139,8 @@ async function getImageDataUrl(doc) {
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.92));
+        // Qualité maximale 0.98 pour export HD
+        resolve(canvas.toDataURL('image/jpeg', 0.98));
       };
       img.onerror = reject;
       img.src = doc.url;

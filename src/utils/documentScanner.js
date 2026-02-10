@@ -906,82 +906,165 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Filtre Noir & Blanc "Magic" - supprime les ombres
+ * Filtre Noir & Blanc Pro - Qualité scanner professionnelle
+ * Algorithme avancé avec suppression d'ombres et texte ultra-net
  */
 export function enhanceBlackAndWhite(imageData) {
   if (!isOpenCvReady()) return imageData;
 
   const cv = window.cv;
-  let src = null, gray = null, dilated = null, bg = null, diff = null, norm = null, kernel = null;
+  const mats = [];
+
+  const track = (mat) => { mats.push(mat); return mat; };
 
   try {
-    src = cv.matFromImageData(imageData);
-    gray = new cv.Mat();
+    const src = track(cv.matFromImageData(imageData));
+    const gray = track(new cv.Mat());
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    // Estimation du fond
-    dilated = new cv.Mat();
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-    cv.morphologyEx(gray, dilated, cv.MORPH_DILATE, kernel);
+    // === ÉTAPE 1: Suppression des ombres avec fond adaptatif ===
+    // Dilatation pour estimer le fond local (zones claires)
+    const kernel1 = track(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(15, 15)));
+    const dilated = track(new cv.Mat());
+    cv.morphologyEx(gray, dilated, cv.MORPH_DILATE, kernel1);
 
-    bg = new cv.Mat();
-    cv.GaussianBlur(dilated, bg, new cv.Size(21, 21), 0, 0);
+    // Grand flou pour fond uniforme
+    const background = track(new cv.Mat());
+    cv.GaussianBlur(dilated, background, new cv.Size(51, 51), 0);
 
-    // Division pour supprimer les ombres
-    diff = new cv.Mat();
-    cv.divide(gray, bg, diff, 255.0, -1);
+    // Division : supprime les variations d'éclairage
+    const normalized = track(new cv.Mat());
+    cv.divide(gray, background, normalized, 255.0, -1);
 
-    // Normalisation finale
-    norm = new cv.Mat();
-    cv.threshold(diff, norm, 200, 255, cv.THRESH_TRUNC);
-    cv.normalize(norm, norm, 0, 255, cv.NORM_MINMAX);
+    // === ÉTAPE 2: Amélioration du contraste avec CLAHE ===
+    const clahe = new cv.CLAHE(4.0, new cv.Size(8, 8));
+    const enhanced = track(new cv.Mat());
+    clahe.apply(normalized, enhanced);
+    clahe.delete();
 
-    const rgbaDst = new cv.Mat();
-    cv.cvtColor(norm, rgbaDst, cv.COLOR_GRAY2RGBA);
+    // === ÉTAPE 3: Netteté avec Unsharp Masking ===
+    const blurred = track(new cv.Mat());
+    cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 2.0);
 
-    const result = new ImageData(
+    const sharp = track(new cv.Mat());
+    cv.addWeighted(enhanced, 1.8, blurred, -0.8, 0, sharp);
+
+    // === ÉTAPE 4: Optimisation des niveaux noir/blanc ===
+    // Calculer les percentiles pour étirement optimal
+    const hist = track(new cv.Mat());
+    const histSize = [256];
+    const ranges = [0, 256];
+    const srcVec = track(new cv.MatVector());
+    srcVec.push_back(sharp);
+    cv.calcHist(srcVec, [0], track(new cv.Mat()), hist, histSize, ranges);
+
+    // Trouver les seuils 2% et 98% pour étirement
+    const totalPixels = sharp.rows * sharp.cols;
+    let cumSum = 0;
+    let lowThresh = 0, highThresh = 255;
+
+    for (let i = 0; i < 256; i++) {
+      cumSum += hist.data32F[i];
+      if (cumSum < totalPixels * 0.02) lowThresh = i;
+      if (cumSum < totalPixels * 0.98) highThresh = i;
+    }
+
+    // Étirement des niveaux
+    const stretched = track(new cv.Mat());
+    const alpha = 255.0 / Math.max(1, highThresh - lowThresh);
+    const beta = -lowThresh * alpha;
+    sharp.convertTo(stretched, -1, alpha, beta);
+
+    // === ÉTAPE 5: Seuillage adaptatif pour texte net ===
+    const binary = track(new cv.Mat());
+    cv.adaptiveThreshold(
+      stretched,
+      binary,
+      255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+      cv.THRESH_BINARY,
+      21,  // Taille du bloc (doit être impair)
+      8    // Constante soustraite
+    );
+
+    // === ÉTAPE 6: Mélange intelligent texte/fond ===
+    // Combiner le seuillage binaire avec les niveaux de gris
+    // pour garder les nuances tout en ayant un texte net
+    const result = track(new cv.Mat());
+
+    // Pondération: 70% binaire + 30% niveaux de gris
+    cv.addWeighted(binary, 0.7, stretched, 0.3, 0, result);
+
+    // Seuil final léger pour blanc pur
+    const final = track(new cv.Mat());
+    cv.threshold(result, final, 245, 255, cv.THRESH_TRUNC);
+
+    // Renforcer les noirs
+    for (let i = 0; i < final.data.length; i++) {
+      if (final.data[i] < 40) {
+        final.data[i] = 0;
+      } else if (final.data[i] > 230) {
+        final.data[i] = 255;
+      }
+    }
+
+    // Convertir en RGBA
+    const rgbaDst = track(new cv.Mat());
+    cv.cvtColor(final, rgbaDst, cv.COLOR_GRAY2RGBA);
+
+    const imgResult = new ImageData(
       new Uint8ClampedArray(rgbaDst.data),
       rgbaDst.cols,
       rgbaDst.rows
     );
 
-    rgbaDst.delete();
-    return result;
+    return imgResult;
 
   } catch (err) {
-    console.error('Magic Filter Error:', err);
+    console.error('B&W Pro Filter Error:', err);
     return imageData;
   } finally {
-    if (src) src.delete();
-    if (gray) gray.delete();
-    if (dilated) dilated.delete();
-    if (bg) bg.delete();
-    if (diff) diff.delete();
-    if (norm) norm.delete();
-    if (kernel) kernel.delete();
+    // Nettoyer tous les cv.Mat
+    mats.forEach(mat => {
+      try { mat.delete(); } catch (e) { /* ignore */ }
+    });
   }
 }
 
 /**
- * Filtre Gris avec CLAHE
+ * Filtre Gris Pro - Niveaux de gris optimisés avec contraste et netteté
  */
 export function enhanceGrayscale(imageData) {
   if (!isOpenCvReady()) return imageData;
 
   const cv = window.cv;
-  let src = null, dst = null;
+  const mats = [];
+  const track = (mat) => { mats.push(mat); return mat; };
 
   try {
-    src = cv.matFromImageData(imageData);
-    dst = new cv.Mat();
-    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+    const src = track(cv.matFromImageData(imageData));
+    const gray = track(new cv.Mat());
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
-    clahe.apply(dst, dst);
+    // CLAHE pour améliorer le contraste local
+    const clahe = new cv.CLAHE(3.0, new cv.Size(8, 8));
+    const enhanced = track(new cv.Mat());
+    clahe.apply(gray, enhanced);
     clahe.delete();
 
-    const rgbaDst = new cv.Mat();
-    cv.cvtColor(dst, rgbaDst, cv.COLOR_GRAY2RGBA);
+    // Unsharp masking pour la netteté
+    const blurred = track(new cv.Mat());
+    cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 1.5);
+
+    const sharp = track(new cv.Mat());
+    cv.addWeighted(enhanced, 1.5, blurred, -0.5, 0, sharp);
+
+    // Étirement des niveaux pour utiliser toute la plage dynamique
+    const normalized = track(new cv.Mat());
+    cv.normalize(sharp, normalized, 0, 255, cv.NORM_MINMAX);
+
+    const rgbaDst = track(new cv.Mat());
+    cv.cvtColor(normalized, rgbaDst, cv.COLOR_GRAY2RGBA);
 
     const imgData = new ImageData(
       new Uint8ClampedArray(rgbaDst.data),
@@ -989,43 +1072,69 @@ export function enhanceGrayscale(imageData) {
       rgbaDst.rows
     );
 
-    rgbaDst.delete();
     return imgData;
 
   } catch (err) {
     console.error('Enhance Gray error:', err);
     return imageData;
   } finally {
-    if (src) src.delete();
-    if (dst) dst.delete();
+    mats.forEach(mat => {
+      try { mat.delete(); } catch (e) { /* ignore */ }
+    });
   }
 }
 
 /**
- * Filtre Couleur avec sharpening
+ * Filtre Couleur Pro - Couleurs vibrantes avec netteté et contraste améliorés
  */
 export function enhanceColor(imageData) {
   if (!isOpenCvReady()) return imageData;
 
   const cv = window.cv;
-  let src = null, dst = null;
+  const mats = [];
+  const track = (mat) => { mats.push(mat); return mat; };
 
   try {
-    src = cv.matFromImageData(imageData);
-    dst = new cv.Mat();
-    cv.cvtColor(src, src, cv.COLOR_RGBA2RGB);
+    const src = track(cv.matFromImageData(imageData));
+    const rgb = track(new cv.Mat());
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
 
-    const kernel = cv.matFromArray(3, 3, cv.CV_32F, [
-      0, -1, 0,
-      -1, 5, -1,
-      0, -1, 0
-    ]);
+    // Convertir en LAB pour traiter luminosité et couleurs séparément
+    const lab = track(new cv.Mat());
+    cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
 
-    cv.filter2D(src, dst, -1, kernel);
-    kernel.delete();
+    // Séparer les canaux
+    const channels = track(new cv.MatVector());
+    cv.split(lab, channels);
+    const L = channels.get(0);
+    const a = channels.get(1);
+    const b = channels.get(2);
 
-    const rgbaDst = new cv.Mat();
-    cv.cvtColor(dst, rgbaDst, cv.COLOR_RGB2RGBA);
+    // CLAHE sur le canal L (luminosité)
+    const clahe = new cv.CLAHE(2.5, new cv.Size(8, 8));
+    clahe.apply(L, L);
+    clahe.delete();
+
+    // Saturation boost sur a et b
+    const boostFactor = 1.15;
+    a.convertTo(a, -1, boostFactor, 128 * (1 - boostFactor));
+    b.convertTo(b, -1, boostFactor, 128 * (1 - boostFactor));
+
+    // Reconstruire l'image
+    cv.merge(channels, lab);
+    const enhanced = track(new cv.Mat());
+    cv.cvtColor(lab, enhanced, cv.COLOR_Lab2RGB);
+
+    // Sharpening avec kernel Unsharp
+    const blurred = track(new cv.Mat());
+    cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 1.5);
+
+    const sharp = track(new cv.Mat());
+    cv.addWeighted(enhanced, 1.4, blurred, -0.4, 0, sharp);
+
+    // Convertir en RGBA
+    const rgbaDst = track(new cv.Mat());
+    cv.cvtColor(sharp, rgbaDst, cv.COLOR_RGB2RGBA);
 
     const imgData = new ImageData(
       new Uint8ClampedArray(rgbaDst.data),
@@ -1033,15 +1142,15 @@ export function enhanceColor(imageData) {
       rgbaDst.rows
     );
 
-    rgbaDst.delete();
     return imgData;
 
   } catch (err) {
     console.error('Enhance Color error:', err);
     return imageData;
   } finally {
-    if (src) src.delete();
-    if (dst) dst.delete();
+    mats.forEach(mat => {
+      try { mat.delete(); } catch (e) { /* ignore */ }
+    });
   }
 }
 
