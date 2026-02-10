@@ -906,94 +906,51 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Filtre Noir & Blanc - Style scanner naturel
- * Approche douce : suppression ombres + contraste subtil
+ * Filtre Noir & Blanc - Simple et propre
+ * Juste ajustement de niveaux pour fond blanc et texte noir
  */
 export function enhanceBlackAndWhite(imageData) {
-  if (!isOpenCvReady()) return imageData;
+  const data = imageData.data;
+  const width = imageData.width;
+  const height = imageData.height;
 
-  const cv = window.cv;
-  const mats = [];
-  const track = (mat) => { mats.push(mat); return mat; };
-
-  try {
-    const src = track(cv.matFromImageData(imageData));
-    const gray = track(new cv.Mat());
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-    // === ÉTAPE 1: Suppression douce des ombres ===
-    // Morphologie pour estimer le fond (zones claires = papier)
-    const kernel = track(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(31, 31)));
-    const background = track(new cv.Mat());
-    cv.morphologyEx(gray, background, cv.MORPH_CLOSE, kernel);
-
-    // Flou large pour fond uniforme
-    const bgSmooth = track(new cv.Mat());
-    cv.GaussianBlur(background, bgSmooth, new cv.Size(101, 101), 0);
-
-    // Division pour normaliser l'éclairage
-    const normalized = track(new cv.Mat());
-    cv.divide(gray, bgSmooth, normalized, 255.0, -1);
-
-    // === ÉTAPE 2: Contraste local doux avec CLAHE ===
-    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
-    const enhanced = track(new cv.Mat());
-    clahe.apply(normalized, enhanced);
-    clahe.delete();
-
-    // === ÉTAPE 3: Légère netteté ===
-    const blurred = track(new cv.Mat());
-    cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 1.0);
-
-    const sharp = track(new cv.Mat());
-    cv.addWeighted(enhanced, 1.3, blurred, -0.3, 0, sharp);
-
-    // === ÉTAPE 4: Étirement des niveaux (blanc pur, noir profond) ===
-    // Trouver min/max pour étirer
-    const minMax = cv.minMaxLoc(sharp);
-    const minVal = minMax.minVal;
-    const maxVal = minMax.maxVal;
-
-    const stretched = track(new cv.Mat());
-    const alpha = 255.0 / Math.max(1, maxVal - minVal);
-    const beta = -minVal * alpha;
-    sharp.convertTo(stretched, -1, alpha, beta);
-
-    // === ÉTAPE 5: Courbe de gamma pour blancs plus blancs ===
-    // Appliquer un gamma < 1 pour éclaircir les tons moyens
-    const gammaLUT = new Uint8Array(256);
-    const gamma = 0.85;
-    for (let i = 0; i < 256; i++) {
-      gammaLUT[i] = Math.min(255, Math.round(255 * Math.pow(i / 255, gamma)));
-    }
-
-    const final = track(new cv.Mat());
-    stretched.copyTo(final);
-
-    // Appliquer le LUT manuellement
-    const data = final.data;
-    for (let i = 0; i < data.length; i++) {
-      data[i] = gammaLUT[data[i]];
-    }
-
-    // Convertir en RGBA
-    const rgbaDst = track(new cv.Mat());
-    cv.cvtColor(final, rgbaDst, cv.COLOR_GRAY2RGBA);
-
-    return new ImageData(
-      new Uint8ClampedArray(rgbaDst.data),
-      rgbaDst.cols,
-      rgbaDst.rows
-    );
-
-  } catch (err) {
-    console.error('B&W Filter Error:', err);
-    return imageData;
-  } finally {
-    mats.forEach(mat => {
-      try { mat.delete(); } catch (e) { /* ignore */ }
-    });
+  // Convertir en niveaux de gris et collecter les valeurs
+  const grayValues = [];
+  for (let i = 0; i < data.length; i += 4) {
+    // Luminosité perceptuelle
+    const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    grayValues.push(gray);
   }
+
+  // Trouver les percentiles 5% et 95% pour l'étirement
+  const sorted = [...grayValues].sort((a, b) => a - b);
+  const lowIdx = Math.floor(sorted.length * 0.05);
+  const highIdx = Math.floor(sorted.length * 0.95);
+  const lowVal = sorted[lowIdx];
+  const highVal = sorted[highIdx];
+
+  // Étirement des niveaux
+  const range = Math.max(1, highVal - lowVal);
+
+  // Appliquer la transformation
+  let idx = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    let gray = grayValues[idx++];
+
+    // Étirer vers 0-255
+    gray = Math.round(((gray - lowVal) / range) * 255);
+    gray = Math.max(0, Math.min(255, gray));
+
+    // Léger gamma pour éclaircir les tons moyens (fond plus blanc)
+    gray = Math.round(255 * Math.pow(gray / 255, 0.9));
+
+    data[i] = gray;     // R
+    data[i + 1] = gray; // G
+    data[i + 2] = gray; // B
+    // Alpha reste inchangé
+  }
+
+  return imageData;
 }
 
 /**
