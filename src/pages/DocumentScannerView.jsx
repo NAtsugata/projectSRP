@@ -280,7 +280,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       ctx.putImageData(imageData, 0, 0);
 
-      // Qualité maximale pour le rendu final
+      // PNG pour qualité sans perte
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => ({
@@ -291,7 +291,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         }));
         setEnhanceMode(filterId);
         setIsProcessing(false);
-      }, 'image/jpeg', 0.98);
+      }, 'image/png');
     };
 
     img.src = currentDoc.originalUrl || currentDoc.url;
@@ -341,7 +341,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       imageData = enhanceBlackAndWhite(imageData);
       outCtx.putImageData(imageData, 0, 0);
 
-      // Qualité maximale 0.98 pour l'export final
+      // PNG pour qualité sans perte
       const transformedBlob = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
         outputCanvas.toBlob(
@@ -349,8 +349,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
             clearTimeout(timeout);
             blob ? resolve(blob) : reject(new Error('Blob échoué'));
           },
-          'image/jpeg',
-          0.98
+          'image/png'
         );
       });
 
@@ -415,7 +414,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
       ctx.restore();
 
-      // Qualité maximale pour la rotation
+      // PNG pour qualité sans perte
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => ({
@@ -425,7 +424,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           rotation: newRotation
         }));
         setIsProcessing(false);
-      }, 'image/jpeg', 0.98);
+      }, 'image/png');
     };
 
     img.src = currentDoc.url;

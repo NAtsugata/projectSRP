@@ -66,8 +66,8 @@ export async function createPdfFromDocuments(documents, options = {}) {
         margin
       );
 
-      // Ajouter l'image au PDF - FAST = meilleure qualité (moins de compression)
-      pdf.addImage(imageDataUrl, 'JPEG', x, y, width, height, undefined, 'FAST');
+      // Ajouter l'image au PDF - NONE = pas de compression, qualité maximale
+      pdf.addImage(imageDataUrl, 'PNG', x, y, width, height, undefined, 'NONE');
 
       logger.log(`[PDF] Page ${i + 1}/${documents.length} ajoutée`);
     } catch (err) {
@@ -139,8 +139,8 @@ async function getImageDataUrl(doc) {
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        // Qualité maximale 0.98 pour export HD
-        resolve(canvas.toDataURL('image/jpeg', 0.98));
+        // PNG pour qualité sans perte
+        resolve(canvas.toDataURL('image/png'));
       };
       img.onerror = reject;
       img.src = doc.url;
