@@ -906,7 +906,7 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Filtre Noir & Blanc - Fond blanc pur, texte noir
+ * Filtre Noir & Blanc - Binaire pur (aucun gris)
  */
 export function enhanceBlackAndWhite(imageData) {
   const data = imageData.data;
@@ -918,33 +918,21 @@ export function enhanceBlackAndWhite(imageData) {
     grayValues.push(gray);
   }
 
-  // Percentiles 2% et 98% pour étirement agressif
+  // Trouver le seuil optimal (méthode Otsu simplifiée)
   const sorted = [...grayValues].sort((a, b) => a - b);
-  const lowVal = sorted[Math.floor(sorted.length * 0.02)];
-  const highVal = sorted[Math.floor(sorted.length * 0.98)];
-  const range = Math.max(1, highVal - lowVal);
+  const threshold = sorted[Math.floor(sorted.length * 0.85)]; // 85% = fond blanc
 
-  // Appliquer
+  // Appliquer seuil binaire
   let idx = 0;
   for (let i = 0; i < data.length; i += 4) {
-    let gray = grayValues[idx++];
+    const gray = grayValues[idx++];
 
-    // Étirer
-    gray = ((gray - lowVal) / range) * 255;
-    gray = Math.max(0, Math.min(255, gray));
+    // Binaire pur: soit 0 soit 255
+    const value = gray > threshold ? 255 : 0;
 
-    // Gamma fort pour pousser les blancs à 255
-    gray = 255 * Math.pow(gray / 255, 0.7);
-
-    // Seuil: tout ce qui est clair devient blanc pur
-    if (gray > 200) gray = 255;
-    if (gray < 50) gray = 0;
-
-    gray = Math.round(gray);
-
-    data[i] = gray;
-    data[i + 1] = gray;
-    data[i + 2] = gray;
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
   }
 
   return imageData;
