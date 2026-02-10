@@ -11,7 +11,7 @@ export const isOpenCvReady = () => {
 
 /**
  * Détecte les bords d'un document dans une image avec OpenCV
- * Version V8 - Détection robuste multi-méthodes avec prétraitement amélioré
+ * Version V9 - Détection améliorée avec meilleure résolution et paramètres optimisés
  */
 export function detectDocumentEdges(imageData) {
   if (!isOpenCvReady()) {
@@ -30,14 +30,14 @@ export function detectDocumentEdges(imageData) {
     // 1. Conversion ImageData -> cv.Mat
     src = cv.matFromImageData(imageData);
 
-    // 2. Resize pour performance (800px max - plus grand = meilleure détection)
+    // 2. Resize pour performance (1200px pour meilleure détection)
     const maxDim = Math.max(src.cols, src.rows);
-    const targetSize = 800;
+    const targetSize = 1200;
     const scale = maxDim > targetSize ? targetSize / maxDim : 1;
 
     resized = new cv.Mat();
     if (scale < 1) {
-      cv.resize(src, resized, new cv.Size(0, 0), scale, scale, cv.INTER_AREA);
+      cv.resize(src, resized, new cv.Size(0, 0), scale, scale, cv.INTER_LINEAR);
     } else {
       src.copyTo(resized);
     }
@@ -45,20 +45,21 @@ export function detectDocumentEdges(imageData) {
     const imgWidth = resized.cols;
     const imgHeight = resized.rows;
     const imgArea = imgWidth * imgHeight;
-    const minAreaThreshold = imgArea * 0.03; // 3% minimum
+    const minAreaThreshold = imgArea * 0.02; // 2% minimum (plus sensible)
 
-    // 3. Amélioration du contraste (CLAHE)
+    // 3. Conversion en niveaux de gris
     gray = new cv.Mat();
     cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
 
+    // 4. Amélioration du contraste (CLAHE plus fort)
     enhanced = new cv.Mat();
-    const clahe = new cv.CLAHE(3.0, new cv.Size(8, 8));
+    const clahe = new cv.CLAHE(4.0, new cv.Size(8, 8));
     clahe.apply(gray, enhanced);
     clahe.delete();
 
-    // 4. Flou bilatéral (préserve les bords)
+    // 5. Flou gaussien pour réduire le bruit
     blurred = new cv.Mat();
-    cv.bilateralFilter(enhanced, blurred, 9, 75, 75);
+    cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
 
     // Collecter tous les candidats de toutes les méthodes
     const candidates = [];
@@ -105,6 +106,13 @@ export function detectDocumentEdges(imageData) {
       candidates.push(colorResult);
     }
 
+    // ===== MÉTHODE 7: Laplacien pour bords fins =====
+    const laplacianResult = detectWithLaplacian(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
+    if (laplacianResult) {
+      laplacianResult.method = 'laplacian';
+      candidates.push(laplacianResult);
+    }
+
     if (candidates.length === 0) {
       console.log('[DETECT] Aucun candidat trouvé');
       return null;
@@ -122,8 +130,8 @@ export function detectDocumentEdges(imageData) {
 
     const best = candidates[0];
 
-    // Seuil plus bas pour accepter plus de détections
-    if (best.score > 0.15) {
+    // Seuil très bas pour accepter plus de détections
+    if (best.score > 0.10) {
       console.log('[DETECT] Meilleur:', best.method, 'score:', best.score.toFixed(2));
       return sortCorners(best.points);
     }
@@ -152,8 +160,8 @@ function detectWithAdaptiveThreshold(cv, gray, minArea, scale, imgWidth, imgHeig
 
   try {
     thresh = new cv.Mat();
-    // Seuillage adaptatif - meilleur pour les documents avec ombres
-    cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 5);
+    // Seuillage adaptatif avec bloc plus grand pour meilleure détection
+    cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 3);
 
     // Inverser si nécessaire (document clair sur fond sombre)
     const mean = cv.mean(thresh);
@@ -161,12 +169,12 @@ function detectWithAdaptiveThreshold(cv, gray, minArea, scale, imgWidth, imgHeig
       cv.bitwise_not(thresh, thresh);
     }
 
-    // Morphologie agressive pour connecter les bords
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    // Morphologie très agressive pour connecter les bords
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
     morphed = new cv.Mat();
     cv.morphologyEx(thresh, morphed, cv.MORPH_CLOSE, kernel);
 
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
+    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
     cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
     bigKernel.delete();
 
@@ -479,6 +487,52 @@ function detectByColorContrast(cv, img, minArea, scale, imgWidth, imgHeight) {
 }
 
 /**
+ * Détection avec Laplacien (bords fins et détaillés)
+ */
+function detectWithLaplacian(cv, gray, minArea, scale, imgWidth, imgHeight) {
+  let laplacian = null, absLaplacian = null, thresh = null, morphed = null, kernel = null;
+  let contours = null, hierarchy = null;
+
+  try {
+    // Laplacien pour détecter les bords
+    laplacian = new cv.Mat();
+    cv.Laplacian(gray, laplacian, cv.CV_16S, 3);
+
+    // Valeur absolue
+    absLaplacian = new cv.Mat();
+    cv.convertScaleAbs(laplacian, absLaplacian);
+
+    // Seuillage
+    thresh = new cv.Mat();
+    cv.threshold(absLaplacian, thresh, 25, 255, cv.THRESH_BINARY);
+
+    // Morphologie pour connecter les bords
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    morphed = new cv.Mat();
+    cv.dilate(thresh, morphed, kernel);
+
+    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(11, 11));
+    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
+    bigKernel.delete();
+
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
+
+  } finally {
+    if (laplacian) laplacian.delete();
+    if (absLaplacian) absLaplacian.delete();
+    if (thresh) thresh.delete();
+    if (morphed) morphed.delete();
+    if (kernel) kernel.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
+  }
+}
+
+/**
  * Estime la médiane d'une image grayscale
  */
 function estimateMedian(gray) {
@@ -533,9 +587,10 @@ function findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight) 
  */
 function calculateQuickScore(points, area, totalArea) {
   const areaRatio = area / totalArea;
-  // Favoriser les grandes zones mais pas trop grandes
-  if (areaRatio < 0.05 || areaRatio > 0.95) return 0;
-  return areaRatio * (1 - Math.abs(areaRatio - 0.5));
+  // Plus permissif: accepter de 3% à 98%
+  if (areaRatio < 0.03 || areaRatio > 0.98) return 0;
+  // Favoriser les documents qui prennent une bonne partie de l'image
+  return Math.sqrt(areaRatio);
 }
 
 /**
@@ -755,25 +810,25 @@ function isValidDocumentShape(points, imgWidth, imgHeight) {
   const bboxWidth = maxX - minX;
   const bboxHeight = maxY - minY;
 
-  // Taille minimum
-  if (bboxWidth < imgWidth * 0.1 || bboxHeight < imgHeight * 0.1) {
+  // Taille minimum plus permissive (5% au lieu de 10%)
+  if (bboxWidth < imgWidth * 0.05 || bboxHeight < imgHeight * 0.05) {
     return false;
   }
 
-  // Ratio d'aspect raisonnable (0.15 à 6.0)
+  // Ratio d'aspect très permissif (0.1 à 10.0)
   const aspectRatio = bboxWidth / bboxHeight;
-  if (aspectRatio < 0.15 || aspectRatio > 6.0) {
+  if (aspectRatio < 0.1 || aspectRatio > 10.0) {
     return false;
   }
 
-  // Vérifier les angles (15° à 165°)
+  // Vérifier les angles (10° à 170° - plus permissif)
   for (let i = 0; i < 4; i++) {
     const p1 = points[(i + 3) % 4];
     const p2 = points[i];
     const p3 = points[(i + 1) % 4];
     const angle = calculateAngle(p1, p2, p3);
 
-    if (angle < 15 || angle > 165) {
+    if (angle < 10 || angle > 170) {
       return false;
     }
   }
