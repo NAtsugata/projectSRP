@@ -906,48 +906,45 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
 }
 
 /**
- * Filtre Noir & Blanc - Simple et propre
- * Juste ajustement de niveaux pour fond blanc et texte noir
+ * Filtre Noir & Blanc - Fond blanc pur, texte noir
  */
 export function enhanceBlackAndWhite(imageData) {
   const data = imageData.data;
-  const width = imageData.width;
-  const height = imageData.height;
 
-  // Convertir en niveaux de gris et collecter les valeurs
+  // Convertir en niveaux de gris
   const grayValues = [];
   for (let i = 0; i < data.length; i += 4) {
-    // Luminosité perceptuelle
     const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
     grayValues.push(gray);
   }
 
-  // Trouver les percentiles 5% et 95% pour l'étirement
+  // Percentiles 2% et 98% pour étirement agressif
   const sorted = [...grayValues].sort((a, b) => a - b);
-  const lowIdx = Math.floor(sorted.length * 0.05);
-  const highIdx = Math.floor(sorted.length * 0.95);
-  const lowVal = sorted[lowIdx];
-  const highVal = sorted[highIdx];
-
-  // Étirement des niveaux
+  const lowVal = sorted[Math.floor(sorted.length * 0.02)];
+  const highVal = sorted[Math.floor(sorted.length * 0.98)];
   const range = Math.max(1, highVal - lowVal);
 
-  // Appliquer la transformation
+  // Appliquer
   let idx = 0;
   for (let i = 0; i < data.length; i += 4) {
     let gray = grayValues[idx++];
 
-    // Étirer vers 0-255
-    gray = Math.round(((gray - lowVal) / range) * 255);
+    // Étirer
+    gray = ((gray - lowVal) / range) * 255;
     gray = Math.max(0, Math.min(255, gray));
 
-    // Léger gamma pour éclaircir les tons moyens (fond plus blanc)
-    gray = Math.round(255 * Math.pow(gray / 255, 0.9));
+    // Gamma fort pour pousser les blancs à 255
+    gray = 255 * Math.pow(gray / 255, 0.7);
 
-    data[i] = gray;     // R
-    data[i + 1] = gray; // G
-    data[i + 2] = gray; // B
-    // Alpha reste inchangé
+    // Seuil: tout ce qui est clair devient blanc pur
+    if (gray > 200) gray = 255;
+    if (gray < 50) gray = 0;
+
+    gray = Math.round(gray);
+
+    data[i] = gray;
+    data[i + 1] = gray;
+    data[i + 2] = gray;
   }
 
   return imageData;
