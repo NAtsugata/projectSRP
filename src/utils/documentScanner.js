@@ -30,9 +30,9 @@ export function detectDocumentEdges(imageData) {
     // 1. Conversion ImageData -> cv.Mat
     src = cv.matFromImageData(imageData);
 
-    // 2. Resize pour performance (1200px pour meilleure détection)
+    // 2. Résolution maximale pour meilleure détection (Full HD)
     const maxDim = Math.max(src.cols, src.rows);
-    const targetSize = 1200;
+    const targetSize = 1920;
     const scale = maxDim > targetSize ? targetSize / maxDim : 1;
 
     resized = new cv.Mat();

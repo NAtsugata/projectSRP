@@ -201,8 +201,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
         await new Promise(r => setTimeout(r, 500));
       }
 
-      // Détection sur image HD
-      const detectionWidth = 1000;
+      // Détection sur image Full HD pour précision maximale
+      const detectionWidth = Math.min(1920, canvas.width);
       const scaleFactor = canvas.width / detectionWidth;
       const detectionHeight = Math.round(canvas.height / scaleFactor);
 

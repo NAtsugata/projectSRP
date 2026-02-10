@@ -122,8 +122,8 @@ export const useDocumentDetection = (options = {}) => {
       isDetectingRef.current = true;
 
       try {
-        // Résolution augmentée pour meilleure détection (1000px)
-        const processWidth = 1000;
+        // Résolution maximale pour meilleure détection (Full HD)
+        const processWidth = Math.min(1920, video.videoWidth);
         const scale = video.videoWidth / processWidth;
         const processHeight = Math.round(video.videoHeight / scale);
 
