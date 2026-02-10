@@ -36,7 +36,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [currentDoc, setCurrentDoc] = useState(null);
   const [mode, setMode] = useState('capture'); // capture, scanning, adjust, preview, export
   const [isProcessing, setIsProcessing] = useState(false);
-  const [enhanceMode, setEnhanceMode] = useState('bw'); // B&W par défaut pour les documents
+  const [enhanceMode, setEnhanceMode] = useState('original'); // Couleur originale par défaut
   const [scanProgress, setScanProgress] = useState(0);
   const [corners, setCorners] = useState(null);
   const [originalImage, setOriginalImage] = useState(null);
@@ -335,12 +335,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         throw new Error('Transformation échouée');
       }
 
-      // Appliquer automatiquement le filtre B&W (mode document)
-      const outCtx = outputCanvas.getContext('2d');
-      let imageData = outCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
-      imageData = enhanceBlackAndWhite(imageData);
-      outCtx.putImageData(imageData, 0, 0);
-
+      // Pas de filtre - garder l'image originale en couleur
       // PNG pour qualité sans perte
       const transformedBlob = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
@@ -361,11 +356,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
         originalUrl: url,
         blob: transformedBlob,
         timestamp: new Date().toISOString(),
-        enhanceMode: 'bw',
+        enhanceMode: 'original',
         rotation: 0,
         wasDetected: true
       });
-      setEnhanceMode('bw');
+      setEnhanceMode('original');
       setMode('preview');
       setCorners(null);
       setOriginalImage(null);
@@ -435,7 +430,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     if (!currentDoc) return;
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
-    setEnhanceMode('bw');
+    setEnhanceMode('original');
     setMode('capture');
     startCamera();
   }, [currentDoc, startCamera]);
@@ -445,7 +440,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     if (!currentDoc) return;
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
-    setEnhanceMode('bw');
+    setEnhanceMode('original');
     setMode('capture');
   }, [currentDoc]);
 
