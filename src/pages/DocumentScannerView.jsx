@@ -73,13 +73,26 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Appliquer le stream à la vidéo
   useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch(err => {
-        logger.error('Erreur play:', err);
-      });
+    if (!stream || mode !== 'capture') return;
+
+    // Petit délai pour s'assurer que le composant vidéo est monté
+    const attachStream = () => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(err => {
+          logger.error('Erreur play:', err);
+        });
+      }
+    };
+
+    // Essayer immédiatement, puis avec un délai si nécessaire
+    if (videoRef.current) {
+      attachStream();
+    } else {
+      const timeout = setTimeout(attachStream, 50);
+      return () => clearTimeout(timeout);
     }
-  }, [stream]);
+  }, [stream, mode]);
 
   // Nettoyage mémoire pour originalImage
   useEffect(() => {
@@ -149,7 +162,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
           height: { ideal: 1080 }
         }
       });
-      setStream(mediaStream);
+      setStream(prev => {
+        // Arrêter l'ancien stream s'il existe
+        if (prev) {
+          prev.getTracks().forEach(track => track.stop());
+        }
+        return mediaStream;
+      });
+      logger.log('[Camera] Stream démarré');
     } catch (error) {
       logger.error('Erreur caméra:', error);
       alert("Impossible d'accéder à la caméra");
