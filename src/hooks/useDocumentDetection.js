@@ -7,7 +7,7 @@ import { loadYoloModel, isYoloReady, detectDocumentYolo } from '../utils/yoloDoc
 import logger from '../utils/logger';
 
 export const useDocumentDetection = (options = {}) => {
-  const { initialDetector = 'yolo' } = options;
+  const { initialDetector = 'yolo' } = options; // YOLO par défaut
 
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
@@ -27,29 +27,31 @@ export const useDocumentDetection = (options = {}) => {
   const STABILITY_THRESHOLD = 3;
   const NO_DETECTION_LIMIT = 5;
 
-  // Charger le modèle YOLO au montage si sélectionné
+  // Charger le modèle YOLO au montage (toujours)
   useEffect(() => {
     let cancelled = false;
 
-    if (detectorType === 'yolo' && !isYoloReady()) {
+    // Toujours charger YOLO
+    if (!isYoloReady()) {
       setYoloModelLoading(true);
       loadYoloModel().then((loaded) => {
         if (cancelled) return;
         setYoloModelLoaded(loaded);
         setYoloModelLoading(false);
-        if (!loaded) {
+        if (loaded) {
+          logger.log('[Detection] YOLO chargé - utilisé comme détecteur principal');
+        } else {
           logger.warn('[Detection] YOLO non disponible, fallback OpenCV');
-          setDetectorType('opencv');
         }
       });
-    } else if (isYoloReady()) {
+    } else {
       setYoloModelLoaded(true);
     }
 
     return () => { cancelled = true; };
-  }, [detectorType]);
+  }, []);
 
-  // Détection sur un fichier (capture finale)
+  // Détection sur un fichier (capture finale) - YOLO prioritaire
   const detectDocument = useCallback(async (file) => {
     // Charger l'image
     const objectUrl = URL.createObjectURL(file);
@@ -61,11 +63,11 @@ export const useDocumentDetection = (options = {}) => {
     });
 
     try {
-      // Essayer YOLO d'abord si disponible
+      // YOLO comme détecteur principal (seuil bas 0.15 pour meilleure détection)
       if (isYoloReady()) {
-        const result = await detectDocumentYolo(img);
+        const result = await detectDocumentYolo(img, { confThreshold: 0.15 });
         if (result) {
-          URL.revokeObjectURL(img.src);
+          logger.log(`[Detection] YOLO détection réussie: confiance ${result.confidence}%`);
           return {
             detected: true,
             corners: result.corners,
@@ -76,7 +78,8 @@ export const useDocumentDetection = (options = {}) => {
         }
       }
 
-      // Fallback OpenCV
+      // Fallback OpenCV seulement si YOLO échoue
+      logger.log('[Detection] YOLO n\'a rien détecté, essai OpenCV...');
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
@@ -85,7 +88,6 @@ export const useDocumentDetection = (options = {}) => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const corners = detectDocumentEdges(imageData);
 
-      URL.revokeObjectURL(img.src);
       return {
         detected: corners !== null,
         contour: corners,
@@ -94,7 +96,7 @@ export const useDocumentDetection = (options = {}) => {
         method: 'opencv'
       };
     } catch (e) {
-      URL.revokeObjectURL(img.src);
+      logger.error('[Detection] Erreur:', e);
       return { detected: false, contour: null, corners: null };
     }
   }, []);
@@ -134,20 +136,26 @@ export const useDocumentDetection = (options = {}) => {
         ctx.drawImage(video, 0, 0, processWidth, processHeight);
 
         let rawCorners = null;
+        let detectionMethod = null;
 
-        // Essayer YOLO d'abord
+        // YOLO comme détecteur principal (seuil bas pour meilleure sensibilité)
         if (isYoloReady()) {
-          const yoloResult = await detectDocumentYolo(tempCanvas, { confThreshold: 0.3 });
+          const yoloResult = await detectDocumentYolo(tempCanvas, { confThreshold: 0.15 });
           if (yoloResult) {
-            // YOLO retourne des coordonnées en pixels de l'image originale du canvas
             rawCorners = yoloResult.corners;
+            detectionMethod = 'yolo';
+            logger.log(`[Detection] YOLO: confiance ${yoloResult.confidence}%`);
           }
         }
 
-        // Fallback OpenCV
+        // Fallback OpenCV seulement si YOLO ne détecte rien
         if (!rawCorners && isOpenCvReady()) {
           const imageData = ctx.getImageData(0, 0, processWidth, processHeight);
           rawCorners = detectDocumentEdges(imageData);
+          if (rawCorners) {
+            detectionMethod = 'opencv';
+            logger.log('[Detection] OpenCV fallback utilisé');
+          }
         }
 
         // Gestion absence de détection

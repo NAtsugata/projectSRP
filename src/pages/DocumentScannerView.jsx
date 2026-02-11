@@ -57,7 +57,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     detectDocument,
     startLiveDetection,
     stopLiveDetection
-  } = useDocumentDetection({ initialDetector: 'opencv' });
+  } = useDocumentDetection({ initialDetector: 'yolo' });
 
   const {
     draggedCorner,
