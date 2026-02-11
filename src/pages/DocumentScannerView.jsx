@@ -49,6 +49,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const previewCanvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const streamRef = useRef(null);
+  const isStartingCameraRef = useRef(false);
 
   // Hooks personnalisés
   const {
@@ -75,9 +77,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   useEffect(() => {
     if (!stream || mode !== 'capture') return;
 
-    // Petit délai pour s'assurer que le composant vidéo est monté
     const attachStream = () => {
-      if (videoRef.current) {
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(err => {
           logger.error('Erreur play:', err);
@@ -85,13 +86,19 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }
     };
 
-    // Essayer immédiatement, puis avec un délai si nécessaire
-    if (videoRef.current) {
-      attachStream();
-    } else {
-      const timeout = setTimeout(attachStream, 50);
-      return () => clearTimeout(timeout);
-    }
+    // Essayer immédiatement
+    attachStream();
+
+    // Réessayer après un court délai si le ref n'était pas prêt
+    const timeout = setTimeout(attachStream, 100);
+
+    return () => {
+      clearTimeout(timeout);
+      // Détacher le stream du video element au cleanup
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
   }, [stream, mode]);
 
   // Nettoyage mémoire pour originalImage
@@ -102,6 +109,16 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }
     };
   }, [originalImage]);
+
+  // Cleanup du stream au démontage du composant
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   // Charger OpenCV
   useEffect(() => {
@@ -152,9 +169,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
-  // Démarrer la caméra
+  // Démarrer la caméra avec protection contre les appels multiples
   const startCamera = useCallback(async () => {
+    // Éviter les appels multiples simultanés
+    if (isStartingCameraRef.current) {
+      logger.log('[Camera] Démarrage déjà en cours, ignoré');
+      return;
+    }
+    isStartingCameraRef.current = true;
+
     try {
+      // Arrêter l'ancien stream s'il existe
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
@@ -162,27 +192,27 @@ export default function DocumentScannerView({ onSave, onClose }) {
           height: { ideal: 1080 }
         }
       });
-      setStream(prev => {
-        // Arrêter l'ancien stream s'il existe
-        if (prev) {
-          prev.getTracks().forEach(track => track.stop());
-        }
-        return mediaStream;
-      });
+
+      // Vérifier qu'on n'a pas été annulé pendant l'attente
+      streamRef.current = mediaStream;
+      setStream(mediaStream);
       logger.log('[Camera] Stream démarré');
     } catch (error) {
       logger.error('Erreur caméra:', error);
       alert("Impossible d'accéder à la caméra");
+    } finally {
+      isStartingCameraRef.current = false;
     }
   }, []);
 
-  // Arrêter la caméra
+  // Arrêter la caméra (utilise ref pour éviter dépendances)
   const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
-  }, [stream]);
+    setStream(null);
+  }, []);
 
   // Capturer une photo
   const capturePhoto = useCallback(async () => {
