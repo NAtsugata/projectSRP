@@ -63,37 +63,51 @@ export const useDocumentDetection = (options = {}) => {
     });
 
     try {
-      // YOLO comme détecteur principal (seuil bas 0.15 pour meilleure détection)
-      if (isYoloReady()) {
-        const result = await detectDocumentYolo(img, { confThreshold: 0.15 });
-        if (result) {
-          logger.log(`[Detection] YOLO détection réussie: confiance ${result.confidence}%`);
-          return {
-            detected: true,
-            corners: result.corners,
-            contour: result.corners,
-            confidence: result.confidence,
-            method: 'yolo'
-          };
-        }
-      }
-
-      // Fallback OpenCV seulement si YOLO échoue
-      logger.log('[Detection] YOLO n\'a rien détecté, essai OpenCV...');
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
+
+      // YOLO détecte si un document est présent
+      let documentDetected = false;
+      let yoloConfidence = 0;
+
+      if (isYoloReady()) {
+        const yoloResult = await detectDocumentYolo(img, { confThreshold: 0.15 });
+        if (yoloResult) {
+          documentDetected = true;
+          yoloConfidence = yoloResult.confidence;
+          logger.log(`[Detection] YOLO a trouvé un document: confiance ${yoloConfidence}%`);
+        }
+      }
+
+      // OpenCV trouve les vrais coins (toujours, car il donne les coins précis)
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const corners = detectDocumentEdges(imageData);
 
+      if (corners) {
+        logger.log('[Detection] Coins précis trouvés par OpenCV');
+        return {
+          detected: true,
+          corners: corners,
+          contour: corners,
+          confidence: documentDetected ? yoloConfidence : 85,
+          method: documentDetected ? 'yolo+opencv' : 'opencv'
+        };
+      }
+
+      // Si OpenCV ne trouve rien mais YOLO a détecté, retourner quand même
+      if (documentDetected) {
+        logger.log('[Detection] Pas de coins précis, document détecté par YOLO');
+      }
+
       return {
-        detected: corners !== null,
-        contour: corners,
-        corners: corners,
-        confidence: corners ? 85 : 0,
-        method: 'opencv'
+        detected: false,
+        contour: null,
+        corners: null,
+        confidence: 0,
+        method: 'none'
       };
     } catch (e) {
       logger.error('[Detection] Erreur:', e);
@@ -138,23 +152,38 @@ export const useDocumentDetection = (options = {}) => {
         let rawCorners = null;
         let detectionMethod = null;
 
-        // YOLO comme détecteur principal (seuil bas pour meilleure sensibilité)
+        // YOLO détecte la zone du document, puis OpenCV trouve les vrais coins
         if (isYoloReady()) {
           const yoloResult = await detectDocumentYolo(tempCanvas, { confThreshold: 0.15 });
           if (yoloResult) {
-            rawCorners = yoloResult.corners;
-            detectionMethod = 'yolo';
-            logger.log(`[Detection] YOLO: confiance ${yoloResult.confidence}%`);
+            logger.log(`[Detection] YOLO a trouvé un document: confiance ${yoloResult.confidence}%`);
+
+            // Utiliser OpenCV pour trouver les vrais coins dans la zone détectée
+            if (isOpenCvReady()) {
+              const imageData = ctx.getImageData(0, 0, processWidth, processHeight);
+              rawCorners = detectDocumentEdges(imageData);
+              if (rawCorners) {
+                detectionMethod = 'yolo+opencv';
+                logger.log('[Detection] Coins trouvés par OpenCV dans zone YOLO');
+              }
+            }
+
+            // Si OpenCV ne trouve rien, utiliser la bbox YOLO comme fallback
+            if (!rawCorners) {
+              rawCorners = yoloResult.corners;
+              detectionMethod = 'yolo-bbox';
+              logger.log('[Detection] Utilisation bbox YOLO (pas de coins précis)');
+            }
           }
         }
 
-        // Fallback OpenCV seulement si YOLO ne détecte rien
+        // Fallback OpenCV seul si YOLO n'a rien trouvé
         if (!rawCorners && isOpenCvReady()) {
           const imageData = ctx.getImageData(0, 0, processWidth, processHeight);
           rawCorners = detectDocumentEdges(imageData);
           if (rawCorners) {
             detectionMethod = 'opencv';
-            logger.log('[Detection] OpenCV fallback utilisé');
+            logger.log('[Detection] OpenCV seul utilisé');
           }
         }
 
