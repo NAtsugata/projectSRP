@@ -512,6 +512,11 @@
   background: var(--scanner-success);
 }
 
+.detector-badge.yolo-seg {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+}
+
 .detector-badge.opencv {
   background: var(--scanner-copper);
 }

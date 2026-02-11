@@ -58,7 +58,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     startLiveDetection,
     stopLiveDetection,
     yoloModelLoaded,
-    yoloModelLoading
+    yoloModelLoading,
+    yoloIsSegmentation
   } = useDocumentDetection({ initialDetector: 'yolo' });
 
   const {
@@ -575,7 +576,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {!liveCorners && <div className="guide-frame" />}
 
       {yoloModelLoading && <div className="detector-badge loading">Chargement YOLO...</div>}
-      {yoloModelLoaded && <div className="detector-badge yolo">YOLO</div>}
+      {yoloModelLoaded && yoloIsSegmentation && <div className="detector-badge yolo-seg">YOLO-SEG</div>}
+      {yoloModelLoaded && !yoloIsSegmentation && <div className="detector-badge yolo">YOLO</div>}
       {!yoloModelLoaded && !yoloModelLoading && <div className="detector-badge opencv">OpenCV</div>}
 
       {scannedDocs.length > 0 && (
