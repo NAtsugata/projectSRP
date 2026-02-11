@@ -108,8 +108,8 @@ export const useDocumentDetection = (options = {}) => {
     stableCornerRef.current = null;
     noDetectionCountRef.current = 0;
 
-    // Intervalle adapté : résolution 800px = plus de temps nécessaire
-    const actualInterval = isYoloReady() ? Math.max(interval, 350) : Math.max(interval, 200);
+    // Intervalle plus rapide pour YOLO (250ms)
+    const actualInterval = isYoloReady() ? Math.max(interval, 250) : Math.max(interval, 150);
 
     const detectLive = async () => {
       if (isDetectingRef.current) return;

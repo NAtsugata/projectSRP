@@ -56,7 +56,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
     detectionConfidence,
     detectDocument,
     startLiveDetection,
-    stopLiveDetection
+    stopLiveDetection,
+    yoloModelLoaded,
+    yoloModelLoading
   } = useDocumentDetection({ initialDetector: 'yolo' });
 
   const {
@@ -572,7 +574,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
       <canvas ref={overlayCanvasRef} className="camera-overlay-canvas" />
       {!liveCorners && <div className="guide-frame" />}
 
-      <div className="detector-badge opencv">OpenCV</div>
+      {yoloModelLoading && <div className="detector-badge loading">Chargement YOLO...</div>}
+      {yoloModelLoaded && <div className="detector-badge yolo">YOLO</div>}
+      {!yoloModelLoaded && !yoloModelLoading && <div className="detector-badge opencv">OpenCV</div>}
 
       {scannedDocs.length > 0 && (
         <div className="mini-gallery">
