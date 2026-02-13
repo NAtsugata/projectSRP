@@ -49,7 +49,35 @@ const getWeekDays = (startDate) => {
 };
 
 /**
- * Groupe les interventions par équipe
+ * Récupère l'équipe assignée pour une intervention à une date donnée
+ * Prend en compte daily_assignments si disponible, sinon utilise intervention_assignments
+ */
+const getTeamForDate = (intervention, dateStr, usersMap) => {
+  const dailyAssignments = intervention.daily_assignments || {};
+  const globalAssignments = intervention.intervention_assignments || [];
+
+  // Vérifier si une équipe spécifique est assignée pour ce jour
+  let userIds = [];
+  if (dailyAssignments[dateStr] && dailyAssignments[dateStr].length > 0) {
+    userIds = [...dailyAssignments[dateStr]].sort();
+  } else if (globalAssignments.length > 0) {
+    userIds = globalAssignments.map(a => a.user_id).sort();
+  }
+
+  if (userIds.length === 0) {
+    return { teamKey: 'unassigned', userIds: [], name: 'Non assigné' };
+  }
+
+  const teamKey = userIds.join('-');
+  const names = userIds
+    .map(uid => usersMap[uid]?.full_name || '?')
+    .join(' + ');
+
+  return { teamKey, userIds, name: names };
+};
+
+/**
+ * Groupe les interventions par équipe (basé sur les assignations globales)
  */
 const groupByTeam = (interventions, users) => {
   const teams = {};
@@ -85,6 +113,55 @@ const groupByTeam = (interventions, users) => {
       teams[teamKey] = {
         id: teamKey,
         name: names,
+        color: TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length],
+        interventions: [],
+        userIds
+      };
+    }
+
+    teams[teamKey].interventions.push(itv);
+  });
+
+  // Trier: équipes avec le plus d'interventions en premier, "Non assigné" en dernier
+  return Object.values(teams).sort((a, b) => {
+    if (a.id === 'unassigned') return 1;
+    if (b.id === 'unassigned') return -1;
+    return b.interventions.length - a.interventions.length;
+  });
+};
+
+/**
+ * Groupe les interventions par équipe pour un jour spécifique (prend en compte daily_assignments)
+ */
+const groupByTeamForDay = (interventions, users, dateStr) => {
+  const teams = {};
+  const usersMap = {};
+  users.forEach(u => { usersMap[u.id] = u; });
+
+  // Créer une équipe "Non assigné"
+  teams['unassigned'] = {
+    id: 'unassigned',
+    name: 'Non assigné',
+    color: '#94a3b8',
+    interventions: [],
+    userIds: []
+  };
+
+  interventions.forEach(itv => {
+    // Vérifier si cette intervention est prévue pour ce jour
+    const allDates = itv.scheduled_dates?.length > 0
+      ? itv.scheduled_dates
+      : [itv.date];
+
+    if (!allDates.includes(dateStr)) return;
+
+    // Obtenir l'équipe pour ce jour spécifique
+    const { teamKey, userIds, name } = getTeamForDate(itv, dateStr, usersMap);
+
+    if (!teams[teamKey]) {
+      teams[teamKey] = {
+        id: teamKey,
+        name: name,
         color: TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length],
         interventions: [],
         userIds
@@ -221,39 +298,61 @@ const PlanningGanttView = ({
   // Générer les jours de la semaine
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
-  // Grouper par équipe (toutes les interventions)
-  const allTeams = useMemo(() =>
-    groupByTeam(interventions, users),
-    [interventions, users]
-  );
-
-  // Filtrer les interventions par équipe sélectionnée
-  const filteredInterventions = useMemo(() => {
-    if (selectedTeamFilter === 'all') return interventions;
-
-    return interventions.filter(itv => {
-      const assignments = itv.intervention_assignments || [];
-      if (assignments.length === 0) {
-        return selectedTeamFilter === 'unassigned';
-      }
-      const userIds = assignments.map(a => a.user_id).sort();
-      const teamKey = userIds.join('-');
-      return teamKey === selectedTeamFilter;
-    });
-  }, [interventions, selectedTeamFilter]);
-
-  // Grouper les interventions filtrées par équipe
-  const teams = useMemo(() =>
-    groupByTeam(filteredInterventions, users),
-    [filteredInterventions, users]
-  );
-
-  // Map users par ID pour lookup rapide
+  // Map users pour lookup rapide
   const usersMap = useMemo(() => {
     const map = {};
     users.forEach(u => { map[u.id] = u; });
     return map;
   }, [users]);
+
+  // Calculer toutes les équipes uniques pour la semaine (basé sur daily_assignments)
+  const allTeamsForWeek = useMemo(() => {
+    const teamsMap = {};
+
+    // Pour chaque jour de la semaine, trouver les équipes
+    weekDays.forEach(day => {
+      const dayTeams = groupByTeamForDay(interventions, users, day.dateStr);
+      dayTeams.forEach(team => {
+        if (!teamsMap[team.id]) {
+          teamsMap[team.id] = {
+            ...team,
+            interventionCount: 0 // Compter le total d'interventions sur la semaine
+          };
+        }
+        teamsMap[team.id].interventionCount += team.interventions.length;
+      });
+    });
+
+    // Trier par nombre d'interventions
+    return Object.values(teamsMap).sort((a, b) => {
+      if (a.id === 'unassigned') return 1;
+      if (b.id === 'unassigned') return -1;
+      return b.interventionCount - a.interventionCount;
+    });
+  }, [interventions, users, weekDays]);
+
+  // Filtrer les équipes selon le filtre sélectionné
+  const teams = useMemo(() => {
+    if (selectedTeamFilter === 'all') return allTeamsForWeek;
+    return allTeamsForWeek.filter(team => team.id === selectedTeamFilter);
+  }, [allTeamsForWeek, selectedTeamFilter]);
+
+  // Calculer les interventions par équipe et par jour
+  const interventionsByTeamAndDay = useMemo(() => {
+    const result = {};
+
+    teams.forEach(team => {
+      result[team.id] = {};
+      weekDays.forEach(day => {
+        // Obtenir les interventions pour cette équipe ce jour-là
+        const dayTeams = groupByTeamForDay(interventions, users, day.dateStr);
+        const matchingTeam = dayTeams.find(t => t.id === team.id);
+        result[team.id][day.dateStr] = matchingTeam?.interventions || [];
+      });
+    });
+
+    return result;
+  }, [teams, weekDays, interventions, users]);
 
   // Calculer les absences par jour de la semaine
   const absencesByDay = useMemo(() => {
@@ -338,16 +437,14 @@ const PlanningGanttView = ({
 
   // Obtenir les interventions d'une équipe pour un jour donné avec infos de span
   const getInterventionsForDay = (team, dateStr, weekDaysArray) => {
-    const dayInterventions = [];
+    // Utiliser les interventions pré-calculées par équipe et jour
+    const dayInterventions = interventionsByTeamAndDay[team.id]?.[dateStr] || [];
 
-    team.interventions.forEach(itv => {
+    const result = dayInterventions.map(itv => {
       // Récupérer toutes les dates de l'intervention
       const allDates = itv.scheduled_dates?.length > 0
         ? [...itv.scheduled_dates].sort()
         : [itv.date];
-
-      // Vérifier si cette date fait partie des dates de l'intervention
-      if (!allDates.includes(dateStr)) return;
 
       // Déterminer la position dans le span
       const indexInDates = allDates.indexOf(dateStr);
@@ -362,7 +459,7 @@ const PlanningGanttView = ({
       const hasDatesBefore = allDates.some(d => d < weekStart);
       const hasDatesAfter = allDates.some(d => d > weekEnd);
 
-      dayInterventions.push({
+      return {
         ...itv,
         isSpanStart: isSpanStart && !hasDatesBefore,
         isSpanMiddle: isSpanMiddle || (isSpanStart && hasDatesBefore),
@@ -370,11 +467,11 @@ const PlanningGanttView = ({
         spanDays: totalDays,
         continuesBefore: hasDatesBefore && dateStr === weekStart,
         continuesAfter: hasDatesAfter && dateStr === weekEnd
-      });
+      };
     });
 
     // Trier par heure
-    return dayInterventions.sort((a, b) => {
+    return result.sort((a, b) => {
       const timeA = a.time || '00:00';
       const timeB = b.time || '00:00';
       return timeA.localeCompare(timeB);
@@ -395,11 +492,13 @@ const PlanningGanttView = ({
     return `${start.getDate()} ${startMonth} - ${end.getDate()} ${endMonth} ${year}`;
   }, [weekDays]);
 
-  // Stats rapides (basées sur les interventions filtrées)
+  // Stats rapides (basées sur les interventions de la semaine)
   const stats = useMemo(() => {
-    const weekInterventions = filteredInterventions.filter(itv => {
-      const startStr = weekDays[0].dateStr;
-      const endStr = weekDays[6].dateStr;
+    const startStr = weekDays[0].dateStr;
+    const endStr = weekDays[6].dateStr;
+
+    // Compter les interventions uniques de la semaine
+    const weekInterventions = interventions.filter(itv => {
       if (itv.scheduled_dates?.some(d => d >= startStr && d <= endStr)) return true;
       return itv.date >= startStr && itv.date <= endStr;
     });
@@ -407,9 +506,9 @@ const PlanningGanttView = ({
     return {
       total: weekInterventions.length,
       completed: weekInterventions.filter(i => i.status === 'Terminée').length,
-      teams: teams.filter(t => t.id !== 'unassigned' && t.interventions.length > 0).length
+      teams: teams.filter(t => t.id !== 'unassigned' && t.interventionCount > 0).length
     };
-  }, [filteredInterventions, weekDays, teams]);
+  }, [interventions, weekDays, teams]);
 
   return (
     <div className="planning-gantt">
@@ -442,9 +541,9 @@ const PlanningGanttView = ({
             title="Filtrer par équipe"
           >
             <option value="all">Toutes les équipes</option>
-            {allTeams.map(team => (
+            {allTeamsForWeek.map(team => (
               <option key={team.id} value={team.id}>
-                {team.name} ({team.interventions.length})
+                {team.name} ({team.interventionCount})
               </option>
             ))}
           </select>
@@ -527,7 +626,7 @@ const PlanningGanttView = ({
                   <div className="team-color-indicator"></div>
                   <span className="team-name">{team.name}</span>
                   <span className="team-count">
-                    {team.interventions.length}
+                    {team.interventionCount}
                   </span>
                 </div>
 
