@@ -312,8 +312,12 @@ export async function getMonthlyExportData(year, month) {
           }
         });
 
-        // --- Dépenses ---
-        const userExpenses = expenses.filter(e => e.user_id === userId);
+        // --- Dépenses (exclure les dépenses payées) ---
+        const userExpenses = expenses.filter(e =>
+          e.user_id === userId &&
+          e.status?.toLowerCase() !== 'payée' &&
+          e.status?.toLowerCase() !== 'payé'
+        );
         const expensesByCategory = {};
         let totalExpenses = 0;
         userExpenses.forEach(e => {
