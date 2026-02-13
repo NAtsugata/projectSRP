@@ -70,10 +70,9 @@ const getTeamForDate = (intervention, dateStr, usersMap) => {
 
   const teamKey = userIds.join('-');
   const names = userIds
-    .map(uid => usersMap[uid]?.full_name || '?')
-    .join(' + ');
+    .map(uid => usersMap[uid]?.full_name || '?');
 
-  return { teamKey, userIds, name: names };
+  return { teamKey, userIds, names };
 };
 
 /**
@@ -88,6 +87,7 @@ const groupByTeam = (interventions, users) => {
   teams['unassigned'] = {
     id: 'unassigned',
     name: 'Non assigné',
+    names: ['Non assigné'],
     color: '#94a3b8',
     interventions: [],
     userIds: []
@@ -107,12 +107,12 @@ const groupByTeam = (interventions, users) => {
 
     if (!teams[teamKey]) {
       const names = assignments
-        .map(a => a.profiles?.full_name || usersMap[a.user_id]?.full_name || '?')
-        .join(' + ');
+        .map(a => a.profiles?.full_name || usersMap[a.user_id]?.full_name || '?');
 
       teams[teamKey] = {
         id: teamKey,
-        name: names,
+        name: names.join(' + '),
+        names: names,
         color: TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length],
         interventions: [],
         userIds
@@ -142,6 +142,7 @@ const groupByTeamForDay = (interventions, users, dateStr) => {
   teams['unassigned'] = {
     id: 'unassigned',
     name: 'Non assigné',
+    names: ['Non assigné'],
     color: '#94a3b8',
     interventions: [],
     userIds: []
@@ -156,12 +157,12 @@ const groupByTeamForDay = (interventions, users, dateStr) => {
     if (!allDates.includes(dateStr)) return;
 
     // Obtenir l'équipe pour ce jour spécifique
-    const { teamKey, userIds, name } = getTeamForDate(itv, dateStr, usersMap);
+    const { teamKey, userIds, names } = getTeamForDate(itv, dateStr, usersMap);
 
     if (!teams[teamKey]) {
       teams[teamKey] = {
         id: teamKey,
-        name: name,
+        names: names, // Array de noms
         color: TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length],
         interventions: [],
         userIds
@@ -543,7 +544,7 @@ const PlanningGanttView = ({
             <option value="all">Toutes les équipes</option>
             {allTeamsForWeek.map(team => (
               <option key={team.id} value={team.id}>
-                {team.name} ({team.interventionCount})
+                {team.names?.join(', ') || team.name} ({team.interventionCount})
               </option>
             ))}
           </select>
@@ -624,7 +625,11 @@ const PlanningGanttView = ({
                 {/* Cellule équipe */}
                 <div className="gantt-team-cell" style={{ '--team-color': team.color }}>
                   <div className="team-color-indicator"></div>
-                  <span className="team-name">{team.name}</span>
+                  <div className="team-names">
+                    {team.names?.map((name, idx) => (
+                      <span key={idx} className="team-member-name">{name}</span>
+                    )) || <span className="team-member-name">{team.name}</span>}
+                  </div>
                   <span className="team-count">
                     {team.interventionCount}
                   </span>
