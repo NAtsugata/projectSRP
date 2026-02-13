@@ -216,14 +216,36 @@ const PlanningGanttView = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState('all');
 
   // Générer les jours de la semaine
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
-  // Grouper par équipe
-  const teams = useMemo(() =>
+  // Grouper par équipe (toutes les interventions)
+  const allTeams = useMemo(() =>
     groupByTeam(interventions, users),
     [interventions, users]
+  );
+
+  // Filtrer les interventions par équipe sélectionnée
+  const filteredInterventions = useMemo(() => {
+    if (selectedTeamFilter === 'all') return interventions;
+
+    return interventions.filter(itv => {
+      const assignments = itv.intervention_assignments || [];
+      if (assignments.length === 0) {
+        return selectedTeamFilter === 'unassigned';
+      }
+      const userIds = assignments.map(a => a.user_id).sort();
+      const teamKey = userIds.join('-');
+      return teamKey === selectedTeamFilter;
+    });
+  }, [interventions, selectedTeamFilter]);
+
+  // Grouper les interventions filtrées par équipe
+  const teams = useMemo(() =>
+    groupByTeam(filteredInterventions, users),
+    [filteredInterventions, users]
   );
 
   // Map users par ID pour lookup rapide
@@ -373,9 +395,9 @@ const PlanningGanttView = ({
     return `${start.getDate()} ${startMonth} - ${end.getDate()} ${endMonth} ${year}`;
   }, [weekDays]);
 
-  // Stats rapides
+  // Stats rapides (basées sur les interventions filtrées)
   const stats = useMemo(() => {
-    const weekInterventions = interventions.filter(itv => {
+    const weekInterventions = filteredInterventions.filter(itv => {
       const startStr = weekDays[0].dateStr;
       const endStr = weekDays[6].dateStr;
       if (itv.scheduled_dates?.some(d => d >= startStr && d <= endStr)) return true;
@@ -387,7 +409,7 @@ const PlanningGanttView = ({
       completed: weekInterventions.filter(i => i.status === 'Terminée').length,
       teams: teams.filter(t => t.id !== 'unassigned' && t.interventions.length > 0).length
     };
-  }, [interventions, weekDays, teams]);
+  }, [filteredInterventions, weekDays, teams]);
 
   return (
     <div className="planning-gantt">
@@ -412,6 +434,21 @@ const PlanningGanttView = ({
           </button>
         </div>
         <div className="gantt-actions">
+          {/* Filtre par équipe */}
+          <select
+            className="team-filter-select"
+            value={selectedTeamFilter}
+            onChange={(e) => setSelectedTeamFilter(e.target.value)}
+            title="Filtrer par équipe"
+          >
+            <option value="all">Toutes les équipes</option>
+            {allTeams.map(team => (
+              <option key={team.id} value={team.id}>
+                {team.name} ({team.interventions.length})
+              </option>
+            ))}
+          </select>
+
           <button className="today-btn" onClick={goToToday}>
             Aujourd'hui
           </button>

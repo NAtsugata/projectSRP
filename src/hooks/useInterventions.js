@@ -117,8 +117,8 @@ export function useInterventions(userId = null, isArchived = false) {
         isDeleting: deleteMutation.isPending,
         isUpdatingAssignments: updateAssignmentsMutation.isPending,
 
-        // Nouvelle fonction pour mettre à jour les assignations
-        updateAssignments: updateAssignmentsMutation.mutate,
+        // Fonctions pour mettre à jour les assignations (mutateAsync pour await)
+        updateAssignments: updateAssignmentsMutation.mutateAsync,
         updateDailyAssignments: updateDailyAssignmentsMutation.mutateAsync,
         isUpdatingDailyAssignments: updateDailyAssignmentsMutation.isPending,
     };
