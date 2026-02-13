@@ -347,6 +347,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }, 'image/png');
     };
 
+    img.onerror = () => {
+      logger.error('[Filter] Erreur chargement image pour filtre');
+      setIsProcessing(false);
+    };
+
     img.src = currentDoc.originalUrl || currentDoc.url;
   }, [currentDoc]);
 
@@ -431,6 +436,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     stopLiveDetection();
     setCorners(null);
     setOriginalImage(null);
+    setIsProcessing(false);
     setMode('capture');
     startCamera();
   }, [startCamera, stopLiveDetection]);
@@ -475,6 +481,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
       }, 'image/png');
     };
 
+    img.onerror = () => {
+      logger.error('[Rotation] Erreur chargement image pour rotation');
+      setIsProcessing(false);
+    };
+
     img.src = currentDoc.url;
   }, [currentDoc]);
 
@@ -484,6 +495,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
     setEnhanceMode('original');
+    setIsProcessing(false);
     setMode('capture');
     startCamera();
   }, [currentDoc, startCamera]);
@@ -494,6 +506,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
     setEnhanceMode('original');
+    setIsProcessing(false);
     setMode('capture');
   }, [currentDoc]);
 
@@ -857,7 +870,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {mode === 'capture' && stream && (
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
           {scannedDocs.length > 0 && (
-            <button className="scanner-btn success" onClick={() => { stopCamera(); }}>
+            <button className="scanner-btn success" onClick={() => { stopCamera(); setIsProcessing(false); }}>
               <CheckCircleIcon style={{ width: 18, height: 18 }} />
               Terminer ({scannedDocs.length})
             </button>
@@ -889,6 +902,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
             onClick={() => {
               stopLiveDetection();
               setCurrentDoc(null);
+              setIsProcessing(false);
               setMode('capture');
               startCamera();
             }}
