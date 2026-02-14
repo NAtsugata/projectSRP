@@ -152,19 +152,17 @@ FOR INSERT TO authenticated WITH CHECK (
 DROP POLICY IF EXISTS "Update maintenance reports" ON public.maintenance_reports;
 DROP POLICY IF EXISTS "Create maintenance reports" ON public.maintenance_reports;
 
--- Seuls les admins ou le créateur peuvent modifier
+-- Seuls les admins peuvent modifier les rapports de maintenance
 CREATE POLICY "Update maintenance reports" ON public.maintenance_reports
 FOR UPDATE TO authenticated USING (
-    public.is_admin() OR created_by = auth.uid()
+    public.is_admin()
 ) WITH CHECK (
-    public.is_admin() OR created_by = auth.uid()
+    public.is_admin()
 );
 
 -- Tout utilisateur authentifié peut créer un rapport
 CREATE POLICY "Create maintenance reports" ON public.maintenance_reports
-FOR INSERT TO authenticated WITH CHECK (
-    created_by = auth.uid() OR public.is_admin()
-);
+FOR INSERT TO authenticated WITH CHECK (true);
 
 -- ============================================================
 -- 7. CONTRACT_HISTORY - Resserrer INSERT
