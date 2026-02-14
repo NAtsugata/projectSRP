@@ -24,10 +24,13 @@ export const logger = {
   },
 
   warn: (...args) => {
-    console.warn(...args);
+    if (isDevelopment) {
+      console.warn(...args);
+    }
   },
 
   error: (...args) => {
+    // Les erreurs sont toujours loggées (nécessaires pour le monitoring)
     console.error(...args);
     // Collecter les erreurs pour analytics
     const errorEntry = {

@@ -9,11 +9,12 @@
 -- ============================================================
 
 -- Bucket pour les fichiers d'intervention (photos, documents)
+-- SÉCURITÉ: Bucket privé - utiliser des signed URLs pour l'accès
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'intervention-files',
   'intervention-files',
-  true,  -- Fichiers publiquement accessibles
+  false,  -- PRIVÉ - accès via signed URLs uniquement
   10485760,  -- 10 MB max par fichier
   ARRAY[
     'image/jpeg',
@@ -29,15 +30,16 @@ VALUES (
   ]
 )
 ON CONFLICT (id) DO UPDATE SET
-  public = true,
+  public = false,
   file_size_limit = 10485760;
 
 -- Bucket pour le coffre-fort
+-- SÉCURITÉ: Bucket privé - utiliser des signed URLs pour l'accès
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'vault-files',
   'vault-files',
-  true,  -- Fichiers publiquement accessibles
+  false,  -- PRIVÉ - accès via signed URLs uniquement
   10485760,  -- 10 MB max par fichier
   ARRAY[
     'image/jpeg',
@@ -53,7 +55,7 @@ VALUES (
   ]
 )
 ON CONFLICT (id) DO UPDATE SET
-  public = true,
+  public = false,
   file_size_limit = 10485760;
 
 -- ============================================================
@@ -77,11 +79,11 @@ WITH CHECK (
   bucket_id = 'intervention-files'
 );
 
--- Politique: SELECT - Tous peuvent voir les fichiers (bucket public)
-CREATE POLICY "Public can view intervention files"
+-- Politique: SELECT - Seuls les utilisateurs authentifiés peuvent voir les fichiers
+CREATE POLICY "Authenticated view intervention files"
 ON storage.objects
 FOR SELECT
-TO public
+TO authenticated
 USING (
   bucket_id = 'intervention-files'
 );
@@ -130,11 +132,11 @@ WITH CHECK (
   bucket_id = 'vault-files'
 );
 
--- Politique: SELECT - Tous peuvent voir les fichiers (bucket public)
-CREATE POLICY "Public can view vault files"
+-- Politique: SELECT - Seuls les utilisateurs authentifiés peuvent voir les fichiers
+CREATE POLICY "Authenticated view vault files"
 ON storage.objects
 FOR SELECT
-TO public
+TO authenticated
 USING (
   bucket_id = 'vault-files'
 );

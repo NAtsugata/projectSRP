@@ -14,9 +14,11 @@ export const profileService = {
   },
 
   async getAllProfiles() {
+    // Sécurité: Ne retourner que les champs nécessaires à l'affichage
+    // Exclure les données sensibles (email personnel, téléphone, etc.)
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, is_admin, employee_id, avatar_url')
       .order('full_name');
     return { data, error };
   },

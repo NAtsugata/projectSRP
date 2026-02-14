@@ -35,7 +35,7 @@ export default defineConfig({
   // Configuration du build
   build: {
     outDir: 'build',
-    sourcemap: true,
+    sourcemap: false, // Désactivé en production pour la sécurité
     chunkSizeWarningLimit: 1000, // Augmenter la limite à 1MB (certaines libs PDF sont grosses)
     rollupOptions: {
       output: {
