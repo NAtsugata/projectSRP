@@ -555,15 +555,46 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     return { ok: true };
   };
 
+  // Détecte les oublis de l'employé
+  const getEmployeeOublis = () => {
+    const oublis = [];
+    const imgCount = Array.isArray(report.files) ? report.files.filter(isImageUrl).length : 0;
+    const checkpointsNotDone = Array.isArray(report.quick_checkpoints)
+      ? report.quick_checkpoints.filter(c => !c.done)
+      : [];
+
+    if (!report.signature) oublis.push('Signature client manquante');
+    if (imgCount < MIN_REQUIRED_PHOTOS) oublis.push(`Photos insuffisantes (${imgCount}/${MIN_REQUIRED_PHOTOS})`);
+    if (!report.arrivalTime) oublis.push('Heure d\'arrivée non enregistrée');
+    if (!report.departureTime) oublis.push('Heure de départ non enregistrée');
+    if (checkpointsNotDone.length > 0) {
+      checkpointsNotDone.forEach(c => oublis.push(`Checkpoint non validé : ${c.label}`));
+    }
+    if (!report.notes?.trim()) oublis.push('Aucune note de rapport');
+
+    return oublis;
+  };
+
   const handleSave = async () => {
     if (!intervention) return;
-    // L'admin peut clôturer sans validation stricte
-    if (!isAdmin) {
+
+    if (isAdmin) {
+      // Détecter et enregistrer les oublis dans le rapport
+      const oublis = getEmployeeOublis();
+      const reportToSave = { ...report };
+      if (oublis.length > 0) {
+        reportToSave.admin_oublis = oublis;
+        reportToSave.admin_closed_at = new Date().toISOString();
+      }
+      setIsSaving(true);
+      try { await onSave(intervention.id, reportToSave); }
+      finally { setIsSaving(false); }
+    } else {
       const v = validateCanClose(); if (!v.ok) { alert(v.msg); return; }
+      setIsSaving(true);
+      try { await onSave(intervention.id, { ...report }); }
+      finally { setIsSaving(false); }
     }
-    setIsSaving(true);
-    try { await onSave(intervention.id, { ...report }); }
-    finally { setIsSaving(false); }
   };
 
   if (loading) return <div className="loading-container"><LoaderIcon className="animate-spin" /><p>Chargement…</p></div>;
@@ -1100,12 +1131,49 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
         {isAdmin ? (
           currentStatus !== 'Terminée' ? (
-            <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-              {isSaving ? (<><LoaderIcon className="animate-spin" /> Clôture...</>) : 'Clôturer l\'intervention (Admin)'}
-            </button>
+            <>
+              {/* Afficher les oublis de l'employé */}
+              {(() => {
+                const oublis = getEmployeeOublis();
+                if (oublis.length === 0) return null;
+                return (
+                  <div className="mt-4" style={{ padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
+                    <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '0.5rem' }}>
+                      Oublis de l'employé ({oublis.length})
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
+                      {oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
+                    </ul>
+                    <div style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                      Ces oublis seront enregistrés dans le rapport.
+                    </div>
+                  </div>
+                );
+              })()}
+              <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
+                {isSaving ? (<><LoaderIcon className="animate-spin" /> Clôture...</>) : 'Clôturer l\'intervention (Admin)'}
+              </button>
+            </>
           ) : (
-            <div className="text-center mt-4" style={{ padding: '1rem', background: '#dcfce7', borderRadius: '0.5rem', color: '#166534', fontWeight: 600 }}>
-              Intervention terminée
+            <div>
+              {report.admin_oublis?.length > 0 && (
+                <div className="mt-4" style={{ padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
+                  <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '0.5rem' }}>
+                    Oublis de l'employé ({report.admin_oublis.length})
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
+                    {report.admin_oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
+                  </ul>
+                  {report.admin_closed_at && (
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                      Clôturée par admin le {new Date(report.admin_closed_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="text-center mt-4" style={{ padding: '1rem', background: '#dcfce7', borderRadius: '0.5rem', color: '#166534', fontWeight: 600 }}>
+                Intervention terminée
+              </div>
             </div>
           )
         ) : (
