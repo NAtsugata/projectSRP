@@ -10,8 +10,9 @@ export const maintenanceContractService = {
   async getContracts(filters = {}) {
     let query = supabase
       .from('maintenance_contracts')
-      .select('*')
-      .order('end_date', { ascending: true });
+      .select('id, client_name, client_address, client_phone, client_email, contract_type, status, start_date, end_date, frequency, price, preferred_technician_id, notes, created_at')
+      .order('end_date', { ascending: true })
+      .limit(200);
 
     if (filters.status) {
       query = query.eq('status', filters.status);
@@ -149,7 +150,7 @@ export const maintenanceContractService = {
 
     return await supabase
       .from('maintenance_contracts')
-      .select('*')
+      .select('id, client_name, client_phone, contract_type, status, end_date, price')
       .in('status', ['active', 'pending_renewal'])
       .lte('end_date', futureDate.toISOString().split('T')[0])
       .gte('end_date', new Date().toISOString().split('T')[0])
@@ -194,9 +195,10 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('contract_history')
-        .select('*')
+        .select('id, contract_id, action, details, performed_by, created_at')
         .eq('contract_id', contractId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) {
         logger.warn('Historique non disponible:', error.message);
@@ -215,9 +217,10 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('contract_equipment')
-        .select('*')
+        .select('id, contract_id, name, type, brand, model, serial_number, location, notes, created_at')
         .eq('contract_id', contractId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100);
 
       if (error) {
         logger.warn('Équipements non disponibles:', error.message);
@@ -305,9 +308,10 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('maintenance_reports')
-        .select('*')
+        .select('id, contract_id, intervention_date, technician_name, description, findings, actions_taken, next_visit_notes, photos, created_at')
         .eq('contract_id', contractId)
-        .order('intervention_date', { ascending: false });
+        .order('intervention_date', { ascending: false })
+        .limit(100);
 
       if (error) {
         logger.warn('Rapports non disponibles:', error.message);

@@ -12,7 +12,8 @@ function createChain(eqResolve) {
         update: vi.fn(() => chain),
         delete: vi.fn(() => chain),
         eq: vi.fn(() => eqResolve ? Promise.resolve(eqResolve) : chain),
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        order: vi.fn(() => chain),
+        limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
     };
     return chain;
 }
@@ -44,7 +45,7 @@ describe('interventionService', () => {
     describe('getInterventions', () => {
         it('retourne les interventions pour admin (sans userId)', async () => {
             const chain = createChain();
-            chain.order.mockResolvedValue({
+            chain.limit.mockResolvedValue({
                 data: [{ id: '1', title: 'Test' }],
                 error: null,
             });
@@ -58,7 +59,7 @@ describe('interventionService', () => {
 
         it('retourne une erreur Supabase', async () => {
             const chain = createChain();
-            chain.order.mockResolvedValue({
+            chain.limit.mockResolvedValue({
                 data: null,
                 error: { message: 'Database error' },
             });

@@ -41,7 +41,7 @@ export const interventionService = {
       query = query.eq('is_archived', isArchived);
     }
 
-    const result = await query.order('scheduled_dates', { ascending: false });
+    const result = await query.order('scheduled_dates', { ascending: false }).limit(500);
 
     logger.log('📋 getInterventions result:', {
       count: result.data?.length || 0,

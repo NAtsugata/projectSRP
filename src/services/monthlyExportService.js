@@ -62,19 +62,19 @@ export async function getMonthlyExportData(year, month) {
 
       supabase
         .from('leave_requests')
-        .select('*, profiles(full_name)')
+        .select('user_id, start_date, end_date, reason, status, profiles(full_name)')
         .in('status', ['Approuvée', 'En attente']),
 
       supabase
         .from('expenses')
-        .select('*')
+        .select('user_id, date, category, amount, description, status')
         .gte('date', startDate)
         .lte('date', endDate),
 
       // Absences (table employee_absences)
       supabase
         .from('employee_absences')
-        .select('*')
+        .select('employee_id, start_date, end_date, reason, notes')
         .lte('start_date', endDate)
         .gte('end_date', startDate),
     ]);

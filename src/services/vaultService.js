@@ -7,15 +7,16 @@ export const vaultService = {
   async getVaultDocuments() {
     const { data, error } = await supabase
       .from('vault_documents')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, user_id, title, description, file_url, file_name, file_type, category, created_at, updated_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
     return { data, error };
   },
 
   async getVaultDocument(id) {
     const { data, error } = await supabase
       .from('vault_documents')
-      .select('*')
+      .select('id, user_id, title, description, file_url, file_name, file_type, file_size, category, metadata, created_at, updated_at')
       .eq('id', id)
       .single();
     return { data, error };

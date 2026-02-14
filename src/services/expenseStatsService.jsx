@@ -138,7 +138,7 @@ export const getMonthlyStats = async () => {
   try {
     const { data, error } = await supabase
       .from('expense_stats_by_month')
-      .select('*')
+      .select('month, count, total_amount, status')
       .order('month', { ascending: false })
       .limit(12);
 
@@ -166,8 +166,9 @@ export const getExpensesToPay = async () => {
   try {
     const { data, error } = await supabase
       .from('expenses_to_pay')
-      .select('*')
-      .order('pending_total', { ascending: false });
+      .select('user_id, full_name, pending_count, pending_total, oldest_expense_date, newest_expense_date')
+      .order('pending_total', { ascending: false })
+      .limit(200);
 
     if (error) {
       if (error.code === '42P01') {

@@ -34,6 +34,8 @@ const escapeSQLLike = (str) => {
  * - metadata: JSONB
  */
 
+const SCANNED_DOC_LIST_COLUMNS = 'id, user_id, title, description, file_url, file_name, file_type, thumbnail_url, tags, category, created_at';
+
 const scannedDocumentsService = {
   /**
    * Récupérer tous les documents d'un utilisateur
@@ -42,9 +44,10 @@ const scannedDocumentsService = {
     try {
       const { data, error } = await supabase
         .from('scanned_documents')
-        .select('*')
+        .select(SCANNED_DOC_LIST_COLUMNS)
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       return { data: data || [], error: null };
@@ -61,8 +64,9 @@ const scannedDocumentsService = {
     try {
       const { data, error } = await supabase
         .from('scanned_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(SCANNED_DOC_LIST_COLUMNS)
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       return { data: data || [], error: null };
@@ -290,7 +294,7 @@ const scannedDocumentsService = {
     try {
       let query = supabase
         .from('scanned_documents')
-        .select('*');
+        .select(SCANNED_DOC_LIST_COLUMNS);
 
       // Filtre par utilisateur si pas admin
       if (!isAdmin) {
@@ -303,7 +307,7 @@ const scannedDocumentsService = {
         query = query.or(`title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`);
       }
 
-      query = query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(200);
 
       const { data, error } = await query;
 
@@ -322,14 +326,14 @@ const scannedDocumentsService = {
     try {
       let query = supabase
         .from('scanned_documents')
-        .select('*')
+        .select(SCANNED_DOC_LIST_COLUMNS)
         .eq('category', category);
 
       if (!isAdmin) {
         query = query.eq('user_id', userId);
       }
 
-      query = query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false }).limit(200);
 
       const { data, error } = await query;
 

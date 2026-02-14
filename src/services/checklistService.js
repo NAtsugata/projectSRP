@@ -90,8 +90,9 @@ const checklistService = {
     try {
       const { data, error } = await supabase
         .from('checklist_templates')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, name, description, category, items, created_at, updated_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (error) throw error;
 
@@ -201,7 +202,7 @@ const checklistService = {
       // Récupérer le template
       const { data: template, error: templateError } = await supabase
         .from('checklist_templates')
-        .select('*')
+        .select('id, name, items')
         .eq('id', templateId)
         .single();
 
@@ -244,8 +245,9 @@ const checklistService = {
     try {
       const { data, error } = await supabase
         .from('checklists')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, intervention_id, template_id, template_name, user_id, items_state, photos, notes, status, completed_at, created_at, updated_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       return { data, error: null };
@@ -262,9 +264,10 @@ const checklistService = {
     try {
       const { data, error } = await supabase
         .from('checklists')
-        .select('*')
+        .select('id, intervention_id, template_id, template_name, user_id, items_state, photos, notes, status, completed_at, created_at, updated_at')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (error) throw error;
       return { data, error: null };
