@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService, profileService } from '../lib/supabase';
+import { organizationService } from '../services/organizationService';
 import logger from '../utils/logger';
 
 // Store Zustand pour l'authentification
@@ -7,6 +8,8 @@ export const useAuthStore = create((set, get) => ({
     // État
     user: null,
     profile: null,
+    organization: null,   // Organisation courante
+    orgRole: null,         // Rôle dans l'organisation ('owner', 'admin', 'manager', 'technician')
     loading: true,
     error: null,
 
@@ -18,6 +21,23 @@ export const useAuthStore = create((set, get) => ({
     setLoading: (loading) => set({ loading }),
 
     setError: (error) => set({ error }),
+
+    // Charger l'organisation et le rôle
+    loadOrganization: async (profile) => {
+        if (!profile?.organization_id) return;
+        try {
+            const [orgResult, roleResult] = await Promise.all([
+                organizationService.getCurrentOrganization(profile.organization_id),
+                organizationService.getUserRole(profile.id, profile.organization_id),
+            ]);
+            set({
+                organization: orgResult.data,
+                orgRole: roleResult.data?.role || (profile.is_admin ? 'admin' : 'technician'),
+            });
+        } catch (error) {
+            logger.error('Error loading organization:', error);
+        }
+    },
 
     // Initialiser la session
     initializeAuth: async () => {
@@ -31,11 +51,13 @@ export const useAuthStore = create((set, get) => ({
             if (session?.user) {
                 set({ user: session.user });
 
-                // Charger le profil - extraire data de la réponse
                 const { data: profile } = await profileService.getProfile(session.user.id);
                 set({ profile, loading: false });
+
+                // Charger l'organisation en arrière-plan
+                get().loadOrganization(profile);
             } else {
-                set({ user: null, profile: null, loading: false });
+                set({ user: null, profile: null, organization: null, orgRole: null, loading: false });
             }
         } catch (error) {
             logger.error('Error initializing auth:', error);
@@ -55,9 +77,11 @@ export const useAuthStore = create((set, get) => ({
             if (data?.user) {
                 set({ user: data.user });
 
-                // Charger le profil - extraire data de la réponse
                 const { data: profile } = await profileService.getProfile(data.user.id);
                 set({ profile, loading: false });
+
+                // Charger l'organisation en arrière-plan
+                get().loadOrganization(profile);
 
                 return { success: true };
             }
@@ -72,7 +96,7 @@ export const useAuthStore = create((set, get) => ({
     logout: async () => {
         try {
             await authService.signOut();
-            set({ user: null, profile: null, loading: false, error: null });
+            set({ user: null, profile: null, organization: null, orgRole: null, loading: false, error: null });
         } catch (error) {
             logger.error('Logout error:', error);
             set({ error: error.message });
@@ -87,6 +111,7 @@ export const useAuthStore = create((set, get) => ({
         try {
             const { data: profile } = await profileService.getProfile(user.id);
             set({ profile });
+            get().loadOrganization(profile);
         } catch (error) {
             logger.error('Error refreshing profile:', error);
         }

@@ -18,7 +18,7 @@ export const profileService = {
     // Exclure les données sensibles (email personnel, téléphone, etc.)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, is_admin, employee_id, avatar_url')
+      .select('id, full_name, is_admin, employee_id, avatar_url, organization_id')
       .order('full_name');
     return { data, error };
   },
