@@ -27,7 +27,7 @@ $$;
 -- ============================================================
 -- HELPER FUNCTION: is_assigned_to_intervention
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.is_assigned_to_intervention(intervention_uuid uuid)
+CREATE OR REPLACE FUNCTION public.is_assigned_to_intervention(intervention_bid bigint)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
@@ -35,7 +35,7 @@ STABLE
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.intervention_assignments
-    WHERE intervention_id = intervention_uuid
+    WHERE intervention_id = intervention_bid
     AND user_id = auth.uid()
   );
 $$;
