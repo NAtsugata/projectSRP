@@ -195,7 +195,7 @@ export const AdminToolsPanel = ({ vaultDocuments = [], users = [], onRefresh }) 
                 <TrashIcon /> Nettoyer complétés
               </button>
               <button onClick={handleCleanOldCache} style={styles.btnWarning}>
-                <TrashIcon /> Nettoyer anciens (> 7j)
+                <TrashIcon /> Nettoyer anciens (&gt; 7j)
               </button>
               <button onClick={loadCacheStats} style={styles.btnSecondary}>
                 <RefreshIcon /> Actualiser
