@@ -125,8 +125,15 @@ export default function LoginScreen() {
                 {/* Footer */}
                 <div className="login-footer">
                     <p>
-                        Besoin d'aide ? Contactez votre administrateur
+                        Besoin d&apos;aide ? Contactez votre administrateur
                     </p>
+                    <div className="login-legal-links" style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#9ca3af' }}>
+                        <a href="/legal-notice" style={{ color: '#9ca3af', textDecoration: 'underline' }}>Mentions l&eacute;gales</a>
+                        {' | '}
+                        <a href="/privacy-policy" style={{ color: '#9ca3af', textDecoration: 'underline' }}>Confidentialit&eacute;</a>
+                        {' | '}
+                        <a href="/terms" style={{ color: '#9ca3af', textDecoration: 'underline' }}>CGU</a>
+                    </div>
                 </div>
             </div>
         </div>

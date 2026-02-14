@@ -20,6 +20,7 @@ import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
+import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/LegalPages';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
@@ -216,6 +217,11 @@ function App() {
         )}
         <ErrorBoundary>
         <Routes>
+          {/* Pages légales accessibles sans authentification */}
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/legal-notice" element={<LegalNoticePage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
+
           {!session || !profile ? (
             <Route path="*" element={<LoginScreen />} />
           ) : (
