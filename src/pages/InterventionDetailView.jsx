@@ -557,7 +557,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   const handleSave = async () => {
     if (!intervention) return;
-    const v = validateCanClose(); if (!v.ok) { alert(v.msg); return; }
+    // L'admin peut clôturer sans validation stricte
+    if (!isAdmin) {
+      const v = validateCanClose(); if (!v.ok) { alert(v.msg); return; }
+    }
     setIsSaving(true);
     try { await onSave(intervention.id, { ...report }); }
     finally { setIsSaving(false); }
@@ -1095,7 +1098,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           )}
 
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>{isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : '🔒 Sauvegarder et Clôturer'}</button>
+        {isAdmin ? (
+          currentStatus !== 'Terminée' ? (
+            <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
+              {isSaving ? (<><LoaderIcon className="animate-spin" /> Clôture...</>) : 'Clôturer l\'intervention (Admin)'}
+            </button>
+          ) : (
+            <div className="text-center mt-4" style={{ padding: '1rem', background: '#dcfce7', borderRadius: '0.5rem', color: '#166534', fontWeight: 600 }}>
+              Intervention terminée
+            </div>
+          )
+        ) : (
+          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
+            {isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : 'Sauvegarder et Clôturer'}
+          </button>
+        )}
       </div>
 
       {/* Modale signature */}
