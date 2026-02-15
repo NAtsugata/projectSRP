@@ -2,6 +2,7 @@
 // Service de gestion du coffre-fort de documents
 
 import { supabase } from '../lib/supabaseClient';
+import { withOrgId } from '../utils/orgHelper';
 
 export const vaultService = {
   async getVaultDocuments() {
@@ -25,7 +26,7 @@ export const vaultService = {
   async createVaultDocument(documentData) {
     const { data, error } = await supabase
       .from('vault_documents')
-      .insert([documentData])
+      .insert([withOrgId(documentData)])
       .select()
       .single();
     return { data, error };

@@ -1,6 +1,7 @@
 // src/services/expenseService.js - SERVICE NOTES DE FRAIS
 import { supabase } from '../lib/supabase';
 import logger from '../utils/logger';
+import { withOrgId } from '../utils/orgHelper';
 
 /**
  * Service pour gérer les notes de frais des employés
@@ -140,7 +141,7 @@ const expenseService = {
 
       const { data, error } = await supabase
         .from('expenses')
-        .insert([expenseData])
+        .insert([withOrgId(expenseData)])
         .select()
         .single();
 

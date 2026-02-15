@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
+import { withOrgId } from '../utils/orgHelper';
 
 export const maintenanceContractService = {
   // ========== CONTRATS ==========
@@ -35,7 +36,7 @@ export const maintenanceContractService = {
   async createContract(data) {
     const { data: contract, error } = await supabase
       .from('maintenance_contracts')
-      .insert([data])
+      .insert([withOrgId(data)])
       .select()
       .single();
 
@@ -236,7 +237,7 @@ export const maintenanceContractService = {
   async addEquipment(contractId, data) {
     const { data: equipment, error } = await supabase
       .from('contract_equipment')
-      .insert([{ ...data, contract_id: contractId }])
+      .insert([withOrgId({ ...data, contract_id: contractId })])
       .select()
       .single();
 
@@ -280,7 +281,7 @@ export const maintenanceContractService = {
   async createMaintenanceReport(contractId, reportData) {
     const { data, error } = await supabase
       .from('maintenance_reports')
-      .insert([{ ...reportData, contract_id: contractId }])
+      .insert([withOrgId({ ...reportData, contract_id: contractId })])
       .select()
       .single();
 

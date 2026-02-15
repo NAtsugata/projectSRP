@@ -4,6 +4,7 @@
 import { supabase } from '../lib/supabase';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
+import { withOrgId } from '../utils/orgHelper';
 
 const STORAGE_KEY = 'employee_alerts';
 
@@ -74,7 +75,7 @@ export const sendAlert = async ({
     // Essayer d'insérer dans Supabase
     const { data, error } = await supabase
       .from('employee_alerts')
-      .insert([alertData])
+      .insert([withOrgId(alertData)])
       .select();
 
     if (error) {
@@ -114,7 +115,7 @@ export const getAlerts = async (options = {}) => {
 
     let query = supabase
       .from('employee_alerts')
-      .select('*')
+      .select('id, employee_id, employee_name, alert_type, message, intervention_id, estimated_delay, status, read_at, created_at')
       .order('created_at', { ascending: false })
       .limit(limit);
 

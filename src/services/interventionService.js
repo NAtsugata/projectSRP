@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
+import { withOrgId } from '../utils/orgHelper';
 
 export const interventionService = {
   async getInterventions(userId = null, isArchived = false) {
@@ -67,7 +68,7 @@ export const interventionService = {
     // 1. Créer l'intervention
     const { data: intervention, error } = await supabase
       .from('interventions')
-      .insert([cleanData])
+      .insert([withOrgId(cleanData)])
       .select()
       .single();
 

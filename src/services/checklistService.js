@@ -1,6 +1,7 @@
 // src/services/checklistService.js - SERVICE CHECKLISTS D'INTERVENTION
 import { supabase } from '../lib/supabase';
 import logger from '../utils/logger';
+import { withOrgId, withOrgIdArray } from '../utils/orgHelper';
 
 /**
  * Service pour gérer les checklists d'intervention plomberie
@@ -127,7 +128,7 @@ const checklistService = {
 
       const { data, error } = await supabase
         .from('checklist_templates')
-        .insert([templateData])
+        .insert([withOrgId(templateData)])
         .select()
         .single();
 
@@ -225,7 +226,7 @@ const checklistService = {
 
       const { data, error } = await supabase
         .from('checklists')
-        .insert(checklistsToCreate)
+        .insert(withOrgIdArray(checklistsToCreate))
         .select();
 
       if (error) throw error;

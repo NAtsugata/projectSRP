@@ -2,6 +2,7 @@
 import { supabase, storageService } from '../lib/supabase';
 import { sanitizeFilename } from '../utils/sanitize';
 import logger from '../utils/logger';
+import { withOrgId } from '../utils/orgHelper';
 
 /**
  * Échappe les caractères spéciaux pour les requêtes SQL LIKE
@@ -114,7 +115,7 @@ const scannedDocumentsService = {
 
       const { data, error } = await supabase
         .from('scanned_documents')
-        .insert([docData])
+        .insert([withOrgId(docData)])
         .select()
         .single();
 

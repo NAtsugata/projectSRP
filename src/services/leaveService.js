@@ -2,6 +2,7 @@
 // Service de gestion des demandes de congés
 
 import { supabase } from '../lib/supabaseClient';
+import { withOrgId } from '../utils/orgHelper';
 
 export const leaveService = {
   async getLeaveRequests(userId = null) {
@@ -16,7 +17,7 @@ export const leaveService = {
   async createLeaveRequest(requestData) {
     const { data, error } = await supabase
       .from('leave_requests')
-      .insert([requestData])
+      .insert([withOrgId(requestData)])
       .select()
       .single();
     return { data, error };
