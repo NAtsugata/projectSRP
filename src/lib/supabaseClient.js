@@ -9,7 +9,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase environment variables missing. Check .env file.');
+  throw new Error(
+    'Variables d\'environnement Supabase manquantes.\n' +
+    'Copiez .env.example vers .env et renseignez vos clés:\n' +
+    '  cp .env.example .env\n' +
+    'Voir README.md > Installation pour plus de détails.'
+  );
 }
 
 // Initialise Supabase client avec optimisations mobile

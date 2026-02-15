@@ -1,6 +1,12 @@
 // src/utils/logger.js - Système de logging avec monitoring intégré
 // En production, seules les erreurs sont loggées + collectées pour analytics
 // En développement, tous les logs sont affichés
+//
+// MONITORING EXTERNE (Sentry, Datadog, etc.)
+// Appelez logger.setErrorTransport(fn) pour envoyer les erreurs à un service externe.
+// Exemple avec Sentry :
+//   import * as Sentry from '@sentry/react';
+//   logger.setErrorTransport((entry) => Sentry.captureException(entry.error || entry.message));
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -10,7 +16,18 @@ const metricsStore = [];
 const MAX_ERRORS = 50;
 const MAX_METRICS = 20;
 
+// Transport externe (Sentry, Datadog, etc.) — null par défaut
+let errorTransport = null;
+
 export const logger = {
+  /**
+   * Configure un transport externe pour les erreurs
+   * @param {(entry: {timestamp: string, message: string, url: string, error?: Error}) => void} transport
+   */
+  setErrorTransport: (transport) => {
+    errorTransport = transport;
+  },
+
   log: (...args) => {
     if (isDevelopment) {
       console.log(...args);
@@ -32,14 +49,21 @@ export const logger = {
   error: (...args) => {
     // Les erreurs sont toujours loggées (nécessaires pour le monitoring)
     console.error(...args);
+    // Trouver l'objet Error s'il existe dans les arguments
+    const errorObj = args.find(a => a instanceof Error) || null;
     // Collecter les erreurs pour analytics
     const errorEntry = {
       timestamp: new Date().toISOString(),
       message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
-      url: typeof window !== 'undefined' ? window.location.href : 'unknown'
+      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+      error: errorObj
     };
     errorStore.push(errorEntry);
     if (errorStore.length > MAX_ERRORS) errorStore.shift();
+    // Envoyer au transport externe si configuré
+    if (errorTransport) {
+      try { errorTransport(errorEntry); } catch (_e) { /* silent */ }
+    }
   },
 
   debug: (...args) => {

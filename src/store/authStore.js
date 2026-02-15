@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { authService, profileService } from '../lib/supabase';
 import { organizationService } from '../services/organizationService';
 import logger from '../utils/logger';
+import { authRateLimiter } from '../utils/rateLimiter';
 
 // Store Zustand pour l'authentification
 export const useAuthStore = create((set, get) => ({
@@ -69,6 +70,13 @@ export const useAuthStore = create((set, get) => ({
     login: async (email, password) => {
         try {
             set({ loading: true, error: null });
+
+            // Rate limiting : max 5 tentatives par minute
+            const { allowed, retryAfterMs } = authRateLimiter.check('login');
+            if (!allowed) {
+                const seconds = Math.ceil(retryAfterMs / 1000);
+                throw new Error(`Trop de tentatives. Réessayez dans ${seconds}s.`);
+            }
 
             const { data, error } = await authService.signIn(email, password);
 

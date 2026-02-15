@@ -28,10 +28,8 @@ class ErrorBoundary extends React.Component {
       errorInfo
     });
 
-    // En production, vous pourriez envoyer à un service de monitoring (Sentry, etc.)
-    if (process.env.NODE_ENV === 'production') {
-      // sendToErrorTracking(error, errorInfo);
-    }
+    // Les erreurs sont automatiquement envoyées au transport externe
+    // via logger.error() si logger.setErrorTransport() a été configuré
   }
 
   handleReset = () => {
