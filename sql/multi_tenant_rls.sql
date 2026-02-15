@@ -7,14 +7,31 @@
 -- ============================================================
 
 -- ============================================================
--- 1. PROFILES - Voir uniquement ceux de son organisation
+-- 1. PROFILES - Voir son propre profil + ceux de son organisation
 -- ============================================================
 DROP POLICY IF EXISTS "View profiles" ON public.profiles;
+DROP POLICY IF EXISTS "View own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Update own profile" ON public.profiles;
 
+-- Chaque utilisateur peut TOUJOURS voir son propre profil (évite la récursion RLS)
+CREATE POLICY "View own profile" ON public.profiles
+FOR SELECT TO authenticated USING (
+    id = auth.uid()
+);
+
+-- Voir les profils de la même organisation (ou super admin voit tout)
 CREATE POLICY "View profiles" ON public.profiles
 FOR SELECT TO authenticated USING (
     organization_id = public.current_user_org_id()
-    OR (SELECT is_super_admin FROM public.profiles WHERE id = auth.uid()) = true
+    OR public.current_user_is_super_admin()
+);
+
+-- Chaque utilisateur peut modifier son propre profil
+CREATE POLICY "Update own profile" ON public.profiles
+FOR UPDATE TO authenticated USING (
+    id = auth.uid()
+) WITH CHECK (
+    id = auth.uid()
 );
 
 -- ============================================================

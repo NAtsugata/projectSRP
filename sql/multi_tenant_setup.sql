@@ -101,6 +101,19 @@ AS $$
     SELECT organization_id FROM public.profiles WHERE id = auth.uid();
 $$;
 
+-- Vérifier si l'utilisateur courant est super admin (SECURITY DEFINER pour éviter récursion RLS)
+CREATE OR REPLACE FUNCTION public.current_user_is_super_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+    SELECT COALESCE(
+        (SELECT is_super_admin FROM public.profiles WHERE id = auth.uid()),
+        false
+    );
+$$;
+
 -- ============================================================
 -- 5. TABLE ROLES PAR ORGANISATION (remplace is_admin à terme)
 -- ============================================================
