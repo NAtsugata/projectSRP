@@ -355,7 +355,7 @@ export const maintenanceContractService = {
     if (contract.preferred_technician_id) {
       const { data: tech } = await supabase
         .from('profiles')
-        .select('id, display_name, full_name')
+        .select('id, full_name')
         .eq('id', contract.preferred_technician_id)
         .single();
       preferredTechnician = tech;

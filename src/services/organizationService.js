@@ -37,7 +37,7 @@ export const organizationService = {
   async getOrganizationMembers(orgId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, employee_id, avatar_url, is_admin')
+      .select('id, full_name, avatar_url, is_admin')
       .eq('organization_id', orgId)
       .order('full_name');
     return { data, error };

@@ -46,7 +46,7 @@ export async function getMonthlyExportData(year, month) {
 
     // Requêtes parallèles
     const [profilesRes, interventionsRes, leavesRes, expensesRes, absencesRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, email, is_admin'),
+      supabase.from('profiles').select('id, full_name, is_admin'),
 
       supabase
         .from('interventions')
@@ -74,7 +74,7 @@ export async function getMonthlyExportData(year, month) {
       // Absences (table employee_absences)
       supabase
         .from('employee_absences')
-        .select('employee_id, start_date, end_date, reason, notes')
+        .select('user_id, start_date, end_date, reason, notes')
         .lte('start_date', endDate)
         .gte('end_date', startDate),
     ]);
@@ -161,7 +161,7 @@ export async function getMonthlyExportData(year, month) {
 
         // --- Pré-traitement absences École (apprentis) ---
         // On retire les jours école des jours travaillés AVANT le calcul zones/paniers
-        const userAbsencesAll = allAbsences.filter(a => a.employee_id === userId);
+        const userAbsencesAll = allAbsences.filter(a => a.user_id === userId);
         const schoolDatesSet = new Set();
         userAbsencesAll.forEach(absence => {
           if (absence.reason !== 'École') return;
