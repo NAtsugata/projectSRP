@@ -14,7 +14,8 @@ import {
     FileTextIcon,
     CheckCircleIcon,
     DollarSignIcon,
-    ChevronDownIcon
+    ChevronDownIcon,
+    BuildingIcon
 } from '../SharedUI';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
@@ -43,6 +44,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
             { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
             { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+            { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
         ]
         : [
             { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },

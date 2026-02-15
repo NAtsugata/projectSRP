@@ -71,6 +71,56 @@ export const organizationService = {
       .single();
     return { data, error };
   },
+
+  // ========== SUPER-ADMIN ==========
+
+  /**
+   * Lister toutes les organisations (super-admin)
+   */
+  async getAllOrganizations() {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, name, slug, logo_url, plan, max_users, is_active, created_at, updated_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    return { data, error };
+  },
+
+  /**
+   * Créer une nouvelle organisation (super-admin)
+   */
+  async createOrganization({ name, slug, plan = 'free', max_users = 5 }) {
+    const { data, error } = await supabase
+      .from('organizations')
+      .insert([{ name, slug, plan, max_users, is_active: true }])
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  /**
+   * Activer/désactiver une organisation (super-admin)
+   */
+  async toggleOrganizationActive(orgId, isActive) {
+    const { data, error } = await supabase
+      .from('organizations')
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .eq('id', orgId)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  /**
+   * Compter les membres d'une organisation
+   */
+  async getOrganizationMemberCount(orgId) {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId);
+    return { count: count || 0, error };
+  },
 };
 
 export default organizationService;
