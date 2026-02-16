@@ -11,16 +11,8 @@ const AdminPlanningViewContainer = () => {
     const navigate = useNavigate();
     const toast = useToast();
     const { interventions, isLoading, createIntervention, updateIntervention, deleteIntervention, updateAssignments, updateDailyAssignments, isUpdatingAssignments } = useInterventions();
-    const { users, error: usersError } = useUsers();
+    const { users } = useUsers();
     const { templates, assignChecklist } = useChecklists();
-
-    // DEBUG: Log pour diagnostic
-    console.log('[AdminPlanningViewContainer] State:', {
-        usersCount: users?.length,
-        usersError: usersError?.message || usersError,
-        interventionsCount: interventions?.length,
-        users: users?.slice(0, 2) // Afficher les 2 premiers pour debug
-    });
 
     const handleCreateIntervention = async (formData, assignedUsers, files) => {
         try {

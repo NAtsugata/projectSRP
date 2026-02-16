@@ -14,27 +14,11 @@ export const profileService = {
   },
 
   async getAllProfiles() {
-    console.log('[DEBUG] getAllProfiles: calling supabase...');
-    try {
-      // Utiliser select('*') pour récupérer toutes les colonnes existantes
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('full_name');
-
-      console.log('[DEBUG] getAllProfiles result:', {
-        data,
-        error,
-        count: data?.length,
-        errorMessage: error?.message,
-        columns: data?.[0] ? Object.keys(data[0]) : []
-      });
-
-      return { data, error };
-    } catch (e) {
-      console.error('[DEBUG] getAllProfiles exception:', e);
-      return { data: null, error: e };
-    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('full_name');
+    return { data, error };
   },
 
   async updateProfile(userId, updates) {

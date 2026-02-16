@@ -115,7 +115,7 @@ export const getAlerts = async (options = {}) => {
 
     let query = supabase
       .from('employee_alerts')
-      .select('id, employee_id, employee_name, alert_type, message, intervention_id, estimated_delay, status, read_at, created_at')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -131,7 +131,8 @@ export const getAlerts = async (options = {}) => {
     const { data, error } = await query;
 
     if (error) {
-      if (error.code === '42P01') {
+      // Fallback si table n'existe pas ou erreur de colonne
+      if (error.code === '42P01' || error.code === '42703') {
         return getAlertsFallback(options);
       }
       throw error;

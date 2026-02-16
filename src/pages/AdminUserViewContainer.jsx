@@ -18,13 +18,6 @@ const AdminUserViewContainer = () => {
         }
     };
 
-    // DEBUG: Log pour diagnostic
-    console.log('[AdminUserViewContainer] State:', {
-        usersCount: users?.length,
-        isLoading,
-        error: error?.message || error
-    });
-
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>

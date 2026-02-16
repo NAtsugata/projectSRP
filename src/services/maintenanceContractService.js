@@ -9,20 +9,25 @@ export const maintenanceContractService = {
   // ========== CONTRATS ==========
 
   async getContracts(filters = {}) {
-    let query = supabase
-      .from('maintenance_contracts')
-      .select('id, client_name, client_address, client_phone, client_email, contract_type, status, start_date, end_date, frequency, price, preferred_technician_id, notes, created_at')
-      .order('end_date', { ascending: true })
-      .limit(200);
+    try {
+      let query = supabase
+        .from('maintenance_contracts')
+        .select('*')
+        .order('end_date', { ascending: true })
+        .limit(200);
 
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.type) {
-      query = query.eq('contract_type', filters.type);
-    }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.type) {
+        query = query.eq('contract_type', filters.type);
+      }
 
-    return await query;
+      return await query;
+    } catch (error) {
+      logger.error('Erreur getContracts:', error);
+      return { data: [], error };
+    }
   },
 
   async getContractById(id) {
@@ -146,16 +151,21 @@ export const maintenanceContractService = {
   // ========== ALERTES ==========
 
   async getExpiringContracts(days = 30) {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + days);
+    try {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
 
-    return await supabase
-      .from('maintenance_contracts')
-      .select('id, client_name, client_phone, contract_type, status, end_date, price')
-      .in('status', ['active', 'pending_renewal'])
-      .lte('end_date', futureDate.toISOString().split('T')[0])
-      .gte('end_date', new Date().toISOString().split('T')[0])
-      .order('end_date', { ascending: true });
+      return await supabase
+        .from('maintenance_contracts')
+        .select('*')
+        .in('status', ['active', 'pending_renewal'])
+        .lte('end_date', futureDate.toISOString().split('T')[0])
+        .gte('end_date', new Date().toISOString().split('T')[0])
+        .order('end_date', { ascending: true });
+    } catch (error) {
+      logger.error('Erreur getExpiringContracts:', error);
+      return { data: [], error };
+    }
   },
 
   async getUpcomingVisits(days = 7) {
@@ -196,7 +206,7 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('contract_history')
-        .select('id, contract_id, action, details, performed_by, created_at')
+        .select('*')
         .eq('contract_id', contractId)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -218,7 +228,7 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('contract_equipment')
-        .select('id, contract_id, name, type, brand, model, serial_number, location, notes, created_at')
+        .select('*')
         .eq('contract_id', contractId)
         .order('created_at', { ascending: true })
         .limit(100);
@@ -309,7 +319,7 @@ export const maintenanceContractService = {
     try {
       const { data, error } = await supabase
         .from('maintenance_reports')
-        .select('id, contract_id, intervention_date, technician_name, description, findings, actions_taken, next_visit_notes, photos, created_at')
+        .select('*')
         .eq('contract_id', contractId)
         .order('intervention_date', { ascending: false })
         .limit(100);
