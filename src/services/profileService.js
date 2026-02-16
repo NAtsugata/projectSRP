@@ -14,10 +14,12 @@ export const profileService = {
   },
 
   async getAllProfiles() {
+    console.log('[DEBUG] getAllProfiles: calling supabase...');
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, is_admin, avatar_url, organization_id')
       .order('full_name');
+    console.log('[DEBUG] getAllProfiles result:', { data, error, count: data?.length });
     return { data, error };
   },
 
