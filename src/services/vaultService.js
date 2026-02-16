@@ -8,7 +8,7 @@ export const vaultService = {
   async getVaultDocuments() {
     const { data, error } = await supabase
       .from('vault_documents')
-      .select('id, user_id, title, description, file_url, file_name, file_type, category, created_at, updated_at')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(500);
     return { data, error };
@@ -17,7 +17,7 @@ export const vaultService = {
   async getVaultDocument(id) {
     const { data, error } = await supabase
       .from('vault_documents')
-      .select('id, user_id, title, description, file_url, file_name, file_type, file_size, category, metadata, created_at, updated_at')
+      .select('*')
       .eq('id', id)
       .single();
     return { data, error };
