@@ -1,13 +1,14 @@
 /**
  * Composant qui affiche une bannière quand l'utilisateur est hors ligne
  * Compatible iOS Safari et Android Chrome
+ * Affiche aussi le nombre d'opérations en attente de synchronisation
  */
 
 import React, { useState, useEffect } from 'react';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useOnlineStatusFull } from '../hooks/useOnlineStatus';
 
 export default function OfflineIndicator() {
-  const isOnline = useOnlineStatus();
+  const { isOnline, isSyncing, pendingCount, forceSync, hasPendingChanges } = useOnlineStatusFull();
   const [show, setShow] = useState(!isOnline);
   const [wasOnline, setWasOnline] = useState(isOnline);
 
@@ -17,17 +18,27 @@ export default function OfflineIndicator() {
         // Passe hors ligne : afficher immédiatement
         setShow(true);
       } else {
-        // Revient en ligne : masquer après 3 secondes
-        setTimeout(() => setShow(false), 3000);
+        // Revient en ligne : masquer après 3 secondes (sauf si pending)
+        if (!hasPendingChanges) {
+          setTimeout(() => setShow(false), 3000);
+        }
       }
       setWasOnline(isOnline);
     }
-  }, [isOnline, wasOnline]);
+  }, [isOnline, wasOnline, hasPendingChanges]);
 
-  // Ne rien afficher si en ligne et déjà masqué
-  if (isOnline && !show) {
+  // Afficher si offline, syncing, ou pending changes
+  const shouldShow = !isOnline || isSyncing || hasPendingChanges || show;
+
+  if (isOnline && !shouldShow) {
     return null;
   }
+
+  const handleSync = async () => {
+    if (isOnline && !isSyncing) {
+      await forceSync();
+    }
+  };
 
   return (
     <>
@@ -112,6 +123,45 @@ export default function OfflineIndicator() {
           background: rgba(255, 255, 255, 0.3);
         }
 
+        .offline-indicator-badge {
+          background: rgba(255, 255, 255, 0.3);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .offline-indicator-sync {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          color: white;
+          padding: 4px 12px;
+          border-radius: 16px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+
+        .offline-indicator-sync:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .offline-indicator-sync:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .sync-spinner {
+          display: inline-block;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 640px) {
           .offline-indicator {
             font-size: 13px;
@@ -122,18 +172,44 @@ export default function OfflineIndicator() {
 
       <div className="offline-indicator">
         <div className="offline-indicator-icon">
-          <div className="offline-indicator-pulse"></div>
-        </div>
-
-        <div className="offline-indicator-text">
-          {isOnline ? (
-            <>📶 Connexion rétablie !</>
+          {isSyncing ? (
+            <span className="sync-spinner">⟳</span>
           ) : (
-            <>📵 Mode hors ligne - Fonctionnalités limitées</>
+            <div className="offline-indicator-pulse"></div>
           )}
         </div>
 
-        {isOnline && (
+        <div className="offline-indicator-text">
+          {isSyncing ? (
+            <>Synchronisation en cours...</>
+          ) : isOnline ? (
+            hasPendingChanges ? (
+              <>{pendingCount} modification{pendingCount > 1 ? 's' : ''} en attente</>
+            ) : (
+              <>📶 Connexion rétablie !</>
+            )
+          ) : (
+            <>📵 Mode hors ligne {hasPendingChanges && `(${pendingCount} en attente)`}</>
+          )}
+        </div>
+
+        {/* Badge compteur */}
+        {hasPendingChanges && !isSyncing && (
+          <span className="offline-indicator-badge">{pendingCount}</span>
+        )}
+
+        {/* Bouton sync */}
+        {isOnline && hasPendingChanges && (
+          <button
+            className="offline-indicator-sync"
+            onClick={handleSync}
+            disabled={isSyncing}
+          >
+            {isSyncing ? '⟳' : 'Sync'}
+          </button>
+        )}
+
+        {isOnline && !hasPendingChanges && (
           <button
             className="offline-indicator-close"
             onClick={() => setShow(false)}

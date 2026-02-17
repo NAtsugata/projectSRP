@@ -1,12 +1,14 @@
 /**
  * Hook React pour détecter le statut de connexion internet
  * Compatible iOS Safari et Android Chrome
+ * Inclut la gestion de la queue de synchronisation offline
  *
- * @returns {boolean} - true si en ligne, false si hors ligne
+ * @returns {boolean|object} - true si en ligne, false si hors ligne (ou objet complet avec useOnlineStatusFull)
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import logger from '../utils/logger';
+import { syncPendingOperations, getPendingCount, addSyncListener } from '../utils/syncService';
 
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(() => {
@@ -46,6 +48,72 @@ export function useOnlineStatus() {
   }, []);
 
   return isOnline;
+}
+
+/**
+ * Hook complet avec gestion de la synchronisation offline
+ * @returns {object} - { isOnline, isSyncing, pendingCount, forceSync, hasPendingChanges }
+ */
+export function useOnlineStatusFull() {
+  const isOnline = useOnlineStatus();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [lastSyncResult, setLastSyncResult] = useState(null);
+
+  // Mettre à jour le compteur d'opérations en attente
+  const updatePendingCount = useCallback(async () => {
+    try {
+      const count = await getPendingCount();
+      setPendingCount(count);
+    } catch (e) {
+      // Silently fail if IndexedDB not available
+    }
+  }, []);
+
+  // Forcer une synchronisation
+  const forceSync = useCallback(async () => {
+    if (!isOnline || isSyncing) return { synced: 0, failed: 0 };
+    setIsSyncing(true);
+    try {
+      const result = await syncPendingOperations();
+      setLastSyncResult(result);
+      await updatePendingCount();
+      return result;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isOnline, isSyncing, updatePendingCount]);
+
+  useEffect(() => {
+    // Écouter les événements de sync
+    const unsubscribe = addSyncListener((event) => {
+      if (event.type === 'SYNC_START') {
+        setIsSyncing(true);
+      } else if (event.type === 'SYNC_COMPLETE') {
+        setIsSyncing(false);
+        setLastSyncResult({ synced: event.synced, failed: event.failed });
+        updatePendingCount();
+      } else if (event.type === 'QUEUED') {
+        updatePendingCount();
+      }
+    });
+
+    // Charger le compteur initial
+    updatePendingCount();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [updatePendingCount]);
+
+  return {
+    isOnline,
+    isSyncing,
+    pendingCount,
+    lastSyncResult,
+    forceSync,
+    hasPendingChanges: pendingCount > 0
+  };
 }
 
 /**
