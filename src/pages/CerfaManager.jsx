@@ -106,16 +106,17 @@ function CerfaManager() {
         }
     }, [toast]);
 
-    // Obtenir le prochain numéro
+    // Obtenir le prochain numéro via la fonction SQL
     const getNextNumero = useCallback(async () => {
         try {
-            // Utiliser un compteur local basé sur les documents existants
+            const { data, error } = await supabase.rpc('get_next_cerfa_numero');
+            if (error) throw error;
+            return data;
+        } catch {
+            // Fallback local si la fonction SQL échoue
             const currentYear = new Date().getFullYear();
             const count = documents.length + 1;
             return `CERFA-${currentYear}-${String(count).padStart(4, '0')}`;
-        } catch {
-            const count = documents.length + 1;
-            return `CERFA-${String(count).padStart(4, '0')}`;
         }
     }, [documents.length]);
 
