@@ -250,8 +250,7 @@ const getGlobalStatsFallback = async () => {
   try {
     const { data: expenses, error } = await supabase
       .from('expenses')
-      .select('status, is_paid, amount')
-      .is('deleted_at', null);
+      .select('status, is_paid, amount');
 
     if (error) throw error;
 
@@ -295,8 +294,7 @@ const getUserStatsFallback = async (userId) => {
   try {
     let query = supabase
       .from('expenses')
-      .select('status, is_paid, amount, date')
-      .is('deleted_at', null);
+      .select('status, is_paid, amount, date');
 
     if (userId) {
       query = query.eq('user_id', userId);
@@ -357,8 +355,7 @@ const getExpensesToPayFallback = async () => {
       .from('expenses')
       .select('user_id, amount, date')
       .eq('status', 'approved')
-      .eq('is_paid', false)
-      .is('deleted_at', null);
+      .eq('is_paid', false);
 
     if (error) throw error;
 
