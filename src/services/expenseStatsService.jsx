@@ -19,47 +19,9 @@ import logger from '../utils/logger';
  * @returns {Promise<{data: object, error: any}>}
  */
 export const getGlobalStats = async () => {
-  try {
-    // Essayer d'utiliser la fonction sécurisée qui lit la vue matérialisée
-    const { data, error } = await supabase
-      .rpc('get_expense_global_stats');
-
-    if (error) {
-      // Si la fonction n'existe pas ou erreur quelconque, utiliser le fallback
-      logger.warn('RPC get_expense_global_stats non disponible, utilisation du fallback:', error.code);
-      return await getGlobalStatsFallback();
-    }
-
-    // Transformer les données de la vue matérialisée en format attendu
-    const stats = {
-      pending: { count: 0, total: 0 },
-      approved: { count: 0, total: 0 },
-      paid: { count: 0, total: 0 },
-      rejected: { count: 0, total: 0 }
-    };
-
-    if (data && Array.isArray(data)) {
-      data.forEach(row => {
-        if (row.is_paid) {
-          // Toutes les expenses payées vont dans "paid"
-          stats.paid.count += Number(row.count);
-          stats.paid.total += Number(row.total_amount);
-        } else {
-          // Sinon, grouper par statut
-          const status = row.status;
-          if (stats[status]) {
-            stats[status].count += Number(row.count);
-            stats[status].total += Number(row.total_amount);
-          }
-        }
-      });
-    }
-
-    return { data: stats, error: null };
-  } catch (error) {
-    logger.error('Erreur lors de la récupération des stats globales:', error);
-    return { data: null, error };
-  }
+  // Utiliser directement le fallback (calcul côté client)
+  // Les vues matérialisées PostgreSQL ne sont pas déployées
+  return await getGlobalStatsFallback();
 };
 
 /**
@@ -69,59 +31,9 @@ export const getGlobalStats = async () => {
  * @returns {Promise<{data: object, error: any}>}
  */
 export const getUserStats = async (userId = null) => {
-  try {
-    // Appeler la fonction sécurisée avec RLS
-    const { data, error } = await supabase
-      .rpc('get_expense_stats_by_user', { target_user_id: userId });
-
-    if (error) {
-      // Si la fonction n'existe pas ou erreur quelconque, utiliser le fallback
-      logger.warn('RPC get_expense_stats_by_user non disponible, utilisation du fallback:', error.code);
-      return await getUserStatsFallback(userId);
-    }
-
-    // Transformer en format attendu
-    // Transformer en format attendu
-    const stats = {
-      pending: { count: 0, total: 0 },
-      approved: { count: 0, total: 0 },
-      paid: { count: 0, total: 0 },
-      rejected: { count: 0, total: 0 },
-      total: 0,
-      lastExpenseDate: null
-    };
-
-    if (data && Array.isArray(data)) {
-      data.forEach(row => {
-        if (row.is_paid) {
-          stats.paid.count += Number(row.count);
-          stats.paid.total += Number(row.total_amount);
-        } else {
-          const status = row.status;
-          if (stats[status]) {
-            stats[status].count += Number(row.count);
-            stats[status].total += Number(row.total_amount);
-          }
-        }
-
-        // Ajouter au total global
-        stats.total += Number(row.total_amount);
-
-        // Garder la date la plus récente
-        if (row.last_expense_date) {
-          const rowDate = new Date(row.last_expense_date);
-          if (!stats.lastExpenseDate || rowDate > stats.lastExpenseDate) {
-            stats.lastExpenseDate = rowDate;
-          }
-        }
-      });
-    }
-
-    return { data: stats, error: null };
-  } catch (error) {
-    logger.error('Erreur lors de la récupération des stats utilisateur:', error);
-    return { data: null, error };
-  }
+  // Utiliser directement le fallback (calcul côté client)
+  // Les vues matérialisées PostgreSQL ne sont pas déployées
+  return await getUserStatsFallback(userId);
 };
 
 /**
