@@ -1,15 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import expenseService from '../services/expenseService';
 import { useAuthStore } from '../store/authStore';
+import { cacheExpenses, getCachedExpenses } from '../utils/offlineStorage';
+import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
+import { useOnlineStatus } from './useOnlineStatus';
 
 /**
  * Hook pour gérer les notes de frais avec React Query
+ * Supporte le mode hors ligne avec cache IndexedDB
  * @param {string} userId - ID de l'utilisateur (optionnel)
  * @returns {object} - Notes de frais, loading, error, et fonctions de mutation
  */
 export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const queryClient = useQueryClient();
     const { user } = useAuthStore();
+    const isOnline = useOnlineStatus();
 
     // Query pour récupérer les notes de frais
     const {
@@ -20,37 +25,83 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     } = useQuery({
         queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
-            if (userId) {
-                const { data } = await expenseService.getUserExpenses(userId, 1, limit, filters);
-                return data || [];
+            // Si hors ligne, utiliser le cache
+            if (!navigator.onLine) {
+                console.log('[useExpenses] Mode offline - utilisation du cache');
+                const cached = await getCachedExpenses();
+                if (userId) {
+                    return cached.filter(e => e.user_id === userId);
+                }
+                return cached;
             }
-            const { data } = await expenseService.getAllExpenses(1, limit, filters);
-            return data || [];
+
+            // En ligne : récupérer depuis Supabase
+            let data;
+            if (userId) {
+                const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
+                data = result.data || [];
+            } else {
+                const result = await expenseService.getAllExpenses(1, limit, filters);
+                data = result.data || [];
+            }
+
+            // Mettre en cache pour le mode offline
+            if (data.length > 0) {
+                cacheExpenses(data).catch(e => console.warn('[useExpenses] Cache failed:', e));
+            }
+
+            return data;
         },
         staleTime: 3 * 60 * 1000,  // 3 minutes - dépenses peuvent changer
         gcTime: 10 * 60 * 1000,    // 10 minutes en cache
-        placeholderData: (previousData) => previousData, // Remplace keepPreviousData (deprecated)
+        placeholderData: (previousData) => previousData,
+        // Permettre les requêtes offline
+        networkMode: 'offlineFirst',
     });
 
-    // Mutation pour créer une note de frais
+    // Mutation pour créer une note de frais (avec support offline)
     const createMutation = useMutation({
-        mutationFn: (newExpense) => expenseService.createExpense(newExpense),
+        mutationFn: async (newExpense) => {
+            if (!navigator.onLine) {
+                // Mode offline : queue l'opération
+                console.log('[useExpenses] Offline - création en queue');
+                const tempId = `temp-${Date.now()}`;
+                const tempExpense = { ...newExpense, id: tempId, _offline: true };
+                await queueOperation(SYNC_OPERATION_TYPES.CREATE_EXPENSE, newExpense);
+                return { data: tempExpense };
+            }
+            return expenseService.createExpense(newExpense);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
-    // Mutation pour mettre à jour une note de frais
+    // Mutation pour mettre à jour une note de frais (avec support offline)
     const updateMutation = useMutation({
-        mutationFn: ({ id, updates }) => expenseService.updateExpense(id, updates),
+        mutationFn: async ({ id, updates }) => {
+            if (!navigator.onLine) {
+                console.log('[useExpenses] Offline - mise à jour en queue');
+                await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
+                return { data: { id, ...updates } };
+            }
+            return expenseService.updateExpense(id, updates);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
-    // Mutation pour supprimer une note de frais
+    // Mutation pour supprimer une note de frais (avec support offline)
     const deleteMutation = useMutation({
-        mutationFn: (id) => expenseService.deleteExpense(id),
+        mutationFn: async (id) => {
+            if (!navigator.onLine) {
+                console.log('[useExpenses] Offline - suppression en queue');
+                await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
+                return { data: null };
+            }
+            return expenseService.deleteExpense(id);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
