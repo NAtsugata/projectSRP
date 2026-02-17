@@ -25,12 +25,9 @@ export const getGlobalStats = async () => {
       .rpc('get_expense_global_stats');
 
     if (error) {
-      // Si la fonction n'existe pas encore (code 42883 = function not found)
-      if (error.code === '42883' || error.code === '42P01') {
-        logger.warn('Vues matérialisées non disponibles, utilisation du fallback');
-        return await getGlobalStatsFallback();
-      }
-      throw error;
+      // Si la fonction n'existe pas ou erreur quelconque, utiliser le fallback
+      logger.warn('RPC get_expense_global_stats non disponible, utilisation du fallback:', error.code);
+      return await getGlobalStatsFallback();
     }
 
     // Transformer les données de la vue matérialisée en format attendu
@@ -78,11 +75,9 @@ export const getUserStats = async (userId = null) => {
       .rpc('get_expense_stats_by_user', { target_user_id: userId });
 
     if (error) {
-      if (error.code === '42883' || error.code === '42P01') {
-        logger.warn('Vues matérialisées non disponibles, utilisation du fallback');
-        return await getUserStatsFallback(userId);
-      }
-      throw error;
+      // Si la fonction n'existe pas ou erreur quelconque, utiliser le fallback
+      logger.warn('RPC get_expense_stats_by_user non disponible, utilisation du fallback:', error.code);
+      return await getUserStatsFallback(userId);
     }
 
     // Transformer en format attendu
@@ -143,11 +138,9 @@ export const getMonthlyStats = async () => {
       .limit(12);
 
     if (error) {
-      if (error.code === '42P01') {
-        logger.warn('Vue mensuelle non disponible');
-        return { data: [], error: null };
-      }
-      throw error;
+      // Vue non disponible, retourner données vides
+      logger.warn('Vue mensuelle non disponible:', error.code);
+      return { data: [], error: null };
     }
 
     return { data: data || [], error: null };
@@ -171,11 +164,9 @@ export const getExpensesToPay = async () => {
       .limit(200);
 
     if (error) {
-      if (error.code === '42P01') {
-        logger.warn('Vue expenses_to_pay non disponible');
-        return await getExpensesToPayFallback();
-      }
-      throw error;
+      // Vue non disponible, utiliser le fallback
+      logger.warn('Vue expenses_to_pay non disponible:', error.code);
+      return await getExpensesToPayFallback();
     }
 
     return { data: data || [], error: null };
@@ -197,18 +188,15 @@ export const refreshRealtimeStats = async () => {
       .rpc('refresh_realtime_expense_stats');
 
     if (error) {
-      // Si la fonction n'existe pas, ne pas échouer
-      if (error.code === '42883') {
-        logger.warn('Fonction de rafraîchissement non disponible');
-        return { success: true, error: null };
-      }
-      throw error;
+      // Fonction non disponible, ignorer silencieusement
+      logger.warn('Fonction refresh_realtime_expense_stats non disponible:', error.code);
+      return { success: true, error: null };
     }
 
     return { success: true, error: null };
   } catch (error) {
     logger.error('Erreur lors du rafraîchissement des stats:', error);
-    return { success: false, error };
+    return { success: true, error: null }; // Ne pas bloquer l'app
   }
 };
 
@@ -224,17 +212,15 @@ export const refreshAllStats = async () => {
       .rpc('refresh_all_expense_stats');
 
     if (error) {
-      if (error.code === '42883') {
-        logger.warn('Fonction de rafraîchissement non disponible');
-        return { success: true, error: null };
-      }
-      throw error;
+      // Fonction non disponible, ignorer silencieusement
+      logger.warn('Fonction refresh_all_expense_stats non disponible:', error.code);
+      return { success: true, error: null };
     }
 
     return { success: true, error: null };
   } catch (error) {
     logger.error('Erreur lors du rafraîchissement de toutes les stats:', error);
-    return { success: false, error };
+    return { success: true, error: null }; // Ne pas bloquer l'app
   }
 };
 
