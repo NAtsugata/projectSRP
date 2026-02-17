@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { interventionService } from '../lib/supabase';
+import { cacheInterventions, getCachedInterventions } from '../utils/offlineStorage';
+import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 
 /**
  * Hook pour gérer les interventions avec React Query
+ * Supporte le mode hors ligne avec cache IndexedDB
  * @param {string} userId - ID de l'utilisateur (optionnel, pour filtrer)
  * @returns {object} - Interventions, loading, error, et fonctions de mutation
  */
@@ -18,18 +21,57 @@ export function useInterventions(userId = null, isArchived = false) {
     } = useQuery({
         queryKey: ['interventions', userId, isArchived],
         queryFn: async () => {
+            // Si hors ligne, utiliser le cache
+            if (!navigator.onLine) {
+                console.log('[useInterventions] Mode offline - utilisation du cache');
+                const cached = await getCachedInterventions();
+                let filtered = cached;
+                if (userId) {
+                    filtered = cached.filter(i =>
+                        i.assigned_users?.some(u => u.id === userId) || i.user_id === userId
+                    );
+                }
+                if (isArchived !== null) {
+                    filtered = filtered.filter(i => i.is_archived === isArchived);
+                }
+                return filtered;
+            }
+
+            // En ligne : récupérer depuis Supabase
             const { data, error } = await interventionService.getInterventions(userId, isArchived);
 
             if (error) throw error;
+
+            // Mettre en cache pour le mode offline
+            if (data && data.length > 0) {
+                cacheInterventions(data).catch(e => console.warn('[useInterventions] Cache failed:', e));
+            }
+
             return data || [];
         },
         staleTime: 2 * 60 * 1000, // 2 minutes - interventions changent modérément
         gcTime: 10 * 60 * 1000,   // 10 minutes en cache
+        placeholderData: (previousData) => previousData,
+        networkMode: 'offlineFirst',
     });
 
-    // Mutation pour créer une intervention
+    // Mutation pour créer une intervention (avec support offline)
     const createMutation = useMutation({
         mutationFn: async (params) => {
+            if (!navigator.onLine) {
+                // Mode offline : queue l'opération
+                console.log('[useInterventions] Offline - création en queue');
+                const tempId = `temp-${Date.now()}`;
+                const tempIntervention = {
+                    ...(params.interventionData || params),
+                    id: tempId,
+                    _offline: true,
+                    created_at: new Date().toISOString()
+                };
+                await queueOperation(SYNC_OPERATION_TYPES.CREATE_INTERVENTION, params);
+                return { data: tempIntervention };
+            }
+
             let result;
             // Support both old style (just data) and new style (object with fields)
             if (params.interventionData || params.assignedUserIds) {
@@ -51,9 +93,15 @@ export function useInterventions(userId = null, isArchived = false) {
         },
     });
 
-    // Mutation pour mettre à jour une intervention
+    // Mutation pour mettre à jour une intervention (avec support offline)
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
+            if (!navigator.onLine) {
+                console.log('[useInterventions] Offline - mise à jour en queue');
+                await queueOperation(SYNC_OPERATION_TYPES.UPDATE_INTERVENTION, { id, updates });
+                return { data: { id, ...updates } };
+            }
+
             const result = await interventionService.updateIntervention(id, updates);
             if (result.error) throw result.error;
             return result;
