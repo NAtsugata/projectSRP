@@ -3,7 +3,7 @@
 // React Query hook for maintenance contracts management
 // =============================
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { maintenanceContractService } from '../lib/supabase';
+import { maintenanceContractService } from '../services/maintenanceContractService';
 
 // ========== QUERY KEYS ==========
 export const contractKeys = {

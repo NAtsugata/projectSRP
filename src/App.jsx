@@ -2,7 +2,7 @@
 // FILE: src/App.js — REFACTORISÉ (Containers + React Query)
 // =============================
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService, profileService, supabase } from './lib/supabase';
 import { Toast, ConfirmationModal } from './components/SharedUI';
@@ -24,7 +24,6 @@ import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
-// Lazy loading des Containers
 // Lazy loading des Containers
 const AdminDashboardContainer = lazy(() => import('./pages/AdminDashboardContainer'));
 const AdminPlanningViewContainer = lazy(() => import('./pages/AdminPlanningViewContainer'));

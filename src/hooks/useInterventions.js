@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { interventionService } from '../lib/supabase';
+import { interventionService } from '../services/interventionService';
 import { cacheInterventions, getCachedInterventions } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 

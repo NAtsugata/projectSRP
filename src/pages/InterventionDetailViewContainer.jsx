@@ -2,7 +2,8 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { interventionService, supabase } from '../lib/supabase';
+import { interventionService } from '../services/interventionService';
+import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { buildSanitizedReport } from '../utils/reportHelpers';
