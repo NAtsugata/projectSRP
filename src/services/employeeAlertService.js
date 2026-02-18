@@ -58,144 +58,40 @@ export const sendAlert = async ({
   interventionId = null,
   estimatedDelay = null
 }) => {
-  try {
-    const alertData = {
-      employee_id: employeeId,
-      employee_name: employeeName,
-      alert_type: alertType,
-      message: message || ALERT_TYPES[alertType.toUpperCase()]?.message || '',
-      intervention_id: interventionId,
-      estimated_delay: estimatedDelay,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
+  const alertData = {
+    employee_id: employeeId,
+    employee_name: employeeName,
+    alert_type: alertType,
+    message: message || ALERT_TYPES[alertType.toUpperCase()]?.message || '',
+    intervention_id: interventionId,
+    estimated_delay: estimatedDelay,
+    status: 'pending',
+    created_at: new Date().toISOString()
+  };
 
-    logger.log('🚨 Envoi alerte:', alertData);
-
-    // Essayer d'insérer dans Supabase
-    const { data, error } = await supabase
-      .from('employee_alerts')
-      .insert([withOrgId(alertData)])
-      .select();
-
-    if (error) {
-      // Fallback localStorage si table n'existe pas
-      if (error.code === '42P01') {
-        logger.warn('⚠️ Table employee_alerts non trouvée, utilisation localStorage');
-        return sendAlertFallback(alertData);
-      }
-      throw error;
-    }
-
-    logger.log('✅ Alerte envoyée avec succès');
-    return { data: data[0], error: null };
-
-  } catch (error) {
-    logger.error('❌ Erreur envoi alerte:', error);
-    // Fallback en cas d'erreur
-    return sendAlertFallback({
-      employee_id: employeeId,
-      employee_name: employeeName,
-      alert_type: alertType,
-      message: message || ALERT_TYPES[alertType.toUpperCase()]?.message || '',
-      intervention_id: interventionId,
-      estimated_delay: estimatedDelay,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    });
-  }
+  logger.log('🚨 Envoi alerte:', alertData);
+  return sendAlertFallback(alertData);
 };
 
 /**
  * Récupérer les alertes (pour admin)
  */
 export const getAlerts = async (options = {}) => {
-  try {
-    const { status = null, today = false, limit = 50 } = options;
-
-    let query = supabase
-      .from('employee_alerts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    if (today) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      query = query.gte('created_at', `${todayStr}T00:00:00`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      // Fallback si table n'existe pas ou erreur de colonne
-      if (error.code === '42P01' || error.code === '42703') {
-        return getAlertsFallback(options);
-      }
-      throw error;
-    }
-
-    return { data, error: null };
-
-  } catch (error) {
-    logger.error('❌ Erreur récupération alertes:', error);
-    return getAlertsFallback(options);
-  }
+  return getAlertsFallback(options);
 };
 
 /**
  * Marquer une alerte comme vue/traitée
  */
 export const markAlertAsRead = async (alertId) => {
-  try {
-    const { error } = await supabase
-      .from('employee_alerts')
-      .update({ status: 'read', read_at: new Date().toISOString() })
-      .eq('id', alertId);
-
-    if (error) {
-      if (error.code === '42P01') {
-        return markAlertAsReadFallback(alertId);
-      }
-      throw error;
-    }
-
-    return { error: null };
-
-  } catch (error) {
-    logger.error('❌ Erreur marquage alerte:', error);
-    return { error };
-  }
+  return markAlertAsReadFallback(alertId);
 };
 
 /**
  * Compter les alertes non lues (pour badge)
  */
 export const getUnreadCount = async () => {
-  try {
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const { count, error } = await supabase
-      .from('employee_alerts')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending')
-      .gte('created_at', `${todayStr}T00:00:00`);
-
-    if (error) {
-      if (error.code === '42P01') {
-        return getUnreadCountFallback();
-      }
-      throw error;
-    }
-
-    return { count: count || 0, error: null };
-
-  } catch (error) {
-    return getUnreadCountFallback();
-  }
+  return getUnreadCountFallback();
 };
 
 // ========== FALLBACK LOCALSTORAGE ==========
