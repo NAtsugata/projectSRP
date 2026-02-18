@@ -156,6 +156,28 @@ const expenseService = {
   },
 
   /**
+   * Mettre à jour une note de frais
+   */
+  async updateExpense(expenseId, updates) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', expenseId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      logger.log('Note de frais mise à jour:', expenseId);
+      return { data, error: null };
+    } catch (error) {
+      logger.error('Erreur updateExpense:', error);
+      return { data: null, error };
+    }
+  },
+
+  /**
    * Approuver une note de frais (admin)
    */
   async approveExpense(expenseId, adminId, comment = '') {

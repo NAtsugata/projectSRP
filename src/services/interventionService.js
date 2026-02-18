@@ -154,9 +154,61 @@ export const interventionService = {
     return { error: null };
   },
 
-  async addBriefingDocuments(id, files) {
-    // Placeholder
-    return { error: null };
+  async addBriefingDocuments(interventionId, files) {
+    if (!files || files.length === 0) return { data: [], error: null };
+
+    try {
+      const uploaded = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        const fileName = `${interventionId}/briefing/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('intervention-files')
+          .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+        if (uploadError) {
+          logger.error('Erreur upload briefing:', uploadError);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('intervention-files')
+          .getPublicUrl(fileName);
+
+        uploaded.push({
+          name: file.name,
+          path: fileName,
+          url: urlData?.publicUrl || '',
+          size: file.size,
+          type: file.type
+        });
+      }
+
+      // Mettre à jour l'intervention avec les documents de briefing
+      if (uploaded.length > 0) {
+        const { data: current } = await supabase
+          .from('interventions')
+          .select('briefing_documents')
+          .eq('id', interventionId)
+          .single();
+
+        const existing = current?.briefing_documents || [];
+        const allDocs = [...existing, ...uploaded];
+
+        await supabase
+          .from('interventions')
+          .update({ briefing_documents: allDocs })
+          .eq('id', interventionId);
+      }
+
+      logger.log('Briefing documents ajoutés:', uploaded.length);
+      return { data: uploaded, error: null };
+    } catch (error) {
+      logger.error('Erreur addBriefingDocuments:', error);
+      return { data: [], error };
+    }
   }
 };
 

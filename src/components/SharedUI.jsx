@@ -104,26 +104,42 @@ export const Toast = ({ message, type, onDismiss }) => {
     const timer = setTimeout(onDismiss, 4000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
-  return <div className={'toast ' + bgColor}>{message}</div>;
+  return <div className={'toast ' + bgColor} role="alert" aria-live="assertive">{message}</div>;
 };
 
 export const ConfirmationModal = ({ title, message, onConfirm, onCancel, showInput = false, inputLabel = '' }) => {
   const [inputValue, setInputValue] = useState('');
+  const cancelRef = useRef(null);
+
+  // Focus le bouton annuler à l'ouverture
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  // Fermer avec Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
+
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
       <div className="modal-content confirmation-modal">
         <div className="confirmation-header">
           <div className="confirmation-icon"><AlertTriangleIcon /></div>
-          <div className="confirmation-text"><h3>{title}</h3><p>{message}</p></div>
+          <div className="confirmation-text"><h3 id="confirm-title">{title}</h3><p id="confirm-message">{message}</p></div>
         </div>
         {showInput && (
           <div className="form-group mt-4">
-            <label>{inputLabel}</label>
-            <textarea value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="form-control" rows="3"></textarea>
+            <label htmlFor="confirm-input">{inputLabel}</label>
+            <textarea id="confirm-input" value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="form-control" rows="3"></textarea>
           </div>
         )}
         <div className="modal-footer">
-          <button type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
+          <button ref={cancelRef} type="button" onClick={onCancel} className="btn btn-secondary">Annuler</button>
           <button type="button" onClick={() => onConfirm(inputValue)} className="btn btn-danger">Confirmer</button>
         </div>
       </div>

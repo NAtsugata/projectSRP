@@ -70,3 +70,54 @@
   color: #6b7280;
   font-size: 0.875rem;
 }
+
+/* ========== SKELETON ========== */
+
+.skeleton-pulse {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-line {
+  display: block;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.skeleton-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #f3f4f6;
+  margin-bottom: 12px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.skeleton-row-content {
+  flex: 1;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
