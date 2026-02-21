@@ -5,6 +5,7 @@ import { useInterventions } from '../hooks/useInterventions';
 import { useUsers } from '../hooks/useUsers';
 import { useChecklists } from '../hooks/useChecklists';
 import { useToast } from '../contexts/ToastContext';
+import { clientService } from '../services/clientService';
 import AdminPlanningView from './AdminPlanningView';
 
 const AdminPlanningViewContainer = () => {
@@ -16,16 +17,30 @@ const AdminPlanningViewContainer = () => {
 
     const handleCreateIntervention = async (formData, assignedUsers, files) => {
         try {
-            // Gérer le cas où on reçoit plusieurs arguments (depuis AdminPlanningView)
+            // Auto-enregistrer le client dans la base clients
+            // (ne bloque pas la creation d'intervention si ca echoue)
+            let clientId = null;
+            if (formData?.client) {
+                const { data: clientData } = await clientService.getOrCreateClientFromIntervention(formData);
+                if (clientData?.id) {
+                    clientId = clientData.id;
+                }
+            }
+
+            const interventionData = clientId
+                ? { ...formData, client_id: clientId }
+                : formData;
+
+            // Gerer le cas ou on recoit plusieurs arguments (depuis AdminPlanningView)
             // ou un seul objet (legacy)
             if (assignedUsers || files) {
                 await createIntervention({
-                    interventionData: formData,
+                    interventionData,
                     assignedUserIds: assignedUsers,
                     briefingFiles: files
                 });
             } else {
-                await createIntervention(formData);
+                await createIntervention(interventionData);
             }
             toast?.success('Intervention créée avec succès');
             return true; // Retourner true pour fermer le formulaire

@@ -282,6 +282,113 @@
   margin-bottom: 0.5rem;
 }
 
+/* Client autocomplete */
+.client-autocomplete-wrapper {
+  position: relative;
+}
+
+.client-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.client-input-container .form-control {
+  flex: 1;
+  padding-right: 120px;
+}
+
+.client-search-indicator {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.875rem;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.client-selected-badge {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #d1fae5;
+  color: #065f46;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.client-suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.suggestions-header {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.client-suggestion-item {
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.client-suggestion-item:hover {
+  background: #f0f9ff;
+}
+
+.client-suggestion-item:last-of-type {
+  border-bottom: none;
+}
+
+.suggestion-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.suggestion-details {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+}
+
+.suggestions-footer {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+  background: #f9fafb;
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+  font-style: italic;
+}
+
 /* Form actions */
 .form-actions {
   display: flex;

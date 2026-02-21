@@ -430,26 +430,168 @@ export const clientService = {
   },
 
   /**
-   * Recherche rapide de clients (pour autocomplete)
+   * Recherche rapide de clients (pour autocomplete dans le formulaire intervention)
    * @param {string} searchTerm - Terme de recherche
    * @param {number} limit - Nombre max de resultats
    * @returns {Promise<{data: Array, error: Object}>}
    */
   async searchClients(searchTerm, limit = 10) {
     try {
+      if (!searchTerm || searchTerm.length < 2) {
+        return { data: [], error: null };
+      }
+
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, company_name, city, phone')
+        .select('id, name, company_name, email, phone, mobile, address, address_complement, postal_code, city')
         .eq('is_active', true)
-        .or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`)
+        .or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`)
+        .order('name')
         .limit(limit);
 
       if (error) throw error;
 
-      return { data, error: null };
+      return { data: data || [], error: null };
     } catch (error) {
       logger.error('❌ Erreur searchClients:', error);
+      return { data: [], error };
+    }
+  },
+
+  /**
+   * Creer ou retrouver un client a partir des infos d'une intervention
+   * Si un client avec le meme nom existe deja, on le retourne.
+   * Sinon, on le cree.
+   * @param {Object} interventionData - Donnees de l'intervention (client, address, client_phone, client_email)
+   * @returns {Promise<{data: Object, error: Object}>}
+   */
+  async getOrCreateClientFromIntervention(interventionData) {
+    try {
+      const clientName = interventionData.client?.trim();
+      if (!clientName) return { data: null, error: null };
+
+      // Chercher un client existant avec le meme nom
+      const { data: existing, error: searchError } = await supabase
+        .from('clients')
+        .select('id, name')
+        .ilike('name', clientName)
+        .limit(1)
+        .single();
+
+      if (existing && !searchError) {
+        // Client existant trouve - mettre a jour ses infos si manquantes
+        const updates = {};
+        if (interventionData.address && !existing.address) updates.address = interventionData.address;
+        if (interventionData.client_phone && !existing.phone) updates.phone = interventionData.client_phone;
+        if (interventionData.client_email && !existing.email) updates.email = interventionData.client_email;
+
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('clients').update(updates).eq('id', existing.id);
+        }
+
+        return { data: existing, error: null };
+      }
+
+      // Creer un nouveau client
+      const newClient = {
+        name: clientName,
+        phone: interventionData.client_phone || null,
+        email: interventionData.client_email || null,
+        address: interventionData.address || null,
+      };
+
+      const { data: created, error: createError } = await supabase
+        .from('clients')
+        .insert([withOrgId(newClient)])
+        .select('id, name')
+        .single();
+
+      if (createError) {
+        logger.warn('⚠️ Impossible de creer le client automatiquement:', createError);
+        return { data: null, error: createError };
+      }
+
+      logger.log('✅ Client auto-cree depuis intervention:', created.name);
+      return { data: created, error: null };
+    } catch (error) {
+      // Ne pas bloquer la creation d'intervention si la creation client echoue
+      logger.warn('⚠️ Erreur getOrCreateClientFromIntervention:', error);
       return { data: null, error };
+    }
+  },
+
+  /**
+   * Migration: extraire les clients uniques depuis les interventions existantes
+   * A executer une seule fois pour importer les clients historiques
+   * @returns {Promise<{imported: number, skipped: number, error: Object}>}
+   */
+  async extractClientsFromInterventions() {
+    try {
+      // Recuperer toutes les interventions avec infos client
+      const { data: interventions, error: fetchError } = await supabase
+        .from('interventions')
+        .select('client, address, client_phone, client_email, organization_id, created_by')
+        .not('client', 'is', null)
+        .neq('client', '');
+
+      if (fetchError) throw fetchError;
+
+      if (!interventions || interventions.length === 0) {
+        return { imported: 0, skipped: 0, error: null };
+      }
+
+      // Recuperer les clients existants pour eviter les doublons
+      const { data: existingClients } = await supabase
+        .from('clients')
+        .select('name, organization_id');
+
+      const existingSet = new Set(
+        (existingClients || []).map(c => `${c.name?.toLowerCase()}|${c.organization_id}`)
+      );
+
+      // Deduplication par nom+org
+      const uniqueClients = new Map();
+      for (const i of interventions) {
+        const key = `${i.client?.toLowerCase()}|${i.organization_id}`;
+        if (!existingSet.has(key) && !uniqueClients.has(key)) {
+          uniqueClients.set(key, {
+            name: i.client,
+            phone: i.client_phone || null,
+            email: i.client_email || null,
+            address: i.address || null,
+            organization_id: i.organization_id,
+            created_by: i.created_by
+          });
+        }
+      }
+
+      if (uniqueClients.size === 0) {
+        return { imported: 0, skipped: interventions.length, error: null };
+      }
+
+      // Inserer par batch de 50
+      const clientsArray = Array.from(uniqueClients.values());
+      let imported = 0;
+      const batchSize = 50;
+
+      for (let i = 0; i < clientsArray.length; i += batchSize) {
+        const batch = clientsArray.slice(i, i + batchSize);
+        const { error: insertError } = await supabase
+          .from('clients')
+          .insert(batch);
+
+        if (!insertError) {
+          imported += batch.length;
+        } else {
+          logger.warn('⚠️ Erreur batch insert clients:', insertError);
+        }
+      }
+
+      logger.log(`✅ Migration clients: ${imported} importes, ${interventions.length - imported} ignores`);
+      return { imported, skipped: interventions.length - imported, error: null };
+    } catch (error) {
+      logger.error('❌ Erreur extractClientsFromInterventions:', error);
+      return { imported: 0, skipped: 0, error };
     }
   },
 

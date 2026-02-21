@@ -1,12 +1,13 @@
 // src/components/planning/InterventionForm.js
 // Formulaire de création/édition d'intervention
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useForm } from '../../hooks';
 import { validateIntervention } from '../../utils/validators';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
+import { clientService } from '../../services/clientService';
 import logger from '../../utils/logger';
 import './InterventionForm.css';
 
@@ -70,6 +71,91 @@ const InterventionForm = ({
   const [briefingFiles, setBriefingFiles] = useState([]);
   const [uploadError, setUploadError] = useState('');
   const [scheduledDates, setScheduledDates] = useState([]);
+
+  // Client autocomplete
+  const [clientSuggestions, setClientSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const suggestionsRef = useRef(null);
+
+  // Recherche clients avec debounce
+  const searchClientsDebounced = useCallback((searchTerm) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchTerm || searchTerm.length < 2) {
+      setClientSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const { data } = await clientService.searchClients(searchTerm, 8);
+        setClientSuggestions(data || []);
+        setShowSuggestions((data || []).length > 0);
+      } catch (error) {
+        logger.warn('Erreur recherche clients:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+  }, []);
+
+  // Quand on tape dans le champ client, lancer la recherche
+  const handleClientInputChange = useCallback((e) => {
+    handleChange(e);
+    setSelectedClient(null); // Reset la selection si on retape
+    searchClientsDebounced(e.target.value);
+  }, [handleChange, searchClientsDebounced]);
+
+  // Quand on selectionne un client dans la liste
+  const handleSelectClient = useCallback((client) => {
+    setSelectedClient(client);
+    setShowSuggestions(false);
+    setClientSuggestions([]);
+
+    // Auto-remplir les champs
+    const fullAddress = [client.address, client.postal_code, client.city]
+      .filter(Boolean)
+      .join(', ');
+
+    // Mettre a jour les champs du formulaire
+    handleChange({ target: { name: 'client', value: client.name } });
+    if (fullAddress) {
+      handleChange({ target: { name: 'address', value: fullAddress } });
+    }
+    if (client.phone) {
+      handleChange({ target: { name: 'client_phone', value: client.phone } });
+    }
+    if (client.email) {
+      handleChange({ target: { name: 'client_email', value: client.email } });
+    }
+
+    logger.log('InterventionForm: Client selectionne', client.name);
+  }, [handleChange]);
+
+  // Fermer les suggestions quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Cleanup timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const handleUserAssignmentChange = useCallback((userId) => {
     setAssignedUsers(prev =>
@@ -168,23 +254,55 @@ const InterventionForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>
-      {/* Client */}
-      <div className="form-group">
+      {/* Client avec autocomplete */}
+      <div className="form-group client-autocomplete-wrapper" ref={suggestionsRef}>
         <label htmlFor="client" className="form-label">
           Client <span className="required">*</span>
         </label>
-        <input
-          id="client"
-          name="client"
-          type="text"
-          value={values.client}
-          onChange={handleChange}
-          disabled={isSubmitting}
-          className={`form-control ${errors.client ? 'error' : ''}`}
-          placeholder="Nom du client"
-          required
-        />
+        <div className="client-input-container">
+          <input
+            id="client"
+            name="client"
+            type="text"
+            value={values.client}
+            onChange={handleClientInputChange}
+            onFocus={() => {
+              if (clientSuggestions.length > 0) setShowSuggestions(true);
+            }}
+            disabled={isSubmitting}
+            className={`form-control ${errors.client ? 'error' : ''}`}
+            placeholder="Tapez pour rechercher un client existant..."
+            required
+            autoComplete="off"
+          />
+          {isSearching && <span className="client-search-indicator">...</span>}
+          {selectedClient && <span className="client-selected-badge">Client existant</span>}
+        </div>
         {errors.client && <span className="error-message">{errors.client}</span>}
+
+        {/* Liste de suggestions clients */}
+        {showSuggestions && clientSuggestions.length > 0 && (
+          <div className="client-suggestions-dropdown">
+            <div className="suggestions-header">Clients existants :</div>
+            {clientSuggestions.map(client => (
+              <div
+                key={client.id}
+                className="client-suggestion-item"
+                onClick={() => handleSelectClient(client)}
+              >
+                <div className="suggestion-name">{client.name}</div>
+                <div className="suggestion-details">
+                  {client.address && <span>{client.address}</span>}
+                  {client.city && <span> - {client.city}</span>}
+                  {client.phone && <span> | {client.phone}</span>}
+                </div>
+              </div>
+            ))}
+            <div className="suggestions-footer">
+              Ou continuez a taper pour creer un nouveau client
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Contact Info - 2 columns */}
