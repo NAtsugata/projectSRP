@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { cacheExpenses, getCachedExpenses } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 import { useOnlineStatus } from './useOnlineStatus';
+import logger from '../utils/logger';
 
 /**
  * Hook pour gérer les notes de frais avec React Query
@@ -27,7 +28,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         queryFn: async () => {
             // Si hors ligne, utiliser le cache
             if (!navigator.onLine) {
-                console.log('[useExpenses] Mode offline - utilisation du cache');
+                logger.log('[useExpenses] Mode offline - utilisation du cache');
                 const cached = await getCachedExpenses();
                 if (userId) {
                     return cached.filter(e => e.user_id === userId);
@@ -47,7 +48,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
 
             // Mettre en cache pour le mode offline
             if (data.length > 0) {
-                cacheExpenses(data).catch(e => console.warn('[useExpenses] Cache failed:', e));
+                cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
             }
 
             return data;
@@ -64,7 +65,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         mutationFn: async (newExpense) => {
             if (!navigator.onLine) {
                 // Mode offline : queue l'opération
-                console.log('[useExpenses] Offline - création en queue');
+                logger.log('[useExpenses] Offline - creation en queue');
                 const tempId = `temp-${Date.now()}`;
                 const tempExpense = { ...newExpense, id: tempId, _offline: true };
                 await queueOperation(SYNC_OPERATION_TYPES.CREATE_EXPENSE, newExpense);
@@ -81,7 +82,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
             if (!navigator.onLine) {
-                console.log('[useExpenses] Offline - mise à jour en queue');
+                logger.log('[useExpenses] Offline - mise a jour en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
                 return { data: { id, ...updates } };
             }
@@ -96,7 +97,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const deleteMutation = useMutation({
         mutationFn: async (id) => {
             if (!navigator.onLine) {
-                console.log('[useExpenses] Offline - suppression en queue');
+                logger.log('[useExpenses] Offline - suppression en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };
             }

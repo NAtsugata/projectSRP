@@ -69,7 +69,7 @@ const checklistService = {
       for (const template of templatesToImport) {
         const { data, error } = await this.createTemplate(template);
         if (data) results.push(data);
-        if (error) console.error('Erreur import template:', template.name, error);
+        if (error) logger.error('Erreur import template:', template.name, error);
       }
 
       return {
@@ -79,7 +79,7 @@ const checklistService = {
         error: null
       };
     } catch (error) {
-      console.error('❌ Erreur importPredefinedTemplates:', error);
+      logger.error('Erreur importPredefinedTemplates:', error);
       return { data: null, imported: 0, skipped: 0, error };
     }
   },

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { interventionService } from '../services/interventionService';
 import { cacheInterventions, getCachedInterventions } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
+import logger from '../utils/logger';
 
 /**
  * Hook pour gérer les interventions avec React Query
@@ -23,7 +24,7 @@ export function useInterventions(userId = null, isArchived = false) {
         queryFn: async () => {
             // Si hors ligne, utiliser le cache
             if (!navigator.onLine) {
-                console.log('[useInterventions] Mode offline - utilisation du cache');
+                logger.log('[useInterventions] Mode offline - utilisation du cache');
                 const cached = await getCachedInterventions();
                 let filtered = cached;
                 if (userId) {
@@ -44,7 +45,7 @@ export function useInterventions(userId = null, isArchived = false) {
 
             // Mettre en cache pour le mode offline
             if (data && data.length > 0) {
-                cacheInterventions(data).catch(e => console.warn('[useInterventions] Cache failed:', e));
+                cacheInterventions(data).catch(e => logger.warn('[useInterventions] Cache failed:', e));
             }
 
             return data || [];
@@ -60,7 +61,7 @@ export function useInterventions(userId = null, isArchived = false) {
         mutationFn: async (params) => {
             if (!navigator.onLine) {
                 // Mode offline : queue l'opération
-                console.log('[useInterventions] Offline - création en queue');
+                logger.log('[useInterventions] Offline - creation en queue');
                 const tempId = `temp-${Date.now()}`;
                 const tempIntervention = {
                     ...(params.interventionData || params),
@@ -97,7 +98,7 @@ export function useInterventions(userId = null, isArchived = false) {
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
             if (!navigator.onLine) {
-                console.log('[useInterventions] Offline - mise à jour en queue');
+                logger.log('[useInterventions] Offline - mise a jour en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_INTERVENTION, { id, updates });
                 return { data: { id, ...updates } };
             }

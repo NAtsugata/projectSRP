@@ -1,6 +1,8 @@
 // src/utils/offlineStorage.js
 // Stockage IndexedDB pour le mode hors ligne
 
+import logger from './logger';
+
 const DB_NAME = 'srp-offline-db';
 const DB_VERSION = 1;
 
@@ -29,19 +31,19 @@ export const openDatabase = () => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error('[OfflineDB] Erreur ouverture:', request.error);
+      logger.error('[OfflineDB] Erreur ouverture:', request.error);
       reject(request.error);
     };
 
     request.onsuccess = () => {
       db = request.result;
-      console.log('[OfflineDB] Base ouverte avec succès');
+      logger.log('[OfflineDB] Base ouverte avec succès');
       resolve(db);
     };
 
     request.onupgradeneeded = (event) => {
       const database = event.target.result;
-      console.log('[OfflineDB] Mise à jour du schéma...');
+      logger.log('[OfflineDB] Mise à jour du schéma...');
 
       // Store pour les interventions
       if (!database.objectStoreNames.contains(STORES.INTERVENTIONS)) {
@@ -229,7 +231,7 @@ export const addToSyncQueue = async (operation) => {
     retries: 0
   };
   await saveToStore(STORES.SYNC_QUEUE, queueItem);
-  console.log('[OfflineDB] Opération ajoutée à la queue:', operation.type);
+  logger.log('[OfflineDB] Opération ajoutée à la queue:', operation.type);
   return queueItem;
 };
 
@@ -245,7 +247,7 @@ export const getPendingSyncOperations = async () => {
  */
 export const removeSyncOperation = async (id) => {
   await deleteFromStore(STORES.SYNC_QUEUE, id);
-  console.log('[OfflineDB] Opération synchronisée et supprimée:', id);
+  logger.log('[OfflineDB] Opération synchronisée et supprimée:', id);
 };
 
 /**
@@ -253,7 +255,7 @@ export const removeSyncOperation = async (id) => {
  */
 export const clearSyncQueue = async () => {
   await clearStore(STORES.SYNC_QUEUE);
-  console.log('[OfflineDB] Queue de sync vidée');
+  logger.log('[OfflineDB] Queue de sync vidée');
 };
 
 // ========================================
