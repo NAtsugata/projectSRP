@@ -879,15 +879,14 @@ function AdminClientsView({
       )}
 
       {/* Confirmation suppression */}
-      <ConfirmationModal
-        isOpen={deleteConfirm.show}
-        title="Supprimer le client"
-        message={`Etes-vous sur de vouloir supprimer le client "${deleteConfirm.clientName}" ? Cette action est irreversible.`}
-        confirmLabel="Supprimer"
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteConfirm({ show: false, clientId: null, clientName: '' })}
-        isDanger={true}
-      />
+      {deleteConfirm.show && (
+        <ConfirmationModal
+          title="Supprimer le client"
+          message={`Etes-vous sur de vouloir supprimer le client "${deleteConfirm.clientName}" ? Cette action est irreversible.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm({ show: false, clientId: null, clientName: '' })}
+        />
+      )}
     </div>
   );
 }

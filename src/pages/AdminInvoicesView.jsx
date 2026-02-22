@@ -1050,15 +1050,14 @@ function AdminInvoicesView({
       )}
 
       {/* Modal Confirmation Suppression */}
-      <ConfirmationModal
-        isOpen={deleteConfirm.show}
-        onClose={() => setDeleteConfirm({ show: false, id: null, number: '' })}
-        onConfirm={handleDelete}
-        title="Confirmer la suppression"
-        message={`Etes-vous sur de vouloir supprimer ${deleteConfirm.number} ? Cette action est irreversible.`}
-        confirmText="Supprimer"
-        confirmStyle="danger"
-      />
+      {deleteConfirm.show && (
+        <ConfirmationModal
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm({ show: false, id: null, number: '' })}
+          title="Confirmer la suppression"
+          message={`Etes-vous sur de vouloir supprimer ${deleteConfirm.number} ? Cette action est irreversible.`}
+        />
+      )}
     </div>
   );
 }
