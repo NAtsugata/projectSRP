@@ -168,8 +168,7 @@ SELECT
   c.organization_id,
   COUNT(DISTINCT i.id) as total_interventions,
   COUNT(DISTINCT CASE WHEN i.status = 'completed' THEN i.id END) as completed_interventions,
-  COUNT(DISTINCT CASE WHEN i.status = 'pending' THEN i.id END) as pending_interventions,
-  MAX(i.created_at) as last_intervention_date
+  COUNT(DISTINCT CASE WHEN i.status = 'pending' THEN i.id END) as pending_interventions
 FROM clients c
 LEFT JOIN interventions i ON i.client_id = c.id
 GROUP BY c.id, c.name, c.organization_id;
@@ -196,8 +195,7 @@ RETURNS TABLE (
   phone VARCHAR,
   city VARCHAR,
   is_active BOOLEAN,
-  total_interventions BIGINT,
-  last_intervention_date TIMESTAMPTZ
+  total_interventions BIGINT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -213,8 +211,7 @@ BEGIN
     c.phone,
     c.city,
     c.is_active,
-    COALESCE(cs.total_interventions, 0) as total_interventions,
-    cs.last_intervention_date
+    COALESCE(cs.total_interventions, 0) as total_interventions
   FROM clients c
   LEFT JOIN client_stats cs ON cs.id = c.id
   WHERE c.organization_id = p_organization_id
