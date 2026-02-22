@@ -169,11 +169,9 @@ SELECT
   COUNT(DISTINCT i.id) as total_interventions,
   COUNT(DISTINCT CASE WHEN i.status = 'completed' THEN i.id END) as completed_interventions,
   COUNT(DISTINCT CASE WHEN i.status = 'pending' THEN i.id END) as pending_interventions,
-  MAX(i.created_at) as last_intervention_date,
-  COUNT(DISTINCT mc.id) as active_contracts
+  MAX(i.created_at) as last_intervention_date
 FROM clients c
 LEFT JOIN interventions i ON i.client_id = c.id
-LEFT JOIN maintenance_contracts mc ON mc.client_id = c.id AND mc.status = 'active'
 GROUP BY c.id, c.name, c.organization_id;
 
 -- ============================================
