@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   organization_id UUID REFERENCES organizations(id) NOT NULL,
   invoice_number VARCHAR(50) UNIQUE NOT NULL,
   client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
-  intervention_id UUID REFERENCES interventions(id) ON DELETE SET NULL,
+  intervention_id BIGINT REFERENCES interventions(id) ON DELETE SET NULL,
 
   -- Status workflow: draft → sent → paid / overdue / cancelled
   status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS quotes (
   organization_id UUID REFERENCES organizations(id) NOT NULL,
   quote_number VARCHAR(50) UNIQUE NOT NULL,
   client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
-  intervention_id UUID REFERENCES interventions(id) ON DELETE SET NULL,
+  intervention_id BIGINT REFERENCES interventions(id) ON DELETE SET NULL,
 
   -- Status workflow: draft → sent → accepted → converted / rejected / expired
   status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'accepted', 'rejected', 'expired', 'converted')),
