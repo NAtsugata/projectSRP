@@ -42,7 +42,8 @@ export const invoicingService = {
           ),
           intervention:interventions!intervention_id (
             id,
-            title,
+            client,
+            service,
             status
           ),
           invoice_items (
@@ -115,7 +116,8 @@ export const invoicingService = {
           ),
           intervention:interventions!intervention_id (
             id,
-            title,
+            client,
+            service,
             status,
             address
           ),
@@ -620,7 +622,8 @@ export const invoicingService = {
           ),
           intervention:interventions!intervention_id (
             id,
-            title,
+            client,
+            service,
             status
           ),
           quote_items (
@@ -693,7 +696,8 @@ export const invoicingService = {
           ),
           intervention:interventions!intervention_id (
             id,
-            title,
+            client,
+            service,
             status,
             address
           ),
@@ -1121,7 +1125,7 @@ export const invoicingService = {
         client_id: intervention.client_id || intervention.client?.id,
         intervention_id: interventionId,
         due_date: dueDate,
-        notes: `Facture pour intervention: ${intervention.title}`
+        notes: `Facture pour intervention: ${intervention.client} - ${intervention.service}`
       };
 
       return await this.createInvoice(invoiceData, items);
@@ -1150,7 +1154,7 @@ export const invoicingService = {
       const quoteData = {
         client_id: intervention.client_id || intervention.client?.id,
         intervention_id: interventionId,
-        notes: `Devis pour intervention: ${intervention.title}`
+        notes: `Devis pour intervention: ${intervention.client} - ${intervention.service}`
       };
 
       return await this.createQuote(quoteData, items);
