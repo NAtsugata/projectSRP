@@ -30,7 +30,7 @@ export const invoicingService = {
         .from('invoices')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             name,
             company_name,
@@ -40,7 +40,7 @@ export const invoicingService = {
             postal_code,
             city
           ),
-          intervention:interventions (
+          intervention:interventions!intervention_id (
             id,
             title,
             status
@@ -98,7 +98,7 @@ export const invoicingService = {
         .from('invoices')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             name,
             company_name,
@@ -113,12 +113,11 @@ export const invoicingService = {
             tva_number,
             payment_terms
           ),
-          intervention:interventions (
+          intervention:interventions!intervention_id (
             id,
             title,
             status,
-            address,
-            completed_at
+            address
           ),
           invoice_items (
             id,
@@ -609,7 +608,7 @@ export const invoicingService = {
         .from('quotes')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             name,
             company_name,
@@ -619,7 +618,7 @@ export const invoicingService = {
             postal_code,
             city
           ),
-          intervention:interventions (
+          intervention:interventions!intervention_id (
             id,
             title,
             status
@@ -677,7 +676,7 @@ export const invoicingService = {
         .from('quotes')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             name,
             company_name,
@@ -692,12 +691,11 @@ export const invoicingService = {
             tva_number,
             payment_terms
           ),
-          intervention:interventions (
+          intervention:interventions!intervention_id (
             id,
             title,
             status,
-            address,
-            completed_at
+            address
           ),
           converted_invoice:invoices (
             id,
@@ -1104,7 +1102,7 @@ export const invoicingService = {
         .from('interventions')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             payment_terms
           )
@@ -1143,7 +1141,7 @@ export const invoicingService = {
     try {
       const { data: intervention, error: intError } = await supabase
         .from('interventions')
-        .select('*, client:clients (id)')
+        .select('*, client:clients!client_id (id)')
         .eq('id', interventionId)
         .single();
 
@@ -1261,7 +1259,7 @@ export const invoicingService = {
         .from('invoices')
         .select(`
           *,
-          client:clients (
+          client:clients!client_id (
             id,
             name,
             email,
