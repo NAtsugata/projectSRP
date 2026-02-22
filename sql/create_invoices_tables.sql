@@ -336,7 +336,7 @@ CREATE INDEX IF NOT EXISTS idx_quote_items_position ON quote_items(quote_id, pos
 -- =====================================================
 
 -- Invoice statistics view
-CREATE OR REPLACE VIEW invoice_stats AS
+CREATE OR REPLACE VIEW invoice_stats WITH (security_invoker = on) AS
 SELECT
   organization_id,
   COUNT(*) AS total_invoices,
@@ -353,7 +353,7 @@ FROM invoices
 GROUP BY organization_id;
 
 -- Quote statistics view
-CREATE OR REPLACE VIEW quote_stats AS
+CREATE OR REPLACE VIEW quote_stats WITH (security_invoker = on) AS
 SELECT
   organization_id,
   COUNT(*) AS total_quotes,
@@ -370,7 +370,7 @@ FROM quotes
 GROUP BY organization_id;
 
 -- Overdue invoices view
-CREATE OR REPLACE VIEW overdue_invoices AS
+CREATE OR REPLACE VIEW overdue_invoices WITH (security_invoker = on) AS
 SELECT
   i.*,
   c.name AS client_name,

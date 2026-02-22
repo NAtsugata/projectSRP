@@ -161,7 +161,7 @@ END $$;
 -- Vue pour statistiques clients
 -- ============================================
 
-CREATE OR REPLACE VIEW client_stats AS
+CREATE OR REPLACE VIEW client_stats WITH (security_invoker = on) AS
 SELECT
   c.id,
   c.name,
