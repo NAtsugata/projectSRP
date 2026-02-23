@@ -5,6 +5,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { LoadingSpinner, SkeletonList } from '../components/ui';
 import { ConfirmationModal } from '../components/SharedUI';
+import CatalogItemSelector from '../components/catalog/CatalogItemSelector';
+import TaxRateSelector from '../components/catalog/TaxRateSelector';
+import QuickClientModal from '../components/catalog/QuickClientModal';
 import './AdminInvoicesView.css';
 
 // Statuts factures
@@ -116,11 +119,13 @@ function AdminInvoicesView({
   onExportCSV,
   onGeneratePDF,
   onPreviewPDF,
+  onClientCreated,
   showToast
 }) {
   // States
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showQuickClient, setShowQuickClient] = useState(false);
   const [documentType, setDocumentType] = useState('invoice'); // invoice ou quote
   const [editingDocument, setEditingDocument] = useState(null);
   const [formData, setFormData] = useState(INITIAL_DOCUMENT_FORM);
@@ -802,18 +807,29 @@ function AdminInvoicesView({
               <div className="form-row">
                 <div className="form-group">
                   <label>Client *</label>
-                  <select
-                    value={formData.client_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, client_id: e.target.value }))}
-                    required
-                  >
-                    <option value="">Selectionner un client</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}{client.company_name ? ` (${client.company_name})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="client-select-row">
+                    <select
+                      value={formData.client_id}
+                      onChange={(e) => setFormData(prev => ({ ...prev, client_id: e.target.value }))}
+                      required
+                      className="client-select"
+                    >
+                      <option value="">Selectionner un client</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}{client.company_name ? ` (${client.company_name})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary btn-new-client"
+                      onClick={() => setShowQuickClient(true)}
+                      title="Nouveau client"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -854,6 +870,14 @@ function AdminInvoicesView({
                     + Ajouter une ligne
                   </button>
                 </div>
+
+                {/* Catalog Item Selector */}
+                <CatalogItemSelector
+                  onSelect={(catalogItem) => {
+                    setItems(prev => [...prev, catalogItem]);
+                  }}
+                  placeholder="Ajouter depuis le catalogue..."
+                />
 
                 <div className="items-table">
                   <div className="items-header">
@@ -902,15 +926,13 @@ function AdminInvoicesView({
                         className="col-price"
                         required
                       />
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={item.tax_rate}
-                        onChange={(e) => handleItemChange(index, 'tax_rate', e.target.value)}
-                        className="col-tax"
-                      />
+                      <div className="col-tax">
+                        <TaxRateSelector
+                          value={item.tax_rate}
+                          onChange={(val) => handleItemChange(index, 'tax_rate', val)}
+                          size="sm"
+                        />
+                      </div>
                       <span className="col-total">
                         {formatAmount((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0))}
                       </span>
@@ -1056,6 +1078,18 @@ function AdminInvoicesView({
           onCancel={() => setDeleteConfirm({ show: false, id: null, number: '' })}
           title="Confirmer la suppression"
           message={`Etes-vous sur de vouloir supprimer ${deleteConfirm.number} ? Cette action est irreversible.`}
+        />
+      )}
+
+      {/* Modal Quick Client */}
+      {showQuickClient && (
+        <QuickClientModal
+          onClose={() => setShowQuickClient(false)}
+          onClientCreated={(newClient) => {
+            setFormData(prev => ({ ...prev, client_id: newClient.id }));
+            onClientCreated?.(newClient);
+          }}
+          showToast={showToast}
         />
       )}
     </div>

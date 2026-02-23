@@ -64,7 +64,11 @@ function AdminInvoicesViewContainer() {
 
   const { data: stats, refetch: refetchStats } = useInvoiceStats();
 
-  const { clients } = useClients({ isActive: true, limit: 500 });
+  const { clients, refetch: refetchClients } = useClients({ isActive: true, limit: 500 });
+
+  const handleClientCreated = useCallback(() => {
+    refetchClients();
+  }, [refetchClients]);
 
   // Handlers
   const handleTabChange = useCallback((tab) => {
@@ -344,6 +348,7 @@ function AdminInvoicesViewContainer() {
       onExportCSV={handleExportCSV}
       onGeneratePDF={handleGeneratePDF}
       onPreviewPDF={handlePreviewPDF}
+      onClientCreated={handleClientCreated}
       showToast={showToast}
     />
   );

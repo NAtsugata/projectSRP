@@ -1,0 +1,53 @@
+/* TaxRateSelector.css */
+
+.tax-rate-selector {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tax-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  min-width: 130px;
+  transition: border-color 0.2s;
+}
+
+.tax-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.tax-custom-input {
+  width: 80px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.tax-custom-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Size variants */
+.tax-rate-selector.sm .tax-select,
+.tax-rate-selector.sm .tax-custom-input {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.tax-rate-selector.sm .tax-select {
+  min-width: 110px;
+}
+
+.tax-rate-selector.sm .tax-custom-input {
+  width: 65px;
+}

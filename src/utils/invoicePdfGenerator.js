@@ -695,9 +695,349 @@ export function previewInvoicePdf(pdfBlob) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
+/**
+ * Calcule les totaux TVA ventiles par taux
+ * @param {Array} items - Lignes du document
+ * @returns {Array} - Ventilation TVA [{rate, base, amount}]
+ */
+function calculateTaxBreakdown(items) {
+  const taxMap = {};
+
+  (items || []).forEach(item => {
+    const qty = parseFloat(item.quantity) || 1;
+    const price = parseFloat(item.unit_price) || 0;
+    const discount = parseFloat(item.discount_percent) || 0;
+    const rate = parseFloat(item.tax_rate) ?? 20;
+
+    const lineBase = qty * price * (1 - discount / 100);
+    const lineAmount = lineBase * (rate / 100);
+
+    if (!taxMap[rate]) {
+      taxMap[rate] = { rate, base: 0, amount: 0 };
+    }
+    taxMap[rate].base += lineBase;
+    taxMap[rate].amount += lineAmount;
+  });
+
+  return Object.values(taxMap).sort((a, b) => b.rate - a.rate);
+}
+
+/**
+ * Genere un PDF de devis avec template personnalise
+ * @param {Object} quote - Donnees du devis
+ * @param {Object} organization - Informations de l'organisation
+ * @param {Object} client - Informations du client
+ * @param {Object} template - Modele de devis (optionnel)
+ * @returns {Blob} - PDF sous forme de Blob
+ */
+export function generateQuotePDFWithTemplate(quote, organization = {}, client = {}, template = {}) {
+  logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
+
+  // Couleur du template
+  const primaryColor = template.primary_color || '#3B82F6';
+  const r = parseInt(primaryColor.slice(1, 3), 16);
+  const g = parseInt(primaryColor.slice(3, 5), 16);
+  const b = parseInt(primaryColor.slice(5, 7), 16);
+  const tplColor = [r, g, b];
+
+  const showRef = template.show_reference ?? true;
+  const showDesc = template.show_item_description ?? true;
+  const showDiscount = template.show_discount_column ?? false;
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let y = MARGIN;
+
+  const drawText = (text, x, yPos, options = {}) => {
+    const { size = 10, bold = false, color = COLORS.text, align = 'left' } = options;
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...color);
+    doc.text(String(text || ''), x, yPos, { align });
+    return yPos + LINE_HEIGHT;
+  };
+
+  const drawLine = (yPos, color = COLORS.lightGray) => {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, yPos, pageWidth - MARGIN, yPos);
+    return yPos + 3;
+  };
+
+  // === HEADER TEXT (template) ===
+  if (template.header_text) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.gray);
+    const headerLines = doc.splitTextToSize(template.header_text, pageWidth - MARGIN * 2);
+    headerLines.forEach(line => {
+      doc.text(line, pageWidth / 2, y, { align: 'center' });
+      y += 3.5;
+    });
+    y += 3;
+  }
+
+  // === TITRE ===
+  y = drawText('DEVIS', pageWidth / 2, y + 5, {
+    size: 24,
+    bold: true,
+    color: tplColor,
+    align: 'center',
+  });
+
+  y = drawText(quote?.quote_number || 'DEV-XXXX', pageWidth / 2, y + 2, {
+    size: 14,
+    bold: true,
+    align: 'center',
+  });
+
+  y += 10;
+
+  // === EMETTEUR (gauche) ===
+  const leftX = MARGIN;
+  let leftY = y;
+  leftY = drawText(organization?.name || 'Votre entreprise', leftX, leftY, { size: 12, bold: true });
+  if (organization?.address) leftY = drawText(organization.address, leftX, leftY, { size: 9, color: COLORS.gray });
+  if (organization?.postal_code || organization?.city) {
+    leftY = drawText(`${organization.postal_code || ''} ${organization.city || ''}`.trim(), leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.phone) leftY = drawText(`Tel: ${organization.phone}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  if (organization?.email) leftY = drawText(organization.email, leftX, leftY, { size: 9, color: COLORS.gray });
+  if (organization?.siret) leftY = drawText(`SIRET: ${organization.siret}`, leftX, leftY, { size: 9, color: COLORS.gray });
+
+  // === CLIENT (droite) ===
+  const rightX = pageWidth - MARGIN - 70;
+  let rightY = y;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(rightX - 5, rightY - 5, 75, 40, 2, 2, 'F');
+  rightY = drawText('DESTINATAIRE:', rightX, rightY, { size: 8, color: COLORS.gray });
+  const clientData = client || quote?.client || {};
+  rightY = drawText(clientData.name || clientData.company_name || '-', rightX, rightY, { size: 11, bold: true });
+  if (clientData.company_name && clientData.name !== clientData.company_name) {
+    rightY = drawText(clientData.company_name, rightX, rightY, { size: 9 });
+  }
+  if (clientData.address) rightY = drawText(clientData.address, rightX, rightY, { size: 9, color: COLORS.gray });
+  if (clientData.postal_code || clientData.city) {
+    rightY = drawText(`${clientData.postal_code || ''} ${clientData.city || ''}`.trim(), rightX, rightY, { size: 9, color: COLORS.gray });
+  }
+  if (clientData.siret) rightY = drawText(`SIRET: ${clientData.siret}`, rightX, rightY, { size: 9, color: COLORS.gray });
+  if (clientData.tva_number) rightY = drawText(`TVA: ${clientData.tva_number}`, rightX, rightY, { size: 9, color: COLORS.gray });
+
+  y = Math.max(leftY, rightY) + 10;
+
+  // === DATES ===
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(MARGIN, y - 3, pageWidth - MARGIN * 2, 15, 2, 2, 'F');
+  const dateY = y + 5;
+  drawText('Date:', MARGIN + 5, dateY, { size: 9, color: COLORS.gray });
+  drawText(formatDate(quote?.issue_date), MARGIN + 20, dateY, { size: 9, bold: true });
+  drawText('Valable jusqu\'au:', MARGIN + 70, dateY, { size: 9, color: COLORS.gray });
+  drawText(formatDate(quote?.valid_until), MARGIN + 105, dateY, { size: 9, bold: true });
+
+  y += 20;
+
+  // === TABLEAU ===
+  const items = quote?.quote_items || [];
+  const tableY = y;
+  doc.setFillColor(...tplColor);
+  doc.rect(MARGIN, tableY, pageWidth - MARGIN * 2, 8, 'F');
+
+  // Colonnes dynamiques selon template
+  let colX = MARGIN + 2;
+  const colDef = [];
+
+  colDef.push({ key: 'description', label: 'Description', x: colX, width: showDiscount ? 65 : 80 });
+  colX += showDiscount ? 65 : 80;
+
+  colDef.push({ key: 'quantity', label: 'Qte', x: colX, width: 15 });
+  colX += 15;
+
+  colDef.push({ key: 'unit', label: 'Unite', x: colX, width: 18 });
+  colX += 18;
+
+  colDef.push({ key: 'unitPrice', label: 'Prix HT', x: colX, width: 22 });
+  colX += 22;
+
+  if (showDiscount) {
+    colDef.push({ key: 'discount', label: 'Remise', x: colX, width: 15 });
+    colX += 15;
+  }
+
+  colDef.push({ key: 'tva', label: 'TVA', x: colX, width: 15 });
+  colX += 15;
+
+  colDef.push({ key: 'total', label: 'Total HT', x: colX, width: 20 });
+
+  // Headers
+  const headerTblY = tableY + 5.5;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  colDef.forEach(col => doc.text(col.label, col.x, headerTblY));
+
+  y = tableY + 10;
+
+  // Rows
+  items.forEach((item, index) => {
+    const qty = parseFloat(item.quantity) || 1;
+    const price = parseFloat(item.unit_price) || 0;
+    const discount = parseFloat(item.discount_percent) || 0;
+    const lineSubtotal = qty * price * (1 - discount / 100);
+
+    if (index % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 2, 'F');
+    }
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.text);
+
+    const desc = item.description || '-';
+    const maxLen = showDiscount ? 35 : 45;
+    doc.text(desc.length > maxLen ? desc.substring(0, maxLen) + '...' : desc, colDef[0].x, y);
+    doc.text(String(qty), colDef[1].x, y);
+    doc.text(item.unit || 'unite', colDef[2].x, y);
+    doc.text(formatAmount(price).replace('\u00a0', ' '), colDef[3].x, y);
+
+    let nextIdx = 4;
+    if (showDiscount) {
+      doc.text(discount > 0 ? `${discount}%` : '-', colDef[nextIdx].x, y);
+      nextIdx++;
+    }
+
+    doc.text(`${item.tax_rate ?? 20}%`, colDef[nextIdx].x, y);
+    doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), colDef[nextIdx + 1].x, y);
+
+    y += LINE_HEIGHT + 1;
+  });
+
+  y = drawLine(y + 2);
+
+  // === TOTAUX MULTI-TVA ===
+  const totalsX = pageWidth - MARGIN - 60;
+  y += 5;
+
+  drawText('Sous-total HT:', totalsX - 30, y, { size: 10, color: COLORS.gray });
+  drawText(formatAmount(quote?.subtotal), totalsX + 25, y, { size: 10, bold: true, align: 'right' });
+  y += LINE_HEIGHT;
+
+  // Ventilation TVA
+  const taxBreakdown = calculateTaxBreakdown(items);
+
+  if (taxBreakdown.length > 1) {
+    // Multi-TVA: afficher chaque taux
+    taxBreakdown.forEach(tax => {
+      drawText(`TVA ${tax.rate}% (base ${formatAmount(tax.base)}):`, totalsX - 40, y, { size: 9, color: COLORS.gray });
+      drawText(formatAmount(tax.amount), totalsX + 25, y, { size: 9, align: 'right' });
+      y += LINE_HEIGHT - 1;
+    });
+    y += 1;
+
+    drawText('Total TVA:', totalsX - 30, y, { size: 10, color: COLORS.gray });
+    drawText(formatAmount(quote?.tax_amount), totalsX + 25, y, { size: 10, align: 'right' });
+    y += LINE_HEIGHT;
+  } else {
+    // Taux unique
+    const singleRate = taxBreakdown[0]?.rate ?? quote?.tax_rate ?? 20;
+    drawText(`TVA (${singleRate}%):`, totalsX - 30, y, { size: 10, color: COLORS.gray });
+    drawText(formatAmount(quote?.tax_amount), totalsX + 25, y, { size: 10, align: 'right' });
+    y += LINE_HEIGHT;
+  }
+
+  // Total TTC
+  doc.setFillColor(...tplColor);
+  doc.roundedRect(totalsX - 35, y - 3, 65, 10, 2, 2, 'F');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL TTC:', totalsX - 30, y + 4);
+  doc.text(formatAmount(quote?.total), totalsX + 25, y + 4, { align: 'right' });
+
+  y += 20;
+
+  // === CONDITIONS (template) ===
+  const termsText = template.terms_text || quote?.terms;
+  if (termsText || quote?.notes) {
+    y = drawLine(y, COLORS.lightGray);
+    y += 3;
+
+    if (termsText) {
+      y = drawText('Conditions:', MARGIN, y, { size: 9, bold: true, color: COLORS.gray });
+      const termsLines = doc.splitTextToSize(termsText, pageWidth - MARGIN * 2 - 10);
+      termsLines.forEach(line => { y = drawText(line, MARGIN, y, { size: 9 }); });
+      y += 3;
+    }
+
+    if (quote?.notes) {
+      y = drawText('Notes:', MARGIN, y, { size: 9, bold: true, color: COLORS.gray });
+      const noteLines = doc.splitTextToSize(quote.notes, pageWidth - MARGIN * 2 - 10);
+      noteLines.forEach(line => { y = drawText(line, MARGIN, y, { size: 9 }); });
+    }
+  }
+
+  // === FOOTER ===
+  const footerY = pageHeight - 25;
+
+  // Validite
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.warning);
+  doc.text(
+    `Ce devis est valable jusqu'au ${formatDate(quote?.valid_until)}`,
+    pageWidth / 2, footerY, { align: 'center' }
+  );
+
+  // Footer text (template)
+  if (template.footer_text) {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.gray);
+    const footerLines = doc.splitTextToSize(template.footer_text, pageWidth - MARGIN * 2);
+    footerLines.forEach((line, i) => {
+      doc.text(line, pageWidth / 2, footerY + 5 + i * 3, { align: 'center' });
+    });
+  } else {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.gray);
+    doc.text(
+      'Devis gratuit et sans engagement. Signature et retour valant acceptation des conditions.',
+      pageWidth / 2, footerY + 5, { align: 'center' }
+    );
+  }
+
+  // Signature
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.text);
+  doc.text('Bon pour accord, date et signature:', MARGIN, footerY + 12);
+  doc.setDrawColor(...COLORS.lightGray);
+  doc.line(MARGIN + 60, footerY + 12, MARGIN + 130, footerY + 12);
+
+  doc.text('Page 1/1', pageWidth - MARGIN, pageHeight - 10, { align: 'right' });
+
+  doc.setProperties({
+    title: `Devis ${quote?.quote_number || ''}`,
+    subject: 'Devis',
+    creator: 'SRP Portal',
+    author: organization?.name || 'SRP',
+  });
+
+  logger.log('[PDF] Devis avec template genere avec succes');
+  return doc.output('blob');
+}
+
 export default {
   generateInvoicePDF,
   generateQuotePDF,
+  generateQuotePDFWithTemplate,
+  calculateTaxBreakdown,
   downloadInvoicePdf,
   previewInvoicePdf,
 };
