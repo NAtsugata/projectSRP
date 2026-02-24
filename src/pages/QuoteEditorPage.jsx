@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import QuoteEditor from '../components/quotes/QuoteEditor';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuthStore } from '../store/authStore';
 
 // Fetch clients
 async function fetchClients(organizationId) {
@@ -68,10 +68,10 @@ function QuoteEditorPage() {
   const navigate = useNavigate();
   const { id: quoteId } = useParams();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { profile } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const organizationId = user?.user_metadata?.organization_id;
+  const organizationId = profile?.organization_id;
 
   // Fetch clients
   const { data: clients = [], isLoading: loadingClients } = useQuery({
