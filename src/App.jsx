@@ -40,6 +40,7 @@ const AdminOrganizationsViewContainer = lazy(() => import('./pages/AdminOrganiza
 const AdminClientsViewContainer = lazy(() => import('./pages/AdminClientsViewContainer'));
 const AdminInvoicesViewContainer = lazy(() => import('./pages/AdminInvoicesViewContainer'));
 const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewContainer'));
+const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -326,6 +327,16 @@ function App() {
                   <Route path="invoices" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminInvoicesViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="quotes/new" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <QuoteEditorPage />
+                    </Suspense>
+                  } />
+                  <Route path="quotes/:id" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <QuoteEditorPage />
                     </Suspense>
                   } />
                   <Route path="catalog" element={

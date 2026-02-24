@@ -3,6 +3,7 @@
 // Admin view for managing invoices and quotes
 // =============================
 import React, { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { LoadingSpinner, SkeletonList } from '../components/ui';
 import { ConfirmationModal } from '../components/SharedUI';
 import CatalogItemSelector from '../components/catalog/CatalogItemSelector';
@@ -473,13 +474,13 @@ function AdminInvoicesView({
           )}
         </div>
         <div className="header-actions">
-          <button
-            onClick={handleNewQuote}
+          <Link
+            to="/quotes/new"
             className="btn btn-secondary"
-            disabled={!isOnline}
+            style={{ pointerEvents: !isOnline ? 'none' : 'auto', opacity: !isOnline ? 0.5 : 1 }}
           >
             + Nouveau devis
-          </button>
+          </Link>
           <button
             onClick={handleNewInvoice}
             className="btn btn-primary"
@@ -706,13 +707,23 @@ function AdminInvoicesView({
 
                   {selectedDocument.status === 'draft' && (
                     <>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleEditDocument(selectedDocument)}
-                        disabled={!isOnline}
-                      >
-                        Modifier
-                      </button>
+                      {selectedDocument.quote_number ? (
+                        <Link
+                          to={`/quotes/${selectedDocument.id}`}
+                          className="btn btn-primary"
+                          style={{ pointerEvents: !isOnline ? 'none' : 'auto', opacity: !isOnline ? 0.5 : 1 }}
+                        >
+                          Modifier
+                        </Link>
+                      ) : (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleEditDocument(selectedDocument)}
+                          disabled={!isOnline}
+                        >
+                          Modifier
+                        </button>
+                      )}
                       <button
                         className="btn btn-success"
                         onClick={() => handleSend(selectedDocument)}
