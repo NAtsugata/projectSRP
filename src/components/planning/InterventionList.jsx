@@ -31,13 +31,14 @@ const sortInterventions = (interventions, sortBy) => {
     case 'client':
       return sorted.sort((a, b) => (a.client || '').localeCompare(b.client || ''));
 
-    case 'status':
+    case 'status': {
       const statusOrder = { 'En cours': 0, 'À venir': 1, 'Terminée': 2 };
       return sorted.sort((a, b) => {
         const statusA = a.status || 'À venir';
         const statusB = b.status || 'À venir';
         return (statusOrder[statusA] || 99) - (statusOrder[statusB] || 99);
       });
+    }
 
     default:
       return sorted;

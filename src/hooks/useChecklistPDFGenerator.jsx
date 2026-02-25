@@ -72,7 +72,7 @@ export const useChecklistPDFGenerator = () => {
               y += 7;
               break;
 
-            case 'textarea':
+            case 'textarea': {
               y += 2;
               addText(`${item.label}:`, 15, true);
               y += 6;
@@ -83,6 +83,7 @@ export const useChecklistPDFGenerator = () => {
               doc.setTextColor(40, 40, 40);
               y += (splitText.length * 5) + 5;
               break;
+            }
 
             default:
               break;

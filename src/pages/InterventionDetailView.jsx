@@ -487,7 +487,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         const arr = new Date(report.arrivalTime).getTime();
         const dep = new Date(nowIso).getTime();
         if (dep < arr) { alert("L'heure de départ ne peut pas précéder l'arrivée."); return; }
-      } catch { }
+      } catch { /* date parse error – ignore */ }
     }
 
     // Lock le body pendant la phase géoloc + persistance (mobile peut sauter)

@@ -34,7 +34,7 @@ export const runMobileDiagnostics = () => {
         typeof window.Blob !== 'undefined',
       dataTransfer: typeof DataTransfer !== 'undefined',
       dataTransferItems: typeof DataTransfer !== 'undefined' &&
-        DataTransfer.prototype.hasOwnProperty('items'),
+        Object.prototype.hasOwnProperty.call(DataTransfer.prototype, 'items'),
       canvas: typeof document.createElement('canvas').getContext !== 'undefined',
       createObjectURL: typeof URL.createObjectURL !== 'undefined',
       webWorkers: typeof Worker !== 'undefined',

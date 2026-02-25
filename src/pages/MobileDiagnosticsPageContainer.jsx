@@ -48,17 +48,13 @@ const MobileDiagnosticsPageContainer = () => {
     };
 
     const handleRequestNotificationPermission = async () => {
-        try {
-            const granted = await requestNotificationPermission();
-            setNotificationStatus({
-                supported: isNotificationSupported(),
-                permission: Notification.permission,
-                enabled: granted
-            });
-            return granted;
-        } catch (error) {
-            throw error;
-        }
+        const granted = await requestNotificationPermission();
+        setNotificationStatus({
+            supported: isNotificationSupported(),
+            permission: Notification.permission,
+            enabled: granted
+        });
+        return granted;
     };
 
     const handleTestNotification = async () => {

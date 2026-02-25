@@ -74,13 +74,13 @@ export const layoutEvents = (events) => {
       parseTimeToMin("08:00");
     const end =
       parseTimeToMin(e.time_end) ??
-      (start != null ? start + 60 : parseTimeToMin("09:00"));
+      (start !== null ? start + 60 : parseTimeToMin("09:00"));
     return { ...e, _start: start, _end: end };
   });
 
   // Filtre ceux qui ont des heures plausibles & clamp dans la zone visible
   const timed = prepared
-    .filter((e) => e._start != null && e._end != null && e._end > e._start)
+    .filter((e) => e._start !== null && e._end !== null && e._end > e._start)
     .map((e) => {
       const s = clamp(e._start, START_MIN, END_MIN);
       const en = clamp(e._end, START_MIN, END_MIN);
@@ -160,9 +160,9 @@ export const layoutEvents = (events) => {
   // Toute la journée (sans heure)
   const allDay = events.filter(
     (e) =>
-      (parseTimeToMin(e.time_start) == null &&
-        parseTimeToMin(e.time_end) == null &&
-        parseTimeToMin(e.time) == null) ||
+      (parseTimeToMin(e.time_start) === null &&
+        parseTimeToMin(e.time_end) === null &&
+        parseTimeToMin(e.time) === null) ||
       e.all_day === true
   );
 

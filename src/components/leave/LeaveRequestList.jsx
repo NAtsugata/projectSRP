@@ -46,12 +46,13 @@ const sortRequests = (requests, sortBy) => {
       return sorted.sort((a, b) =>
         new Date(b.start_date) - new Date(a.start_date)
       );
-    case 'status':
+    case 'status': {
       // Order: En attente > Approuvée > Rejetée
       const statusOrder = { 'En attente': 0, 'Approuvée': 1, 'Rejetée': 2 };
       return sorted.sort((a, b) =>
         (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3)
       );
+    }
     case 'user':
       return sorted.sort((a, b) =>
         (a.user_name || '').localeCompare(b.user_name || '')
