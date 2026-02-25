@@ -1033,11 +1033,439 @@ export function generateQuotePDFWithTemplate(quote, organization = {}, client = 
   return doc.output('blob');
 }
 
+/**
+ * Genere un PDF de devis avec layout personnalise et images
+ * @param {Object} quote - Donnees du devis
+ * @param {Object} organization - Informations de l'organisation
+ * @param {Object} client - Informations du client
+ * @param {Object} layout - Configuration de mise en page
+ * @param {Array} attachments - Pieces jointes avec URLs
+ * @returns {Promise<Blob>} - PDF sous forme de Blob
+ */
+export async function generateQuotePDFWithLayout(quote, organization = {}, client = {}, layout = {}, attachments = []) {
+  logger.log('[PDF] Generation devis avec layout:', quote?.quote_number);
+
+  // Theme colors
+  const THEME_COLORS = {
+    default: [59, 130, 246],
+    modern: [139, 92, 246],
+    classic: [5, 150, 105],
+    minimal: [107, 114, 128],
+    bold: [220, 38, 38]
+  };
+
+  const themeColor = THEME_COLORS[layout.theme] || THEME_COLORS.default;
+
+  // Font size based on layout
+  const FONT_SIZES = {
+    small: { title: 20, subtitle: 12, normal: 8, small: 7 },
+    medium: { title: 24, subtitle: 14, normal: 10, small: 8 },
+    large: { title: 28, subtitle: 16, normal: 11, small: 9 }
+  };
+  const fontSize = FONT_SIZES[layout.fontSize] || FONT_SIZES.medium;
+
+  // Margins based on layout
+  const MARGINS = {
+    narrow: 10,
+    normal: 15,
+    wide: 20
+  };
+  const margin = MARGINS[layout.pageMargins] || MARGINS.normal;
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let y = margin;
+  let pageNum = 1;
+
+  // Helper functions
+  const drawText = (text, x, yPos, options = {}) => {
+    const { size = fontSize.normal, bold = false, color = COLORS.text, align = 'left' } = options;
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...color);
+    doc.text(String(text || ''), x, yPos, { align });
+    return yPos + LINE_HEIGHT;
+  };
+
+  const drawLine = (yPos, color = COLORS.lightGray) => {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    return yPos + 3;
+  };
+
+  const checkPageBreak = (requiredHeight) => {
+    if (y + requiredHeight > pageHeight - 30) {
+      doc.addPage();
+      pageNum++;
+      y = margin;
+      return true;
+    }
+    return false;
+  };
+
+  // Get visible sections ordered by their position
+  const sections = (layout.sections || [])
+    .filter(s => s.visible !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Section renderers
+  const renderHeader = () => {
+    y = drawText('DEVIS', pageWidth / 2, y + 5, {
+      size: fontSize.title,
+      bold: true,
+      color: themeColor,
+      align: 'center',
+    });
+    y = drawText(quote?.quote_number || 'DEV-XXXX', pageWidth / 2, y + 2, {
+      size: fontSize.subtitle,
+      bold: true,
+      align: 'center',
+    });
+    y += 10;
+  };
+
+  const renderClient = () => {
+    const leftX = margin;
+    let leftY = y;
+
+    // Organization info (left)
+    leftY = drawText(organization?.name || 'Votre entreprise', leftX, leftY, { size: 12, bold: true });
+    if (organization?.address) leftY = drawText(organization.address, leftX, leftY, { size: 9, color: COLORS.gray });
+    if (organization?.postal_code || organization?.city) {
+      leftY = drawText(`${organization.postal_code || ''} ${organization.city || ''}`.trim(), leftX, leftY, { size: 9, color: COLORS.gray });
+    }
+    if (organization?.phone) leftY = drawText(`Tel: ${organization.phone}`, leftX, leftY, { size: 9, color: COLORS.gray });
+    if (organization?.email) leftY = drawText(organization.email, leftX, leftY, { size: 9, color: COLORS.gray });
+    if (organization?.siret) leftY = drawText(`SIRET: ${organization.siret}`, leftX, leftY, { size: 9, color: COLORS.gray });
+
+    // Client info (right)
+    const rightX = pageWidth - margin - 70;
+    let rightY = y;
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(rightX - 5, rightY - 5, 75, 40, 2, 2, 'F');
+    rightY = drawText('DESTINATAIRE:', rightX, rightY, { size: 8, color: COLORS.gray });
+    const clientData = client || quote?.client || {};
+    rightY = drawText(clientData.name || clientData.company_name || '-', rightX, rightY, { size: 11, bold: true });
+    if (clientData.company_name && clientData.name !== clientData.company_name) {
+      rightY = drawText(clientData.company_name, rightX, rightY, { size: 9 });
+    }
+    if (clientData.address) rightY = drawText(clientData.address, rightX, rightY, { size: 9, color: COLORS.gray });
+    if (clientData.postal_code || clientData.city) {
+      rightY = drawText(`${clientData.postal_code || ''} ${clientData.city || ''}`.trim(), rightX, rightY, { size: 9, color: COLORS.gray });
+    }
+    if (clientData.email) rightY = drawText(clientData.email, rightX, rightY, { size: 9, color: COLORS.gray });
+
+    y = Math.max(leftY, rightY) + 10;
+  };
+
+  const renderDates = () => {
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y - 3, pageWidth - margin * 2, 15, 2, 2, 'F');
+    const dateY = y + 5;
+    drawText('Date:', margin + 5, dateY, { size: 9, color: COLORS.gray });
+    drawText(formatDate(quote?.issue_date), margin + 20, dateY, { size: 9, bold: true });
+    drawText('Valable jusqu\'au:', margin + 70, dateY, { size: 9, color: COLORS.gray });
+    drawText(formatDate(quote?.valid_until), margin + 105, dateY, { size: 9, bold: true });
+    y += 20;
+  };
+
+  const renderItems = () => {
+    const items = quote?.quote_items || [];
+    const tableY = y;
+    doc.setFillColor(...themeColor);
+    doc.rect(margin, tableY, pageWidth - margin * 2, 8, 'F');
+
+    const cols = {
+      description: { x: margin + 2, width: 80 },
+      quantity: { x: margin + 85, width: 20 },
+      unit: { x: margin + 105, width: 20 },
+      unitPrice: { x: margin + 125, width: 25 },
+      tva: { x: margin + 150, width: 15 },
+      total: { x: margin + 165, width: 20 },
+    };
+
+    const headerY = tableY + 5.5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Description', cols.description.x, headerY);
+    doc.text('Qte', cols.quantity.x, headerY);
+    doc.text('Unite', cols.unit.x, headerY);
+    doc.text('Prix HT', cols.unitPrice.x, headerY);
+    doc.text('TVA', cols.tva.x, headerY);
+    doc.text('Total HT', cols.total.x, headerY);
+
+    y = tableY + 10;
+
+    items.forEach((item, index) => {
+      checkPageBreak(15);
+      const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
+
+      if (index % 2 === 1) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 2, 'F');
+      }
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...COLORS.text);
+
+      const desc = item.description || '-';
+      const maxLen = 45;
+      doc.text(desc.length > maxLen ? desc.substring(0, maxLen) + '...' : desc, cols.description.x, y);
+      doc.text(String(item.quantity || 1), cols.quantity.x, y);
+      doc.text(item.unit || 'unite', cols.unit.x, y);
+      doc.text(formatAmount(item.unit_price).replace('\u00a0', ' '), cols.unitPrice.x, y);
+      doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
+      doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
+
+      y += LINE_HEIGHT + 1;
+    });
+
+    y = drawLine(y + 2);
+  };
+
+  const renderTotals = () => {
+    checkPageBreak(40);
+    const totalsX = pageWidth - margin - 60;
+    y += 5;
+
+    drawText('Sous-total HT:', totalsX - 30, y, { size: 10, color: COLORS.gray });
+    drawText(formatAmount(quote?.subtotal), totalsX + 25, y, { size: 10, bold: true, align: 'right' });
+    y += LINE_HEIGHT;
+
+    const taxBreakdown = calculateTaxBreakdown(quote?.quote_items || []);
+    if (taxBreakdown.length > 1) {
+      taxBreakdown.forEach(tax => {
+        drawText(`TVA ${tax.rate}% (base ${formatAmount(tax.base)}):`, totalsX - 40, y, { size: 9, color: COLORS.gray });
+        drawText(formatAmount(tax.amount), totalsX + 25, y, { size: 9, align: 'right' });
+        y += LINE_HEIGHT - 1;
+      });
+      y += 1;
+      drawText('Total TVA:', totalsX - 30, y, { size: 10, color: COLORS.gray });
+      drawText(formatAmount(quote?.tax_amount), totalsX + 25, y, { size: 10, align: 'right' });
+      y += LINE_HEIGHT;
+    } else {
+      const singleRate = taxBreakdown[0]?.rate ?? quote?.tax_rate ?? 20;
+      drawText(`TVA (${singleRate}%):`, totalsX - 30, y, { size: 10, color: COLORS.gray });
+      drawText(formatAmount(quote?.tax_amount), totalsX + 25, y, { size: 10, align: 'right' });
+      y += LINE_HEIGHT;
+    }
+
+    doc.setFillColor(...themeColor);
+    doc.roundedRect(totalsX - 35, y - 3, 65, 10, 2, 2, 'F');
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL TTC:', totalsX - 30, y + 4);
+    doc.text(formatAmount(quote?.total), totalsX + 25, y + 4, { align: 'right' });
+
+    y += 20;
+  };
+
+  const renderNotes = () => {
+    if (!quote?.notes) return;
+    checkPageBreak(30);
+    y = drawText('Notes:', margin, y, { size: 9, bold: true, color: COLORS.gray });
+    const noteLines = doc.splitTextToSize(quote.notes, pageWidth - margin * 2 - 10);
+    noteLines.forEach(line => { y = drawText(line, margin, y, { size: 9 }); });
+    y += 5;
+  };
+
+  const renderTerms = () => {
+    if (!quote?.terms) return;
+    checkPageBreak(30);
+    y = drawText('Conditions:', margin, y, { size: 9, bold: true, color: COLORS.gray });
+    const termsLines = doc.splitTextToSize(quote.terms, pageWidth - margin * 2 - 10);
+    termsLines.forEach(line => { y = drawText(line, margin, y, { size: 9 }); });
+    y += 5;
+  };
+
+  const renderSignature = () => {
+    if (!layout.showSignatureZone) return;
+    checkPageBreak(25);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.text);
+    doc.text('Bon pour accord, date et signature:', margin, y);
+    doc.setDrawColor(...COLORS.lightGray);
+    doc.rect(margin, y + 5, 80, 25);
+    y += 35;
+  };
+
+  const renderAttachments = async () => {
+    const visibleAttachments = attachments.filter(a => a.include_in_pdf && a.display_mode !== 'hidden');
+    if (visibleAttachments.length === 0) return;
+
+    // Determine placement based on layout
+    const placement = layout.attachmentDisplay || 'end';
+
+    if (placement === 'separate') {
+      // Each image on separate page
+      for (const att of visibleAttachments) {
+        if (att.file_type?.startsWith('image/') && att.signed_url) {
+          doc.addPage();
+          pageNum++;
+          y = margin;
+
+          try {
+            const imgData = await loadImageAsBase64(att.signed_url);
+            if (imgData) {
+              const imgWidth = pageWidth - margin * 2;
+              const imgHeight = pageHeight - margin * 2 - 20;
+              doc.addImage(imgData, 'JPEG', margin, y, imgWidth, imgHeight, undefined, 'MEDIUM');
+              y = pageHeight - margin - 15;
+              if (att.caption) {
+                doc.setFontSize(9);
+                doc.setTextColor(...COLORS.gray);
+                doc.text(att.caption, pageWidth / 2, y, { align: 'center' });
+              }
+            }
+          } catch (err) {
+            logger.warn('[PDF] Could not add image:', err);
+          }
+        }
+      }
+    } else {
+      // At the end (default) or inline
+      checkPageBreak(60);
+      y = drawLine(y);
+      y = drawText('Pieces jointes:', margin, y + 3, { size: 10, bold: true, color: COLORS.gray });
+      y += 5;
+
+      for (const att of visibleAttachments) {
+        if (att.file_type?.startsWith('image/') && att.signed_url) {
+          try {
+            const imgData = await loadImageAsBase64(att.signed_url);
+            if (imgData) {
+              checkPageBreak(70);
+
+              const maxWidth = att.display_mode === 'full' ? pageWidth - margin * 2 : 60;
+              const maxHeight = att.display_mode === 'full' ? 100 : 45;
+
+              doc.addImage(imgData, 'JPEG', margin, y, maxWidth, maxHeight, undefined, 'MEDIUM');
+
+              if (att.caption) {
+                doc.setFontSize(8);
+                doc.setTextColor(...COLORS.gray);
+                doc.text(att.caption, margin, y + maxHeight + 4);
+              }
+
+              y += maxHeight + (att.caption ? 10 : 5);
+            }
+          } catch (err) {
+            logger.warn('[PDF] Could not add image:', err);
+          }
+        } else if (att.file_type === 'application/pdf') {
+          // For PDFs, just note the attachment
+          doc.setFontSize(9);
+          doc.setTextColor(...COLORS.text);
+          doc.text(`Piece jointe PDF: ${att.file_name}`, margin, y);
+          if (att.caption) {
+            doc.setFontSize(8);
+            doc.setTextColor(...COLORS.gray);
+            doc.text(att.caption, margin + 5, y + 5);
+          }
+          y += 12;
+        }
+      }
+    }
+  };
+
+  // Section mapping
+  const sectionRenderers = {
+    header: renderHeader,
+    client: renderClient,
+    dates: renderDates,
+    items: renderItems,
+    totals: renderTotals,
+    notes: renderNotes,
+    terms: renderTerms,
+    signature: renderSignature,
+    attachments: renderAttachments
+  };
+
+  // Render sections in order
+  for (const section of sections) {
+    const renderer = sectionRenderers[section.id];
+    if (renderer) {
+      if (section.id === 'attachments') {
+        await renderer();
+      } else {
+        renderer();
+      }
+    }
+  }
+
+  // Footer on all pages
+  const totalPages = pageNum;
+  for (let p = 1; p <= totalPages; p++) {
+    if (p > 1) doc.setPage(p);
+    doc.setFontSize(8);
+    doc.setTextColor(...COLORS.gray);
+    doc.text(`Page ${p}/${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+  }
+
+  // Reset to last page
+  doc.setPage(totalPages);
+
+  // Add validity note at bottom if space
+  const footerY = pageHeight - 25;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.warning);
+  doc.text(
+    `Ce devis est valable jusqu'au ${formatDate(quote?.valid_until)}`,
+    pageWidth / 2, footerY, { align: 'center' }
+  );
+
+  doc.setProperties({
+    title: `Devis ${quote?.quote_number || ''}`,
+    subject: 'Devis',
+    creator: 'SRP Portal',
+    author: organization?.name || 'SRP',
+  });
+
+  logger.log('[PDF] Devis avec layout genere avec succes');
+  return doc.output('blob');
+}
+
+/**
+ * Charge une image depuis une URL et la convertit en base64
+ * @param {string} url - URL de l'image
+ * @returns {Promise<string|null>} - Image en base64 ou null
+ */
+async function loadImageAsBase64(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    logger.warn('[PDF] Error loading image:', err);
+    return null;
+  }
+}
+
 export default {
   generateInvoicePDF,
   generateQuotePDF,
   generateQuotePDFWithTemplate,
+  generateQuotePDFWithLayout,
   calculateTaxBreakdown,
   downloadInvoicePdf,
   previewInvoicePdf,
+  loadImageAsBase64,
 };

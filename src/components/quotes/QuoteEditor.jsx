@@ -5,6 +5,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useCatalogItems, useCatalogCategories, useTaxRates } from '../../hooks/useCatalog';
 import QuickClientModal from '../catalog/QuickClientModal';
+import QuoteAttachments from './QuoteAttachments';
+import QuoteLayoutEditor, { DEFAULT_LAYOUT } from './QuoteLayoutEditor';
 import './QuoteEditor.css';
 
 // Unites disponibles
@@ -41,7 +43,8 @@ function QuoteEditor({
   onSave,
   onCancel,
   showToast,
-  onClientCreated
+  onClientCreated,
+  organizationId
 }) {
   // State du formulaire
   const [formData, setFormData] = useState({
@@ -59,6 +62,11 @@ function QuoteEditor({
   const [items, setItems] = useState([{ ...INITIAL_ITEM }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showQuickClient, setShowQuickClient] = useState(false);
+
+  // State pour pièces jointes et mise en page
+  const [attachments, setAttachments] = useState([]);
+  const [layout, setLayout] = useState(DEFAULT_LAYOUT);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
 
   // Catalogue
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -98,6 +106,16 @@ function QuoteEditor({
           tax_rate: item.tax_rate || 20,
           discount_percent: item.discount_percent || 0
         })));
+      }
+
+      // Charger les pièces jointes
+      if (editingQuote.quote_attachments?.length > 0) {
+        setAttachments(editingQuote.quote_attachments);
+      }
+
+      // Charger la mise en page
+      if (editingQuote.layout) {
+        setLayout(editingQuote.layout);
       }
     }
   }, [editingQuote]);
@@ -264,12 +282,14 @@ function QuoteEditor({
         ...formData,
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
-        total: totals.total
+        total: totals.total,
+        layout: layout
       };
 
       await onSave?.({
         quoteData,
         items: validItems,
+        attachments: attachments,
         isEdit: !!editingQuote,
         quoteId: editingQuote?.id
       });
@@ -280,7 +300,7 @@ function QuoteEditor({
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, items, totals, editingQuote, onSave, showToast]);
+  }, [formData, items, totals, editingQuote, onSave, showToast, attachments, layout]);
 
   // Client sélectionné
   const selectedClient = useMemo(() => {
@@ -409,6 +429,13 @@ function QuoteEditor({
             <h1>{editingQuote ? `Modifier devis ${editingQuote.quote_number}` : 'Nouveau devis'}</h1>
           </div>
           <div className="quote-actions">
+            <button
+              className="btn btn-icon"
+              onClick={() => setShowLayoutEditor(true)}
+              title="Personnaliser la mise en page"
+            >
+              ⚙️ Mise en page
+            </button>
             <button className="btn btn-secondary" onClick={onCancel}>
               Annuler
             </button>
@@ -648,6 +675,17 @@ function QuoteEditor({
             />
           </div>
         </section>
+
+        {/* Pièces jointes (images/PDF) */}
+        <section className="quote-attachments-section">
+          <QuoteAttachments
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
+            quoteId={editingQuote?.id}
+            organizationId={organizationId}
+            showToast={showToast}
+          />
+        </section>
       </main>
 
       {/* Quick Client Modal */}
@@ -661,6 +699,14 @@ function QuoteEditor({
           showToast={showToast}
         />
       )}
+
+      {/* Layout Editor Modal */}
+      <QuoteLayoutEditor
+        layout={layout}
+        onLayoutChange={setLayout}
+        isOpen={showLayoutEditor}
+        onClose={() => setShowLayoutEditor(false)}
+      />
     </div>
   );
 }

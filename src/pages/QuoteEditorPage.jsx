@@ -22,7 +22,7 @@ async function fetchClients(organizationId) {
   return data || [];
 }
 
-// Fetch single quote with items
+// Fetch single quote with items and attachments
 async function fetchQuote(quoteId) {
   if (!quoteId) return null;
 
@@ -31,6 +31,7 @@ async function fetchQuote(quoteId) {
     .select(`
       *,
       quote_items (*),
+      quote_attachments (*),
       clients (*)
     `)
     .eq('id', quoteId)
@@ -90,7 +91,7 @@ function QuoteEditorPage() {
 
   // Save quote mutation
   const saveMutation = useMutation({
-    mutationFn: async ({ quoteData, items, isEdit, quoteId: editId }) => {
+    mutationFn: async ({ quoteData, items, attachments = [], isEdit, quoteId: editId }) => {
       // Create or update quote
       if (isEdit && editId) {
         // Update existing quote
@@ -105,6 +106,7 @@ function QuoteEditorPage() {
             total: quoteData.total,
             notes: quoteData.notes,
             terms: quoteData.terms,
+            layout: quoteData.layout,
             updated_at: new Date().toISOString()
           })
           .eq('id', editId);
@@ -134,6 +136,30 @@ function QuoteEditorPage() {
 
         if (itemsError) throw itemsError;
 
+        // Handle attachments - delete old and insert new
+        await supabase
+          .from('quote_attachments')
+          .delete()
+          .eq('quote_id', editId);
+
+        if (attachments.length > 0) {
+          const { error: attachError } = await supabase
+            .from('quote_attachments')
+            .insert(attachments.map((att, idx) => ({
+              quote_id: editId,
+              file_name: att.file_name,
+              file_type: att.file_type,
+              file_size: att.file_size,
+              storage_path: att.storage_path,
+              position: idx,
+              display_mode: att.display_mode || 'thumbnail',
+              caption: att.caption || '',
+              include_in_pdf: att.include_in_pdf !== false,
+              pdf_page: att.pdf_page || 'end'
+            })));
+          if (attachError) throw attachError;
+        }
+
         return { id: editId };
       } else {
         // Create new quote
@@ -152,6 +178,7 @@ function QuoteEditorPage() {
             total: quoteData.total,
             notes: quoteData.notes,
             terms: quoteData.terms,
+            layout: quoteData.layout,
             status: 'draft'
           })
           .select()
@@ -175,6 +202,25 @@ function QuoteEditorPage() {
           })));
 
         if (itemsError) throw itemsError;
+
+        // Insert attachments
+        if (attachments.length > 0) {
+          const { error: attachError } = await supabase
+            .from('quote_attachments')
+            .insert(attachments.map((att, idx) => ({
+              quote_id: newQuote.id,
+              file_name: att.file_name,
+              file_type: att.file_type,
+              file_size: att.file_size,
+              storage_path: att.storage_path,
+              position: idx,
+              display_mode: att.display_mode || 'thumbnail',
+              caption: att.caption || '',
+              include_in_pdf: att.include_in_pdf !== false,
+              pdf_page: att.pdf_page || 'end'
+            })));
+          if (attachError) throw attachError;
+        }
 
         return newQuote;
       }
@@ -213,6 +259,7 @@ function QuoteEditorPage() {
       onCancel={() => navigate('/invoices')}
       showToast={showToast}
       onClientCreated={handleClientCreated}
+      organizationId={organizationId}
     />
   );
 }
