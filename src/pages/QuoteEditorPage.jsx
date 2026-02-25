@@ -22,7 +22,7 @@ async function fetchClients(organizationId) {
   return data || [];
 }
 
-// Fetch single quote with items and attachments
+// Fetch single quote with items (attachments loaded separately if table exists)
 async function fetchQuote(quoteId) {
   if (!quoteId) return null;
 
@@ -31,13 +31,29 @@ async function fetchQuote(quoteId) {
     .select(`
       *,
       quote_items (*),
-      quote_attachments (*),
       clients (*)
     `)
     .eq('id', quoteId)
     .single();
 
   if (error) throw error;
+
+  // Try to fetch attachments if table exists (optional feature)
+  try {
+    const { data: attachments } = await supabase
+      .from('quote_attachments')
+      .select('*')
+      .eq('quote_id', quoteId)
+      .order('position');
+
+    if (attachments) {
+      data.quote_attachments = attachments;
+    }
+  } catch {
+    // Table doesn't exist yet - ignore
+    data.quote_attachments = [];
+  }
+
   return data;
 }
 
@@ -92,26 +108,42 @@ function QuoteEditorPage() {
   // Save quote mutation
   const saveMutation = useMutation({
     mutationFn: async ({ quoteData, items, attachments = [], isEdit, quoteId: editId }) => {
+      // Build base quote data (without optional fields that may not exist yet)
+      const baseQuoteData = {
+        client_id: quoteData.client_id,
+        issue_date: quoteData.issue_date,
+        valid_until: quoteData.valid_until,
+        subtotal: quoteData.subtotal,
+        tax_amount: quoteData.tax_amount,
+        total: quoteData.total,
+        notes: quoteData.notes,
+        terms: quoteData.terms
+      };
+
       // Create or update quote
       if (isEdit && editId) {
         // Update existing quote
         const { error: quoteError } = await supabase
           .from('quotes')
           .update({
-            client_id: quoteData.client_id,
-            issue_date: quoteData.issue_date,
-            valid_until: quoteData.valid_until,
-            subtotal: quoteData.subtotal,
-            tax_amount: quoteData.tax_amount,
-            total: quoteData.total,
-            notes: quoteData.notes,
-            terms: quoteData.terms,
-            layout: quoteData.layout,
+            ...baseQuoteData,
             updated_at: new Date().toISOString()
           })
           .eq('id', editId);
 
         if (quoteError) throw quoteError;
+
+        // Try to update layout if column exists
+        if (quoteData.layout) {
+          try {
+            await supabase
+              .from('quotes')
+              .update({ layout: quoteData.layout })
+              .eq('id', editId);
+          } catch {
+            // Layout column doesn't exist yet - ignore
+          }
+        }
 
         // Delete old items
         await supabase
@@ -136,28 +168,31 @@ function QuoteEditorPage() {
 
         if (itemsError) throw itemsError;
 
-        // Handle attachments - delete old and insert new
-        await supabase
-          .from('quote_attachments')
-          .delete()
-          .eq('quote_id', editId);
-
-        if (attachments.length > 0) {
-          const { error: attachError } = await supabase
+        // Handle attachments if table exists (optional feature)
+        try {
+          await supabase
             .from('quote_attachments')
-            .insert(attachments.map((att, idx) => ({
-              quote_id: editId,
-              file_name: att.file_name,
-              file_type: att.file_type,
-              file_size: att.file_size,
-              storage_path: att.storage_path,
-              position: idx,
-              display_mode: att.display_mode || 'thumbnail',
-              caption: att.caption || '',
-              include_in_pdf: att.include_in_pdf !== false,
-              pdf_page: att.pdf_page || 'end'
-            })));
-          if (attachError) throw attachError;
+            .delete()
+            .eq('quote_id', editId);
+
+          if (attachments.length > 0) {
+            await supabase
+              .from('quote_attachments')
+              .insert(attachments.map((att, idx) => ({
+                quote_id: editId,
+                file_name: att.file_name,
+                file_type: att.file_type,
+                file_size: att.file_size,
+                storage_path: att.storage_path,
+                position: idx,
+                display_mode: att.display_mode || 'thumbnail',
+                caption: att.caption || '',
+                include_in_pdf: att.include_in_pdf !== false,
+                pdf_page: att.pdf_page || 'end'
+              })));
+          }
+        } catch {
+          // Attachments table doesn't exist yet - ignore
         }
 
         return { id: editId };
@@ -170,21 +205,25 @@ function QuoteEditorPage() {
           .insert({
             organization_id: organizationId,
             quote_number: quoteNumber,
-            client_id: quoteData.client_id,
-            issue_date: quoteData.issue_date,
-            valid_until: quoteData.valid_until,
-            subtotal: quoteData.subtotal,
-            tax_amount: quoteData.tax_amount,
-            total: quoteData.total,
-            notes: quoteData.notes,
-            terms: quoteData.terms,
-            layout: quoteData.layout,
+            ...baseQuoteData,
             status: 'draft'
           })
           .select()
           .single();
 
         if (quoteError) throw quoteError;
+
+        // Try to update layout if column exists
+        if (quoteData.layout) {
+          try {
+            await supabase
+              .from('quotes')
+              .update({ layout: quoteData.layout })
+              .eq('id', newQuote.id);
+          } catch {
+            // Layout column doesn't exist yet - ignore
+          }
+        }
 
         // Insert items
         const { error: itemsError } = await supabase
@@ -203,23 +242,26 @@ function QuoteEditorPage() {
 
         if (itemsError) throw itemsError;
 
-        // Insert attachments
+        // Insert attachments if table exists (optional feature)
         if (attachments.length > 0) {
-          const { error: attachError } = await supabase
-            .from('quote_attachments')
-            .insert(attachments.map((att, idx) => ({
-              quote_id: newQuote.id,
-              file_name: att.file_name,
-              file_type: att.file_type,
-              file_size: att.file_size,
-              storage_path: att.storage_path,
-              position: idx,
-              display_mode: att.display_mode || 'thumbnail',
-              caption: att.caption || '',
-              include_in_pdf: att.include_in_pdf !== false,
-              pdf_page: att.pdf_page || 'end'
-            })));
-          if (attachError) throw attachError;
+          try {
+            await supabase
+              .from('quote_attachments')
+              .insert(attachments.map((att, idx) => ({
+                quote_id: newQuote.id,
+                file_name: att.file_name,
+                file_type: att.file_type,
+                file_size: att.file_size,
+                storage_path: att.storage_path,
+                position: idx,
+                display_mode: att.display_mode || 'thumbnail',
+                caption: att.caption || '',
+                include_in_pdf: att.include_in_pdf !== false,
+                pdf_page: att.pdf_page || 'end'
+              })));
+          } catch {
+            // Attachments table doesn't exist yet - ignore
+          }
         }
 
         return newQuote;
