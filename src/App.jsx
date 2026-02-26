@@ -41,6 +41,7 @@ const AdminClientsViewContainer = lazy(() => import('./pages/AdminClientsViewCon
 const AdminInvoicesViewContainer = lazy(() => import('./pages/AdminInvoicesViewContainer'));
 const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewContainer'));
 const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
+const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -342,6 +343,11 @@ function App() {
                   <Route path="catalog" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminCatalogViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="settings" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <OrganizationSettingsPage />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
