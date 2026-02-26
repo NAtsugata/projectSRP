@@ -3,6 +3,7 @@
 // Container for invoices/quotes management
 // =============================
 import React, { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useInvoices, useQuotes, useInvoiceStats } from '../hooks/useInvoices';
 import { useClients } from '../hooks/useClients';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -10,13 +11,30 @@ import { useToast } from '../contexts/ToastContext';
 import { invoicingService } from '../services/invoicingService';
 import { generateInvoicePDF, generateQuotePDF, downloadInvoicePdf, previewInvoicePdf } from '../utils/invoicePdfGenerator';
 import { useAuthStore } from '../store/authStore';
+import { supabase } from '../lib/supabaseClient';
 import AdminInvoicesView from './AdminInvoicesView';
 
 function AdminInvoicesViewContainer() {
   const { showToast } = useToast();
   const isOnline = useOnlineStatus();
   const { profile } = useAuthStore();
-  const organization = profile?.organization || {};
+  const organizationId = profile?.organization_id;
+
+  // Fetch organization with all settings
+  const { data: organization = {} } = useQuery({
+    queryKey: ['organization', organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', organizationId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000
+  });
 
   // State
   const [activeTab, setActiveTab] = useState('invoices');

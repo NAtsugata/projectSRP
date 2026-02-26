@@ -128,8 +128,17 @@ export function generateInvoicePDF(invoice, organization = {}, client = {}) {
   if (organization?.siret) {
     leftY = drawText(`SIRET: ${organization.siret}`, leftX, leftY, { size: 9, color: COLORS.gray });
   }
-  if (organization?.tva_number) {
-    leftY = drawText(`TVA: ${organization.tva_number}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  if (organization?.vat_number || organization?.tva_number) {
+    leftY = drawText(`TVA: ${organization.vat_number || organization.tva_number}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.rcs) {
+    leftY = drawText(`RCS: ${organization.rcs}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.ape_code) {
+    leftY = drawText(`APE: ${organization.ape_code}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.legal_form && organization?.share_capital) {
+    leftY = drawText(`${organization.legal_form} au capital de ${organization.share_capital}`, leftX, leftY, { size: 9, color: COLORS.gray });
   }
 
   // === INFORMATIONS CLIENT (droite) ===
@@ -438,6 +447,18 @@ export function generateQuotePDF(quote, organization = {}, client = {}) {
   if (organization?.siret) {
     leftY = drawText(`SIRET: ${organization.siret}`, leftX, leftY, { size: 9, color: COLORS.gray });
   }
+  if (organization?.vat_number) {
+    leftY = drawText(`TVA: ${organization.vat_number}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.rcs) {
+    leftY = drawText(`RCS: ${organization.rcs}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.ape_code) {
+    leftY = drawText(`APE: ${organization.ape_code}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
+  if (organization?.legal_form && organization?.share_capital) {
+    leftY = drawText(`${organization.legal_form} au capital de ${organization.share_capital}`, leftX, leftY, { size: 9, color: COLORS.gray });
+  }
 
   // === INFORMATIONS CLIENT (droite) ===
   const rightX = pageWidth - MARGIN - 70;
@@ -623,7 +644,22 @@ export function generateQuotePDF(quote, organization = {}, client = {}) {
   }
 
   // === PIED DE PAGE ===
-  const footerY = pageHeight - 25;
+  const invoiceSettings = organization?.invoice_settings || {};
+  const bankDetails = invoiceSettings.bank_details || {};
+  let footerY = pageHeight - 35;
+
+  // Coordonnées bancaires si disponibles
+  if (bankDetails.iban || bankDetails.bic) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.gray);
+    let bankText = 'Coordonnées bancaires:';
+    if (bankDetails.bank_name) bankText += ` ${bankDetails.bank_name}`;
+    if (bankDetails.iban) bankText += ` - IBAN: ${bankDetails.iban}`;
+    if (bankDetails.bic) bankText += ` - BIC: ${bankDetails.bic}`;
+    doc.text(bankText, pageWidth / 2, footerY, { align: 'center' });
+    footerY += 5;
+  }
 
   // Mention de validite
   doc.setFontSize(9);
@@ -636,21 +672,22 @@ export function generateQuotePDF(quote, organization = {}, client = {}) {
     { align: 'center' }
   );
 
-  // Mentions legales
+  // Mentions legales de l'organisation ou par défaut
+  const legalText = invoiceSettings.legal_mentions ||
+    'Devis gratuit et sans engagement. Signature et retour valant acceptation des conditions.';
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.gray);
-  doc.text(
-    'Devis gratuit et sans engagement. Signature et retour valant acceptation des conditions.',
-    pageWidth / 2,
-    footerY + 5,
-    { align: 'center' }
-  );
+  const legalLines = doc.splitTextToSize(legalText, pageWidth - MARGIN * 2);
+  legalLines.forEach((line, i) => {
+    doc.text(line, pageWidth / 2, footerY + 5 + i * 3, { align: 'center' });
+  });
 
   // Espace signature
-  doc.text('Bon pour accord, date et signature:', MARGIN, footerY + 12);
+  const signatureY = footerY + 5 + legalLines.length * 3 + 3;
+  doc.text('Bon pour accord, date et signature:', MARGIN, signatureY);
   doc.setDrawColor(...COLORS.lightGray);
-  doc.line(MARGIN + 60, footerY + 12, MARGIN + 130, footerY + 12);
+  doc.line(MARGIN + 60, signatureY, MARGIN + 130, signatureY);
 
   // Numero de page
   doc.text(`Page 1/1`, pageWidth - MARGIN, pageHeight - 10, { align: 'right' });
