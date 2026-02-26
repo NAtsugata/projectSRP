@@ -27,7 +27,7 @@ const DEFAULT_INVOICE_SETTINGS = {
 
 function OrganizationSettingsPage() {
   const { profile } = useAuthStore();
-  const { showToast } = useToast();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('company');
   const [formData, setFormData] = useState({});
@@ -94,10 +94,10 @@ function OrganizationSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization'] });
-      showToast('Paramètres enregistrés', 'success');
+      toast.success('Paramètres enregistrés');
     },
     onError: (error) => {
-      showToast(`Erreur: ${error.message}`, 'error');
+      toast.error(`Erreur: ${error.message}`);
     }
   });
 
@@ -115,7 +115,7 @@ function OrganizationSettingsPage() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        showToast('Le fichier est trop volumineux (max 2MB)', 'error');
+        toast.error('Le fichier est trop volumineux (max 2MB)');
         return;
       }
       setLogoFile(file);
@@ -143,7 +143,7 @@ function OrganizationSettingsPage() {
       if (uploadError) {
         // Si le bucket n'existe pas, on ignore l'erreur du logo
         console.error('Upload error:', uploadError);
-        showToast(`Erreur upload logo: ${uploadError.message}`, 'error');
+        toast.error(`Erreur upload logo: ${uploadError.message}`);
         return formData.logo_url || '';
       }
 
@@ -154,7 +154,7 @@ function OrganizationSettingsPage() {
       return data?.publicUrl || '';
     } catch (error) {
       console.error('Upload exception:', error);
-      showToast(`Erreur upload logo: ${error.message}`, 'error');
+      toast.error(`Erreur upload logo: ${error.message}`);
       return formData.logo_url || '';
     } finally {
       setIsUploading(false);
