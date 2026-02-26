@@ -239,14 +239,20 @@ export const invoicingService = {
    */
   async deleteInvoice(invoiceId) {
     try {
-      // Verifier que la facture est en brouillon
-      const { data: invoice, error: fetchError } = await supabase
+      // Verifier que la facture existe et est en brouillon
+      const { data: invoices, error: fetchError } = await supabase
         .from('invoices')
         .select('status')
-        .eq('id', invoiceId)
-        .single();
+        .eq('id', invoiceId);
 
       if (fetchError) throw fetchError;
+
+      // Si aucune facture trouvée, c'est qu'elle n'existe pas ou RLS bloque
+      if (!invoices || invoices.length === 0) {
+        throw new Error('Facture introuvable ou accès refusé');
+      }
+
+      const invoice = invoices[0];
 
       if (invoice.status !== 'draft') {
         throw new Error('Seules les factures en brouillon peuvent etre supprimees');
@@ -433,11 +439,12 @@ export const invoicingService = {
   async deleteInvoiceItem(itemId) {
     try {
       // Obtenir l'invoice_id avant de supprimer
-      const { data: item } = await supabase
+      const { data: items } = await supabase
         .from('invoice_items')
         .select('invoice_id')
-        .eq('id', itemId)
-        .single();
+        .eq('id', itemId);
+
+      const item = items?.[0];
 
       const { error } = await supabase
         .from('invoice_items')
@@ -829,14 +836,20 @@ export const invoicingService = {
    */
   async deleteQuote(quoteId) {
     try {
-      // Verifier que le devis est en brouillon
-      const { data: quote, error: fetchError } = await supabase
+      // Verifier que le devis existe et est en brouillon
+      const { data: quotes, error: fetchError } = await supabase
         .from('quotes')
         .select('status')
-        .eq('id', quoteId)
-        .single();
+        .eq('id', quoteId);
 
       if (fetchError) throw fetchError;
+
+      // Si aucun devis trouvé, c'est qu'il n'existe pas ou RLS bloque
+      if (!quotes || quotes.length === 0) {
+        throw new Error('Devis introuvable ou accès refusé');
+      }
+
+      const quote = quotes[0];
 
       if (quote.status !== 'draft') {
         throw new Error('Seuls les devis en brouillon peuvent etre supprimes');
