@@ -19,15 +19,15 @@ const UNITS = [
   { value: 'ml', label: 'ml' }
 ];
 
-// Item initial
-const INITIAL_ITEM = {
+// Item initial (tax_rate sera écrasé par le default de l'organisation)
+const getInitialItem = (taxRate = 20) => ({
   description: '',
   quantity: 1,
   unit: 'unite',
   unit_price: 0,
-  tax_rate: 20,
+  tax_rate: taxRate,
   discount_percent: 0
-};
+});
 
 // Formatage montant
 const formatAmount = (amount) => {
@@ -44,22 +44,31 @@ function QuoteEditor({
   onCancel,
   showToast,
   onClientCreated,
-  organizationId
+  organizationId,
+  organization = null
 }) {
+  // Extraire les paramètres de facturation de l'organisation
+  const invoiceSettings = organization?.invoice_settings || {};
+  const defaultTaxRate = invoiceSettings.default_tax_rate || 20;
+  const defaultTerms = invoiceSettings.default_terms || '';
+  const quoteValidityDays = invoiceSettings.quote_validity_days || 30;
+
   // State du formulaire
-  const [formData, setFormData] = useState({
-    client_id: '',
-    issue_date: new Date().toISOString().split('T')[0],
-    valid_until: (() => {
-      const d = new Date();
-      d.setDate(d.getDate() + 30);
-      return d.toISOString().split('T')[0];
-    })(),
-    notes: '',
-    terms: ''
+  const [formData, setFormData] = useState(() => {
+    const today = new Date();
+    const validUntil = new Date();
+    validUntil.setDate(today.getDate() + quoteValidityDays);
+
+    return {
+      client_id: '',
+      issue_date: today.toISOString().split('T')[0],
+      valid_until: validUntil.toISOString().split('T')[0],
+      notes: '',
+      terms: defaultTerms
+    };
   });
 
-  const [items, setItems] = useState([{ ...INITIAL_ITEM }]);
+  const [items, setItems] = useState([getInitialItem(defaultTaxRate)]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showQuickClient, setShowQuickClient] = useState(false);
 
@@ -119,6 +128,31 @@ function QuoteEditor({
       }
     }
   }, [editingQuote]);
+
+  // Appliquer les paramètres de l'organisation pour les nouveaux devis
+  useEffect(() => {
+    if (!editingQuote && organization) {
+      const settings = organization.invoice_settings || {};
+      const validityDays = settings.quote_validity_days || 30;
+      const validUntil = new Date();
+      validUntil.setDate(validUntil.getDate() + validityDays);
+
+      setFormData(prev => ({
+        ...prev,
+        terms: prev.terms || settings.default_terms || '',
+        valid_until: validUntil.toISOString().split('T')[0]
+      }));
+
+      // Mettre à jour le taux de TVA par défaut des lignes existantes
+      const newTaxRate = settings.default_tax_rate || 20;
+      setItems(prev => {
+        if (prev.length === 1 && !prev[0].description) {
+          return [getInitialItem(newTaxRate)];
+        }
+        return prev;
+      });
+    }
+  }, [organization, editingQuote]);
 
   // Filtrer articles du catalogue
   const filteredCatalogItems = useMemo(() => {
@@ -222,8 +256,8 @@ function QuoteEditor({
 
   // Ajouter ligne vide
   const handleAddItem = useCallback(() => {
-    setItems(prev => [...prev, { ...INITIAL_ITEM }]);
-  }, []);
+    setItems(prev => [...prev, getInitialItem(defaultTaxRate)]);
+  }, [defaultTaxRate]);
 
   // Supprimer ligne
   const handleRemoveItem = useCallback((index) => {

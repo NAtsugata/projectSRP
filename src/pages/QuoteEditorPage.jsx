@@ -22,6 +22,18 @@ async function fetchClients(organizationId) {
   return data || [];
 }
 
+// Fetch organization settings
+async function fetchOrganization(organizationId) {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', organizationId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // Fetch single quote with items (attachments loaded separately if table exists)
 async function fetchQuote(quoteId) {
   if (!quoteId) return null;
@@ -94,6 +106,14 @@ function QuoteEditorPage() {
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ['clients', organizationId],
     queryFn: () => fetchClients(organizationId),
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000
+  });
+
+  // Fetch organization settings
+  const { data: organization } = useQuery({
+    queryKey: ['organization', organizationId],
+    queryFn: () => fetchOrganization(organizationId),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000
   });
@@ -302,6 +322,7 @@ function QuoteEditorPage() {
       showToast={showToast}
       onClientCreated={handleClientCreated}
       organizationId={organizationId}
+      organization={organization}
     />
   );
 }
