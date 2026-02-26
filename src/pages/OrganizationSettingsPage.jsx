@@ -129,7 +129,7 @@ function OrganizationSettingsPage() {
 
   // Upload logo
   const uploadLogo = async () => {
-    if (!logoFile) return formData.logo_url;
+    if (!logoFile) return formData.logo_url || '';
 
     setIsUploading(true);
     try {
@@ -140,16 +140,22 @@ function OrganizationSettingsPage() {
         .from('organization-assets')
         .upload(fileName, logoFile, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Si le bucket n'existe pas, on ignore l'erreur du logo
+        console.error('Upload error:', uploadError);
+        showToast(`Erreur upload logo: ${uploadError.message}`, 'error');
+        return formData.logo_url || '';
+      }
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data } = supabase.storage
         .from('organization-assets')
         .getPublicUrl(fileName);
 
-      return publicUrl;
+      return data?.publicUrl || '';
     } catch (error) {
+      console.error('Upload exception:', error);
       showToast(`Erreur upload logo: ${error.message}`, 'error');
-      return formData.logo_url;
+      return formData.logo_url || '';
     } finally {
       setIsUploading(false);
     }
@@ -157,49 +163,57 @@ function OrganizationSettingsPage() {
 
   // Save company info
   const saveCompanyInfo = async () => {
-    const logoUrl = await uploadLogo();
+    try {
+      const logoUrl = await uploadLogo();
 
-    const updates = {
-      name: formData.name,
-      address: formData.address,
-      phone: formData.phone,
-      email: formData.email,
-      siret: formData.siret,
-      vat_number: formData.vat_number,
-      ape_code: formData.ape_code,
-      share_capital: formData.share_capital,
-      legal_form: formData.legal_form,
-      rcs: formData.rcs,
-      logo_url: logoUrl,
-      updated_at: new Date().toISOString()
-    };
+      const updates = {
+        name: formData.name || '',
+        address: formData.address || '',
+        phone: formData.phone || '',
+        email: formData.email || '',
+        siret: formData.siret || '',
+        vat_number: formData.vat_number || null,
+        ape_code: formData.ape_code || null,
+        share_capital: formData.share_capital || null,
+        legal_form: formData.legal_form || null,
+        rcs: formData.rcs || null,
+        logo_url: logoUrl || null,
+        updated_at: new Date().toISOString()
+      };
 
-    saveMutation.mutate(updates);
-    setLogoFile(null);
+      await saveMutation.mutateAsync(updates);
+      setLogoFile(null);
+    } catch (error) {
+      console.error('Save error:', error);
+    }
   };
 
   // Save invoice settings
   const saveInvoiceSettings = async () => {
-    const invoiceSettings = {
-      default_terms: formData.default_terms,
-      default_footer: formData.default_footer,
-      default_payment_terms: parseInt(formData.default_payment_terms) || 30,
-      default_tax_rate: parseFloat(formData.default_tax_rate) || 20,
-      quote_validity_days: parseInt(formData.quote_validity_days) || 30,
-      show_logo_on_documents: formData.show_logo_on_documents,
-      show_siret: formData.show_siret,
-      bank_details: {
-        iban: formData.iban,
-        bic: formData.bic,
-        bank_name: formData.bank_name
-      },
-      legal_mentions: formData.legal_mentions
-    };
+    try {
+      const invoiceSettings = {
+        default_terms: formData.default_terms || '',
+        default_footer: formData.default_footer || '',
+        default_payment_terms: parseInt(formData.default_payment_terms) || 30,
+        default_tax_rate: parseFloat(formData.default_tax_rate) || 20,
+        quote_validity_days: parseInt(formData.quote_validity_days) || 30,
+        show_logo_on_documents: formData.show_logo_on_documents ?? true,
+        show_siret: formData.show_siret ?? true,
+        bank_details: {
+          iban: formData.iban || '',
+          bic: formData.bic || '',
+          bank_name: formData.bank_name || ''
+        },
+        legal_mentions: formData.legal_mentions || ''
+      };
 
-    saveMutation.mutate({
-      invoice_settings: invoiceSettings,
-      updated_at: new Date().toISOString()
-    });
+      await saveMutation.mutateAsync({
+        invoice_settings: invoiceSettings,
+        updated_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Save invoice settings error:', error);
+    }
   };
 
   // Remove logo
