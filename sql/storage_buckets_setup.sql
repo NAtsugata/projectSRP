@@ -58,6 +58,26 @@ ON CONFLICT (id) DO UPDATE SET
   public = false,
   file_size_limit = 10485760;
 
+-- Bucket pour les assets d'organisation (logos, etc.)
+-- SÉCURITÉ: Bucket public pour permettre l'affichage des logos sur les documents
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'organization-assets',
+  'organization-assets',
+  true,  -- PUBLIC - les logos doivent être accessibles publiquement
+  2097152,  -- 2 MB max par fichier (logos)
+  ARRAY[
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/svg+xml',
+    'image/webp'
+  ]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 2097152;
+
 -- ============================================================
 -- 2. POLITIQUES RLS POUR INTERVENTION-FILES
 -- ============================================================
@@ -161,7 +181,71 @@ USING (
 );
 
 -- ============================================================
--- 4. VÉRIFICATION
+-- 4. POLITIQUES RLS POUR ORGANIZATION-ASSETS
+-- ============================================================
+
+-- Supprimer les anciennes politiques si elles existent
+DROP POLICY IF EXISTS "Users can upload organization assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view organization assets" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update organization assets" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete organization assets" ON storage.objects;
+
+-- Politique: UPLOAD - Les utilisateurs authentifiés de l'organisation peuvent uploader
+CREATE POLICY "Users can upload organization assets"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'organization-assets'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text FROM profiles WHERE id = auth.uid()
+  )
+);
+
+-- Politique: SELECT - Les assets sont publics (pour afficher les logos sur documents)
+CREATE POLICY "Public can view organization assets"
+ON storage.objects
+FOR SELECT
+TO public
+USING (
+  bucket_id = 'organization-assets'
+);
+
+-- Politique: UPDATE - Les utilisateurs peuvent modifier les assets de leur organisation
+CREATE POLICY "Users can update organization assets"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'organization-assets'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text FROM profiles WHERE id = auth.uid()
+  )
+)
+WITH CHECK (
+  bucket_id = 'organization-assets'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text FROM profiles WHERE id = auth.uid()
+  )
+);
+
+-- Politique: DELETE - Seuls les admins peuvent supprimer les assets d'organisation
+CREATE POLICY "Users can delete organization assets"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'organization-assets'
+  AND EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+    AND profiles.organization_id::text = (storage.foldername(name))[1]
+  )
+);
+
+-- ============================================================
+-- 5. VÉRIFICATION
 -- ============================================================
 
 -- Vérifier que les buckets sont bien créés
@@ -172,7 +256,7 @@ SELECT
   file_size_limit,
   allowed_mime_types
 FROM storage.buckets
-WHERE id IN ('intervention-files', 'vault-files');
+WHERE id IN ('intervention-files', 'vault-files', 'organization-assets');
 
 -- Vérifier les politiques
 SELECT
@@ -184,5 +268,5 @@ SELECT
   cmd
 FROM pg_policies
 WHERE tablename = 'objects'
-AND policyname LIKE '%intervention%' OR policyname LIKE '%vault%'
+AND (policyname LIKE '%intervention%' OR policyname LIKE '%vault%' OR policyname LIKE '%organization%')
 ORDER BY policyname;
