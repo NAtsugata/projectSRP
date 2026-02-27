@@ -725,7 +725,6 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
   }
 
   // === PIED DE PAGE ===
-  const invoiceSettings = organization?.invoice_settings || {};
   const bankDetails = invoiceSettings.bank_details || {};
   let footerY = pageHeight - 35;
 
