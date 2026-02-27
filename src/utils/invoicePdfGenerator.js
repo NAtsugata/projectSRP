@@ -44,13 +44,69 @@ const formatDate = (date) => {
 };
 
 /**
+ * Charge une image depuis une URL et retourne son data URL
+ * @param {string} url - URL de l'image
+ * @returns {Promise<string|null>} - Data URL de l'image ou null en cas d'erreur
+ */
+const loadImageAsDataUrl = async (url) => {
+  if (!url) return null;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    logger.log('[PDF] Erreur chargement logo:', error);
+    return null;
+  }
+};
+
+/**
+ * Ajoute le logo au document PDF
+ * @param {jsPDF} doc - Document PDF
+ * @param {string} logoDataUrl - Data URL du logo
+ * @param {number} x - Position X
+ * @param {number} y - Position Y
+ * @param {number} maxWidth - Largeur maximale
+ * @param {number} maxHeight - Hauteur maximale
+ * @returns {number} - Nouvelle position Y après le logo
+ */
+const addLogoToPdf = (doc, logoDataUrl, x, y, maxWidth = 50, maxHeight = 20) => {
+  if (!logoDataUrl) return y;
+
+  try {
+    // Déterminer le format de l'image
+    let format = 'PNG';
+    if (logoDataUrl.includes('image/jpeg') || logoDataUrl.includes('image/jpg')) {
+      format = 'JPEG';
+    }
+
+    // Ajouter l'image avec les dimensions maximales
+    doc.addImage(logoDataUrl, format, x, y, maxWidth, maxHeight, undefined, 'FAST');
+
+    return y + maxHeight + 5;
+  } catch (error) {
+    logger.log('[PDF] Erreur ajout logo au PDF:', error);
+    return y;
+  }
+};
+
+/**
  * Genere un PDF de facture
  * @param {Object} invoice - Donnees de la facture
  * @param {Object} organization - Informations de l'organisation
  * @param {Object} client - Informations du client
+ * @param {string} logoDataUrl - Data URL du logo (optionnel, pré-chargé)
  * @returns {Blob} - PDF sous forme de Blob
  */
-export function generateInvoicePDF(invoice, organization = {}, client = {}) {
+export async function generateInvoicePDF(invoice, organization = {}, client = {}, logoDataUrl = null) {
   logger.log('[PDF] Generation de la facture:', invoice?.invoice_number);
 
   const doc = new jsPDF({
@@ -82,6 +138,18 @@ export function generateInvoicePDF(invoice, organization = {}, client = {}) {
   };
 
   // === EN-TETE ===
+  // Charger et afficher le logo si disponible
+  const invoiceSettings = organization?.invoice_settings || {};
+  const showLogo = invoiceSettings.show_logo_on_documents !== false;
+
+  if (showLogo && organization?.logo_url) {
+    // Charger le logo si pas déjà fourni
+    const logoData = logoDataUrl || await loadImageAsDataUrl(organization.logo_url);
+    if (logoData) {
+      y = addLogoToPdf(doc, logoData, MARGIN, y, 50, 20);
+    }
+  }
+
   // Titre FACTURE
   y = drawText('FACTURE', pageWidth / 2, y + 5, {
     size: 24,
@@ -367,9 +435,10 @@ export function generateInvoicePDF(invoice, organization = {}, client = {}) {
  * @param {Object} quote - Donnees du devis
  * @param {Object} organization - Informations de l'organisation
  * @param {Object} client - Informations du client
+ * @param {string} logoDataUrl - Data URL du logo (optionnel, pré-chargé)
  * @returns {Blob} - PDF sous forme de Blob
  */
-export function generateQuotePDF(quote, organization = {}, client = {}) {
+export async function generateQuotePDF(quote, organization = {}, client = {}, logoDataUrl = null) {
   logger.log('[PDF] Generation du devis:', quote?.quote_number);
 
   const doc = new jsPDF({
@@ -401,6 +470,18 @@ export function generateQuotePDF(quote, organization = {}, client = {}) {
   };
 
   // === EN-TETE ===
+  // Charger et afficher le logo si disponible
+  const invoiceSettings = organization?.invoice_settings || {};
+  const showLogo = invoiceSettings.show_logo_on_documents !== false;
+
+  if (showLogo && organization?.logo_url) {
+    // Charger le logo si pas déjà fourni
+    const logoData = logoDataUrl || await loadImageAsDataUrl(organization.logo_url);
+    if (logoData) {
+      y = addLogoToPdf(doc, logoData, MARGIN, y, 50, 20);
+    }
+  }
+
   // Titre DEVIS
   y = drawText('DEVIS', pageWidth / 2, y + 5, {
     size: 24,
@@ -765,9 +846,10 @@ function calculateTaxBreakdown(items) {
  * @param {Object} organization - Informations de l'organisation
  * @param {Object} client - Informations du client
  * @param {Object} template - Modele de devis (optionnel)
+ * @param {string} logoDataUrl - Data URL du logo (optionnel, pré-chargé)
  * @returns {Blob} - PDF sous forme de Blob
  */
-export function generateQuotePDFWithTemplate(quote, organization = {}, client = {}, template = {}) {
+export async function generateQuotePDFWithTemplate(quote, organization = {}, client = {}, template = {}, logoDataUrl = null) {
   logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
 
   // Couleur du template
@@ -806,6 +888,17 @@ export function generateQuotePDFWithTemplate(quote, organization = {}, client = 
     doc.line(MARGIN, yPos, pageWidth - MARGIN, yPos);
     return yPos + 3;
   };
+
+  // === LOGO ===
+  const invoiceSettings = organization?.invoice_settings || {};
+  const showLogo = invoiceSettings.show_logo_on_documents !== false;
+
+  if (showLogo && organization?.logo_url) {
+    const logoData = logoDataUrl || await loadImageAsDataUrl(organization.logo_url);
+    if (logoData) {
+      y = addLogoToPdf(doc, logoData, MARGIN, y, 50, 20);
+    }
+  }
 
   // === HEADER TEXT (template) ===
   if (template.header_text) {
@@ -1152,8 +1245,23 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
     .filter(s => s.visible !== false)
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
+  // Charger le logo si nécessaire
+  let logoDataUrl = null;
+  const invoiceSettings = organization?.invoice_settings || {};
+  const showLogoFromSettings = invoiceSettings.show_logo_on_documents !== false;
+  const showLogoFromLayout = layout.showLogo !== false;
+
+  if (showLogoFromSettings && showLogoFromLayout && organization?.logo_url) {
+    logoDataUrl = await loadImageAsDataUrl(organization.logo_url);
+  }
+
   // Section renderers
   const renderHeader = () => {
+    // Afficher le logo si disponible
+    if (logoDataUrl) {
+      y = addLogoToPdf(doc, logoDataUrl, margin, y, 50, 20);
+    }
+
     y = drawText('DEVIS', pageWidth / 2, y + 5, {
       size: fontSize.title,
       bold: true,

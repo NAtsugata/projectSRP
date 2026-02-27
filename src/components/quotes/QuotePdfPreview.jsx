@@ -65,7 +65,7 @@ function QuotePdfPreview({
   const handleDownloadPdf = useCallback(async () => {
     setIsGenerating(true);
     try {
-      const blob = generateQuotePDF(quoteData, organization, selectedClient);
+      const blob = await generateQuotePDF(quoteData, organization, selectedClient);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -99,8 +99,16 @@ function QuotePdfPreview({
         <div className="pdf-page">
           {/* En-tête */}
           <header className="pdf-header">
-            <h1 className="pdf-title">DEVIS</h1>
-            <p className="pdf-number">{quoteData.quote_number}</p>
+            {/* Logo de l'organisation */}
+            {organization?.logo_url && organization?.invoice_settings?.show_logo_on_documents !== false && (
+              <div className="pdf-logo">
+                <img src={organization.logo_url} alt="Logo" />
+              </div>
+            )}
+            <div className="pdf-header-text">
+              <h1 className="pdf-title">DEVIS</h1>
+              <p className="pdf-number">{quoteData.quote_number}</p>
+            </div>
           </header>
 
           {/* Informations émetteur et destinataire */}

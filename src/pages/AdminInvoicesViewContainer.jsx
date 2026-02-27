@@ -270,12 +270,12 @@ function AdminInvoicesViewContainer() {
   }, [convertToInvoice, showToast]);
 
   // PDF handlers
-  const handleGeneratePDF = useCallback((doc, isInvoice) => {
+  const handleGeneratePDF = useCallback(async (doc, isInvoice) => {
     try {
       const client = doc.client || clients.find(c => c.id === doc.client_id) || {};
       const pdfBlob = isInvoice
-        ? generateInvoicePDF(doc, organization, client)
-        : generateQuotePDF(doc, organization, client);
+        ? await generateInvoicePDF(doc, organization, client)
+        : await generateQuotePDF(doc, organization, client);
 
       const filename = isInvoice
         ? `${doc.invoice_number || 'facture'}.pdf`
@@ -288,12 +288,12 @@ function AdminInvoicesViewContainer() {
     }
   }, [clients, organization, showToast]);
 
-  const handlePreviewPDF = useCallback((doc, isInvoice) => {
+  const handlePreviewPDF = useCallback(async (doc, isInvoice) => {
     try {
       const client = doc.client || clients.find(c => c.id === doc.client_id) || {};
       const pdfBlob = isInvoice
-        ? generateInvoicePDF(doc, organization, client)
-        : generateQuotePDF(doc, organization, client);
+        ? await generateInvoicePDF(doc, organization, client)
+        : await generateQuotePDF(doc, organization, client);
 
       previewInvoicePdf(pdfBlob);
     } catch (error) {

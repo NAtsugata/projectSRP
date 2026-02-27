@@ -59,8 +59,25 @@
 
 /* En-tête */
 .pdf-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 10mm;
+}
+
+.pdf-logo {
+  flex-shrink: 0;
+}
+
+.pdf-logo img {
+  max-width: 50mm;
+  max-height: 20mm;
+  object-fit: contain;
+}
+
+.pdf-header-text {
+  text-align: right;
+  flex: 1;
 }
 
 .pdf-title {
