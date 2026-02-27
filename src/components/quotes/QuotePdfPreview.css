@@ -1,0 +1,365 @@
+/* =============================
+ * FILE: src/components/quotes/QuotePdfPreview.css
+ * Styles for the real-time PDF preview
+ * ============================= */
+
+.quote-pdf-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary, #f1f5f9);
+  border-left: 1px solid var(--border-color, #e2e8f0);
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-primary, #fff);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.preview-title {
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  font-size: 14px;
+}
+
+.preview-container {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Page PDF simulée */
+.pdf-page {
+  width: 210mm;
+  min-height: 297mm;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 15mm;
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-size: 10px;
+  color: #1f2937;
+  transform-origin: top center;
+  transform: scale(0.75);
+  margin-bottom: -80mm; /* Compenser le scale */
+}
+
+@media (max-width: 1400px) {
+  .pdf-page {
+    transform: scale(0.6);
+    margin-bottom: -120mm;
+  }
+}
+
+/* En-tête */
+.pdf-header {
+  text-align: center;
+  margin-bottom: 10mm;
+}
+
+.pdf-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #3b82f6;
+  margin: 0 0 2mm 0;
+}
+
+.pdf-number {
+  font-size: 14px;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Parties (émetteur/destinataire) */
+.pdf-parties {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10mm;
+}
+
+.pdf-sender {
+  flex: 1;
+}
+
+.pdf-sender h3 {
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 2mm 0;
+  color: #1f2937;
+}
+
+.pdf-sender p {
+  font-size: 9px;
+  color: #6b7280;
+  margin: 0 0 1mm 0;
+  line-height: 1.4;
+}
+
+.pdf-recipient {
+  width: 70mm;
+  background: #f8fafc;
+  border-radius: 2mm;
+  padding: 3mm;
+}
+
+.pdf-recipient .label {
+  font-size: 8px;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 1mm;
+}
+
+.pdf-recipient h3 {
+  font-size: 11px;
+  font-weight: bold;
+  margin: 0 0 1mm 0;
+  color: #1f2937;
+}
+
+.pdf-recipient p {
+  font-size: 9px;
+  color: #6b7280;
+  margin: 0 0 1mm 0;
+}
+
+/* Métadonnées (dates, statut) */
+.pdf-meta {
+  display: flex;
+  gap: 15mm;
+  background: #f8fafc;
+  border-radius: 2mm;
+  padding: 3mm 5mm;
+  margin-bottom: 8mm;
+}
+
+.meta-item {
+  display: flex;
+  gap: 2mm;
+  align-items: baseline;
+}
+
+.meta-label {
+  font-size: 9px;
+  color: #6b7280;
+}
+
+.meta-value {
+  font-size: 9px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.meta-value.status-draft { color: #6b7280; }
+.meta-value.status-sent { color: #eab308; }
+.meta-value.status-accepted { color: #22c55e; }
+.meta-value.status-rejected { color: #ef4444; }
+.meta-value.status-expired { color: #6b7280; }
+.meta-value.status-converted { color: #22c55e; }
+
+/* Tableau */
+.pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 5mm;
+  font-size: 9px;
+}
+
+.pdf-table thead tr {
+  background: #3b82f6;
+  color: white;
+}
+
+.pdf-table th {
+  padding: 2mm;
+  text-align: left;
+  font-weight: bold;
+  font-size: 8px;
+}
+
+.pdf-table td {
+  padding: 2mm;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pdf-table tbody tr.alt {
+  background: #f8fafc;
+}
+
+.pdf-table .col-desc {
+  width: 45%;
+}
+
+.pdf-table .col-qty,
+.pdf-table .col-unit,
+.pdf-table .col-tax {
+  width: 10%;
+  text-align: center;
+}
+
+.pdf-table .col-price,
+.pdf-table .col-total {
+  width: 12%;
+  text-align: right;
+}
+
+.pdf-table th.col-qty,
+.pdf-table th.col-unit,
+.pdf-table th.col-tax {
+  text-align: center;
+}
+
+.pdf-table th.col-price,
+.pdf-table th.col-total {
+  text-align: right;
+}
+
+.pdf-table .empty-row td {
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 5mm;
+}
+
+/* Totaux */
+.pdf-totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10mm;
+  margin-bottom: 8mm;
+}
+
+.totals-breakdown {
+  font-size: 8px;
+  color: #6b7280;
+}
+
+.tax-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 5mm;
+  margin-bottom: 1mm;
+}
+
+.totals-summary {
+  min-width: 50mm;
+  font-size: 9px;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 1mm 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.total-row.final {
+  font-weight: bold;
+  font-size: 11px;
+  color: #3b82f6;
+  border-bottom: 2px solid #3b82f6;
+  padding-top: 2mm;
+}
+
+/* Notes et conditions */
+.pdf-footer-content {
+  display: flex;
+  gap: 10mm;
+  margin-bottom: 5mm;
+}
+
+.pdf-notes,
+.pdf-terms {
+  flex: 1;
+  background: #f8fafc;
+  border-radius: 2mm;
+  padding: 3mm;
+}
+
+.pdf-notes h4,
+.pdf-terms h4 {
+  font-size: 9px;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 2mm 0;
+}
+
+.pdf-notes p,
+.pdf-terms p {
+  font-size: 8px;
+  color: #6b7280;
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+/* Mentions légales */
+.pdf-legal {
+  font-size: 7px;
+  color: #9ca3af;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 3mm;
+  margin-top: 5mm;
+}
+
+.pdf-legal p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Coordonnées bancaires */
+.pdf-bank {
+  background: #f8fafc;
+  border-radius: 2mm;
+  padding: 3mm;
+  margin-top: 5mm;
+}
+
+.pdf-bank h4 {
+  font-size: 9px;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 2mm 0;
+}
+
+.pdf-bank p {
+  font-size: 8px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .quote-pdf-preview {
+    background: #1e293b;
+    border-left-color: #334155;
+  }
+
+  .preview-toolbar {
+    background: #0f172a;
+    border-bottom-color: #334155;
+  }
+
+  .preview-title {
+    color: #f1f5f9;
+  }
+
+  /* La page PDF reste blanche même en dark mode */
+  .pdf-page {
+    background: white;
+  }
+}
+
+/* Responsive - panneau plus étroit */
+@media (max-width: 1200px) {
+  .pdf-page {
+    transform: scale(0.5);
+    margin-bottom: -150mm;
+  }
+}

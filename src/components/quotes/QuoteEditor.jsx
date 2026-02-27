@@ -7,6 +7,7 @@ import { useCatalogItems, useCatalogCategories, useTaxRates } from '../../hooks/
 import QuickClientModal from '../catalog/QuickClientModal';
 import QuoteAttachments from './QuoteAttachments';
 import QuoteLayoutEditor, { DEFAULT_LAYOUT } from './QuoteLayoutEditor';
+import QuotePdfPreview from './QuotePdfPreview';
 import './QuoteEditor.css';
 
 // Unites disponibles
@@ -76,6 +77,7 @@ function QuoteEditor({
   const [attachments, setAttachments] = useState([]);
   const [layout, setLayout] = useState(DEFAULT_LAYOUT);
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Catalogue
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -342,7 +344,7 @@ function QuoteEditor({
   }, [clients, formData.client_id]);
 
   return (
-    <div className="quote-editor">
+    <div className={`quote-editor ${showPreview ? 'with-preview' : ''}`}>
       {/* Sidebar Catalogue */}
       <aside className="catalog-sidebar">
         <div className="catalog-header">
@@ -463,6 +465,13 @@ function QuoteEditor({
             <h1>{editingQuote ? `Modifier devis ${editingQuote.quote_number}` : 'Nouveau devis'}</h1>
           </div>
           <div className="quote-actions">
+            <button
+              className={`btn btn-icon ${showPreview ? 'active' : ''}`}
+              onClick={() => setShowPreview(!showPreview)}
+              title={showPreview ? 'Masquer l\'aperçu' : 'Afficher l\'aperçu PDF'}
+            >
+              {showPreview ? '👁️ Masquer aperçu' : '👁️ Aperçu PDF'}
+            </button>
             <button
               className="btn btn-icon"
               onClick={() => setShowLayoutEditor(true)}
@@ -721,6 +730,21 @@ function QuoteEditor({
           />
         </section>
       </main>
+
+      {/* Panneau d'aperçu PDF en temps réel */}
+      {showPreview && (
+        <aside className="preview-sidebar">
+          <QuotePdfPreview
+            formData={formData}
+            items={items}
+            totals={totals}
+            organization={organization}
+            selectedClient={selectedClient}
+            quoteNumber={editingQuote?.quote_number}
+            status={editingQuote?.status || 'draft'}
+          />
+        </aside>
+      )}
 
       {/* Quick Client Modal */}
       {showQuickClient && (

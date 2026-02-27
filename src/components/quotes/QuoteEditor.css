@@ -731,3 +731,64 @@
     width: 100%;
   }
 }
+
+/* =====================================================
+   PREVIEW PANEL
+   ===================================================== */
+.quote-editor.with-preview {
+  grid-template-columns: 280px 1fr 400px;
+}
+
+.preview-sidebar {
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+/* Button active state for preview toggle */
+.quote-editor .btn-icon.active {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Responsive: hide preview on smaller screens */
+@media (max-width: 1400px) {
+  .quote-editor.with-preview {
+    grid-template-columns: 280px 1fr 350px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .quote-editor.with-preview {
+    grid-template-columns: 280px 1fr;
+  }
+
+  .preview-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 400px;
+    z-index: 100;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (max-width: 1024px) {
+  .quote-editor.with-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-sidebar {
+    width: 100%;
+    max-width: 450px;
+  }
+}
+
+/* Attachments section styling */
+.quote-attachments-section {
+  margin-top: 1.5rem;
+}
