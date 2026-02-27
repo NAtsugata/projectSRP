@@ -89,6 +89,7 @@ DROP POLICY IF EXISTS "Users can delete intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Admins can delete intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view intervention files" ON storage.objects;
 DROP POLICY IF EXISTS "Employees can delete own intervention files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated view intervention files" ON storage.objects;
 
 -- Politique: UPLOAD - Tous les utilisateurs authentifiés peuvent uploader
 CREATE POLICY "Users can upload intervention files"
@@ -142,6 +143,7 @@ DROP POLICY IF EXISTS "Users can view vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete own vault files" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view vault files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated view vault files" ON storage.objects;
 
 -- Politique: UPLOAD - Tous les utilisateurs authentifiés peuvent uploader
 CREATE POLICY "Users can upload vault files"
