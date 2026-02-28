@@ -9,7 +9,7 @@ import { useClients } from '../hooks/useClients';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useToast } from '../contexts/ToastContext';
 import { invoicingService } from '../services/invoicingService';
-import { generateInvoicePDF, generateQuotePDF, downloadInvoicePdf, previewInvoicePdf } from '../utils/invoicePdfGenerator';
+import { generateInvoicePDF, generateQuotePDFWithLayout, downloadInvoicePdf, previewInvoicePdf } from '../utils/invoicePdfGenerator';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabaseClient';
 import AdminInvoicesView from './AdminInvoicesView';
@@ -275,7 +275,7 @@ function AdminInvoicesViewContainer() {
       const client = doc.client || clients.find(c => c.id === doc.client_id) || {};
       const pdfBlob = isInvoice
         ? await generateInvoicePDF(doc, organization, client)
-        : await generateQuotePDF(doc, organization, client);
+        : await generateQuotePDFWithLayout(doc, organization, client, doc.layout || {}, doc.quote_attachments || []);
 
       const filename = isInvoice
         ? `${doc.invoice_number || 'facture'}.pdf`
@@ -293,7 +293,7 @@ function AdminInvoicesViewContainer() {
       const client = doc.client || clients.find(c => c.id === doc.client_id) || {};
       const pdfBlob = isInvoice
         ? await generateInvoicePDF(doc, organization, client)
-        : await generateQuotePDF(doc, organization, client);
+        : await generateQuotePDFWithLayout(doc, organization, client, doc.layout || {}, doc.quote_attachments || []);
 
       previewInvoicePdf(pdfBlob);
     } catch (error) {

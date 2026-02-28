@@ -380,3 +380,158 @@
     margin-bottom: -150mm;
   }
 }
+
+/* ========================================
+ * Styles dynamiques pour le layout
+ * ======================================== */
+
+/* Position du logo */
+.pdf-logo.logo-left {
+  order: -1;
+}
+
+.pdf-logo.logo-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pdf-logo.logo-right {
+  order: 1;
+  margin-left: auto;
+}
+
+.pdf-header:has(.logo-center) {
+  position: relative;
+}
+
+/* Tailles du logo */
+.pdf-logo.logo-size-small img {
+  max-width: 30mm;
+  max-height: 15mm;
+}
+
+.pdf-logo.logo-size-medium img {
+  max-width: 50mm;
+  max-height: 20mm;
+}
+
+.pdf-logo.logo-size-large img {
+  max-width: 70mm;
+  max-height: 25mm;
+}
+
+/* Tailles de police */
+.pdf-page.font-size-small {
+  font-size: 8px;
+}
+
+.pdf-page.font-size-small .pdf-title {
+  font-size: 20px;
+}
+
+.pdf-page.font-size-small .pdf-number {
+  font-size: 12px;
+}
+
+.pdf-page.font-size-small .pdf-table {
+  font-size: 7px;
+}
+
+.pdf-page.font-size-medium {
+  font-size: 10px;
+}
+
+.pdf-page.font-size-large {
+  font-size: 11px;
+}
+
+.pdf-page.font-size-large .pdf-title {
+  font-size: 28px;
+}
+
+.pdf-page.font-size-large .pdf-number {
+  font-size: 16px;
+}
+
+.pdf-page.font-size-large .pdf-table {
+  font-size: 10px;
+}
+
+/* Zone de signature */
+.pdf-signature-zone {
+  margin-top: 8mm;
+  padding-top: 5mm;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pdf-signature-zone p {
+  font-size: 9px;
+  color: #6b7280;
+  margin: 0 0 3mm 0;
+}
+
+.pdf-signature-zone .signature-box {
+  width: 80mm;
+  height: 25mm;
+  border: 1px solid #e5e7eb;
+  border-radius: 2mm;
+  background: #fafafa;
+}
+
+/* Pièces jointes (aperçu) */
+.pdf-attachments-preview {
+  margin-top: 5mm;
+  padding-top: 5mm;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pdf-attachments-preview h4 {
+  font-size: 9px;
+  font-weight: bold;
+  color: #6b7280;
+  margin: 0 0 3mm 0;
+}
+
+.attachments-grid {
+  display: flex;
+  gap: 3mm;
+}
+
+.attachment-thumb {
+  width: 20mm;
+  height: 15mm;
+  border: 1px solid #e5e7eb;
+  border-radius: 2mm;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.attachment-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-more {
+  width: 20mm;
+  height: 15mm;
+  border: 1px solid #e5e7eb;
+  border-radius: 2mm;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: bold;
+}
+
+/* Total TTC avec couleur personnalisée */
+.total-row.final {
+  background: var(--primary-color, #3b82f6);
+  color: var(--header-text-color, white);
+  border-radius: 2mm;
+  padding: 2mm 3mm;
+  border-bottom: none;
+}

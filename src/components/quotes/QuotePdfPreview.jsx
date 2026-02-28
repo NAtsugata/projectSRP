@@ -3,7 +3,8 @@
 // Real-time PDF preview for quotes
 // =============================
 import React, { useMemo, useCallback, useState } from 'react';
-import { generateQuotePDF } from '../../utils/invoicePdfGenerator';
+import { generateQuotePDFWithLayout } from '../../utils/invoicePdfGenerator';
+import { DEFAULT_LAYOUT } from './QuoteLayoutEditor';
 import './QuotePdfPreview.css';
 
 // Formatage montant
@@ -42,9 +43,18 @@ function QuotePdfPreview({
   selectedClient,
   quoteNumber,
   status = 'draft',
-  onDownloadPdf
+  onDownloadPdf,
+  layout = DEFAULT_LAYOUT,
+  attachments = []
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Fusionner le layout avec les valeurs par défaut
+  const currentLayout = useMemo(() => ({
+    ...DEFAULT_LAYOUT,
+    ...layout,
+    sections: layout?.sections || DEFAULT_LAYOUT.sections
+  }), [layout]);
 
   // Préparer les données du devis pour l'aperçu
   const quoteData = useMemo(() => ({
@@ -65,7 +75,7 @@ function QuotePdfPreview({
   const handleDownloadPdf = useCallback(async () => {
     setIsGenerating(true);
     try {
-      const blob = await generateQuotePDF(quoteData, organization, selectedClient);
+      const blob = await generateQuotePDFWithLayout(quoteData, organization, selectedClient, currentLayout, attachments);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -80,7 +90,23 @@ function QuotePdfPreview({
     } finally {
       setIsGenerating(false);
     }
-  }, [quoteData, organization, selectedClient, onDownloadPdf]);
+  }, [quoteData, organization, selectedClient, onDownloadPdf, currentLayout, attachments]);
+
+  // Styles dynamiques basés sur le layout
+  const previewStyles = useMemo(() => ({
+    primaryColor: currentLayout.primaryColor || '#3b82f6',
+    textColor: currentLayout.textColor || '#1f2937',
+    headerTextColor: currentLayout.headerTextColor || '#ffffff',
+    tableBgColor: currentLayout.tableBgColor || '#f8fafc',
+    fontSize: currentLayout.fontSize || 'medium'
+  }), [currentLayout]);
+
+  // Déterminer si le logo doit être affiché
+  const showLogo = useMemo(() => {
+    const showLogoFromSettings = organization?.invoice_settings?.show_logo_on_documents !== false;
+    const showLogoFromLayout = currentLayout.showLogo !== false;
+    return showLogoFromSettings && showLogoFromLayout && organization?.logo_url;
+  }, [organization, currentLayout]);
 
   return (
     <div className="quote-pdf-preview">
@@ -96,17 +122,17 @@ function QuotePdfPreview({
       </div>
 
       <div className="preview-container">
-        <div className="pdf-page">
+        <div className={`pdf-page font-size-${previewStyles.fontSize}`} style={{ '--primary-color': previewStyles.primaryColor, '--text-color': previewStyles.textColor, '--header-text-color': previewStyles.headerTextColor, '--table-bg-color': previewStyles.tableBgColor }}>
           {/* En-tête */}
           <header className="pdf-header">
             {/* Logo de l'organisation */}
-            {organization?.logo_url && organization?.invoice_settings?.show_logo_on_documents !== false && (
-              <div className="pdf-logo">
+            {showLogo && (
+              <div className={`pdf-logo logo-${currentLayout.logoPosition || 'left'} logo-size-${currentLayout.logoSize || 'medium'}`}>
                 <img src={organization.logo_url} alt="Logo" />
               </div>
             )}
             <div className="pdf-header-text">
-              <h1 className="pdf-title">DEVIS</h1>
+              <h1 className="pdf-title" style={{ color: previewStyles.primaryColor }}>{currentLayout.documentTitle || 'DEVIS'}</h1>
               <p className="pdf-number">{quoteData.quote_number}</p>
             </div>
           </header>
@@ -179,7 +205,7 @@ function QuotePdfPreview({
           {/* Tableau des lignes */}
           <table className="pdf-table">
             <thead>
-              <tr>
+              <tr style={{ backgroundColor: previewStyles.primaryColor, color: previewStyles.headerTextColor }}>
                 <th className="col-desc">Description</th>
                 <th className="col-qty">Qté</th>
                 <th className="col-unit">Unité</th>
@@ -196,8 +222,9 @@ function QuotePdfPreview({
               ) : (
                 quoteData.quote_items.map((item, index) => {
                   const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+                  const isAlt = currentLayout.alternateRowColors !== false && index % 2 === 1;
                   return (
-                    <tr key={index} className={index % 2 === 1 ? 'alt' : ''}>
+                    <tr key={index} className={isAlt ? 'alt' : ''} style={isAlt ? { backgroundColor: previewStyles.tableBgColor } : {}}>
                       <td className="col-desc">{item.description}</td>
                       <td className="col-qty">{item.quantity}</td>
                       <td className="col-unit">{item.unit}</td>
@@ -230,7 +257,7 @@ function QuotePdfPreview({
                 <span>TVA</span>
                 <span>{formatAmount(totals.taxAmount)}</span>
               </div>
-              <div className="total-row final">
+              <div className="total-row final" style={{ backgroundColor: previewStyles.primaryColor, color: previewStyles.headerTextColor }}>
                 <span>Total TTC</span>
                 <span>{formatAmount(totals.total)}</span>
               </div>
@@ -275,6 +302,31 @@ function QuotePdfPreview({
                   <span> - BIC: {organization.invoice_settings.bank_details.bic}</span>
                 )}
               </p>
+            </div>
+          )}
+
+          {/* Zone de signature */}
+          {currentLayout.showSignatureZone && (
+            <div className="pdf-signature-zone">
+              <p>Bon pour accord, date et signature :</p>
+              <div className="signature-box"></div>
+            </div>
+          )}
+
+          {/* Pièces jointes (aperçu) */}
+          {attachments.length > 0 && attachments.some(a => a.include_in_pdf) && (
+            <div className="pdf-attachments-preview">
+              <h4>Pièces jointes ({attachments.filter(a => a.include_in_pdf).length})</h4>
+              <div className="attachments-grid">
+                {attachments.filter(a => a.include_in_pdf && a.file_type?.startsWith('image/')).slice(0, 3).map((att, idx) => (
+                  <div key={idx} className="attachment-thumb">
+                    {att.signed_url && <img src={att.signed_url} alt={att.caption || 'Pièce jointe'} />}
+                  </div>
+                ))}
+                {attachments.filter(a => a.include_in_pdf).length > 3 && (
+                  <div className="attachment-more">+{attachments.filter(a => a.include_in_pdf).length - 3}</div>
+                )}
+              </div>
             </div>
           )}
         </div>

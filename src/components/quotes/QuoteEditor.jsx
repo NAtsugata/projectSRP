@@ -742,6 +742,8 @@ function QuoteEditor({
             selectedClient={selectedClient}
             quoteNumber={editingQuote?.quote_number}
             status={editingQuote?.status || 'draft'}
+            layout={layout}
+            attachments={attachments}
           />
         </aside>
       )}
