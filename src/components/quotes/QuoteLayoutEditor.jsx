@@ -1,6 +1,6 @@
 // =============================
 // FILE: src/components/quotes/QuoteLayoutEditor.jsx
-// Éditeur de mise en page pour personnaliser les devis
+// Éditeur de mise en page avancé pour personnaliser les devis
 // =============================
 import React, { useState, useCallback } from 'react';
 import './QuoteLayoutEditor.css';
@@ -18,13 +18,44 @@ const DEFAULT_SECTIONS = [
   { id: 'signature', label: 'Zone signature', icon: '✍️', required: false }
 ];
 
-// Thèmes disponibles
-const THEMES = [
-  { id: 'default', label: 'Standard', preview: '#3b82f6' },
-  { id: 'modern', label: 'Moderne', preview: '#8b5cf6' },
-  { id: 'classic', label: 'Classique', preview: '#059669' },
-  { id: 'minimal', label: 'Minimaliste', preview: '#6b7280' },
-  { id: 'bold', label: 'Audacieux', preview: '#dc2626' }
+// Palette de couleurs prédéfinies
+const COLOR_PRESETS = [
+  { id: 'blue', color: '#3b82f6', label: 'Bleu' },
+  { id: 'purple', color: '#8b5cf6', label: 'Violet' },
+  { id: 'green', color: '#059669', label: 'Vert' },
+  { id: 'red', color: '#dc2626', label: 'Rouge' },
+  { id: 'orange', color: '#ea580c', label: 'Orange' },
+  { id: 'teal', color: '#0d9488', label: 'Turquoise' },
+  { id: 'pink', color: '#db2777', label: 'Rose' },
+  { id: 'indigo', color: '#4f46e5', label: 'Indigo' },
+  { id: 'gray', color: '#6b7280', label: 'Gris' },
+  { id: 'black', color: '#1f2937', label: 'Noir' },
+];
+
+// Couleurs de texte
+const TEXT_COLOR_PRESETS = [
+  { id: 'dark', color: '#1f2937', label: 'Foncé' },
+  { id: 'medium', color: '#4b5563', label: 'Moyen' },
+  { id: 'light', color: '#6b7280', label: 'Clair' },
+  { id: 'navy', color: '#1e3a5f', label: 'Marine' },
+  { id: 'brown', color: '#78350f', label: 'Marron' },
+];
+
+// Polices disponibles
+const FONTS = [
+  { id: 'helvetica', label: 'Helvetica', preview: 'Helvetica, Arial, sans-serif' },
+  { id: 'times', label: 'Times', preview: 'Times New Roman, serif' },
+  { id: 'courier', label: 'Courier', preview: 'Courier New, monospace' },
+];
+
+// Options de filigrane
+const WATERMARK_PRESETS = [
+  { id: 'none', label: 'Aucun' },
+  { id: 'draft', label: 'BROUILLON' },
+  { id: 'confidential', label: 'CONFIDENTIEL' },
+  { id: 'copy', label: 'COPIE' },
+  { id: 'sample', label: 'SPECIMEN' },
+  { id: 'custom', label: 'Personnalisé' },
 ];
 
 // Layout par défaut
@@ -34,12 +65,47 @@ export const DEFAULT_LAYOUT = {
     visible: s.id !== 'signature',
     order: i
   })),
+  // Style de base
   theme: 'default',
   showLogo: true,
   showSignatureZone: false,
-  attachmentDisplay: 'end', // 'inline', 'end', 'separate'
-  fontSize: 'medium', // 'small', 'medium', 'large'
-  pageMargins: 'normal' // 'narrow', 'normal', 'wide'
+  attachmentDisplay: 'end',
+  fontSize: 'medium',
+  pageMargins: 'normal',
+
+  // Couleurs personnalisées
+  primaryColor: '#3b82f6',
+  textColor: '#1f2937',
+  headerTextColor: '#ffffff',
+  tableBgColor: '#f8fafc',
+
+  // Typographie
+  fontFamily: 'helvetica',
+  titleStyle: 'bold',
+
+  // Logo
+  logoPosition: 'left',
+  logoSize: 'medium',
+
+  // En-tête personnalisé
+  customTitle: '',
+  showQuoteNumber: true,
+
+  // Filigrane
+  watermark: 'none',
+  customWatermark: '',
+  watermarkOpacity: 0.1,
+
+  // Style du tableau
+  tableBorderStyle: 'simple',
+  alternateRowColors: true,
+
+  // Pied de page
+  showPageNumbers: true,
+  customFooter: '',
+
+  // Titre du document
+  documentTitle: 'DEVIS',
 };
 
 function QuoteLayoutEditor({
@@ -48,7 +114,7 @@ function QuoteLayoutEditor({
   isOpen,
   onClose
 }) {
-  const [activeTab, setActiveTab] = useState('sections'); // sections, style, options
+  const [activeTab, setActiveTab] = useState('sections');
   const [draggedIndex, setDraggedIndex] = useState(null);
 
   // Fusionner avec les valeurs par défaut
@@ -73,6 +139,14 @@ function QuoteLayoutEditor({
     onLayoutChange?.({
       ...currentLayout,
       [key]: value
+    });
+  }, [currentLayout, onLayoutChange]);
+
+  // Mettre à jour plusieurs valeurs
+  const updateLayoutMultiple = useCallback((updates) => {
+    onLayoutChange?.({
+      ...currentLayout,
+      ...updates
     });
   }, [currentLayout, onLayoutChange]);
 
@@ -124,9 +198,9 @@ function QuoteLayoutEditor({
 
   return (
     <div className="layout-editor-overlay" onClick={onClose}>
-      <div className="layout-editor" onClick={(e) => e.stopPropagation()}>
+      <div className="layout-editor layout-editor-large" onClick={(e) => e.stopPropagation()}>
         <div className="layout-editor-header">
-          <h2>Personnaliser la mise en page</h2>
+          <h2>Personnaliser votre devis</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 
@@ -139,10 +213,22 @@ function QuoteLayoutEditor({
             Sections
           </button>
           <button
-            className={`tab ${activeTab === 'style' ? 'active' : ''}`}
-            onClick={() => setActiveTab('style')}
+            className={`tab ${activeTab === 'colors' ? 'active' : ''}`}
+            onClick={() => setActiveTab('colors')}
           >
-            Style
+            Couleurs
+          </button>
+          <button
+            className={`tab ${activeTab === 'typography' ? 'active' : ''}`}
+            onClick={() => setActiveTab('typography')}
+          >
+            Typographie
+          </button>
+          <button
+            className={`tab ${activeTab === 'header' ? 'active' : ''}`}
+            onClick={() => setActiveTab('header')}
+          >
+            En-tête
           </button>
           <button
             className={`tab ${activeTab === 'options' ? 'active' : ''}`}
@@ -212,58 +298,209 @@ function QuoteLayoutEditor({
             </div>
           )}
 
-          {/* Tab: Style */}
-          {activeTab === 'style' && (
-            <div className="style-tab">
+          {/* Tab: Couleurs */}
+          {activeTab === 'colors' && (
+            <div className="colors-tab">
               <p className="tab-description">
-                Choisissez l'apparence visuelle de vos devis PDF.
+                Personnalisez les couleurs de votre devis pour refléter votre identité visuelle.
               </p>
 
+              {/* Couleur principale */}
               <div className="style-section">
-                <h4>Thème</h4>
-                <div className="theme-grid">
-                  {THEMES.map(theme => (
-                    <button
-                      key={theme.id}
-                      className={`theme-option ${currentLayout.theme === theme.id ? 'selected' : ''}`}
-                      onClick={() => updateLayout('theme', theme.id)}
-                    >
-                      <span
-                        className="theme-preview"
-                        style={{ backgroundColor: theme.preview }}
+                <h4>Couleur principale</h4>
+                <p className="section-help">Utilisée pour les titres, les bordures et les accents</p>
+                <div className="color-picker-row">
+                  <div className="color-presets">
+                    {COLOR_PRESETS.map(preset => (
+                      <button
+                        key={preset.id}
+                        className={`color-preset ${currentLayout.primaryColor === preset.color ? 'selected' : ''}`}
+                        style={{ backgroundColor: preset.color }}
+                        onClick={() => updateLayout('primaryColor', preset.color)}
+                        title={preset.label}
                       />
-                      <span className="theme-label">{theme.label}</span>
+                    ))}
+                  </div>
+                  <div className="custom-color">
+                    <input
+                      type="color"
+                      value={currentLayout.primaryColor}
+                      onChange={(e) => updateLayout('primaryColor', e.target.value)}
+                      className="color-input"
+                    />
+                    <span className="color-value">{currentLayout.primaryColor}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Couleur du texte */}
+              <div className="style-section">
+                <h4>Couleur du texte</h4>
+                <p className="section-help">Couleur du texte principal du document</p>
+                <div className="color-picker-row">
+                  <div className="color-presets">
+                    {TEXT_COLOR_PRESETS.map(preset => (
+                      <button
+                        key={preset.id}
+                        className={`color-preset ${currentLayout.textColor === preset.color ? 'selected' : ''}`}
+                        style={{ backgroundColor: preset.color }}
+                        onClick={() => updateLayout('textColor', preset.color)}
+                        title={preset.label}
+                      />
+                    ))}
+                  </div>
+                  <div className="custom-color">
+                    <input
+                      type="color"
+                      value={currentLayout.textColor}
+                      onChange={(e) => updateLayout('textColor', e.target.value)}
+                      className="color-input"
+                    />
+                    <span className="color-value">{currentLayout.textColor}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Couleur d'en-tête de tableau */}
+              <div className="style-section">
+                <h4>Texte des en-têtes</h4>
+                <p className="section-help">Couleur du texte dans les en-têtes de tableau</p>
+                <div className="color-picker-row">
+                  <div className="color-presets">
+                    <button
+                      className={`color-preset ${currentLayout.headerTextColor === '#ffffff' ? 'selected' : ''}`}
+                      style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb' }}
+                      onClick={() => updateLayout('headerTextColor', '#ffffff')}
+                      title="Blanc"
+                    />
+                    <button
+                      className={`color-preset ${currentLayout.headerTextColor === '#1f2937' ? 'selected' : ''}`}
+                      style={{ backgroundColor: '#1f2937' }}
+                      onClick={() => updateLayout('headerTextColor', '#1f2937')}
+                      title="Noir"
+                    />
+                  </div>
+                  <div className="custom-color">
+                    <input
+                      type="color"
+                      value={currentLayout.headerTextColor}
+                      onChange={(e) => updateLayout('headerTextColor', e.target.value)}
+                      className="color-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Couleur de fond alternée */}
+              <div className="style-section">
+                <h4>Fond des lignes alternées</h4>
+                <p className="section-help">Couleur de fond pour les lignes paires du tableau</p>
+                <div className="color-picker-row">
+                  <div className="color-presets">
+                    {[
+                      { color: '#f8fafc', label: 'Gris clair' },
+                      { color: '#f0f9ff', label: 'Bleu clair' },
+                      { color: '#f0fdf4', label: 'Vert clair' },
+                      { color: '#fefce8', label: 'Jaune clair' },
+                      { color: '#ffffff', label: 'Blanc' },
+                    ].map(preset => (
+                      <button
+                        key={preset.color}
+                        className={`color-preset ${currentLayout.tableBgColor === preset.color ? 'selected' : ''}`}
+                        style={{ backgroundColor: preset.color, border: '1px solid #e5e7eb' }}
+                        onClick={() => updateLayout('tableBgColor', preset.color)}
+                        title={preset.label}
+                      />
+                    ))}
+                  </div>
+                  <div className="custom-color">
+                    <input
+                      type="color"
+                      value={currentLayout.tableBgColor}
+                      onChange={(e) => updateLayout('tableBgColor', e.target.value)}
+                      className="color-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Typographie */}
+          {activeTab === 'typography' && (
+            <div className="typography-tab">
+              <p className="tab-description">
+                Configurez la police et les styles de texte de votre devis.
+              </p>
+
+              {/* Police */}
+              <div className="style-section">
+                <h4>Police de caractères</h4>
+                <div className="font-options">
+                  {FONTS.map(font => (
+                    <button
+                      key={font.id}
+                      className={`font-option ${currentLayout.fontFamily === font.id ? 'selected' : ''}`}
+                      onClick={() => updateLayout('fontFamily', font.id)}
+                      style={{ fontFamily: font.preview }}
+                    >
+                      <span className="font-preview" style={{ fontFamily: font.preview }}>Aa</span>
+                      <span className="font-label">{font.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Taille du texte */}
               <div className="style-section">
                 <h4>Taille du texte</h4>
                 <div className="button-group">
                   {[
-                    { id: 'small', label: 'Petit' },
-                    { id: 'medium', label: 'Moyen' },
-                    { id: 'large', label: 'Grand' }
+                    { id: 'small', label: 'Petit', desc: 'Compact, plus de contenu par page' },
+                    { id: 'medium', label: 'Moyen', desc: 'Taille standard, équilibré' },
+                    { id: 'large', label: 'Grand', desc: 'Plus lisible, moins de contenu' }
                   ].map(size => (
                     <button
                       key={size.id}
-                      className={`option-btn ${currentLayout.fontSize === size.id ? 'selected' : ''}`}
+                      className={`option-btn-large ${currentLayout.fontSize === size.id ? 'selected' : ''}`}
                       onClick={() => updateLayout('fontSize', size.id)}
                     >
-                      {size.label}
+                      <span className="option-title">{size.label}</span>
+                      <span className="option-desc">{size.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Style du titre */}
               <div className="style-section">
-                <h4>Marges</h4>
+                <h4>Style du titre</h4>
                 <div className="button-group">
                   {[
-                    { id: 'narrow', label: 'Étroites' },
-                    { id: 'normal', label: 'Normales' },
-                    { id: 'wide', label: 'Larges' }
+                    { id: 'normal', label: 'Normal' },
+                    { id: 'bold', label: 'Gras' },
+                    { id: 'italic', label: 'Italique' },
+                    { id: 'uppercase', label: 'MAJUSCULES' }
+                  ].map(style => (
+                    <button
+                      key={style.id}
+                      className={`option-btn ${currentLayout.titleStyle === style.id ? 'selected' : ''}`}
+                      onClick={() => updateLayout('titleStyle', style.id)}
+                    >
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Marges */}
+              <div className="style-section">
+                <h4>Marges de la page</h4>
+                <div className="button-group">
+                  {[
+                    { id: 'narrow', label: 'Étroites', desc: '10mm' },
+                    { id: 'normal', label: 'Normales', desc: '15mm' },
+                    { id: 'wide', label: 'Larges', desc: '20mm' }
                   ].map(margin => (
                     <button
                       key={margin.id}
@@ -278,6 +515,142 @@ function QuoteLayoutEditor({
             </div>
           )}
 
+          {/* Tab: En-tête */}
+          {activeTab === 'header' && (
+            <div className="header-tab">
+              <p className="tab-description">
+                Personnalisez l'en-tête et l'apparence de votre devis.
+              </p>
+
+              {/* Titre du document */}
+              <div className="style-section">
+                <h4>Titre du document</h4>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder="DEVIS"
+                  value={currentLayout.documentTitle || ''}
+                  onChange={(e) => updateLayout('documentTitle', e.target.value)}
+                />
+                <p className="section-help">Laissez vide pour utiliser "DEVIS" par défaut</p>
+              </div>
+
+              {/* Afficher le logo */}
+              <div className="style-section">
+                <h4>Logo</h4>
+                <div className="option-row inline">
+                  <label className="option-label">
+                    <input
+                      type="checkbox"
+                      checked={currentLayout.showLogo}
+                      onChange={(e) => updateLayout('showLogo', e.target.checked)}
+                    />
+                    <span>Afficher le logo</span>
+                  </label>
+                </div>
+
+                {currentLayout.showLogo && (
+                  <>
+                    <div className="sub-option">
+                      <span className="sub-label">Position du logo</span>
+                      <div className="button-group">
+                        {[
+                          { id: 'left', label: 'Gauche' },
+                          { id: 'center', label: 'Centre' },
+                          { id: 'right', label: 'Droite' }
+                        ].map(pos => (
+                          <button
+                            key={pos.id}
+                            className={`option-btn-small ${currentLayout.logoPosition === pos.id ? 'selected' : ''}`}
+                            onClick={() => updateLayout('logoPosition', pos.id)}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="sub-option">
+                      <span className="sub-label">Taille du logo</span>
+                      <div className="button-group">
+                        {[
+                          { id: 'small', label: 'Petit', width: '30mm' },
+                          { id: 'medium', label: 'Moyen', width: '50mm' },
+                          { id: 'large', label: 'Grand', width: '70mm' }
+                        ].map(size => (
+                          <button
+                            key={size.id}
+                            className={`option-btn-small ${currentLayout.logoSize === size.id ? 'selected' : ''}`}
+                            onClick={() => updateLayout('logoSize', size.id)}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Numéro de devis */}
+              <div className="style-section">
+                <h4>Numéro de référence</h4>
+                <div className="option-row inline">
+                  <label className="option-label">
+                    <input
+                      type="checkbox"
+                      checked={currentLayout.showQuoteNumber}
+                      onChange={(e) => updateLayout('showQuoteNumber', e.target.checked)}
+                    />
+                    <span>Afficher le numéro de devis</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Filigrane */}
+              <div className="style-section">
+                <h4>Filigrane</h4>
+                <p className="section-help">Ajoutez un texte en filigrane sur le document</p>
+                <div className="watermark-options">
+                  {WATERMARK_PRESETS.map(wm => (
+                    <button
+                      key={wm.id}
+                      className={`watermark-btn ${currentLayout.watermark === wm.id ? 'selected' : ''}`}
+                      onClick={() => updateLayout('watermark', wm.id)}
+                    >
+                      {wm.label}
+                    </button>
+                  ))}
+                </div>
+
+                {currentLayout.watermark === 'custom' && (
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="Texte du filigrane..."
+                    value={currentLayout.customWatermark || ''}
+                    onChange={(e) => updateLayout('customWatermark', e.target.value)}
+                  />
+                )}
+
+                {currentLayout.watermark !== 'none' && (
+                  <div className="sub-option">
+                    <span className="sub-label">Opacité: {Math.round(currentLayout.watermarkOpacity * 100)}%</span>
+                    <input
+                      type="range"
+                      min="0.05"
+                      max="0.3"
+                      step="0.05"
+                      value={currentLayout.watermarkOpacity}
+                      onChange={(e) => updateLayout('watermarkOpacity', parseFloat(e.target.value))}
+                      className="range-input"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Tab: Options */}
           {activeTab === 'options' && (
             <div className="options-tab">
@@ -285,31 +658,56 @@ function QuoteLayoutEditor({
                 Configurez les options supplémentaires de vos devis.
               </p>
 
-              <div className="option-row">
-                <label className="option-label">
-                  <input
-                    type="checkbox"
-                    checked={currentLayout.showLogo}
-                    onChange={(e) => updateLayout('showLogo', e.target.checked)}
-                  />
-                  <span>Afficher le logo</span>
-                </label>
-                <span className="option-help">Votre logo apparaîtra en haut du devis</span>
+              {/* Style du tableau */}
+              <div className="style-section">
+                <h4>Style du tableau</h4>
+                <div className="button-group">
+                  {[
+                    { id: 'none', label: 'Sans bordure', desc: 'Minimaliste' },
+                    { id: 'simple', label: 'Simple', desc: 'Lignes horizontales' },
+                    { id: 'full', label: 'Complet', desc: 'Toutes les bordures' }
+                  ].map(style => (
+                    <button
+                      key={style.id}
+                      className={`option-btn-large ${currentLayout.tableBorderStyle === style.id ? 'selected' : ''}`}
+                      onClick={() => updateLayout('tableBorderStyle', style.id)}
+                    >
+                      <span className="option-title">{style.label}</span>
+                      <span className="option-desc">{style.desc}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="option-row inline">
+                  <label className="option-label">
+                    <input
+                      type="checkbox"
+                      checked={currentLayout.alternateRowColors}
+                      onChange={(e) => updateLayout('alternateRowColors', e.target.checked)}
+                    />
+                    <span>Alterner les couleurs des lignes</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="option-row">
-                <label className="option-label">
-                  <input
-                    type="checkbox"
-                    checked={currentLayout.showSignatureZone}
-                    onChange={(e) => updateLayout('showSignatureZone', e.target.checked)}
-                  />
-                  <span>Zone de signature client</span>
-                </label>
-                <span className="option-help">Ajoute un espace pour la signature en bas du devis</span>
+              {/* Zone de signature */}
+              <div className="style-section">
+                <h4>Zone de signature</h4>
+                <div className="option-row inline">
+                  <label className="option-label">
+                    <input
+                      type="checkbox"
+                      checked={currentLayout.showSignatureZone}
+                      onChange={(e) => updateLayout('showSignatureZone', e.target.checked)}
+                    />
+                    <span>Afficher une zone de signature client</span>
+                  </label>
+                </div>
+                <p className="section-help">Ajoute un espace "Bon pour accord" en bas du devis</p>
               </div>
 
-              <div className="option-section">
+              {/* Pièces jointes */}
+              <div className="style-section">
                 <h4>Affichage des pièces jointes</h4>
                 <div className="radio-group">
                   {[
@@ -331,6 +729,32 @@ function QuoteLayoutEditor({
                       </div>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Pied de page */}
+              <div className="style-section">
+                <h4>Pied de page</h4>
+                <div className="option-row inline">
+                  <label className="option-label">
+                    <input
+                      type="checkbox"
+                      checked={currentLayout.showPageNumbers}
+                      onChange={(e) => updateLayout('showPageNumbers', e.target.checked)}
+                    />
+                    <span>Afficher la numérotation des pages</span>
+                  </label>
+                </div>
+
+                <div className="sub-option">
+                  <span className="sub-label">Texte personnalisé en pied de page</span>
+                  <textarea
+                    className="text-input textarea"
+                    placeholder="Texte supplémentaire pour le pied de page..."
+                    value={currentLayout.customFooter || ''}
+                    onChange={(e) => updateLayout('customFooter', e.target.value)}
+                    rows={2}
+                  />
                 </div>
               </div>
             </div>
