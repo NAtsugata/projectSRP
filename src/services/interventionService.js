@@ -17,7 +17,7 @@ export const interventionService = {
         .from('interventions')
         .select(`
           *,
-          client:clients (
+          client_data:clients (
             id,
             name,
             company_name,
@@ -40,7 +40,7 @@ export const interventionService = {
         .from('interventions')
         .select(`
           *,
-          client:clients (
+          client_data:clients (
             id,
             name,
             company_name,
