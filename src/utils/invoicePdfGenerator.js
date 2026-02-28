@@ -44,6 +44,21 @@ const formatDate = (date) => {
 };
 
 /**
+ * Convertit une couleur hexadécimale en tableau RGB
+ * @param {string} hex - Couleur hexadécimale (ex: '#3b82f6')
+ * @returns {number[]} - Tableau [r, g, b]
+ */
+const hexToRgb = (hex) => {
+  if (!hex || typeof hex !== 'string') return [59, 130, 246]; // Bleu par défaut
+  const cleanHex = hex.replace('#', '');
+  if (cleanHex.length !== 6) return [59, 130, 246];
+  const r = parseInt(cleanHex.slice(0, 2), 16);
+  const g = parseInt(cleanHex.slice(2, 4), 16);
+  const b = parseInt(cleanHex.slice(4, 6), 16);
+  return [r, g, b];
+};
+
+/**
  * Charge une image depuis une URL et retourne son data URL
  * @param {string} url - URL de l'image
  * @returns {Promise<string|null>} - Data URL de l'image ou null en cas d'erreur
@@ -1201,6 +1216,12 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
   };
   const margin = MARGINS[layout.pageMargins] || MARGINS.normal;
 
+  // Custom colors from layout
+  const primaryColorRgb = layout.primaryColor ? hexToRgb(layout.primaryColor) : themeColor;
+  const headerTextColorRgb = layout.headerTextColor ? hexToRgb(layout.headerTextColor) : [255, 255, 255];
+  const tableBgColorRgb = layout.tableBgColor ? hexToRgb(layout.tableBgColor) : [248, 250, 252];
+  const useAlternateRows = layout.alternateRowColors !== false;
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -1261,10 +1282,10 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
       y = addLogoToPdf(doc, logoDataUrl, margin, y, 50, 20);
     }
 
-    y = drawText('DEVIS', pageWidth / 2, y + 5, {
+    y = drawText(layout.documentTitle || 'DEVIS', pageWidth / 2, y + 5, {
       size: fontSize.title,
       bold: true,
-      color: themeColor,
+      color: primaryColorRgb,
       align: 'center',
     });
     y = drawText(quote?.quote_number || 'DEV-XXXX', pageWidth / 2, y + 2, {
@@ -1323,7 +1344,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
   const renderItems = () => {
     const items = quote?.quote_items || [];
     const tableY = y;
-    doc.setFillColor(...themeColor);
+    doc.setFillColor(...primaryColorRgb);
     doc.rect(margin, tableY, pageWidth - margin * 2, 8, 'F');
 
     const cols = {
@@ -1338,7 +1359,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
     const headerY = tableY + 5.5;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...headerTextColorRgb);
     doc.text('Description', cols.description.x, headerY);
     doc.text('Qte', cols.quantity.x, headerY);
     doc.text('Unite', cols.unit.x, headerY);
@@ -1352,8 +1373,8 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
       checkPageBreak(15);
       const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
 
-      if (index % 2 === 1) {
-        doc.setFillColor(248, 250, 252);
+      if (useAlternateRows && index % 2 === 1) {
+        doc.setFillColor(...tableBgColorRgb);
         doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 2, 'F');
       }
 
@@ -1403,11 +1424,11 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
       y += LINE_HEIGHT;
     }
 
-    doc.setFillColor(...themeColor);
+    doc.setFillColor(...primaryColorRgb);
     doc.roundedRect(totalsX - 35, y - 3, 65, 10, 2, 2, 'F');
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...headerTextColorRgb);
     doc.text('TOTAL TTC:', totalsX - 30, y + 4);
     doc.text(formatAmount(quote?.total), totalsX + 25, y + 4, { align: 'right' });
 
