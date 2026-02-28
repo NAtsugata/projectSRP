@@ -268,13 +268,13 @@ function AdminClientsView({
 
   // Aller a l'intervention
   const handleGoToIntervention = (interventionId) => {
-    navigate(`/admin/planning/${interventionId}`);
+    navigate(`/planning/${interventionId}`);
   };
 
   // Creer intervention pour ce client
   const handleCreateInterventionForClient = () => {
     if (!selectedClient) return;
-    navigate('/admin/planning', {
+    navigate('/planning', {
       state: {
         prefillClient: {
           client_id: selectedClient.id,

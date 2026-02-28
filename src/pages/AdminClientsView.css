@@ -816,3 +816,234 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* ==========================================
+   DARK THEME SUPPORT
+   ========================================== */
+
+/* Appliquer le theme sombre quand les variables sont definies */
+@media (prefers-color-scheme: dark) {
+  .stat-card,
+  .client-card,
+  .client-detail-panel,
+  .modal-content,
+  .panel-header {
+    background: var(--bg-primary, #1e293b) !important;
+    color: var(--text-primary, #f8fafc) !important;
+  }
+
+  .client-card.inactive {
+    background: var(--bg-secondary, #334155) !important;
+  }
+
+  .btn-export,
+  .filter-btn,
+  .btn-secondary,
+  .btn-close,
+  .btn-icon {
+    background: var(--bg-secondary, #334155) !important;
+    color: var(--text-primary, #f8fafc) !important;
+    border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+  }
+
+  .search-box input,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: var(--bg-secondary, #334155) !important;
+    color: var(--text-primary, #f8fafc) !important;
+    border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+  }
+
+  .panel-header,
+  .modal-header {
+    border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+  }
+
+  .panel-section {
+    border-color: var(--border-color-light, rgba(148, 163, 184, 0.1)) !important;
+  }
+
+  .mini-stat,
+  .contact-item,
+  .intervention-item {
+    background: var(--bg-secondary, #334155) !important;
+  }
+
+  .intervention-item:hover,
+  .client-card:hover {
+    background: var(--bg-tertiary, #475569) !important;
+  }
+
+  .client-name,
+  .panel-header h2,
+  .panel-section h3,
+  .modal-header h2,
+  .contact-name,
+  .intervention-title,
+  .stat-value,
+  .mini-stat-value,
+  .form-section-title,
+  .info-item span {
+    color: var(--text-primary, #f8fafc) !important;
+  }
+
+  .company-name,
+  .client-detail,
+  .stat-label,
+  .mini-stat-label,
+  .contact-role,
+  .contact-email,
+  .contact-phone,
+  .intervention-date,
+  .info-item label,
+  .form-group label,
+  .client-notes,
+  .no-contacts,
+  .no-interventions {
+    color: var(--text-secondary, #cbd5e1) !important;
+  }
+
+  .form-section-title {
+    border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+  }
+
+  .modal-footer {
+    border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+  }
+}
+
+/* Support explicite via classe .dark-theme sur body ou html */
+.dark-theme .stat-card,
+.dark-theme .client-card,
+.dark-theme .client-detail-panel,
+.dark-theme .modal-content,
+.dark-theme .panel-header,
+body[data-theme="dark"] .stat-card,
+body[data-theme="dark"] .client-card,
+body[data-theme="dark"] .client-detail-panel,
+body[data-theme="dark"] .modal-content,
+body[data-theme="dark"] .panel-header {
+  background: var(--bg-primary, #1e293b) !important;
+  color: var(--text-primary, #f8fafc) !important;
+}
+
+.dark-theme .client-card.inactive,
+body[data-theme="dark"] .client-card.inactive {
+  background: var(--bg-secondary, #334155) !important;
+}
+
+.dark-theme .btn-export,
+.dark-theme .filter-btn,
+.dark-theme .btn-secondary,
+.dark-theme .btn-close,
+.dark-theme .btn-icon,
+body[data-theme="dark"] .btn-export,
+body[data-theme="dark"] .filter-btn,
+body[data-theme="dark"] .btn-secondary,
+body[data-theme="dark"] .btn-close,
+body[data-theme="dark"] .btn-icon {
+  background: var(--bg-secondary, #334155) !important;
+  color: var(--text-primary, #f8fafc) !important;
+  border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+}
+
+.dark-theme .search-box input,
+.dark-theme .form-group input,
+.dark-theme .form-group select,
+.dark-theme .form-group textarea,
+body[data-theme="dark"] .search-box input,
+body[data-theme="dark"] .form-group input,
+body[data-theme="dark"] .form-group select,
+body[data-theme="dark"] .form-group textarea {
+  background: var(--bg-secondary, #334155) !important;
+  color: var(--text-primary, #f8fafc) !important;
+  border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+}
+
+.dark-theme .panel-header,
+.dark-theme .modal-header,
+body[data-theme="dark"] .panel-header,
+body[data-theme="dark"] .modal-header {
+  border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+}
+
+.dark-theme .panel-section,
+body[data-theme="dark"] .panel-section {
+  border-color: var(--border-color-light, rgba(148, 163, 184, 0.1)) !important;
+}
+
+.dark-theme .mini-stat,
+.dark-theme .contact-item,
+.dark-theme .intervention-item,
+body[data-theme="dark"] .mini-stat,
+body[data-theme="dark"] .contact-item,
+body[data-theme="dark"] .intervention-item {
+  background: var(--bg-secondary, #334155) !important;
+}
+
+.dark-theme .intervention-item:hover,
+.dark-theme .client-card:hover,
+body[data-theme="dark"] .intervention-item:hover,
+body[data-theme="dark"] .client-card:hover {
+  background: var(--bg-tertiary, #475569) !important;
+}
+
+.dark-theme .client-name,
+.dark-theme .panel-header h2,
+.dark-theme .panel-section h3,
+.dark-theme .modal-header h2,
+.dark-theme .contact-name,
+.dark-theme .intervention-title,
+.dark-theme .stat-value,
+.dark-theme .mini-stat-value,
+.dark-theme .form-section-title,
+.dark-theme .info-item span,
+body[data-theme="dark"] .client-name,
+body[data-theme="dark"] .panel-header h2,
+body[data-theme="dark"] .panel-section h3,
+body[data-theme="dark"] .modal-header h2,
+body[data-theme="dark"] .contact-name,
+body[data-theme="dark"] .intervention-title,
+body[data-theme="dark"] .stat-value,
+body[data-theme="dark"] .mini-stat-value,
+body[data-theme="dark"] .form-section-title,
+body[data-theme="dark"] .info-item span {
+  color: var(--text-primary, #f8fafc) !important;
+}
+
+.dark-theme .company-name,
+.dark-theme .client-detail,
+.dark-theme .stat-label,
+.dark-theme .mini-stat-label,
+.dark-theme .contact-role,
+.dark-theme .contact-email,
+.dark-theme .contact-phone,
+.dark-theme .intervention-date,
+.dark-theme .info-item label,
+.dark-theme .form-group label,
+.dark-theme .client-notes,
+.dark-theme .no-contacts,
+.dark-theme .no-interventions,
+body[data-theme="dark"] .company-name,
+body[data-theme="dark"] .client-detail,
+body[data-theme="dark"] .stat-label,
+body[data-theme="dark"] .mini-stat-label,
+body[data-theme="dark"] .contact-role,
+body[data-theme="dark"] .contact-email,
+body[data-theme="dark"] .contact-phone,
+body[data-theme="dark"] .intervention-date,
+body[data-theme="dark"] .info-item label,
+body[data-theme="dark"] .form-group label,
+body[data-theme="dark"] .client-notes,
+body[data-theme="dark"] .no-contacts,
+body[data-theme="dark"] .no-interventions {
+  color: var(--text-secondary, #cbd5e1) !important;
+}
+
+.dark-theme .form-section-title,
+.dark-theme .modal-footer,
+body[data-theme="dark"] .form-section-title,
+body[data-theme="dark"] .modal-footer {
+  border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+}
