@@ -279,7 +279,9 @@ function AdminClientsView({
         prefillClient: {
           client_id: selectedClient.id,
           client: selectedClient.name,
-          address: [selectedClient.address, selectedClient.postal_code, selectedClient.city].filter(Boolean).join(', ')
+          address: [selectedClient.address, selectedClient.postal_code, selectedClient.city].filter(Boolean).join(', '),
+          client_phone: selectedClient.phone || selectedClient.mobile || '',
+          client_email: selectedClient.email || ''
         }
       }
     });

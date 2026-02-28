@@ -2,7 +2,7 @@
 // Gestion du planning admin avec composants modulaires
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
 import AbsenceManager from '../components/agenda/AbsenceManager';
@@ -30,8 +30,14 @@ export default function AdminPlanningView({
   onAssignChecklist
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+
+  // Récupérer le client préfillé depuis la navigation (depuis AdminClientsView)
+  const prefillClient = location.state?.prefillClient || null;
+
+  // Ouvrir automatiquement le formulaire si on arrive avec un client préfillé
+  const [showForm, setShowForm] = useState(searchParams.get('new') === 'true' || !!prefillClient);
   const [viewMode, setViewMode] = useState(() => {
     // Récupérer la préférence de vue depuis localStorage (Gantt par défaut)
     return localStorage.getItem('planningViewMode') || VIEW_MODES.GANTT;
@@ -214,6 +220,7 @@ export default function AdminPlanningView({
             onSubmit={handleSubmit}
             onCancel={closeForm}
             isSubmitting={isSubmitting}
+            prefillClient={prefillClient}
           />
         </div>
       )}

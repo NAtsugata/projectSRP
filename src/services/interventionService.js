@@ -17,6 +17,15 @@ export const interventionService = {
         .from('interventions')
         .select(`
           *,
+          client:clients (
+            id,
+            name,
+            company_name,
+            email,
+            phone,
+            address,
+            city
+          ),
           intervention_assignments!inner (
             user_id,
             profiles (full_name)
@@ -31,6 +40,15 @@ export const interventionService = {
         .from('interventions')
         .select(`
           *,
+          client:clients (
+            id,
+            name,
+            company_name,
+            email,
+            phone,
+            address,
+            city
+          ),
           intervention_assignments (
             user_id,
             profiles (full_name)

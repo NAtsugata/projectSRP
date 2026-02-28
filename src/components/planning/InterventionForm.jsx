@@ -45,18 +45,32 @@ const InterventionForm = ({
   users = [],
   onSubmit,
   onCancel,
-  isSubmitting = false
+  isSubmitting = false,
+  prefillClient = null
 }) => {
+  // Si un client est préfillé (depuis la vue clients), fusionner avec les valeurs initiales
+  const mergedInitialValues = prefillClient
+    ? {
+        ...initialValues,
+        client: prefillClient.client || '',
+        address: prefillClient.address || '',
+        client_phone: prefillClient.client_phone || '',
+        client_email: prefillClient.client_email || '',
+        client_id: prefillClient.client_id || null
+      }
+    : initialValues;
   const { values, errors, handleChange, handleSubmit, reset } = useForm(
-    initialValues,
+    mergedInitialValues,
     validateIntervention,
     async (formData) => {
       logger.log('InterventionForm: Submitting...', formData);
 
       // Ajouter les dates planifiées aux données du formulaire
+      // Conserver le client_id si fourni via prefillClient
       const formDataWithScheduledDates = {
         ...formData,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null,
+        client_id: selectedClient?.id || prefillClient?.client_id || null
       };
 
       await onSubmit({
@@ -75,7 +89,10 @@ const InterventionForm = ({
   // Client autocomplete
   const [clientSuggestions, setClientSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
+  // Si un client est préfillé, le marquer comme sélectionné
+  const [selectedClient, setSelectedClient] = useState(
+    prefillClient?.client_id ? { id: prefillClient.client_id, name: prefillClient.client } : null
+  );
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef(null);
   const suggestionsRef = useRef(null);

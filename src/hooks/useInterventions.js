@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { interventionService } from '../services/interventionService';
+import { clientService } from '../services/clientService';
 import { cacheInterventions, getCachedInterventions } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 import logger from '../utils/logger';
@@ -73,16 +74,29 @@ export function useInterventions(userId = null, isArchived = false) {
                 return { data: tempIntervention };
             }
 
+            const interventionData = params.interventionData || params;
+
+            // Si un client_id n'est pas fourni mais qu'on a un nom de client,
+            // créer ou récupérer le client automatiquement
+            if (!interventionData.client_id && interventionData.client) {
+                logger.log('[useInterventions] Auto-creation/recuperation du client:', interventionData.client);
+                const { data: clientData } = await clientService.getOrCreateClientFromIntervention(interventionData);
+                if (clientData?.id) {
+                    interventionData.client_id = clientData.id;
+                    logger.log('[useInterventions] Client lie a l\'intervention:', clientData.id);
+                }
+            }
+
             let result;
             // Support both old style (just data) and new style (object with fields)
             if (params.interventionData || params.assignedUserIds) {
                 result = await interventionService.createIntervention(
-                    params.interventionData || params,
+                    interventionData,
                     params.assignedUserIds,
                     params.briefingFiles
                 );
             } else {
-                result = await interventionService.createIntervention(params);
+                result = await interventionService.createIntervention(interventionData);
             }
 
             if (result.error) throw result.error;
@@ -91,6 +105,8 @@ export function useInterventions(userId = null, isArchived = false) {
         onSuccess: () => {
             // Invalider le cache pour recharger les données
             queryClient.invalidateQueries({ queryKey: ['interventions'] });
+            // Invalider aussi le cache des clients car un nouveau client peut avoir été créé
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
         },
     });
 
