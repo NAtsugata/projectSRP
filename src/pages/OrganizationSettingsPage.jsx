@@ -166,6 +166,13 @@ function OrganizationSettingsPage() {
     try {
       const logoUrl = await uploadLogo();
 
+      // Récupérer les paramètres de facturation existants pour mettre à jour show_logo_on_documents
+      const currentInvoiceSettings = organization?.invoice_settings || {};
+      const updatedInvoiceSettings = {
+        ...currentInvoiceSettings,
+        show_logo_on_documents: formData.show_logo_on_documents ?? true
+      };
+
       const updates = {
         name: formData.name || '',
         address: formData.address || '',
@@ -178,6 +185,7 @@ function OrganizationSettingsPage() {
         legal_form: formData.legal_form || null,
         rcs: formData.rcs || null,
         logo_url: logoUrl || null,
+        invoice_settings: updatedInvoiceSettings,
         updated_at: new Date().toISOString()
       };
 
