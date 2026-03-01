@@ -55,6 +55,10 @@ export default function AdminUserView({ users, onUpdateUser }) {
                             <div>
                                 <p className="font-semibold">{u.full_name}</p>
                                 <p className="text-muted">{u.email}</p>
+                                <p className="text-muted" style={{fontSize: '0.75rem', marginTop: '0.25rem'}}>
+                                    <span style={{fontWeight: 500}}>TYPE: </span>
+                                    {u.is_admin ? 'Admin' : 'Standard'}
+                                </p>
                             </div>
                             <button onClick={() => setEditingUser(u)} className="btn-icon"><EditIcon/></button>
                         </li>
