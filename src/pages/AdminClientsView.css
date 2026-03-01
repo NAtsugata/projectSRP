@@ -1063,35 +1063,35 @@ body[data-theme="dark"] .modal-footer {
 /* Type badges en mode sombre */
 .dark-theme .type-standard,
 body[data-theme="dark"] .type-standard {
-  background: rgba(148, 163, 184, 0.2) !important;
-  color: #e2e8f0 !important;
+  background: #e5e7eb !important;
+  color: #1f2937 !important;
 }
 
 .dark-theme .type-vip,
 body[data-theme="dark"] .type-vip {
-  background: rgba(251, 191, 36, 0.25) !important;
-  color: #fcd34d !important;
+  background: #fcd34d !important;
+  color: #78350f !important;
 }
 
 .dark-theme .type-prospect,
 body[data-theme="dark"] .type-prospect {
-  background: rgba(96, 165, 250, 0.25) !important;
-  color: #93c5fd !important;
+  background: #93c5fd !important;
+  color: #1e3a8a !important;
 }
 
 @media (prefers-color-scheme: dark) {
   .type-standard {
-    background: rgba(148, 163, 184, 0.2) !important;
-    color: #e2e8f0 !important;
+    background: #e5e7eb !important;
+    color: #1f2937 !important;
   }
 
   .type-vip {
-    background: rgba(251, 191, 36, 0.25) !important;
-    color: #fcd34d !important;
+    background: #fcd34d !important;
+    color: #78350f !important;
   }
 
   .type-prospect {
-    background: rgba(96, 165, 250, 0.25) !important;
-    color: #93c5fd !important;
+    background: #93c5fd !important;
+    color: #1e3a8a !important;
   }
 }
