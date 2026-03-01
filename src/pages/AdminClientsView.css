@@ -46,16 +46,17 @@
 
 .btn-export {
   padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #d1d5db);
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
+  color: var(--text-primary, inherit);
 }
 
 .btn-export:hover {
-  background: #f3f4f6;
+  background: var(--bg-secondary, #f3f4f6);
 }
 
 .btn-primary {
@@ -88,11 +89,12 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-primary, white);
   padding: 1rem;
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   text-align: center;
+  border: 1px solid var(--border-color, transparent);
 }
 
 .stat-card.stat-vip {
@@ -148,16 +150,17 @@
 
 .filter-btn {
   padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #d1d5db);
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 0.75rem;
   transition: all 0.2s;
+  color: var(--text-primary, inherit);
 }
 
 .filter-btn:hover {
-  background: #f3f4f6;
+  background: var(--bg-secondary, #f3f4f6);
 }
 
 .filter-btn.active {
@@ -195,18 +198,21 @@
 
 /* Client card */
 .client-card {
-  background: white;
+  background: var(--bg-primary, white);
   border-radius: 0.75rem;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  border: 1px solid var(--border-color, transparent);
+  color: var(--text-primary, inherit);
 }
 
 .client-card:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
+  background: var(--bg-secondary, #f9fafb);
 }
 
 .client-card.selected {
@@ -215,7 +221,7 @@
 
 .client-card.inactive {
   opacity: 0.6;
-  background: #f9fafb;
+  background: var(--bg-secondary, #f9fafb);
 }
 
 .client-card-header {
@@ -305,15 +311,16 @@
   height: 1.75rem;
   border: none;
   border-radius: 0.375rem;
-  background: #f3f4f6;
+  background: var(--bg-secondary, #f3f4f6);
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s;
+  color: var(--text-primary, inherit);
 }
 
 .btn-icon:hover {
-  background: #e5e7eb;
+  background: var(--bg-tertiary, #e5e7eb);
 }
 
 .btn-icon.btn-danger:hover {
@@ -325,12 +332,14 @@
 .client-detail-panel {
   flex: 1;
   max-width: 50%;
-  background: white;
+  background: var(--bg-primary, white);
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
+  border: 1px solid var(--border-color, transparent);
+  color: var(--text-primary, inherit);
 }
 
 .panel-header {
@@ -338,10 +347,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
   position: sticky;
   top: 0;
-  background: white;
+  background: var(--bg-primary, white);
   z-index: 10;
 }
 
@@ -354,19 +363,20 @@
   width: 2rem;
   height: 2rem;
   border: none;
-  background: #f3f4f6;
+  background: var(--bg-secondary, #f3f4f6);
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 1rem;
+  color: var(--text-primary, inherit);
 }
 
 .btn-close:hover {
-  background: #e5e7eb;
+  background: var(--bg-tertiary, #e5e7eb);
 }
 
 .panel-section {
   padding: 1.25rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color-light, #f3f4f6);
 }
 
 .panel-section:last-child {
@@ -461,7 +471,7 @@
 .mini-stat {
   text-align: center;
   padding: 0.75rem;
-  background: #f9fafb;
+  background: var(--bg-secondary, #f9fafb);
   border-radius: 0.5rem;
 }
 
@@ -489,7 +499,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: #f9fafb;
+  background: var(--bg-secondary, #f9fafb);
   border-radius: 0.5rem;
 }
 
@@ -547,14 +557,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: #f9fafb;
+  background: var(--bg-secondary, #f9fafb);
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .intervention-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-tertiary, #f3f4f6);
 }
 
 .intervention-info {
@@ -616,12 +626,14 @@
 }
 
 .modal-content {
-  background: white;
+  background: var(--bg-primary, white);
   border-radius: 0.75rem;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  border: 1px solid var(--border-color, transparent);
+  color: var(--text-primary, inherit);
 }
 
 .contact-modal {
@@ -633,7 +645,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
 .modal-header h2 {
