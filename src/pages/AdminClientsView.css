@@ -1059,3 +1059,39 @@ body[data-theme="dark"] .form-section-title,
 body[data-theme="dark"] .modal-footer {
   border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
 }
+
+/* Type badges en mode sombre */
+.dark-theme .type-standard,
+body[data-theme="dark"] .type-standard {
+  background: rgba(148, 163, 184, 0.2) !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-theme .type-vip,
+body[data-theme="dark"] .type-vip {
+  background: rgba(251, 191, 36, 0.25) !important;
+  color: #fcd34d !important;
+}
+
+.dark-theme .type-prospect,
+body[data-theme="dark"] .type-prospect {
+  background: rgba(96, 165, 250, 0.25) !important;
+  color: #93c5fd !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .type-standard {
+    background: rgba(148, 163, 184, 0.2) !important;
+    color: #e2e8f0 !important;
+  }
+
+  .type-vip {
+    background: rgba(251, 191, 36, 0.25) !important;
+    color: #fcd34d !important;
+  }
+
+  .type-prospect {
+    background: rgba(96, 165, 250, 0.25) !important;
+    color: #93c5fd !important;
+  }
+}
