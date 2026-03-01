@@ -90,6 +90,29 @@ body {
     border-radius: var(--border-radius-lg) !important;
 }
 
+/* Client Type Badges - High contrast for dark mode */
+.type-standard,
+.client-type.type-standard,
+.type-badge.type-standard {
+    background: #e5e7eb !important;
+    color: #1f2937 !important;
+    border: 1px solid #9ca3af !important;
+}
+
+.type-vip,
+.client-type.type-vip,
+.type-badge.type-vip {
+    background: #fcd34d !important;
+    color: #78350f !important;
+}
+
+.type-prospect,
+.client-type.type-prospect,
+.type-badge.type-prospect {
+    background: #93c5fd !important;
+    color: #1e3a8a !important;
+}
+
 /* Input Fields */
 input[type="text"],
 input[type="email"],

@@ -266,10 +266,12 @@
   white-space: nowrap;
 }
 
-.type-standard {
-  background: #d1d5db;
-  color: #1f2937;
-  border: 1px solid #9ca3af;
+.type-standard,
+.client-type.type-standard,
+.type-badge.type-standard {
+  background: #d1d5db !important;
+  color: #1f2937 !important;
+  border: 1px solid #6b7280 !important;
 }
 
 .type-vip {
