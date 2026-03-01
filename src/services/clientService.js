@@ -156,20 +156,32 @@ export const clientService = {
    */
   async updateClient(clientId, updates) {
     try {
-      const { data, error } = await supabase
+      // Nettoyer les updates pour eviter d'envoyer des champs vides ou undefined
+      const cleanedUpdates = {};
+      for (const [key, value] of Object.entries(updates)) {
+        if (value !== undefined) {
+          cleanedUpdates[key] = value;
+        }
+      }
+
+      const { data, error, count } = await supabase
         .from('clients')
         .update({
-          ...updates,
+          ...cleanedUpdates,
           updated_at: new Date().toISOString()
         })
         .eq('id', clientId)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
 
-      logger.log('✅ Client mis a jour:', clientId);
-      return { data, error: null };
+      // Verifier si la mise a jour a reussi (au moins 1 ligne modifiee)
+      if (!data || data.length === 0) {
+        throw new Error('Impossible de modifier le client. Verifiez vos permissions.');
+      }
+
+      logger.log('✅ Client mis a jour:', clientId, cleanedUpdates);
+      return { data: data[0], error: null };
     } catch (error) {
       logger.error('❌ Erreur updateClient:', error);
       return { data: null, error };

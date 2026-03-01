@@ -136,11 +136,19 @@ export function useClients(options = {}) {
       if (!navigator.onLine) {
         throw new Error('Modification impossible hors ligne');
       }
-      return clientService.updateClient(clientId, updates);
+      const result = await clientService.updateClient(clientId, updates);
+      // Propager l'erreur pour que onError soit appele
+      if (result.error) {
+        throw result.error;
+      }
+      return result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
+    },
+    onError: (error) => {
+      logger.error('[useClients] Erreur mise a jour client:', error);
     },
   });
 
