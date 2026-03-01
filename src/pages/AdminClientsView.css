@@ -1060,37 +1060,64 @@ body[data-theme="dark"] .modal-footer {
   border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
 }
 
-/* Type badges en mode sombre */
+/* Type badges en mode sombre - sélecteurs très spécifiques */
 .dark-theme .type-standard,
-body[data-theme="dark"] .type-standard {
+.dark-theme .type-badge.type-standard,
+.dark-theme .client-type.type-standard,
+.dark-theme .info-item .type-standard,
+body[data-theme="dark"] .type-standard,
+body[data-theme="dark"] .type-badge.type-standard,
+body[data-theme="dark"] .client-type.type-standard,
+body[data-theme="dark"] .info-item .type-standard {
   background: #e5e7eb !important;
   color: #1f2937 !important;
 }
 
 .dark-theme .type-vip,
-body[data-theme="dark"] .type-vip {
+.dark-theme .type-badge.type-vip,
+.dark-theme .client-type.type-vip,
+.dark-theme .info-item .type-vip,
+body[data-theme="dark"] .type-vip,
+body[data-theme="dark"] .type-badge.type-vip,
+body[data-theme="dark"] .client-type.type-vip,
+body[data-theme="dark"] .info-item .type-vip {
   background: #fcd34d !important;
   color: #78350f !important;
 }
 
 .dark-theme .type-prospect,
-body[data-theme="dark"] .type-prospect {
+.dark-theme .type-badge.type-prospect,
+.dark-theme .client-type.type-prospect,
+.dark-theme .info-item .type-prospect,
+body[data-theme="dark"] .type-prospect,
+body[data-theme="dark"] .type-badge.type-prospect,
+body[data-theme="dark"] .client-type.type-prospect,
+body[data-theme="dark"] .info-item .type-prospect {
   background: #93c5fd !important;
   color: #1e3a8a !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  .type-standard {
+  .type-standard,
+  .type-badge.type-standard,
+  .client-type.type-standard,
+  .info-item .type-standard {
     background: #e5e7eb !important;
     color: #1f2937 !important;
   }
 
-  .type-vip {
+  .type-vip,
+  .type-badge.type-vip,
+  .client-type.type-vip,
+  .info-item .type-vip {
     background: #fcd34d !important;
     color: #78350f !important;
   }
 
-  .type-prospect {
+  .type-prospect,
+  .type-badge.type-prospect,
+  .client-type.type-prospect,
+  .info-item .type-prospect {
     background: #93c5fd !important;
     color: #1e3a8a !important;
   }
