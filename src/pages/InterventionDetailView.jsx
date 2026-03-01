@@ -252,6 +252,36 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     }
   }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
 
+  // ✅ Rafraîchir les URLs signées des images (expirent après 1h)
+  useEffect(() => {
+    const refreshFileUrls = async () => {
+      if (!report?.files?.length) return;
+
+      // Vérifier si les URLs ont besoin d'être rafraîchies (contiennent supabase)
+      const needsRefresh = report.files.some(f =>
+        f.url && typeof f.url === 'string' && f.url.includes('supabase')
+      );
+
+      if (!needsRefresh) return;
+
+      try {
+        logger.log('🔄 Rafraîchissement des URLs des images...');
+        const refreshedFiles = await storageService.refreshReportFileUrls(report.files);
+
+        // Mettre à jour seulement si les URLs ont changé
+        const urlsChanged = refreshedFiles.some((f, i) => f.url !== report.files[i]?.url);
+        if (urlsChanged) {
+          logger.log('✅ URLs des images rafraîchies');
+          setReport(prev => ({ ...prev, files: refreshedFiles }));
+        }
+      } catch (error) {
+        logger.error('❌ Erreur rafraîchissement URLs:', error);
+      }
+    };
+
+    refreshFileUrls();
+  }, [intervention?.id]); // Rafraîchir quand l'intervention change
+
   // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
   const persistReport = useCallback(async (updated) => {
     setReport(updated);

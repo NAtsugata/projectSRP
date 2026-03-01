@@ -141,6 +141,74 @@ export const storageService = {
    */
   async refreshSignedUrl(filePath, bucket = 'intervention-files') {
     return await getSignedUrl(bucket, filePath);
+  },
+
+  /**
+   * Extraire le chemin de fichier d'une URL Supabase
+   */
+  extractFilePath(url, bucket = 'intervention-files') {
+    if (!url || typeof url !== 'string') return null;
+
+    // Pattern pour les signed URLs: /storage/v1/object/sign/bucket-name/path?token=...
+    // Pattern pour les public URLs: /storage/v1/object/public/bucket-name/path
+    const signedPattern = new RegExp(`/storage/v1/object/sign/${bucket}/(.+?)(?:\\?|$)`);
+    const publicPattern = new RegExp(`/storage/v1/object/public/${bucket}/(.+?)(?:\\?|$)`);
+
+    let match = url.match(signedPattern) || url.match(publicPattern);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+
+    // Fallback: chercher après le nom du bucket
+    const parts = url.split(`/${bucket}/`);
+    if (parts.length > 1) {
+      let path = parts[1];
+      // Nettoyer les query params
+      if (path.includes('?')) {
+        path = path.split('?')[0];
+      }
+      return decodeURIComponent(path);
+    }
+
+    return null;
+  },
+
+  /**
+   * Rafraîchir les URLs de tous les fichiers d'un rapport d'intervention
+   * Retourne les fichiers avec les nouvelles URLs signées
+   */
+  async refreshReportFileUrls(files, bucket = 'intervention-files') {
+    if (!Array.isArray(files) || files.length === 0) {
+      return files;
+    }
+
+    const refreshedFiles = await Promise.all(
+      files.map(async (file) => {
+        // Si pas d'URL ou URL locale (blob:), ne pas rafraîchir
+        if (!file.url || file.url.startsWith('blob:') || file.url.startsWith('data:')) {
+          return file;
+        }
+
+        // Extraire le chemin du fichier
+        const filePath = this.extractFilePath(file.url, bucket);
+        if (!filePath) {
+          logger.warn('Impossible d\'extraire le chemin du fichier:', file.url);
+          return file;
+        }
+
+        try {
+          // Générer une nouvelle signed URL
+          const newUrl = await getSignedUrl(bucket, filePath);
+          logger.log('✅ URL rafraîchie pour:', filePath);
+          return { ...file, url: newUrl };
+        } catch (error) {
+          logger.error('Erreur rafraîchissement URL:', error);
+          return file;
+        }
+      })
+    );
+
+    return refreshedFiles;
   }
 };
 
