@@ -356,7 +356,7 @@ export const clientService = {
         .from('interventions')
         .select(`
           id,
-          title,
+          client,
           status,
           category,
           scheduled_dates,
@@ -387,15 +387,9 @@ export const clientService = {
    */
   async getClientContracts(clientId) {
     try {
-      const { data, error } = await supabase
-        .from('maintenance_contracts')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      return { data, error: null };
+      // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
+      // TODO: Ajouter client_id a maintenance_contracts si necessaire
+      return { data: [], error: null };
     } catch (error) {
       logger.error('❌ Erreur getClientContracts:', error);
       return { data: null, error };
@@ -417,21 +411,12 @@ export const clientService = {
 
       if (intError) throw intError;
 
-      // Compter les contrats actifs
-      const { data: contracts, error: contrError } = await supabase
-        .from('maintenance_contracts')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('status', 'active');
-
-      if (contrError) throw contrError;
-
       const stats = {
         totalInterventions: interventions?.length || 0,
         completedInterventions: interventions?.filter(i => i.status === 'completed').length || 0,
         pendingInterventions: interventions?.filter(i => i.status === 'pending').length || 0,
         inProgressInterventions: interventions?.filter(i => i.status === 'in_progress').length || 0,
-        activeContracts: contracts?.length || 0
+        activeContracts: 0 // maintenance_contracts n'a pas de client_id
       };
 
       return { data: stats, error: null };
