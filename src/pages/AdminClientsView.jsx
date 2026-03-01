@@ -417,8 +417,8 @@ function AdminClientsView({
                       <span className="company-name">{client.company_name}</span>
                     )}
                   </div>
-                  <span className={`client-type type-${client.client_type}`}>
-                    {CLIENT_TYPES[client.client_type] || client.client_type}
+                  <span className={`client-type type-${client.client_type || 'standard'}`}>
+                    {CLIENT_TYPES[client.client_type] || 'Standard'}
                   </span>
                 </div>
                 <div className="client-card-body">
@@ -478,8 +478,8 @@ function AdminClientsView({
                     )}
                     <div className="info-item">
                       <label>Type</label>
-                      <span className={`type-badge type-${selectedClient.client_type}`}>
-                        {CLIENT_TYPES[selectedClient.client_type]}
+                      <span className={`type-badge type-${selectedClient.client_type || 'standard'}`}>
+                        {CLIENT_TYPES[selectedClient.client_type] || 'Standard'}
                       </span>
                     </div>
                     {selectedClient.email && (
