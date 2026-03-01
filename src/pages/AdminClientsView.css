@@ -896,7 +896,7 @@
   .stat-value,
   .mini-stat-value,
   .form-section-title,
-  .info-item span {
+  .info-item span:not(.type-badge):not(.type-standard):not(.type-vip):not(.type-prospect) {
     color: var(--text-primary, #f8fafc) !important;
   }
 
@@ -1010,7 +1010,7 @@ body[data-theme="dark"] .client-card:hover {
 .dark-theme .stat-value,
 .dark-theme .mini-stat-value,
 .dark-theme .form-section-title,
-.dark-theme .info-item span,
+.dark-theme .info-item span:not(.type-badge):not(.type-standard):not(.type-vip):not(.type-prospect),
 body[data-theme="dark"] .client-name,
 body[data-theme="dark"] .panel-header h2,
 body[data-theme="dark"] .panel-section h3,
@@ -1020,7 +1020,7 @@ body[data-theme="dark"] .intervention-title,
 body[data-theme="dark"] .stat-value,
 body[data-theme="dark"] .mini-stat-value,
 body[data-theme="dark"] .form-section-title,
-body[data-theme="dark"] .info-item span {
+body[data-theme="dark"] .info-item span:not(.type-badge):not(.type-standard):not(.type-vip):not(.type-prospect) {
   color: var(--text-primary, #f8fafc) !important;
 }
 
