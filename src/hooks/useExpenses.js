@@ -108,52 +108,51 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         },
     });
 
-    // Mutation pour approuver une note de frais
+    // Mutation pour approuver une note de frais (optimisé - sans refetch)
     const approveMutation = useMutation({
         mutationFn: ({ id, comment }) => expenseService.approveExpense(id, user?.id, comment),
         onSuccess: (response) => {
             if (response.data) {
-                // Mettre à jour le cache local immédiatement
-                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
-                    if (!oldExpenses) return [];
+                // Mettre à jour TOUTES les queries expenses en cache (sans refetch)
+                queryClient.setQueriesData({ queryKey: ['expenses'] }, (oldExpenses) => {
+                    if (!oldExpenses || !Array.isArray(oldExpenses)) return oldExpenses;
                     return oldExpenses.map(exp =>
                         exp.id === response.data.id ? response.data : exp
                     );
                 });
             }
-            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
-    // Mutation pour rejeter une note de frais
+    // Mutation pour rejeter une note de frais (optimisé - sans refetch)
     const rejectMutation = useMutation({
         mutationFn: ({ id, comment }) => expenseService.rejectExpense(id, user?.id, comment),
         onSuccess: (response) => {
             if (response.data) {
-                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
-                    if (!oldExpenses) return [];
+                // Mettre à jour TOUTES les queries expenses en cache (sans refetch)
+                queryClient.setQueriesData({ queryKey: ['expenses'] }, (oldExpenses) => {
+                    if (!oldExpenses || !Array.isArray(oldExpenses)) return oldExpenses;
                     return oldExpenses.map(exp =>
                         exp.id === response.data.id ? response.data : exp
                     );
                 });
             }
-            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 
-    // Mutation pour marquer comme payée
+    // Mutation pour marquer comme payée (optimisé - sans refetch)
     const markAsPaidMutation = useMutation({
         mutationFn: (id) => expenseService.markAsPaid(id, user?.id),
         onSuccess: (response) => {
             if (response.data) {
-                queryClient.setQueryData(['expenses', userId], (oldExpenses) => {
-                    if (!oldExpenses) return [];
+                // Mettre à jour TOUTES les queries expenses en cache (sans refetch)
+                queryClient.setQueriesData({ queryKey: ['expenses'] }, (oldExpenses) => {
+                    if (!oldExpenses || !Array.isArray(oldExpenses)) return oldExpenses;
                     return oldExpenses.map(exp =>
                         exp.id === response.data.id ? response.data : exp
                     );
                 });
             }
-            queryClient.invalidateQueries({ queryKey: ['expenses'] });
         },
     });
 

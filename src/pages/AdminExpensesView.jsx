@@ -1,21 +1,26 @@
 // src/pages/AdminExpensesView.js - GESTION ADMIN NOTES DE FRAIS
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserExpensesAccordion } from '../components/expenses';
-import * as expenseStatsService from '../services/expenseStatsService';
 import '../components/expenses/ExpensesStyles.css';
-import logger from '../utils/logger';
 
 export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters, onUpdateFilters }) {
   const [filterStatus, setFilterStatus] = useState('all');
-  const [globalStats, setGlobalStats] = useState({
-    pending: { count: 0, total: 0 },
-    approved: { count: 0, total: 0 },
-    paid: { count: 0, total: 0 },
-    rejected: { count: 0, total: 0 },
-    total: 0
-  });
-  // eslint-disable-next-line no-unused-vars
-  const [_statsLoading, setStatsLoading] = useState(true);
+
+  // Calcul des stats côté client (instantané, pas d'appel API)
+  const globalStats = useMemo(() => {
+    const pending = expenses.filter(e => e.status === 'pending');
+    const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
+    const paid = expenses.filter(e => e.is_paid);
+    const rejected = expenses.filter(e => e.status === 'rejected');
+
+    return {
+      pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
+      approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
+      paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
+      rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) },
+      total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+    };
+  }, [expenses]);
 
   // Catégories de frais
   const categories = [
@@ -43,44 +48,6 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
       onUpdateFilters({ startDate: d.toISOString().split('T')[0] });
     }
   };
-
-  // Charger les statistiques globales
-  useEffect(() => {
-    const loadStats = async () => {
-      setStatsLoading(true);
-      try {
-        const { data, error } = await expenseStatsService.getGlobalStats();
-
-        if (error) {
-          logger.error('Erreur lors du chargement des stats:', error);
-          // Fallback: calculer côté client
-          const pending = expenses.filter(e => e.status === 'pending');
-          const approved = expenses.filter(e => e.status === 'approved' && !e.is_paid);
-          const paid = expenses.filter(e => e.is_paid);
-          const rejected = expenses.filter(e => e.status === 'rejected');
-
-          setGlobalStats({
-            pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) },
-            total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-          });
-        } else if (data) {
-          setGlobalStats({
-            ...data,
-            total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-          });
-        }
-      } catch (err) {
-        logger.error('Erreur inattendue:', err);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-
-    loadStats();
-  }, [expenses]);
 
   // Regroupement par utilisateur
   const expensesByUser = useMemo(() => {
