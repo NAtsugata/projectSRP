@@ -43,7 +43,7 @@
 }
 
 /* Icon */
-.alert-icon {
+.alert-card-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,29 +53,30 @@
   flex-shrink: 0;
 }
 
-.alert-icon-warning {
+.alert-card-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Icon colors per variant */
+.alert-card-warning .alert-card-icon {
   background: rgba(245, 158, 11, 0.2);
   color: #f59e0b;
 }
 
-.alert-icon-danger {
+.alert-card-danger .alert-card-icon {
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
 }
 
-.alert-icon-info {
+.alert-card-info .alert-card-icon {
   background: rgba(59, 130, 246, 0.2);
   color: #3b82f6;
 }
 
-.alert-icon-success {
+.alert-card-success .alert-card-icon {
   background: rgba(16, 185, 129, 0.2);
   color: #10b981;
-}
-
-.alert-icon svg {
-  width: 1.25rem;
-  height: 1.25rem;
 }
 
 /* Content */
