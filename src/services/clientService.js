@@ -355,12 +355,7 @@ export const clientService = {
       const { data, error } = await supabase
         .from('interventions')
         .select(`
-          id,
-          client,
-          status,
-          category,
-          scheduled_dates,
-          completed_at,
+          *,
           intervention_assignments (
             user_id,
             profiles (full_name)
