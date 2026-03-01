@@ -267,8 +267,9 @@
 }
 
 .type-standard {
-  background: #e5e7eb;
-  color: #374151;
+  background: #d1d5db;
+  color: #1f2937;
+  border: 1px solid #9ca3af;
 }
 
 .type-vip {
