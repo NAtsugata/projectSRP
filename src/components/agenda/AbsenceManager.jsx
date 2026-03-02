@@ -241,8 +241,17 @@ const AbsenceManager = ({
     }).sort((a, b) => a.startDate.localeCompare(b.startDate));
   };
 
+  // Obtenir les absences passées (récentes, max 10)
+  const getPastAbsences = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return absences.filter(absence => {
+      return absence.endDate < today;
+    }).sort((a, b) => b.endDate.localeCompare(a.endDate)).slice(0, 10);
+  };
+
   const currentAbsences = getCurrentAbsences();
   const upcomingAbsences = getUpcomingAbsences();
+  const pastAbsences = getPastAbsences();
 
   const getEmployeeName = (employeeId) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -358,6 +367,49 @@ const AbsenceManager = ({
                   <div className="absence-list">
                     {upcomingAbsences.map(absence => (
                       <div key={absence.id} className="absence-card upcoming">
+                        <div className="absence-card-header">
+                          <div className="absence-employee">
+                            <UserIcon />
+                            <span className="absence-employee-name">
+                              {getEmployeeName(absence.employeeId)}
+                            </span>
+                          </div>
+                          <button
+                            className="absence-delete"
+                            onClick={() => handleDeleteAbsence(absence.id)}
+                            aria-label="Supprimer"
+                          >
+                            <XIcon />
+                          </button>
+                        </div>
+                        <div className="absence-card-body">
+                          <div className="absence-dates">
+                            <CalendarIcon />
+                            <span>
+                              {formatDate(absence.startDate)} - {formatDate(absence.endDate)}
+                              ({getDaysCount(absence.startDate, absence.endDate)} jour{getDaysCount(absence.startDate, absence.endDate) > 1 ? 's' : ''})
+                            </span>
+                          </div>
+                          <div className="absence-reason">{absence.reason}</div>
+                          {absence.notes && (
+                            <div className="absence-notes">{absence.notes}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Absences passées (récentes) */}
+              {!loading && pastAbsences.length > 0 && (
+                <div className="absence-section">
+                  <h5 className="absence-section-title">
+                    📋 Historique récent ({pastAbsences.length})
+                  </h5>
+                  <div className="absence-list">
+                    {pastAbsences.map(absence => (
+                      <div key={absence.id} className="absence-card past">
                         <div className="absence-card-header">
                           <div className="absence-employee">
                             <UserIcon />

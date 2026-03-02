@@ -26,28 +26,28 @@ ALTER TABLE employee_absences ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view all absences" ON employee_absences;
 CREATE POLICY "Users can view all absences"
   ON employee_absences FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL);
 
 -- Policy: Les utilisateurs authentifiés peuvent créer des absences
 DROP POLICY IF EXISTS "Admins can create absences" ON employee_absences;
 DROP POLICY IF EXISTS "Authenticated users can create absences" ON employee_absences;
 CREATE POLICY "Authenticated users can create absences"
   ON employee_absences FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Policy: Les utilisateurs authentifiés peuvent modifier des absences
 DROP POLICY IF EXISTS "Admins can update absences" ON employee_absences;
 DROP POLICY IF EXISTS "Authenticated users can update absences" ON employee_absences;
 CREATE POLICY "Authenticated users can update absences"
   ON employee_absences FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL);
 
 -- Policy: Les utilisateurs authentifiés peuvent supprimer des absences
 DROP POLICY IF EXISTS "Admins can delete absences" ON employee_absences;
 DROP POLICY IF EXISTS "Authenticated users can delete absences" ON employee_absences;
 CREATE POLICY "Authenticated users can delete absences"
   ON employee_absences FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL);
 
 -- Trigger pour mettre à jour updated_at automatiquement
 CREATE OR REPLACE FUNCTION update_employee_absences_updated_at()
