@@ -268,6 +268,74 @@
   opacity: 0.7;
 }
 
+.legend-dot.absence {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+}
+
+/* Absences */
+.day-cell.has-absences {
+  background: #fff7ed;
+}
+
+.day-cell.today.has-absences {
+  background: linear-gradient(135deg, #e0f2fe 0%, #ffedd5 100%);
+}
+
+.day-absences {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.absence-dot {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.375rem;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  color: white;
+  overflow: hidden;
+}
+
+.absence-dot.absence-conges {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+}
+
+.absence-dot.absence-maladie {
+  background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+}
+
+.absence-dot.absence-formation {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+}
+
+.absence-dot.absence-ecole {
+  background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+}
+
+.absence-icon {
+  font-size: 0.625rem;
+  flex-shrink: 0;
+}
+
+.absence-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.more-absences {
+  font-size: 0.5625rem;
+  color: #9a3412;
+  font-weight: 600;
+  padding: 0.125rem 0.25rem;
+  text-align: center;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .month-header {
@@ -290,6 +358,14 @@
 
   .dot-time {
     display: none;
+  }
+
+  .absence-dot {
+    padding: 0.125rem 0.25rem;
+  }
+
+  .absence-icon {
+    font-size: 0.5625rem;
   }
 }
 
@@ -325,5 +401,13 @@
   .month-legend {
     gap: 1rem;
     flex-wrap: wrap;
+  }
+
+  .absence-name {
+    display: none;
+  }
+
+  .absence-dot {
+    padding: 0.125rem;
   }
 }

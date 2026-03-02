@@ -66,6 +66,8 @@ const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const PlanningMonthView = ({
   interventions = [],
+  absences = [],
+  users = [],
   onInterventionClick,
   onDayClick
 }) => {
@@ -76,6 +78,13 @@ const PlanningMonthView = ({
   const month = currentDate.getMonth();
 
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
+
+  // Map users pour lookup rapide
+  const usersMap = useMemo(() => {
+    const map = {};
+    users.forEach(u => { map[u.id] = u; });
+    return map;
+  }, [users]);
 
   // Grouper les interventions par date
   const interventionsByDate = useMemo(() => {
@@ -96,6 +105,37 @@ const PlanningMonthView = ({
 
     return byDate;
   }, [interventions]);
+
+  // Grouper les absences par date
+  const absencesByDate = useMemo(() => {
+    const byDate = {};
+
+    absences.forEach(absence => {
+      const startDate = absence.startDate || absence.start_date;
+      const endDate = absence.endDate || absence.end_date;
+      const empId = absence.employeeId || absence.employee_id;
+
+      if (!startDate || !endDate || !empId) return;
+
+      // Pour chaque jour de l'absence
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = toLocalDateStr(d);
+        if (!byDate[dateStr]) {
+          byDate[dateStr] = [];
+        }
+        byDate[dateStr].push({
+          ...absence,
+          employeeId: empId,
+          employeeName: usersMap[empId]?.full_name || '?'
+        });
+      }
+    });
+
+    return byDate;
+  }, [absences, usersMap]);
 
   // Navigation
   const goToPreviousMonth = () => {
@@ -190,19 +230,51 @@ const PlanningMonthView = ({
         <div className="days-grid">
           {monthDays.map(day => {
             const dayInterventions = interventionsByDate[day.dateStr] || [];
+            const dayAbsences = absencesByDate[day.dateStr] || [];
             const hasInterventions = dayInterventions.length > 0;
+            const hasAbsences = dayAbsences.length > 0;
 
             return (
               <div
                 key={day.dateStr}
-                className={`day-cell ${day.isCurrentMonth ? '' : 'other-month'} ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${hasInterventions ? 'has-items' : ''}`}
+                className={`day-cell ${day.isCurrentMonth ? '' : 'other-month'} ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${hasInterventions ? 'has-items' : ''} ${hasAbsences ? 'has-absences' : ''}`}
                 onClick={() => onDayClick?.(day.date, dayInterventions)}
               >
                 <span className="day-number">{day.dayNum}</span>
 
+                {/* Absences du jour */}
+                {hasAbsences && (
+                  <div className="day-absences">
+                    {dayAbsences.slice(0, 2).map((absence, idx) => {
+                      const reasonIcons = {
+                        'Congés': '🏖️',
+                        'Maladie': '🏥',
+                        'Formation': '📚',
+                        'École': '🎓',
+                        'Autre': '📋'
+                      };
+                      const icon = reasonIcons[absence.reason] || '🚫';
+                      return (
+                        <div
+                          key={`absence-${absence.employeeId}-${idx}`}
+                          className={`absence-dot absence-${(absence.reason || 'autre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}
+                          title={`${absence.employeeName} — ${absence.reason || 'Absent'}`}
+                        >
+                          <span className="absence-icon">{icon}</span>
+                          <span className="absence-name">{absence.employeeName?.split(' ')[0] || '?'}</span>
+                        </div>
+                      );
+                    })}
+                    {dayAbsences.length > 2 && (
+                      <span className="more-absences">+{dayAbsences.length - 2} absent{dayAbsences.length - 2 > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Interventions du jour */}
                 {hasInterventions && (
                   <div className="day-interventions">
-                    {dayInterventions.slice(0, 3).map(itv => (
+                    {dayInterventions.slice(0, hasAbsences ? 2 : 3).map(itv => (
                       <div
                         key={itv.id}
                         className={`intervention-dot ${itv.status === 'Terminée' ? 'completed' : itv.status === 'En cours' ? 'in-progress' : ''}`}
@@ -216,8 +288,8 @@ const PlanningMonthView = ({
                         <span className="dot-client">{itv.client}</span>
                       </div>
                     ))}
-                    {dayInterventions.length > 3 && (
-                      <span className="more-count">+{dayInterventions.length - 3}</span>
+                    {dayInterventions.length > (hasAbsences ? 2 : 3) && (
+                      <span className="more-count">+{dayInterventions.length - (hasAbsences ? 2 : 3)}</span>
                     )}
                   </div>
                 )}
@@ -240,6 +312,10 @@ const PlanningMonthView = ({
         <div className="legend-item">
           <span className="legend-dot completed"></span>
           <span>Terminée</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot absence"></span>
+          <span>Absent</span>
         </div>
       </div>
     </div>
