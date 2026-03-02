@@ -138,6 +138,14 @@
   border-left: 3px solid #2563eb;
 }
 
+.calendar-day.has-absences {
+  background: linear-gradient(135deg, #fef3c7 0%, #ffffff 40%);
+}
+
+.calendar-day.today.has-absences {
+  background: linear-gradient(135deg, #eff6ff 0%, #fef3c7 50%);
+}
+
 .day-number {
   font-weight: 600;
   font-size: 0.875rem;
@@ -201,6 +209,68 @@
   border-radius: 0.25rem;
 }
 
+/* Absences du jour */
+.day-absences {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.absence-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: white;
+  overflow: hidden;
+}
+
+.absence-chip.absence-conges {
+  background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+}
+
+.absence-chip.absence-maladie {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+.absence-chip.absence-formation {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+}
+
+.absence-chip.absence-ecole {
+  background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+}
+
+.absence-chip.absence-autre {
+  background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+}
+
+.absence-icon {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.absence-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.more-absences {
+  font-size: 0.65rem;
+  color: #92400e;
+  font-weight: 500;
+  padding: 2px 4px;
+  background: #fef3c7;
+  border-radius: 3px;
+  text-align: center;
+}
+
 /* Légende */
 .calendar-legend {
   display: flex;
@@ -239,6 +309,10 @@
   opacity: 0.6;
 }
 
+.absence-dot {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .calendar-header {
@@ -273,5 +347,23 @@
   .weekday {
     padding: 0.5rem;
     font-size: 0.75rem;
+  }
+
+  .absence-chip {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+  .absence-icon {
+    font-size: 0.65rem;
+  }
+
+  .absence-name {
+    display: none;
+  }
+
+  .more-absences {
+    font-size: 0.55rem;
+    padding: 1px 3px;
   }
 }

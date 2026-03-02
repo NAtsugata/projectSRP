@@ -98,13 +98,25 @@ const MONTHS = [
 ];
 
 /**
+ * Icônes par type d'absence
+ */
+const ABSENCE_ICONS = {
+  'Congés': '🏖️',
+  'Maladie': '🏥',
+  'Formation': '📚',
+  'École': '🎓',
+  'Autre': '📋'
+};
+
+/**
  * PlanningCalendarView Component
  */
 const PlanningCalendarView = ({
   interventions = [],
   onInterventionClick,
   onDateClick,
-  users = []
+  users = [],
+  absences = []
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const year = currentDate.getFullYear();
@@ -143,6 +155,38 @@ const PlanningCalendarView = ({
     users.forEach(u => { map[u.id] = u; });
     return map;
   }, [users]);
+
+  // Grouper les absences par date
+  const absencesByDate = useMemo(() => {
+    const byDate = {};
+
+    absences.forEach(absence => {
+      const startDate = absence.startDate || absence.start_date;
+      const endDate = absence.endDate || absence.end_date;
+      const empId = absence.employeeId || absence.employee_id;
+
+      if (!startDate || !endDate || !empId) return;
+
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = toLocalDateStr(d);
+        if (!byDate[dateStr]) byDate[dateStr] = [];
+
+        // Éviter les doublons
+        if (!byDate[dateStr].find(a => a.id === absence.id)) {
+          byDate[dateStr].push({
+            ...absence,
+            employeeId: empId,
+            employeeName: usersMap[empId]?.full_name || usersMap[empId]?.name || '?'
+          });
+        }
+      }
+    });
+
+    return byDate;
+  }, [absences, usersMap]);
 
   // Navigation
   const goToPreviousMonth = () => {
@@ -213,15 +257,42 @@ const PlanningCalendarView = ({
         {calendarDays.map((day, index) => {
           const dateKey = formatDateKey(day.date);
           const dayInterventions = interventionsByDate[dateKey] || [];
+          const dayAbsences = absencesByDate[dateKey] || [];
           const hasInterventions = dayInterventions.length > 0;
+          const hasAbsences = dayAbsences.length > 0;
 
           return (
             <div
               key={index}
-              className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${hasInterventions ? 'has-interventions' : ''}`}
+              className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${hasInterventions ? 'has-interventions' : ''} ${hasAbsences ? 'has-absences' : ''}`}
               onClick={() => onDateClick?.(day.date, dayInterventions)}
             >
               <span className="day-number">{day.date.getDate()}</span>
+
+              {/* Absences du jour */}
+              {hasAbsences && (
+                <div className="day-absences">
+                  {dayAbsences.slice(0, 2).map((absence, idx) => {
+                    const reason = absence.reason || 'Autre';
+                    const icon = ABSENCE_ICONS[reason] || '📋';
+                    const absenceClass = `absence-${reason.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+
+                    return (
+                      <div
+                        key={`absence-${absence.id}-${idx}`}
+                        className={`absence-chip ${absenceClass}`}
+                        title={`${absence.employeeName} — ${reason}`}
+                      >
+                        <span className="absence-icon">{icon}</span>
+                        <span className="absence-name">{absence.employeeName?.split(' ')[0]}</span>
+                      </div>
+                    );
+                  })}
+                  {dayAbsences.length > 2 && (
+                    <span className="more-absences">+{dayAbsences.length - 2} absent(s)</span>
+                  )}
+                </div>
+              )}
 
               {/* Interventions du jour */}
               <div className="day-interventions">
@@ -263,7 +334,11 @@ const PlanningCalendarView = ({
         </div>
         <div className="legend-item">
           <span className="legend-dot has-dot"></span>
-          <span>Avec interventions</span>
+          <span>Interventions</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot absence-dot"></span>
+          <span>Absences</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot completed-dot"></span>

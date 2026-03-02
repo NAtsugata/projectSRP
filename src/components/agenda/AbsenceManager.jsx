@@ -1,9 +1,9 @@
 // src/components/agenda/AbsenceManager.js
 // Gestionnaire d'absences et de congés des employés
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button, LoadingSpinner } from '../ui';
-import { UserIcon, PlusIcon, XIcon, CalendarIcon } from '../SharedUI';
+import { UserIcon, PlusIcon, XIcon, CalendarIcon, EditIcon, DownloadIcon, SearchIcon } from '../SharedUI';
 import { useToast } from '../../contexts/ToastContext';
 import * as absenceService from '../../lib/absenceService';
 import logger from '../../utils/logger';
@@ -34,6 +34,16 @@ const AbsenceManager = ({
     reason: 'Congés',
     notes: ''
   });
+
+  // États pour l'édition
+  const [editingAbsence, setEditingAbsence] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // États pour les filtres
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterEmployee, setFilterEmployee] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('date-desc');
 
   // Fonction de chargement des absences (définie avant le useEffect)
   const loadAbsences = useCallback(async () => {
@@ -159,10 +169,44 @@ const AbsenceManager = ({
 
     setLoading(true);
     try {
-      const { error } = await absenceService.createAbsence(newAbsence);
-      if (error) throw error;
+      // Vérifier les chevauchements
+      const { hasOverlap, overlapping } = await absenceService.checkAbsenceOverlap(
+        newAbsence.employeeId,
+        newAbsence.startDate,
+        newAbsence.endDate,
+        isEditing ? editingAbsence.id : null
+      );
 
-      toast.success('Absence enregistrée avec succès');
+      if (hasOverlap) {
+        const empName = getEmployeeName(newAbsence.employeeId);
+        const overlapDetails = overlapping.map(o => {
+          const startDate = o.start_date || o.startDate;
+          const endDate = o.end_date || o.endDate;
+          return `• ${o.reason}: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+        }).join('\n');
+
+        const proceed = window.confirm(
+          `⚠️ Attention: ${empName} a déjà une absence sur cette période:\n\n${overlapDetails}\n\nVoulez-vous continuer ?`
+        );
+
+        if (!proceed) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Mode édition ou création
+      if (isEditing && editingAbsence) {
+        const { error } = await absenceService.updateAbsence(editingAbsence.id, newAbsence);
+        if (error) throw error;
+        toast.success('Absence modifiée avec succès');
+        setIsEditing(false);
+        setEditingAbsence(null);
+      } else {
+        const { error } = await absenceService.createAbsence(newAbsence);
+        if (error) throw error;
+        toast.success('Absence enregistrée avec succès');
+      }
 
       // Reset form
       setNewAbsence({
@@ -177,11 +221,47 @@ const AbsenceManager = ({
       // Reload absences
       await loadAbsences();
     } catch (error) {
-      logger.error('Erreur ajout absence:', error);
-      toast.error('Impossible d\'enregistrer l\'absence');
+      logger.error('Erreur ajout/modification absence:', error);
+      toast.error(isEditing ? 'Impossible de modifier l\'absence' : 'Impossible d\'enregistrer l\'absence');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Éditer une absence
+  const handleEditAbsence = (absence) => {
+    setEditingAbsence(absence);
+    setNewAbsence({
+      employeeId: absence.employeeId,
+      startDate: absence.startDate,
+      endDate: absence.endDate,
+      reason: absence.reason || 'Congés',
+      notes: absence.notes || ''
+    });
+    setIsEditing(true);
+    setIsAdding(true);
+  };
+
+  // Annuler l'édition
+  const cancelEdit = () => {
+    setIsAdding(false);
+    setIsEditing(false);
+    setEditingAbsence(null);
+    setMultiSelectMode(false);
+    setSelectedEmployeeIds([]);
+    setNewAbsence({
+      employeeId: '',
+      startDate: '',
+      endDate: '',
+      reason: 'Congés',
+      notes: ''
+    });
+  };
+
+  // Exporter les absences en CSV
+  const handleExport = () => {
+    absenceService.exportAbsencesToCSV(absences, employees);
+    toast.success('Export CSV téléchargé');
   };
 
   // Toggle employee selection in multi-select mode
@@ -253,6 +333,54 @@ const AbsenceManager = ({
   const upcomingAbsences = getUpcomingAbsences();
   const pastAbsences = getPastAbsences();
 
+  // Absences filtrées pour la recherche
+  const filteredAbsences = useMemo(() => {
+    let result = [...absences];
+
+    // Filtre par recherche
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(a => {
+        const emp = employees.find(e => e.id === a.employeeId);
+        const empName = (emp?.full_name || emp?.name || '').toLowerCase();
+        return empName.includes(term);
+      });
+    }
+
+    // Filtre par employé
+    if (filterEmployee !== 'all') {
+      result = result.filter(a => a.employeeId === filterEmployee);
+    }
+
+    // Filtre par type
+    if (filterType !== 'all') {
+      result = result.filter(a => a.reason === filterType);
+    }
+
+    // Tri
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-asc':
+          return a.startDate.localeCompare(b.startDate);
+        case 'date-desc':
+          return b.startDate.localeCompare(a.startDate);
+        case 'name-asc':
+          return getEmployeeNameSort(a.employeeId).localeCompare(getEmployeeNameSort(b.employeeId));
+        case 'name-desc':
+          return getEmployeeNameSort(b.employeeId).localeCompare(getEmployeeNameSort(a.employeeId));
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [absences, searchTerm, filterEmployee, filterType, sortBy, employees]);
+
+  const getEmployeeNameSort = (employeeId) => {
+    const emp = employees.find(e => e.id === employeeId);
+    return emp?.full_name || emp?.name || '';
+  };
+
   const getEmployeeName = (employeeId) => {
     const employee = employees.find(e => e.id === employeeId);
     return employee?.full_name || employee?.name || 'Inconnu';
@@ -298,16 +426,80 @@ const AbsenceManager = ({
           <div className="absence-panel">
             <div className="absence-header">
               <h4 className="absence-title">Gestion des absences</h4>
-              <button
-                className="absence-close"
-                onClick={() => setIsOpen(false)}
-                aria-label="Fermer"
-              >
-                <XIcon />
-              </button>
+              <div className="absence-header-actions">
+                {absences.length > 0 && (
+                  <button
+                    className="absence-export-btn"
+                    onClick={handleExport}
+                    title="Exporter en CSV"
+                  >
+                    <DownloadIcon />
+                  </button>
+                )}
+                <button
+                  className="absence-close"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Fermer"
+                >
+                  <XIcon />
+                </button>
+              </div>
             </div>
 
             <div className="absence-body">
+              {/* Filtres */}
+              {!loading && absences.length > 3 && !isAdding && (
+                <div className="absence-filters">
+                  <div className="absence-search-wrapper">
+                    <SearchIcon />
+                    <input
+                      type="text"
+                      className="absence-search"
+                      placeholder="Rechercher..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    className="absence-filter-select"
+                    value={filterEmployee}
+                    onChange={(e) => setFilterEmployee(e.target.value)}
+                  >
+                    <option value="all">Tous les employés</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.full_name || emp.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="absence-filter-select"
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                  >
+                    <option value="all">Tous les types</option>
+                    <option value="Congés">Congés</option>
+                    <option value="Maladie">Maladie</option>
+                    <option value="Formation">Formation</option>
+                    <option value="École">École</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+
+                  <select
+                    className="absence-sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="date-desc">Date ↓</option>
+                    <option value="date-asc">Date ↑</option>
+                    <option value="name-asc">Nom A-Z</option>
+                    <option value="name-desc">Nom Z-A</option>
+                  </select>
+                </div>
+              )}
+
               {/* Loading state */}
               {loading && (
                 <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -331,13 +523,22 @@ const AbsenceManager = ({
                               {getEmployeeName(absence.employeeId)}
                             </span>
                           </div>
-                          <button
-                            className="absence-delete"
-                            onClick={() => handleDeleteAbsence(absence.id)}
-                            aria-label="Supprimer"
-                          >
-                            <XIcon />
-                          </button>
+                          <div className="absence-card-actions">
+                            <button
+                              className="absence-edit"
+                              onClick={() => handleEditAbsence(absence)}
+                              aria-label="Modifier"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button
+                              className="absence-delete"
+                              onClick={() => handleDeleteAbsence(absence.id)}
+                              aria-label="Supprimer"
+                            >
+                              <XIcon />
+                            </button>
+                          </div>
                         </div>
                         <div className="absence-card-body">
                           <div className="absence-dates">
@@ -374,13 +575,22 @@ const AbsenceManager = ({
                               {getEmployeeName(absence.employeeId)}
                             </span>
                           </div>
-                          <button
-                            className="absence-delete"
-                            onClick={() => handleDeleteAbsence(absence.id)}
-                            aria-label="Supprimer"
-                          >
-                            <XIcon />
-                          </button>
+                          <div className="absence-card-actions">
+                            <button
+                              className="absence-edit"
+                              onClick={() => handleEditAbsence(absence)}
+                              aria-label="Modifier"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button
+                              className="absence-delete"
+                              onClick={() => handleDeleteAbsence(absence.id)}
+                              aria-label="Supprimer"
+                            >
+                              <XIcon />
+                            </button>
+                          </div>
                         </div>
                         <div className="absence-card-body">
                           <div className="absence-dates">
@@ -417,13 +627,22 @@ const AbsenceManager = ({
                               {getEmployeeName(absence.employeeId)}
                             </span>
                           </div>
-                          <button
-                            className="absence-delete"
-                            onClick={() => handleDeleteAbsence(absence.id)}
-                            aria-label="Supprimer"
-                          >
-                            <XIcon />
-                          </button>
+                          <div className="absence-card-actions">
+                            <button
+                              className="absence-edit"
+                              onClick={() => handleEditAbsence(absence)}
+                              aria-label="Modifier"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button
+                              className="absence-delete"
+                              onClick={() => handleDeleteAbsence(absence.id)}
+                              aria-label="Supprimer"
+                            >
+                              <XIcon />
+                            </button>
+                          </div>
                         </div>
                         <div className="absence-card-body">
                           <div className="absence-dates">
@@ -451,10 +670,12 @@ const AbsenceManager = ({
                 </div>
               )}
 
-              {/* Formulaire d'ajout */}
+              {/* Formulaire d'ajout/édition */}
               {!loading && isAdding ? (
                 <div className="absence-form">
-                  <h5 className="absence-form-title">Nouvelle absence</h5>
+                  <h5 className="absence-form-title">
+                    {isEditing ? 'Modifier l\'absence' : 'Nouvelle absence'}
+                  </h5>
 
                   <div className="form-group">
                     <label htmlFor="absence-reason">Motif</label>
@@ -557,18 +778,7 @@ const AbsenceManager = ({
                   <div className="form-actions">
                     <Button
                       variant="secondary"
-                      onClick={() => {
-                        setIsAdding(false);
-                        setMultiSelectMode(false);
-                        setSelectedEmployeeIds([]);
-                        setNewAbsence({
-                          employeeId: '',
-                          startDate: '',
-                          endDate: '',
-                          reason: 'Congés',
-                          notes: ''
-                        });
-                      }}
+                      onClick={cancelEdit}
                     >
                       Annuler
                     </Button>
@@ -576,9 +786,11 @@ const AbsenceManager = ({
                       variant="primary"
                       onClick={handleAddAbsence}
                     >
-                      {multiSelectMode && selectedEmployeeIds.length > 1
-                        ? `Enregistrer (${selectedEmployeeIds.length})`
-                        : 'Enregistrer'}
+                      {isEditing
+                        ? 'Modifier'
+                        : multiSelectMode && selectedEmployeeIds.length > 1
+                          ? `Enregistrer (${selectedEmployeeIds.length})`
+                          : 'Enregistrer'}
                     </Button>
                   </div>
                 </div>

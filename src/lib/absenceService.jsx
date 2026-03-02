@@ -125,6 +125,160 @@ export const deleteAbsence = async (absenceId) => {
 };
 
 /**
+ * Modifier une absence existante
+ * @param {string} absenceId - ID de l'absence
+ * @param {Object} updates - Données à mettre à jour
+ * @returns {Promise<{data, error}>}
+ */
+export const updateAbsence = async (absenceId, updates) => {
+  try {
+    logger.log('✏️ Modification absence:', absenceId, updates);
+
+    const { data, error } = await supabase
+      .from('employee_absences')
+      .update({
+        employee_id: updates.employeeId,
+        start_date: updates.startDate,
+        end_date: updates.endDate,
+        reason: updates.reason || 'Congés',
+        notes: updates.notes || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', absenceId)
+      .select();
+
+    if (error) {
+      logger.error('❌ Erreur modification absence:', error);
+
+      // Fallback localStorage
+      if (error.code === '42P01' || error.code === 'PGRST116') {
+        logger.warn('⚠️ Table absences non trouvée, utilisation localStorage');
+        return updateAbsenceFallback(absenceId, updates);
+      }
+
+      throw error;
+    }
+
+    logger.log('✅ Absence modifiée avec succès, data:', data);
+    return { data, error: null };
+
+  } catch (error) {
+    logger.error('❌ Erreur générale modification absence:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Vérifier si une absence chevauche des absences existantes
+ * @param {string} employeeId - ID de l'employé
+ * @param {string} startDate - Date de début (YYYY-MM-DD)
+ * @param {string} endDate - Date de fin (YYYY-MM-DD)
+ * @param {string} excludeId - ID à exclure (pour édition)
+ * @returns {Promise<{hasOverlap: boolean, overlapping: Array}>}
+ */
+export const checkAbsenceOverlap = async (employeeId, startDate, endDate, excludeId = null) => {
+  try {
+    logger.log('🔍 Vérification chevauchement:', { employeeId, startDate, endDate, excludeId });
+
+    // Requête pour trouver les absences qui chevauchent la période
+    let query = supabase
+      .from('employee_absences')
+      .select('id, start_date, end_date, reason')
+      .eq('employee_id', employeeId)
+      .lte('start_date', endDate)
+      .gte('end_date', startDate);
+
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logger.error('❌ Erreur vérification chevauchement:', error);
+
+      // Fallback localStorage
+      if (error.code === '42P01') {
+        return checkAbsenceOverlapFallback(employeeId, startDate, endDate, excludeId);
+      }
+
+      throw error;
+    }
+
+    const hasOverlap = data && data.length > 0;
+    logger.log(hasOverlap ? '⚠️ Chevauchements trouvés:' : '✅ Aucun chevauchement', data);
+
+    return {
+      hasOverlap,
+      overlapping: data || []
+    };
+
+  } catch (error) {
+    logger.error('❌ Erreur générale vérification chevauchement:', error);
+    return { hasOverlap: false, overlapping: [], error };
+  }
+};
+
+/**
+ * Exporter les absences en CSV
+ * @param {Array} absences - Liste des absences
+ * @param {Array} employees - Liste des employés
+ * @param {Object} dateRange - Plage de dates optionnelle
+ */
+export const exportAbsencesToCSV = (absences, employees, dateRange = {}) => {
+  const headers = [
+    'Employé',
+    'Date début',
+    'Date fin',
+    'Durée (jours)',
+    'Type',
+    'Notes'
+  ];
+
+  // Map employés pour lookup rapide
+  const employeesMap = {};
+  employees.forEach(e => { employeesMap[e.id] = e; });
+
+  const rows = absences.map(absence => {
+    const empId = absence.employeeId || absence.employee_id;
+    const emp = employeesMap[empId];
+    const startDate = absence.startDate || absence.start_date;
+    const endDate = absence.endDate || absence.end_date;
+    const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+
+    return [
+      emp?.full_name || emp?.name || 'Inconnu',
+      startDate,
+      endDate,
+      days,
+      absence.reason || 'Non spécifié',
+      (absence.notes || '').replace(/"/g, '""') // Échapper les guillemets
+    ];
+  });
+
+  const csvContent = [
+    headers.join(';'),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+  ].join('\n');
+
+  // Téléchargement
+  const BOM = '\uFEFF'; // Pour Excel UTF-8
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  const today = new Date().toISOString().split('T')[0];
+  link.href = url;
+  link.download = `absences_export_${today}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  logger.log('📥 Export CSV généré:', absences.length, 'absences');
+};
+
+/**
  * Vérifier si un employé est absent à une date donnée
  * @param {string} employeeId - ID de l'employé
  * @param {string} date - Date (YYYY-MM-DD)
@@ -231,6 +385,53 @@ const deleteAbsenceFallback = (absenceId) => {
   const updated = absences.filter(a => a.id !== absenceId);
   safeStorage.setJSON(STORAGE_KEY, updated);
   return { error: null };
+};
+
+const updateAbsenceFallback = (absenceId, updates) => {
+  try {
+    const absences = safeStorage.getJSON(STORAGE_KEY, []);
+    const index = absences.findIndex(a => a.id === absenceId);
+
+    if (index === -1) {
+      return { data: null, error: { message: 'Absence non trouvée' } };
+    }
+
+    const updatedAbsence = {
+      ...absences[index],
+      employee_id: updates.employeeId,
+      start_date: updates.startDate,
+      end_date: updates.endDate,
+      reason: updates.reason,
+      notes: updates.notes,
+      updated_at: new Date().toISOString()
+    };
+
+    absences[index] = updatedAbsence;
+    safeStorage.setJSON(STORAGE_KEY, absences);
+
+    return { data: [updatedAbsence], error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
+const checkAbsenceOverlapFallback = (employeeId, startDate, endDate, excludeId = null) => {
+  const absences = safeStorage.getJSON(STORAGE_KEY, []);
+  const overlapping = absences.filter(absence => {
+    if (absence.employee_id !== employeeId) return false;
+    if (excludeId && absence.id === excludeId) return false;
+
+    const aStart = absence.start_date;
+    const aEnd = absence.end_date;
+
+    // Vérifier le chevauchement
+    return aStart <= endDate && aEnd >= startDate;
+  });
+
+  return {
+    hasOverlap: overlapping.length > 0,
+    overlapping
+  };
 };
 
 const isEmployeeAbsentFallback = (employeeId, date) => {
