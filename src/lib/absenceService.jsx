@@ -317,33 +317,18 @@ CREATE POLICY "Users can view all absences"
   ON employee_absences FOR SELECT
   USING (auth.role() = 'authenticated');
 
--- Policy: Les admins peuvent créer des absences
-CREATE POLICY "Admins can create absences"
+-- Policy: Les utilisateurs authentifiés peuvent créer des absences
+CREATE POLICY "Authenticated users can create absences"
   ON employee_absences FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  WITH CHECK (auth.role() = 'authenticated');
 
--- Policy: Les admins peuvent modifier des absences
-CREATE POLICY "Admins can update absences"
+-- Policy: Les utilisateurs authentifiés peuvent modifier des absences
+CREATE POLICY "Authenticated users can update absences"
   ON employee_absences FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (auth.role() = 'authenticated');
 
--- Policy: Les admins peuvent supprimer des absences
-CREATE POLICY "Admins can delete absences"
+-- Policy: Les utilisateurs authentifiés peuvent supprimer des absences
+CREATE POLICY "Authenticated users can delete absences"
   ON employee_absences FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
-    )
-  );
+  USING (auth.role() = 'authenticated');
 */
