@@ -1,9 +1,9 @@
 // src/pages/AdminExpensesView.js - GESTION ADMIN NOTES DE FRAIS
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { UserExpensesAccordion } from '../components/expenses';
 import '../components/expenses/ExpensesStyles.css';
 
-export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters, onUpdateFilters }) {
+export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters: _filters, onUpdateFilters }) {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // Calcul des stats côté client (instantané, pas d'appel API)

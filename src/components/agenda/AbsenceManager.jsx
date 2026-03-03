@@ -1,8 +1,8 @@
 // src/components/agenda/AbsenceManager.js
 // Gestionnaire d'absences et de congés des employés
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button, LoadingSpinner } from '../ui';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button } from '../ui';
 import { UserIcon, PlusIcon, XIcon, CalendarIcon, EditIcon, DownloadIcon, SearchIcon } from '../SharedUI';
 import { useToast } from '../../contexts/ToastContext';
 import * as absenceService from '../../lib/absenceService';
@@ -294,17 +294,6 @@ const AbsenceManager = ({
     }
   };
 
-  // Vérifier si un employé est absent à une date donnée
-  const isEmployeeAbsent = (employeeId, date) => {
-    return absences.some(absence => {
-      return (
-        absence.employeeId === employeeId &&
-        date >= absence.startDate &&
-        date <= absence.endDate
-      );
-    });
-  };
-
   // Obtenir les absences en cours
   const getCurrentAbsences = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -333,8 +322,14 @@ const AbsenceManager = ({
   const upcomingAbsences = getUpcomingAbsences();
   const pastAbsences = getPastAbsences();
 
-  // Absences filtrées pour la recherche
-  const filteredAbsences = useMemo(() => {
+  // Helper pour trier par nom d'employé
+  const getEmployeeNameSort = useCallback((employeeId) => {
+    const emp = employees.find(e => e.id === employeeId);
+    return emp?.full_name || emp?.name || '';
+  }, [employees]);
+
+  // Absences filtrées pour la recherche (pour future utilisation)
+  const _filteredAbsences = useMemo(() => {
     let result = [...absences];
 
     // Filtre par recherche
@@ -374,12 +369,7 @@ const AbsenceManager = ({
     });
 
     return result;
-  }, [absences, searchTerm, filterEmployee, filterType, sortBy, employees]);
-
-  const getEmployeeNameSort = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId);
-    return emp?.full_name || emp?.name || '';
-  };
+  }, [absences, searchTerm, filterEmployee, filterType, sortBy, employees, getEmployeeNameSort]);
 
   const getEmployeeName = (employeeId) => {
     const employee = employees.find(e => e.id === employeeId);

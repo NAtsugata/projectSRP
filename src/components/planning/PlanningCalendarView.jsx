@@ -1,7 +1,7 @@
 // src/components/planning/PlanningCalendarView.jsx
 // Vue calendrier pour la gestion du planning
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '../SharedUI';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './PlanningCalendarView.css';

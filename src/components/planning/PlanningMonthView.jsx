@@ -1,7 +1,7 @@
 // src/components/planning/PlanningMonthView.jsx
 // Vue mensuelle du planning
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
 import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
@@ -322,4 +322,4 @@ const PlanningMonthView = ({
   );
 };
 
-export default React.memo(PlanningMonthView);
+export default memo(PlanningMonthView);

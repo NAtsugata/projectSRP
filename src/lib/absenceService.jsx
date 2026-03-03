@@ -225,7 +225,7 @@ export const checkAbsenceOverlap = async (employeeId, startDate, endDate, exclud
  * @param {Array} employees - Liste des employés
  * @param {Object} dateRange - Plage de dates optionnelle
  */
-export const exportAbsencesToCSV = (absences, employees, dateRange = {}) => {
+export const exportAbsencesToCSV = (absences, employees, _dateRange = {}) => {
   const headers = [
     'Employé',
     'Date début',

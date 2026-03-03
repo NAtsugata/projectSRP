@@ -3,7 +3,6 @@ import expenseService from '../services/expenseService';
 import { useAuthStore } from '../store/authStore';
 import { cacheExpenses, getCachedExpenses } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
-import { useOnlineStatus } from './useOnlineStatus';
 import logger from '../utils/logger';
 
 /**
@@ -15,7 +14,6 @@ import logger from '../utils/logger';
 export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const queryClient = useQueryClient();
     const { user } = useAuthStore();
-    const isOnline = useOnlineStatus();
 
     // Query pour récupérer les notes de frais
     const {
