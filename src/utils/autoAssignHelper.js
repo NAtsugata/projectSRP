@@ -2,7 +2,23 @@
 // Algorithmes pour l'auto-assignation et l'optimisation
 
 import { checkEmployeeOverload, doIntervensionsOverlap } from './agendaHelpers';
-import { isEmployeeAbsent } from '../components/agenda/AbsenceManager';
+
+/**
+ * Vérifie si un employé est absent à une date donnée (version synchrone)
+ * @param {string} employeeId - ID de l'employé
+ * @param {string} date - Date au format YYYY-MM-DD
+ * @param {Array} absences - Liste des absences
+ * @returns {boolean}
+ */
+const isEmployeeAbsentSync = (employeeId, date, absences = []) => {
+  if (!absences || absences.length === 0) return false;
+  return absences.some(absence => {
+    const empId = absence.employeeId || absence.employee_id;
+    const startDate = absence.startDate || absence.start_date;
+    const endDate = absence.endDate || absence.end_date;
+    return empId === employeeId && date >= startDate && date <= endDate;
+  });
+};
 
 /**
  * Calculate simple distance between two addresses (approximation)
@@ -42,7 +58,7 @@ const calculateAddressDistance = (address1, address2) => {
  * @param {Object} intervention - Intervention to assign
  * @param {Array} employees - Available employees
  * @param {Array} allInterventions - All interventions for conflict checking
- * @param {Object} options - Options
+ * @param {Object} options - Options (includes absences array)
  * @returns {Array} - Sorted list of employee suggestions with scores
  */
 export const suggestEmployeeAssignment = (
@@ -55,7 +71,8 @@ export const suggestEmployeeAssignment = (
     maxHours = 8,
     considerDistance = true,
     considerWorkload = true,
-    considerAvailability = true
+    considerAvailability = true,
+    absences = []
   } = options;
 
   const suggestions = employees.map(employee => {
@@ -64,7 +81,7 @@ export const suggestEmployeeAssignment = (
     const warnings = [];
 
     // 1. Check if employee is absent
-    if (considerAvailability && isEmployeeAbsent(employee.id, intervention.date)) {
+    if (considerAvailability && isEmployeeAbsentSync(employee.id, intervention.date, absences)) {
       return {
         employee,
         score: 0,

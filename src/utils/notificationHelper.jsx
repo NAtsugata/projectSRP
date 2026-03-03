@@ -2,8 +2,24 @@
 // Système de notifications pour l'agenda
 
 import { checkEmployeeOverload } from './agendaHelpers';
-import { isEmployeeAbsent } from '../components/agenda/AbsenceManager';
 import logger from './logger';
+
+/**
+ * Vérifie si un employé est absent à une date donnée (version synchrone)
+ * @param {string} employeeId - ID de l'employé
+ * @param {string} date - Date au format YYYY-MM-DD
+ * @param {Array} absences - Liste des absences
+ * @returns {boolean}
+ */
+const isEmployeeAbsentSync = (employeeId, date, absences = []) => {
+  if (!absences || absences.length === 0) return false;
+  return absences.some(absence => {
+    const empId = absence.employeeId || absence.employee_id;
+    const startDate = absence.startDate || absence.start_date;
+    const endDate = absence.endDate || absence.end_date;
+    return empId === employeeId && date >= startDate && date <= endDate;
+  });
+};
 
 /**
  * Check for upcoming interventions (within next 2 hours)
@@ -56,15 +72,18 @@ export const checkOverloadedEmployees = (interventions, employees, date) => {
 
 /**
  * Check for interventions assigned to absent employees
+ * @param {Array} interventions - Liste des interventions
+ * @param {Array} employees - Liste des employés
+ * @param {Array} absences - Liste des absences
  */
-export const checkAbsentAssignments = (interventions, employees) => {
+export const checkAbsentAssignments = (interventions, employees, absences = []) => {
   const alerts = [];
 
   interventions.forEach(itv => {
     if (!itv.assigned_to || !itv.date) return;
 
     itv.assigned_to.forEach(empId => {
-      if (isEmployeeAbsent(empId, itv.date)) {
+      if (isEmployeeAbsentSync(empId, itv.date, absences)) {
         const employee = employees.find(e => e.id === empId);
         alerts.push({
           type: 'absent',
@@ -109,8 +128,13 @@ export const checkUnassignedUrgent = (interventions) => {
 
 /**
  * Get all notifications for the agenda
+ * @param {Array} interventions - Liste des interventions
+ * @param {Array} employees - Liste des employés
+ * @param {string} currentUserId - ID de l'utilisateur courant
+ * @param {Object} dateRange - Plage de dates
+ * @param {Array} absences - Liste des absences
  */
-export const getAgendaNotifications = (interventions, employees, currentUserId, dateRange) => {
+export const getAgendaNotifications = (interventions, employees, currentUserId, dateRange, absences = []) => {
   const notifications = [];
 
   // Upcoming interventions for current user
@@ -125,7 +149,7 @@ export const getAgendaNotifications = (interventions, employees, currentUserId, 
   }
 
   // Absent employee assignments
-  notifications.push(...checkAbsentAssignments(interventions, employees));
+  notifications.push(...checkAbsentAssignments(interventions, employees, absences));
 
   // Unassigned urgent interventions
   notifications.push(...checkUnassignedUrgent(interventions));
