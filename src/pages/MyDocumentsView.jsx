@@ -133,9 +133,19 @@ export default function MyDocumentsView({
 
   // Télécharger un document
   const handleDownload = useCallback(async (doc) => {
+    // Extraire le chemin du fichier depuis l'URL stockée
+    let storagePath = null;
+    if (doc.file_url && doc.file_url.includes('vault-files')) {
+      // Extraire le path après 'vault-files/'
+      const match = doc.file_url.match(/vault-files\/(.+?)(?:\?|$)/);
+      if (match) {
+        storagePath = decodeURIComponent(match[1]);
+      }
+    }
+
     await downloadFile(doc.file_url, doc.title || doc.file_name || 'document', {
-      storagePath: doc.path,
-      bucketName: 'vault-files'
+      storagePath,
+      bucketName: storagePath ? 'vault-files' : null
     });
   }, [downloadFile]);
 
