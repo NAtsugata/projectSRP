@@ -15,7 +15,6 @@ import {
   UserIcon
 } from '../components/SharedUI';
 import { useDownload } from '../hooks/useDownload';
-import { storageService } from '../lib/supabase';
 
 // Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
 const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
@@ -136,21 +135,8 @@ export default function MyDocumentsView({
   const handleDownload = useCallback(async (doc) => {
     logger.log('Download document:', { url: doc.file_url, title: doc.title });
 
-    // Utiliser storageService pour extraire le chemin
-    const storagePath = storageService.extractFilePath(doc.file_url, 'vault-files');
-    logger.log('Extracted path:', storagePath);
-
-    // Si on a un chemin valide, utiliser signed URL, sinon télécharger directement
-    if (storagePath) {
-      await downloadFile(doc.file_url, doc.title || doc.file_name || 'document', {
-        storagePath,
-        bucketName: 'vault-files'
-      });
-    } else {
-      // Fallback: télécharger directement depuis l'URL
-      logger.log('No storage path found, downloading directly from URL');
-      await downloadFile(doc.file_url, doc.title || doc.file_name || 'document');
-    }
+    // Télécharger directement depuis l'URL stockée (évite les problèmes RLS sur storage.buckets)
+    await downloadFile(doc.file_url, doc.title || doc.file_name || 'document');
   }, [downloadFile]);
 
   // Obtenir le nom de l'utilisateur
