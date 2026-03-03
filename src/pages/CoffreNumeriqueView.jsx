@@ -10,6 +10,7 @@ import {
 } from '../components/SharedUI';
 import './CoffreNumeriqueView.css';
 import logger from '../utils/logger';
+import { storageService } from '../lib/supabase';
 
 // Icônes par type de fichier
 const getFileIcon = (fileName) => {
@@ -254,6 +255,48 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     setSelectedDocs(new Set());
   }, []);
 
+  // Rafraîchir une URL signée expirée
+  const getFreshUrl = useCallback(async (doc) => {
+    try {
+      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+      if (filePath) {
+        return await storageService.refreshSignedUrl(filePath, 'vault-files');
+      }
+      return doc.file_url; // Fallback
+    } catch (error) {
+      logger.error('Erreur rafraîchissement URL:', error);
+      return doc.file_url;
+    }
+  }, []);
+
+  // Télécharger un document unique
+  const handleDownload = useCallback(async (doc) => {
+    try {
+      const freshUrl = await getFreshUrl(doc);
+      const link = document.createElement('a');
+      link.href = freshUrl;
+      link.download = doc.file_name || 'document';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      logger.error('Erreur téléchargement:', error);
+      alert('Erreur lors du téléchargement. Veuillez réessayer.');
+    }
+  }, [getFreshUrl]);
+
+  // Ouvrir un document
+  const handleView = useCallback(async (doc) => {
+    try {
+      const freshUrl = await getFreshUrl(doc);
+      window.open(freshUrl, '_blank');
+    } catch (error) {
+      logger.error('Erreur ouverture:', error);
+      alert('Erreur lors de l\'ouverture du document.');
+    }
+  }, [getFreshUrl]);
+
   // Télécharger les documents sélectionnés
   const downloadSelected = useCallback(async () => {
     if (selectedDocs.size === 0) return;
@@ -266,9 +309,12 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
       for (let i = 0; i < docsToDownload.length; i++) {
         const doc = docsToDownload[i];
 
+        // Rafraîchir l'URL signée avant téléchargement
+        const freshUrl = await getFreshUrl(doc);
+
         // Créer un lien temporaire et cliquer dessus
         const link = document.createElement('a');
-        link.href = doc.file_url;
+        link.href = freshUrl;
         link.download = doc.file_name || 'document';
         link.target = '_blank';
         document.body.appendChild(link);
@@ -287,7 +333,7 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     } finally {
       setIsDownloading(false);
     }
-  }, [selectedDocs, enrichedDocuments]);
+  }, [selectedDocs, enrichedDocuments, getFreshUrl]);
 
   return (
     <div className="coffre-view">
@@ -498,25 +544,22 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
                         </div>
 
                         <div className="document-actions">
-                          <a
-                            href={doc.file_url}
-                            download
+                          <button
+                            onClick={() => handleDownload(doc)}
                             className="btn-action btn-download"
                             title="Télécharger"
                           >
                             <DownloadIcon />
                             <span>Télécharger</span>
-                          </a>
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          </button>
+                          <button
+                            onClick={() => handleView(doc)}
                             className="btn-action btn-view"
                             title="Voir"
                           >
                             <ExternalLinkIcon />
                             <span>Ouvrir</span>
-                          </a>
+                          </button>
                         </div>
                       </div>
                     ))}
