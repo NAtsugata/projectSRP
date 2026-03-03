@@ -15,6 +15,7 @@ import {
   UserIcon
 } from '../components/SharedUI';
 import { useDownload } from '../hooks/useDownload';
+import { storageService } from '../lib/supabase';
 
 // Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
 const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
@@ -135,9 +136,44 @@ export default function MyDocumentsView({
   const handleDownload = useCallback(async (doc) => {
     logger.log('Download document:', { url: doc.file_url, title: doc.title });
 
-    // Télécharger directement depuis l'URL stockée (évite les problèmes RLS sur storage.buckets)
-    await downloadFile(doc.file_url, doc.title || doc.file_name || 'document');
+    try {
+      // Les signed URLs expirent après 1h, on doit en générer une nouvelle
+      // Extraire le chemin du fichier depuis l'URL stockée
+      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+
+      if (filePath) {
+        // Générer une nouvelle signed URL valide
+        const freshUrl = await storageService.refreshSignedUrl(filePath, 'vault-files');
+        logger.log('Fresh signed URL generated for:', filePath);
+        await downloadFile(freshUrl, doc.title || doc.file_name || 'document');
+      } else {
+        // Fallback: essayer avec l'URL stockée directement
+        logger.warn('Could not extract file path, using stored URL');
+        await downloadFile(doc.file_url, doc.title || doc.file_name || 'document');
+      }
+    } catch (error) {
+      logger.error('Download error:', error);
+      alert('Erreur lors du téléchargement. Veuillez réessayer.');
+    }
   }, [downloadFile]);
+
+  // Voir un document (génère une nouvelle signed URL)
+  const handleView = useCallback(async (doc) => {
+    try {
+      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+
+      if (filePath) {
+        const freshUrl = await storageService.refreshSignedUrl(filePath, 'vault-files');
+        window.open(freshUrl, '_blank');
+      } else {
+        // Fallback
+        window.open(doc.file_url, '_blank');
+      }
+    } catch (error) {
+      logger.error('View error:', error);
+      alert('Erreur lors de l\'ouverture du document.');
+    }
+  }, []);
 
   // Obtenir le nom de l'utilisateur
   const getUserName = useCallback((userId) => {
@@ -594,7 +630,7 @@ export default function MyDocumentsView({
                 <div className="doc-actions">
                   <button
                     className="doc-btn view"
-                    onClick={() => window.open(doc.file_url, '_blank')}
+                    onClick={() => handleView(doc)}
                   >
                     <EyeIcon size={14} /> Voir
                   </button>
