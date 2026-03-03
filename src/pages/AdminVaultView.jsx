@@ -13,6 +13,7 @@ import {
   CustomFileInput
 } from '../components/SharedUI';
 import logger from '../utils/logger';
+import { storageService } from '../lib/supabase';
 import './AdminVaultView.css';
 
 // Icône X pour fermer
@@ -24,7 +25,7 @@ const XIcon = () => (
 );
 
 // Composant Accordion pour chaque employé
-const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) => {
+const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, formatDate }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -47,9 +48,9 @@ const UserAccordion = ({ userName, documents, onDeleteDocument, formatDate }) =>
                 <span className="document-date">Envoyé le {formatDate(doc.created_at)}</span>
               </div>
               <div className="document-actions">
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Télécharger">
+                <button onClick={() => onDownload(doc)} className="btn-icon" title="Télécharger">
                   <DownloadIcon />
-                </a>
+                </button>
                 <button onClick={() => onDeleteDocument(doc)} className="btn-icon-danger" title="Supprimer">
                   <TrashIcon />
                 </button>
@@ -283,6 +284,28 @@ export default function AdminVaultView({
       day: 'numeric'
     });
   };
+
+  // Télécharger un document (avec URL signée fraîche)
+  const handleDownload = useCallback(async (doc) => {
+    try {
+      // Les signed URLs expirent après 1h, on doit en générer une nouvelle
+      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+
+      if (filePath) {
+        const freshUrl = await storageService.refreshSignedUrl(filePath, 'vault-files');
+        logger.log('Fresh signed URL generated for download:', filePath);
+        // Ouvrir dans un nouvel onglet pour télécharger
+        window.open(freshUrl, '_blank');
+      } else {
+        // Fallback: essayer avec l'URL stockée
+        logger.warn('Could not extract file path, using stored URL');
+        window.open(doc.file_url, '_blank');
+      }
+    } catch (error) {
+      logger.error('Download error:', error);
+      alert('Erreur lors du téléchargement. Veuillez réessayer.');
+    }
+  }, []);
 
   // Export JSON
   const handleExportJSON = useCallback(() => {
@@ -653,6 +676,7 @@ export default function AdminVaultView({
                   userName={data.userName}
                   documents={data.documents}
                   onDeleteDocument={onDeleteDocument}
+                  onDownload={handleDownload}
                   formatDate={formatDate}
                 />
               ))
