@@ -2,42 +2,31 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoicingService } from '../services/invoicingService';
 import { useOnlineStatus } from './useOnlineStatus';
 import logger from '../utils/logger';
+import { safeStorage } from '../utils/safeStorage';
 
-// Cache localStorage pour le mode offline
+// Cache pour le mode offline
 const INVOICES_CACHE_KEY = 'invoices_cache';
 const QUOTES_CACHE_KEY = 'quotes_cache';
 
 const getCachedInvoices = () => {
-  try {
-    const cached = localStorage.getItem(INVOICES_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
+  return safeStorage.getJSON(INVOICES_CACHE_KEY, []);
 };
 
 const cacheInvoices = (invoices) => {
-  try {
-    localStorage.setItem(INVOICES_CACHE_KEY, JSON.stringify(invoices));
-  } catch (e) {
-    logger.warn('[useInvoices] Cache failed:', e);
+  const success = safeStorage.setJSON(INVOICES_CACHE_KEY, invoices);
+  if (!success) {
+    logger.warn('[useInvoices] Cache failed');
   }
 };
 
 const getCachedQuotes = () => {
-  try {
-    const cached = localStorage.getItem(QUOTES_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
+  return safeStorage.getJSON(QUOTES_CACHE_KEY, []);
 };
 
 const cacheQuotes = (quotes) => {
-  try {
-    localStorage.setItem(QUOTES_CACHE_KEY, JSON.stringify(quotes));
-  } catch (e) {
-    logger.warn('[useInvoices] Quotes cache failed:', e);
+  const success = safeStorage.setJSON(QUOTES_CACHE_KEY, quotes);
+  if (!success) {
+    logger.warn('[useInvoices] Quotes cache failed');
   }
 };
 

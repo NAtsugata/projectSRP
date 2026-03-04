@@ -2,24 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientService } from '../services/clientService';
 import { useOnlineStatus } from './useOnlineStatus';
 import logger from '../utils/logger';
+import { safeStorage } from '../utils/safeStorage';
 
-// Cache IndexedDB pour le mode offline
+// Cache pour le mode offline
 const CLIENTS_CACHE_KEY = 'clients_cache';
 
 const getCachedClients = async () => {
-  try {
-    const cached = localStorage.getItem(CLIENTS_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
+  return safeStorage.getJSON(CLIENTS_CACHE_KEY, []);
 };
 
 const cacheClients = (clients) => {
-  try {
-    localStorage.setItem(CLIENTS_CACHE_KEY, JSON.stringify(clients));
-  } catch (e) {
-    logger.warn('[useClients] Cache failed:', e);
+  const success = safeStorage.setJSON(CLIENTS_CACHE_KEY, clients);
+  if (!success) {
+    logger.warn('[useClients] Cache failed');
   }
 };
 

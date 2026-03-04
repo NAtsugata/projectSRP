@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogService } from '../services/catalogService';
 import { useOnlineStatus } from './useOnlineStatus';
 import logger from '../utils/logger';
+import { safeStorage } from '../utils/safeStorage';
 
 // Cache localStorage pour le mode offline
 const CATALOG_CACHE_KEY = 'catalog_items_cache';
@@ -9,19 +10,13 @@ const CATEGORIES_CACHE_KEY = 'catalog_categories_cache';
 const TAX_RATES_CACHE_KEY = 'tax_rates_cache';
 
 const getCached = (key) => {
-  try {
-    const cached = localStorage.getItem(key);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
+  return safeStorage.getJSON(key, []);
 };
 
 const setCache = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    logger.warn('[useCatalog] Cache failed:', e);
+  const success = safeStorage.setJSON(key, data);
+  if (!success) {
+    logger.warn('[useCatalog] Cache failed');
   }
 };
 

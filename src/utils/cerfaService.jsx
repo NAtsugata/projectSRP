@@ -5,6 +5,7 @@
 
 import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
+import { safeStorage } from './safeStorage';
 
 // Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
@@ -48,7 +49,7 @@ const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
 export const getNextFicheNumber = () => {
     try {
         const currentYear = new Date().getFullYear();
-        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
+        const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
 
         // Réinitialiser le compteur si on change d'année
         if (stored.year !== currentYear) {
@@ -58,7 +59,7 @@ export const getNextFicheNumber = () => {
 
         // Incrémenter le compteur
         stored.count = (stored.count || 0) + 1;
-        localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify(stored));
+        safeStorage.setJSON(STORAGE_KEY_COUNTER, stored);
 
         // Formater le numéro (CERFA-2026-0001)
         const paddedCount = String(stored.count).padStart(4, '0');
@@ -74,20 +75,16 @@ export const getNextFicheNumber = () => {
  * @returns {Object} { year, count, formatted }
  */
 export const getCurrentFicheInfo = () => {
-    try {
-        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_COUNTER) || '{}');
-        const year = stored.year || new Date().getFullYear();
-        const count = stored.count || 0;
-        const paddedCount = String(count).padStart(4, '0');
-        return {
-            year,
-            count,
-            formatted: `CERFA-${year}-${paddedCount}`,
-            nextNumber: count + 1
-        };
-    } catch (e) {
-        return { year: new Date().getFullYear(), count: 0, formatted: 'CERFA-0000', nextNumber: 1 };
-    }
+    const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
+    const year = stored.year || new Date().getFullYear();
+    const count = stored.count || 0;
+    const paddedCount = String(count).padStart(4, '0');
+    return {
+        year,
+        count,
+        formatted: `CERFA-${year}-${paddedCount}`,
+        nextNumber: count + 1
+    };
 };
 
 /**
@@ -96,17 +93,15 @@ export const getCurrentFicheInfo = () => {
  * @returns {boolean} Succès
  */
 export const resetFicheCounter = (startNumber = 0) => {
-    try {
-        const currentYear = new Date().getFullYear();
-        localStorage.setItem(STORAGE_KEY_COUNTER, JSON.stringify({
-            year: currentYear,
-            count: startNumber
-        }));
-        return true;
-    } catch (e) {
-        logger.error('Erreur réinitialisation compteur:', e);
-        return false;
+    const currentYear = new Date().getFullYear();
+    const success = safeStorage.setJSON(STORAGE_KEY_COUNTER, {
+        year: currentYear,
+        count: startNumber
+    });
+    if (!success) {
+        logger.error('Erreur réinitialisation compteur');
     }
+    return success;
 };
 
 // =============================
@@ -118,13 +113,9 @@ export const resetFicheCounter = (startNumber = 0) => {
  * @returns {Object} Informations entreprise
  */
 export const getCompanyInfo = () => {
-    try {
-        const saved = localStorage.getItem(STORAGE_KEY_COMPANY);
-        if (saved) {
-            return { ...DEFAULT_COMPANY_INFO, ...JSON.parse(saved) };
-        }
-    } catch (e) {
-        logger.error('Erreur lecture company info:', e);
+    const saved = safeStorage.getJSON(STORAGE_KEY_COMPANY, null);
+    if (saved) {
+        return { ...DEFAULT_COMPANY_INFO, ...saved };
     }
     return { ...DEFAULT_COMPANY_INFO };
 };
@@ -134,13 +125,11 @@ export const getCompanyInfo = () => {
  * @param {Object} info - Informations à sauvegarder
  */
 export const saveCompanyInfo = (info) => {
-    try {
-        localStorage.setItem(STORAGE_KEY_COMPANY, JSON.stringify(info));
-        return true;
-    } catch (e) {
-        logger.error('Erreur sauvegarde company info:', e);
-        return false;
+    const success = safeStorage.setJSON(STORAGE_KEY_COMPANY, info);
+    if (!success) {
+        logger.error('Erreur sauvegarde company info');
     }
+    return success;
 };
 
 // =============================
@@ -153,16 +142,8 @@ export const saveCompanyInfo = (info) => {
  * @returns {Object|null} Informations équipement
  */
 export const getEquipmentInfo = (clientId) => {
-    try {
-        const allEquipment = localStorage.getItem('cerfa_equipment_info');
-        if (allEquipment) {
-            const parsed = JSON.parse(allEquipment);
-            return parsed[clientId] || null;
-        }
-    } catch (e) {
-        logger.error('Erreur lecture equipment info:', e);
-    }
-    return null;
+    const allEquipment = safeStorage.getJSON('cerfa_equipment_info', {});
+    return allEquipment[clientId] || null;
 };
 
 /**
@@ -171,15 +152,13 @@ export const getEquipmentInfo = (clientId) => {
  * @param {Object} info - Informations équipement
  */
 export const saveEquipmentInfo = (clientId, info) => {
-    try {
-        const allEquipment = JSON.parse(localStorage.getItem('cerfa_equipment_info') || '{}');
-        allEquipment[clientId] = info;
-        localStorage.setItem('cerfa_equipment_info', JSON.stringify(allEquipment));
-        return true;
-    } catch (e) {
-        logger.error('Erreur sauvegarde equipment info:', e);
-        return false;
+    const allEquipment = safeStorage.getJSON('cerfa_equipment_info', {});
+    allEquipment[clientId] = info;
+    const success = safeStorage.setJSON('cerfa_equipment_info', allEquipment);
+    if (!success) {
+        logger.error('Erreur sauvegarde equipment info');
     }
+    return success;
 };
 
 // =============================
@@ -808,16 +787,15 @@ export const downloadCerfa = (pdfBlob, filename = 'cerfa_15497_entretien.pdf') =
  * @param {Object} record - Enregistrement de génération
  */
 export const saveGenerationRecord = (record) => {
-    try {
-        const history = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || '[]');
-        history.unshift({
-            ...record,
-            generatedAt: new Date().toISOString()
-        });
-        // Garder les 50 dernières générations
-        localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history.slice(0, 50)));
-    } catch (e) {
-        logger.error('Erreur sauvegarde historique:', e);
+    const history = safeStorage.getJSON(STORAGE_KEY_HISTORY, []);
+    history.unshift({
+        ...record,
+        generatedAt: new Date().toISOString()
+    });
+    // Garder les 50 dernières générations
+    const success = safeStorage.setJSON(STORAGE_KEY_HISTORY, history.slice(0, 50));
+    if (!success) {
+        logger.error('Erreur sauvegarde historique');
     }
 };
 
@@ -826,11 +804,7 @@ export const saveGenerationRecord = (record) => {
  * @returns {Array} Historique des générations
  */
 export const getGenerationHistory = () => {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || '[]');
-    } catch {
-        return [];
-    }
+    return safeStorage.getJSON(STORAGE_KEY_HISTORY, []);
 };
 
 // =============================

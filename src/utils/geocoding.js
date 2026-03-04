@@ -3,6 +3,7 @@
 // Utilise Nominatim (OpenStreetMap) + Haversine + facteur route
 
 import logger from './logger';
+import { safeStorage } from './safeStorage';
 
 // Coordonnées du siège : 422 route de Digne, 04660 Champtercier
 const COMPANY_HQ_COORDS = { lat: 44.0556, lng: 6.0681 };
@@ -15,20 +16,11 @@ const ROAD_FACTOR = 1.35;
 const CACHE_KEY = 'srp_geocode_cache';
 
 function getCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return safeStorage.getJSON(CACHE_KEY, {});
 }
 
 function setCache(cache) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // localStorage plein — ignorer
-  }
+  safeStorage.setJSON(CACHE_KEY, cache);
 }
 
 /**
@@ -179,7 +171,7 @@ export async function batchGetDistances(addresses) {
  * Vide le cache de géocodage
  */
 export function clearGeoCache() {
-  localStorage.removeItem(CACHE_KEY);
+  safeStorage.removeItem(CACHE_KEY);
 }
 
 export { COMPANY_HQ_COORDS, ROAD_FACTOR };

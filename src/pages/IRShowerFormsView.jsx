@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { storageService, supabase } from '../lib/supabase';
 import logger from '../utils/logger';
+import { safeStorage } from '../utils/safeStorage';
 import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../components/ir-shower';
 import { usePlanCanvas } from '../hooks/usePlanCanvas';
 import { useUndoRedo } from '../hooks/useUndoRedo';
@@ -328,10 +329,9 @@ export default function IRShowerFormsView({ profile }) {
   useEffect(() => {
     const saveTimer = setInterval(() => {
       const data = { study, elements, photosAvant, photosApres, signatureClient, signatureInstaller, timestamp: Date.now() };
-      try {
-        localStorage.setItem('ir-shower-draft', JSON.stringify(data));
-      } catch (e) {
-        logger.error('Sauvegarde auto échouée:', e);
+      const success = safeStorage.setJSON('ir-shower-draft', data);
+      if (!success) {
+        logger.error('Sauvegarde auto échouée');
       }
     }, 5000);
     return () => clearInterval(saveTimer);
@@ -339,19 +339,14 @@ export default function IRShowerFormsView({ profile }) {
 
   // Restauration au chargement (without adding to undo history)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('ir-shower-draft');
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.study) setStudy(data.study);
-        if (data.elements) setElementsNoHistory(data.elements);
-        if (data.photosAvant) setPhotosAvant(data.photosAvant);
-        if (data.photosApres) setPhotosApres(data.photosApres);
-        if (data.signatureClient) setSignatureClient(data.signatureClient);
-        if (data.signatureInstaller) setSignatureInstaller(data.signatureInstaller);
-      }
-    } catch (e) {
-      logger.error('Restauration échouée:', e);
+    const data = safeStorage.getJSON('ir-shower-draft', null);
+    if (data) {
+      if (data.study) setStudy(data.study);
+      if (data.elements) setElementsNoHistory(data.elements);
+      if (data.photosAvant) setPhotosAvant(data.photosAvant);
+      if (data.photosApres) setPhotosApres(data.photosApres);
+      if (data.signatureClient) setSignatureClient(data.signatureClient);
+      if (data.signatureInstaller) setSignatureInstaller(data.signatureInstaller);
     }
   }, [setElementsNoHistory]);
 
