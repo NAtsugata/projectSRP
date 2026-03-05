@@ -1,0 +1,168 @@
+/* src/components/agenda/QuickActionsBar.css */
+
+.quick-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.quick-actions-title {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.quick-actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.quick-action-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.quick-action-btn:active {
+  transform: translateY(0);
+}
+
+/* Primary - Nouvelle intervention */
+.quick-action-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.quick-action-primary:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+/* Warning - Assigner */
+.quick-action-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.quick-action-warning:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+}
+
+/* Urgent - Filtrer urgents */
+.quick-action-urgent {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  animation: pulse-urgent 2s ease-in-out infinite;
+}
+
+.quick-action-urgent:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+@keyframes pulse-urgent {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Secondary - Export */
+.quick-action-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quick-action-secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Refresh */
+.quick-action-refresh {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.quick-action-refresh:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.quick-action-refresh.refreshing {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quick-action-refresh svg.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .quick-actions-bar {
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .quick-actions-title {
+    text-align: center;
+  }
+
+  .quick-actions-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .quick-action-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .quick-action-btn span {
+    display: none;
+  }
+
+  .quick-action-btn {
+    padding: 10px;
+  }
+}

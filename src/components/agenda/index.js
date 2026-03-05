@@ -13,3 +13,4 @@ export { default as DroppableTimeSlot } from './DroppableTimeSlot';
 export { default as ExportMenu } from './ExportMenu';
 export { default as AbsenceManager } from './AbsenceManager';
 export { default as EmployeeAgendaView } from './EmployeeAgendaView';
+export { default as QuickActionsBar } from './QuickActionsBar';

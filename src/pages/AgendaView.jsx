@@ -10,7 +10,8 @@ import {
   ResourceView,
   SavedFilters,
   ExportMenu,
-  AbsenceManager
+  AbsenceManager,
+  QuickActionsBar
 } from '../components/agenda';
 import { EmptyState, LoadingSpinner } from '../components/ui';
 import { CalendarIcon } from '../components/SharedUI';
@@ -205,7 +206,7 @@ const AgendaView = ({
         if (insertError) throw insertError;
       }
 
-      logger.log('✅ Intervention déplacée avec succès');
+      logger.log('Intervention déplacée avec succès');
       toast.success('Intervention déplacée avec succès');
 
       // Recharger les données après déplacement
@@ -215,7 +216,41 @@ const AgendaView = ({
       logger.error('Erreur lors du déplacement:', error);
       toast.error('Impossible de déplacer l\'intervention. Veuillez réessayer.');
     }
+  }, [toast, onRefreshInterventions]);
+
+  // Calculer les stats pour QuickActionsBar
+  const quickStats = useMemo(() => {
+    let urgent = 0;
+    let unassigned = 0;
+
+    for (const itv of filteredInterventions) {
+      // Check urgent
+      if (itv.urgent_count > 0 || itv.has_urgent_needs) {
+        urgent++;
+      }
+      // Check unassigned
+      const assignments = itv.intervention_assignments;
+      const hasAssignment = assignments && Array.isArray(assignments) && assignments.length > 0;
+      if (!hasAssignment && (!itv.assigned_to || itv.assigned_to.length === 0)) {
+        unassigned++;
+      }
+    }
+
+    return { urgent, unassigned };
+  }, [filteredInterventions]);
+
+  // Handlers pour QuickActionsBar
+  const handleFilterUrgent = useCallback(() => {
+    setFilters(prev => ({ ...prev, showUrgentOnly: true }));
+    toast.success('Filtrage par urgences activé');
   }, [toast]);
+
+  const handleRefresh = useCallback(async () => {
+    if (onRefreshInterventions) {
+      await onRefreshInterventions();
+      toast.success('Données actualisées');
+    }
+  }, [onRefreshInterventions, toast]);
 
   // Error state
   if (error) {
@@ -254,6 +289,13 @@ const AgendaView = ({
         allInterventions={interventions}
         employees={employees}
         dateRange={dateRange}
+      />
+
+      {/* Barre d'actions rapides admin */}
+      <QuickActionsBar
+        stats={quickStats}
+        onFilterUrgent={quickStats.urgent > 0 ? handleFilterUrgent : null}
+        onRefresh={handleRefresh}
       />
 
       {/* Filtres rapides sauvegardés */}
