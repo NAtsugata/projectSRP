@@ -320,6 +320,13 @@ const UserExpensesAccordion = ({
                     )}
                   </div>
 
+                  {/* Paid Date */}
+                  {expense.is_paid && expense.paid_date && (
+                    <div className="admin-expense-paid-date">
+                      <strong>Payé le:</strong> {formatDate(expense.paid_date)}
+                    </div>
+                  )}
+
                   {/* Admin Comment */}
                   {expense.admin_comment && (
                     <div className="admin-expense-comment">
