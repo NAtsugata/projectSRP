@@ -2,7 +2,7 @@
 // Gestionnaire d'absences et de congés des employés
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button } from '../ui';
+import { Button, LoadingSpinner } from '../ui';
 import { UserIcon, PlusIcon, XIcon, CalendarIcon, EditIcon, DownloadIcon, SearchIcon } from '../SharedUI';
 import { useToast } from '../../contexts/ToastContext';
 import * as absenceService from '../../lib/absenceService';
