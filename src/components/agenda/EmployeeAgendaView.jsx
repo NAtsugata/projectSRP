@@ -1,7 +1,7 @@
 // src/components/agenda/EmployeeAgendaView.jsx
 // Vue agenda simplifiée et intuitive pour les employés
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarIcon,
@@ -12,7 +12,9 @@ import {
   ChevronRightIcon,
   UserIcon,
   AlertTriangleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  NavigationIcon,
+  PlayIcon
 } from '../SharedUI';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './EmployeeAgendaView.css';
@@ -29,7 +31,14 @@ const EmployeeAgendaView = ({
 }) => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('week'); // 'day' ou 'week'
+  const [viewMode, setViewMode] = useState('day'); // 'day' ou 'week' - par défaut 'day' pour plus de clarté
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Mettre à jour l'heure courante toutes les minutes
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Formater une date en français
   const formatDate = useCallback((date) => {
@@ -97,6 +106,48 @@ const EmployeeAgendaView = ({
 
     return { total, urgent, completed, remaining: total - completed };
   }, [weekDates, getInterventionsForDate]);
+
+  // Trouver la prochaine intervention (celle à faire maintenant ou bientôt)
+  const nextIntervention = useMemo(() => {
+    const now = currentTime;
+    const todayStr = toLocalDateStr(now);
+    const currentTimeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Interventions d'aujourd'hui non terminées, triées par heure
+    const todayPending = interventions
+      .filter(itv => {
+        const itvDate = itv.scheduled_dates?.includes(todayStr) ? todayStr : itv.date;
+        return itvDate === todayStr && itv.status !== 'completed' && itv.status !== 'cancelled';
+      })
+      .sort((a, b) => {
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return 0;
+      });
+
+    // Trouver la prochaine intervention (heure >= maintenant, ou en cours)
+    const inProgress = todayPending.find(itv => itv.status === 'in_progress');
+    if (inProgress) return inProgress;
+
+    const upcoming = todayPending.find(itv => itv.time && itv.time >= currentTimeStr);
+    if (upcoming) return upcoming;
+
+    // Sinon, la première intervention en attente
+    return todayPending[0] || null;
+  }, [interventions, currentTime]);
+
+  // Vérifier si une intervention est en retard
+  const isLate = useCallback((intervention) => {
+    if (!intervention.time || intervention.status === 'completed' || intervention.status === 'in_progress') {
+      return false;
+    }
+    const now = currentTime;
+    const todayStr = toLocalDateStr(now);
+    const currentTimeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const itvDate = intervention.scheduled_dates?.includes(todayStr) ? todayStr : intervention.date;
+    return itvDate === todayStr && intervention.time < currentTimeStr;
+  }, [currentTime]);
 
   // Navigation
   const handlePrevious = useCallback(() => {
@@ -202,28 +253,54 @@ const EmployeeAgendaView = ({
           <h1>Mon Agenda</h1>
           {userName && <p className="greeting-text">Bonjour {userName}</p>}
         </div>
-        <button className="today-btn" onClick={handleToday}>
-          Aujourd'hui
-        </button>
+        <div className="header-time">
+          {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
       </header>
 
-      {/* Stats rapides de la semaine */}
-      <div className="week-stats">
-        <div className="stat-item">
-          <span className="stat-value">{weekStats.remaining}</span>
-          <span className="stat-label">A faire</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-value">{weekStats.completed}</span>
-          <span className="stat-label">Terminées</span>
-        </div>
-        {weekStats.urgent > 0 && (
-          <div className="stat-item stat-urgent">
-            <span className="stat-value">{weekStats.urgent}</span>
-            <span className="stat-label">Urgentes</span>
+      {/* SECTION PROCHAINE INTERVENTION - Mise en avant */}
+      {nextIntervention && (
+        <div className="next-intervention-section">
+          <div className="next-intervention-label">
+            <PlayIcon className="next-icon" />
+            {nextIntervention.status === 'in_progress' ? 'En cours maintenant' : 'Prochaine intervention'}
           </div>
+          <NextInterventionCard
+            intervention={nextIntervention}
+            onClick={() => handleInterventionClick(nextIntervention)}
+            onCall={handleCall}
+            isLate={isLate(nextIntervention)}
+          />
+        </div>
+      )}
+
+      {/* Stats du jour - Plus simples et claires */}
+      <div className="day-summary">
+        <div className="summary-item">
+          <span className="summary-number">{todayInterventions.filter(i => i.status !== 'completed').length}</span>
+          <span className="summary-text">à faire aujourd'hui</span>
+        </div>
+        <div className="summary-separator">|</div>
+        <div className="summary-item">
+          <span className="summary-number">{todayInterventions.filter(i => i.status === 'completed').length}</span>
+          <span className="summary-text">terminée{todayInterventions.filter(i => i.status === 'completed').length > 1 ? 's' : ''}</span>
+        </div>
+        {todayInterventions.some(i => i.priority === 'urgent' || i.is_urgent) && (
+          <>
+            <div className="summary-separator">|</div>
+            <div className="summary-item summary-urgent">
+              <span className="summary-number">{todayInterventions.filter(i => i.priority === 'urgent' || i.is_urgent).length}</span>
+              <span className="summary-text">urgente{todayInterventions.filter(i => i.priority === 'urgent' || i.is_urgent).length > 1 ? 's' : ''}</span>
+            </div>
+          </>
         )}
       </div>
+
+      {/* Bouton Aujourd'hui */}
+      <button className="today-btn-large" onClick={handleToday}>
+        <CalendarIcon className="today-icon" />
+        Voir aujourd'hui
+      </button>
 
       {/* Navigation et sélecteur de vue */}
       <div className="date-navigation">
@@ -324,6 +401,7 @@ const EmployeeAgendaView = ({
                       onCall={handleCall}
                       getStatusColor={getStatusColor}
                       getStatusLabel={getStatusLabel}
+                      isLate={isLate(intervention)}
                     />
                   ))}
               </div>
@@ -380,7 +458,82 @@ const EmployeeAgendaView = ({
 };
 
 /**
- * Carte d'intervention
+ * Carte PROCHAINE INTERVENTION - Grande et mise en avant
+ */
+const NextInterventionCard = ({ intervention, onClick, onCall, isLate }) => {
+  const isUrgent = intervention.priority === 'urgent' || intervention.is_urgent;
+  const isInProgress = intervention.status === 'in_progress';
+  const clientName = intervention.clients?.name || intervention.client_name || 'Client';
+  const clientPhone = intervention.clients?.phone || intervention.client_phone;
+  const address = intervention.clients?.address || intervention.address;
+
+  // Ouvrir dans Google Maps
+  const openMaps = (e) => {
+    e.stopPropagation();
+    if (address) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+    }
+  };
+
+  return (
+    <div
+      className={`next-intervention-card ${isUrgent ? 'is-urgent' : ''} ${isInProgress ? 'is-active' : ''} ${isLate ? 'is-late' : ''}`}
+      onClick={onClick}
+    >
+      {/* Indicateur de statut bien visible */}
+      <div className="next-status">
+        {isLate && <span className="status-late">EN RETARD</span>}
+        {isInProgress && <span className="status-active">EN COURS</span>}
+        {isUrgent && !isLate && !isInProgress && <span className="status-urgent">URGENT</span>}
+      </div>
+
+      {/* Heure - Grande et visible */}
+      <div className="next-time">
+        <ClockIcon className="next-time-icon" />
+        <span className="next-time-value">{intervention.time || 'Pas d\'heure'}</span>
+      </div>
+
+      {/* Titre clair */}
+      <h3 className="next-title">
+        {intervention.title || intervention.description || 'Intervention'}
+      </h3>
+
+      {/* Client */}
+      <div className="next-client">
+        <UserIcon className="next-client-icon" />
+        <span>{clientName}</span>
+      </div>
+
+      {/* Adresse avec bouton Maps */}
+      {address && (
+        <div className="next-address">
+          <MapPinIcon className="next-address-icon" />
+          <span className="next-address-text">{address}</span>
+          <button className="maps-btn" onClick={openMaps} title="Ouvrir dans Maps">
+            <NavigationIcon />
+            GPS
+          </button>
+        </div>
+      )}
+
+      {/* Actions principales - Grandes et claires */}
+      <div className="next-actions">
+        {clientPhone && (
+          <button className="next-action-btn call" onClick={(e) => onCall(clientPhone, e)}>
+            <PhoneIcon />
+            Appeler le client
+          </button>
+        )}
+        <button className="next-action-btn details" onClick={onClick}>
+          Voir les détails
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Carte d'intervention simplifiée
  */
 const InterventionCard = ({
   intervention,
@@ -388,70 +541,64 @@ const InterventionCard = ({
   onCall,
   getStatusColor,
   getStatusLabel,
-  compact = false
+  compact = false,
+  isLate = false
 }) => {
   const isUrgent = intervention.priority === 'urgent' || intervention.is_urgent;
+  const isCompleted = intervention.status === 'completed';
   const clientName = intervention.clients?.name || intervention.client_name || 'Client';
   const clientPhone = intervention.clients?.phone || intervention.client_phone;
   const address = intervention.clients?.address || intervention.address;
 
   return (
     <div
-      className={`intervention-card ${compact ? 'compact' : ''} ${isUrgent ? 'is-urgent' : ''}`}
+      className={`intervention-card ${compact ? 'compact' : ''} ${isUrgent ? 'is-urgent' : ''} ${isCompleted ? 'is-completed' : ''} ${isLate ? 'is-late' : ''}`}
       onClick={onClick}
     >
-      {/* En-tête avec heure et statut */}
-      <div className="card-header">
-        <div className="time-badge">
-          <ClockIcon className="time-icon" />
-          <span>{intervention.time || 'Heure non définie'}</span>
+      {/* Timeline avec heure et statut */}
+      <div className="card-timeline">
+        <div className={`timeline-dot ${getStatusColor(intervention.status)}`}></div>
+        <div className="timeline-content">
+          <span className="timeline-time">{intervention.time || '--:--'}</span>
+          <span className={`timeline-status ${getStatusColor(intervention.status)}`}>
+            {getStatusLabel(intervention.status)}
+          </span>
         </div>
-        <span className={`status-badge ${getStatusColor(intervention.status)}`}>
-          {getStatusLabel(intervention.status)}
-        </span>
       </div>
 
-      {/* Titre et type */}
-      <div className="card-body">
-        <h4 className="intervention-title">
-          {isUrgent && <AlertTriangleIcon className="urgent-icon" />}
+      {/* Contenu principal */}
+      <div className="card-main">
+        <h4 className="card-title">
+          {isUrgent && <AlertTriangleIcon className="urgent-badge" />}
           {intervention.title || intervention.description || 'Intervention'}
         </h4>
-        {intervention.type && (
-          <span className="intervention-type">{intervention.type}</span>
-        )}
-      </div>
-
-      {/* Informations client */}
-      <div className="card-client">
-        <div className="client-info">
-          <UserIcon className="info-icon" />
-          <span className="client-name">{clientName}</span>
+        <div className="card-client-line">
+          <UserIcon className="client-icon" />
+          <span>{clientName}</span>
         </div>
-
         {address && !compact && (
-          <div className="client-address">
-            <MapPinIcon className="info-icon" />
+          <div className="card-address-line">
+            <MapPinIcon className="address-icon" />
             <span>{address}</span>
           </div>
         )}
       </div>
 
-      {/* Actions rapides */}
-      <div className="card-actions">
-        {clientPhone && (
+      {/* Action rapide */}
+      <div className="card-quick-action">
+        {clientPhone && !isCompleted ? (
           <button
-            className="action-btn call-btn"
+            className="quick-call-btn"
             onClick={(e) => onCall(clientPhone, e)}
-            title={`Appeler ${clientPhone}`}
+            title="Appeler"
           >
             <PhoneIcon />
-            <span>Appeler</span>
           </button>
+        ) : isCompleted ? (
+          <CheckCircleIcon className="completed-check" />
+        ) : (
+          <ChevronRightIcon className="card-chevron" />
         )}
-        <button className="action-btn details-btn" onClick={onClick}>
-          Voir détails
-        </button>
       </div>
     </div>
   );
