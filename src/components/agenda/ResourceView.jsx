@@ -71,8 +71,9 @@ const groupInterventionsByEmployee = (interventions, employees) => {
             grouped[empId].stats.inProgress++;
           }
 
-          // Estimation 2h par intervention
-          grouped[empId].stats.hours += 2;
+          // Utilise estimated_duration ou 2h par défaut
+          const duration = parseFloat(itv.estimated_duration) || 2;
+          grouped[empId].stats.hours += duration;
         }
       });
     }

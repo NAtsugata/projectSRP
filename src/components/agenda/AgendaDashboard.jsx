@@ -109,21 +109,21 @@ const calculateStats = (interventions, employees) => {
       stats.pending++;
     }
 
-    // Calculer la charge par employé (estimation : 2h par intervention)
-    const estimatedHours = 2;
+    // Calculer la charge par employé (utilise estimated_duration ou 2h par défaut)
+    const duration = parseFloat(itv.estimated_duration) || 2;
     if (assignments && Array.isArray(assignments)) {
       assignments.forEach(assignment => {
         const userId = assignment.user_id;
         if (stats.employeeLoad[userId]) {
           stats.employeeLoad[userId].count++;
-          stats.employeeLoad[userId].hours += estimatedHours;
+          stats.employeeLoad[userId].hours += duration;
         }
       });
     } else if (itv.assigned_to && Array.isArray(itv.assigned_to)) {
       itv.assigned_to.forEach(userId => {
         if (stats.employeeLoad[userId]) {
           stats.employeeLoad[userId].count++;
-          stats.employeeLoad[userId].hours += estimatedHours;
+          stats.employeeLoad[userId].hours += duration;
         }
       });
     }
