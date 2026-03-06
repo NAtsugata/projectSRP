@@ -6,6 +6,7 @@ import { interventionService } from '../services/interventionService';
 import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
+import { useUsers } from '../hooks/useUsers';
 import { buildSanitizedReport } from '../utils/reportHelpers';
 import InterventionDetailView from './InterventionDetailView';
 import logger from '../utils/logger';
@@ -16,6 +17,8 @@ const InterventionDetailViewContainer = () => {
     const { profile } = useAuthStore();
     const toast = useToast();
     const queryClient = useQueryClient();
+    const { users } = useUsers();
+    const [isUpdatingTeam, setIsUpdatingTeam] = React.useState(false);
 
     const { data: intervention, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['intervention', interventionId],
@@ -23,7 +26,13 @@ const InterventionDetailViewContainer = () => {
             logger.log('Fetching intervention:', interventionId);
             const { data, error } = await supabase
                 .from('interventions')
-                .select('*')
+                .select(`
+                    *,
+                    intervention_assignments (
+                        user_id,
+                        profiles (id, full_name)
+                    )
+                `)
                 .eq('id', interventionId)
                 .single();
 
@@ -133,6 +142,30 @@ const InterventionDetailViewContainer = () => {
         }
     };
 
+    const handleUpdateTeam = async (id, userIds, dailyAssignments) => {
+        setIsUpdatingTeam(true);
+        try {
+            // Mettre à jour les assignations globales
+            const assignResult = await interventionService.updateAssignments(id, userIds);
+            if (assignResult.error) throw assignResult.error;
+
+            // Si des assignations journalières sont fournies, les sauvegarder aussi
+            if (dailyAssignments) {
+                const dailyResult = await interventionService.updateDailyAssignments(id, dailyAssignments);
+                if (dailyResult.error) throw dailyResult.error;
+            }
+
+            toast?.success('Équipe mise à jour !');
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        } catch (error) {
+            toast?.error('Erreur lors de la mise à jour de l\'équipe: ' + (error.message || 'Erreur inconnue'));
+            throw error;
+        } finally {
+            setIsUpdatingTeam(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
@@ -151,6 +184,9 @@ const InterventionDetailViewContainer = () => {
             onAddBriefingDocuments={handleAddBriefingDocuments}
             onUpdateScheduledDates={handleUpdateScheduledDates}
             onUpdateAdminNote={handleUpdateAdminNote}
+            onUpdateTeam={handleUpdateTeam}
+            isUpdatingTeam={isUpdatingTeam}
+            users={users}
             isAdmin={profile?.is_admin}
             refreshData={refetch}
             dataVersion={Date.now()} // Force update if needed

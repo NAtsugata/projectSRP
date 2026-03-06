@@ -28,6 +28,7 @@ import {
 } from '../components/intervention';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
+import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
@@ -68,7 +69,7 @@ const fmtTime = (iso) => {
 
 // InlineUploader et VoiceNoteRecorder remplacés par FileUploader et VoiceRecorder importés
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [] }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -78,6 +79,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [isSaving, setIsSaving] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
   const [showCerfaModal, setShowCerfaModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
 
   // Debug: logger les changements de uploadQueue
@@ -689,6 +691,63 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         )}
 
+        {/* GESTION DE L'ÉQUIPE (Admin uniquement) */}
+        {isAdmin && onUpdateTeam && (
+          <div className="card-white" style={{ marginBottom: '1rem' }}>
+            <div className="section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0 }}>👥 Équipe assignée</h3>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowTeamModal(true)}
+                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}
+                >
+                  Modifier l'équipe
+                </button>
+              </div>
+
+              {/* Affichage de l'équipe actuelle */}
+              {intervention.intervention_assignments && intervention.intervention_assignments.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {intervention.intervention_assignments.map((assignment, idx) => (
+                    <span
+                      key={assignment.user_id || idx}
+                      className="badge"
+                      style={{ background: '#3b82f6', color: 'white', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
+                    >
+                      {assignment.profiles?.full_name || 'Employé'}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted" style={{ margin: 0 }}>Aucun employé assigné</p>
+              )}
+
+              {/* Affichage des assignations par jour si présentes */}
+              {intervention.daily_assignments && Object.keys(intervention.daily_assignments).length > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: '#6b7280' }}>Équipe par jour :</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {Object.entries(intervention.daily_assignments).sort(([a], [b]) => a.localeCompare(b)).map(([date, userIds]) => {
+                      const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                      const userNames = userIds.map(uid => {
+                        const assignment = intervention.intervention_assignments?.find(a => a.user_id === uid);
+                        return assignment?.profiles?.full_name || users.find(u => u.id === uid)?.full_name || 'Employé';
+                      });
+                      return (
+                        <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                          <span style={{ fontWeight: 500, minWidth: '80px' }}>{formattedDate}</span>
+                          <span style={{ color: '#374151' }}>{userNames.join(', ') || 'Aucun'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ANCIEN CONTENU (conservé) */}
         <div className="card-white">
           <h2>{intervention.client}</h2>
@@ -1225,6 +1284,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         sourceId={intervention?.id}
         showToast={(msg, type) => alert(msg)}
       />
+
+      {/* Modal Équipe (Admin) */}
+      {isAdmin && onUpdateTeam && (
+        <EditTeamModal
+          isOpen={showTeamModal}
+          intervention={intervention}
+          users={users}
+          onSave={async (selectedUserIds, dailyAssignments) => {
+            await onUpdateTeam(intervention.id, selectedUserIds, dailyAssignments);
+            setShowTeamModal(false);
+          }}
+          onCancel={() => setShowTeamModal(false)}
+          loading={isUpdatingTeam}
+        />
+      )}
     </div>
   );
 }
