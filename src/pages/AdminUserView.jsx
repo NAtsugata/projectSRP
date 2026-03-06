@@ -56,17 +56,23 @@ export default function AdminUserView({ users, onUpdateUser }) {
     const [availablePermissions, setAvailablePermissions] = useState([]);
     const [userPermissions, setUserPermissions] = useState([]);
     const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
+    const [permissionsError, setPermissionsError] = useState(null);
 
     // Charger les permissions disponibles au montage
     useEffect(() => {
         const loadAvailablePermissions = async () => {
             try {
                 const { data, error } = await permissionService.getAvailablePermissions();
-                if (!error && data) {
+                if (error) {
+                    console.error('Erreur chargement permissions:', error);
+                    setPermissionsError('Les tables de permissions ne sont pas configurees. Executez la migration SQL.');
+                } else if (data) {
                     setAvailablePermissions(data);
+                    setPermissionsError(null);
                 }
             } catch (err) {
                 console.error('Erreur chargement permissions disponibles:', err);
+                setPermissionsError('Erreur de connexion aux permissions.');
             }
         };
         loadAvailablePermissions();
