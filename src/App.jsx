@@ -21,6 +21,7 @@ import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
 import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/LegalPages';
+import PermissionRoute from './components/PermissionRoute';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
@@ -490,6 +491,86 @@ function App() {
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
+
+                  {/* Routes protegees par permissions pour employes */}
+                  <Route path="dashboard" element={
+                    <PermissionRoute permission="view_reports">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminDashboardContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="clients" element={
+                    <PermissionRoute permission="manage_clients">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminClientsViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="contracts" element={
+                    <PermissionRoute permission="view_contracts">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminContractsViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="contracts/:contractId" element={
+                    <PermissionRoute permission="view_contracts">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <ContractDetailViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="invoices" element={
+                    <PermissionRoute permission="view_invoices">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminInvoicesViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="catalog" element={
+                    <PermissionRoute permission="access_catalog">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminCatalogViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="admin-vault" element={
+                    <PermissionRoute permission="access_admin_vault">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminVaultViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="archives" element={
+                    <PermissionRoute permission="view_all_interventions">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminArchiveViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="checklist-templates" element={
+                    <PermissionRoute permission="manage_checklist_templates">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminChecklistTemplatesViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="admin-expenses" element={
+                    <PermissionRoute permission="approve_expenses">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminExpensesViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="admin-leaves" element={
+                    <PermissionRoute permission="approve_leave_requests">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <AdminLeaveViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+
                   <Route path="*" element={<Navigate to="/planning" replace />} />
                 </>
               )}
