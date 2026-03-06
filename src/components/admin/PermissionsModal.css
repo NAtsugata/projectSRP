@@ -200,13 +200,8 @@
   justify-content: space-between;
   padding: 1rem 1.25rem;
   background: var(--perm-white);
-  cursor: pointer;
   transition: all 0.2s ease;
   border-left: 4px solid var(--category-color, var(--perm-copper));
-}
-
-.category-header:hover {
-  background: var(--perm-gray-light);
 }
 
 .category-info {
@@ -244,6 +239,12 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.category-checkbox:hover {
+  border-color: var(--perm-copper);
+  background: rgba(184, 115, 51, 0.1);
 }
 
 .category-checkbox.checked {

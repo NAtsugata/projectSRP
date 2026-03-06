@@ -153,7 +153,6 @@ export default function PermissionsModal({
                   <div key={category} className="permission-category">
                     <div
                       className="category-header"
-                      onClick={() => toggleCategory(category)}
                       style={{ '--category-color': config.color }}
                     >
                       <div className="category-info">
@@ -163,7 +162,11 @@ export default function PermissionsModal({
                           {perms.filter(p => selectedPermissions.has(p.code)).length}/{perms.length}
                         </span>
                       </div>
-                      <div className={`category-checkbox ${allSelected ? 'checked' : someSelected ? 'partial' : ''}`}>
+                      <div
+                        className={`category-checkbox ${allSelected ? 'checked' : someSelected ? 'partial' : ''}`}
+                        onClick={() => toggleCategory(category)}
+                        title={allSelected ? 'Désélectionner toutes les permissions de cette catégorie' : 'Sélectionner toutes les permissions de cette catégorie'}
+                      >
                         {allSelected && <CheckIcon />}
                       </div>
                     </div>
