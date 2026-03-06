@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     BriefcaseIcon,
@@ -20,6 +20,7 @@ import {
 } from '../SharedUI';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
+import { usePermissions } from '../../hooks/usePermissions';
 import './AppLayout.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
@@ -27,41 +28,109 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const navigate = useNavigate();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-    const isAdmin = profile?.is_admin;
+    const { hasPermission, isAdmin } = usePermissions();
 
-    const navigation = isAdmin
-        ? [
-            { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-            { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { name: 'Congés', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
-            { name: 'Dépenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
-            { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
-            { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
-            { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
-            { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-            { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
-            { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' },
-            { name: 'Facturation', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
-            { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
-            { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
-            { name: 'Paramètres', href: '/settings', icon: SettingsIcon, color: 'text-slate-500', bg: 'bg-slate-50' },
-        ]
-        : [
-            { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-            { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { name: 'Congés', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
-            { name: 'Dépenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
-            { name: 'Coffre-fort', href: '/vault', icon: LockIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
-            { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
-            { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
-            { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
-        ];
+    // Navigation de base pour les employes
+    const baseNavigation = [
+        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
+        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
+        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
+        { name: 'Coffre-fort', href: '/vault', icon: LockIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
+        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
+        { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+        { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+    ];
+
+    // Navigation complete admin
+    const adminNavigation = [
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
+        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
+        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
+        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
+        { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
+        { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
+        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
+        { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+        { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
+        { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { name: 'Facturation', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
+        { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
+        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+        { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+        { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
+        { name: 'Parametres', href: '/settings', icon: SettingsIcon, color: 'text-slate-500', bg: 'bg-slate-50' },
+    ];
+
+    // Pages additionnelles basees sur les permissions
+    const permissionBasedPages = [
+        {
+            permission: 'view_reports',
+            page: { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' }
+        },
+        {
+            permission: 'manage_clients',
+            page: { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' }
+        },
+        {
+            permission: 'view_contracts',
+            page: { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' }
+        },
+        {
+            permission: 'view_invoices',
+            page: { name: 'Factures', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' }
+        },
+        {
+            permission: 'access_catalog',
+            page: { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' }
+        },
+        {
+            permission: 'access_admin_vault',
+            page: { name: 'Coffre Admin', href: '/admin-vault', icon: LockIcon, color: 'text-red-500', bg: 'bg-red-50' }
+        },
+        {
+            permission: 'view_all_interventions',
+            page: { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' }
+        },
+        {
+            permission: 'manage_checklist_templates',
+            page: { name: 'Modeles Checklist', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-600', bg: 'bg-emerald-100' }
+        },
+        {
+            permission: 'approve_expenses',
+            page: { name: 'Valider Depenses', href: '/admin-expenses', icon: DollarSignIcon, color: 'text-green-600', bg: 'bg-green-100' }
+        },
+        {
+            permission: 'approve_leave_requests',
+            page: { name: 'Valider Conges', href: '/admin-leaves', icon: SunIcon, color: 'text-orange-600', bg: 'bg-orange-100' }
+        },
+    ];
+
+    // Construire la navigation finale
+    const navigation = useMemo(() => {
+        if (isAdmin) {
+            return adminNavigation;
+        }
+
+        // Commencer avec la nav de base
+        const nav = [...baseNavigation];
+
+        // Ajouter les pages basees sur les permissions
+        permissionBasedPages.forEach(({ permission, page }) => {
+            if (hasPermission(permission)) {
+                // Eviter les doublons
+                if (!nav.some(n => n.href === page.href)) {
+                    nav.push(page);
+                }
+            }
+        });
+
+        return nav;
+    }, [isAdmin, hasPermission]);
 
     const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
 
@@ -111,7 +180,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 <div className="sidebar-footer">
                     <button onClick={handleLogout} className="logout-button">
                         <LogOutIcon className="nav-icon" />
-                        Déconnexion
+                        Deconnexion
                     </button>
                 </div>
             </div>

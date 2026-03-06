@@ -16,3 +16,4 @@ export {
   useOfflineUpload,
   useResilientUpload
 } from './useMobileUpload';
+export { usePermissions } from './usePermissions';
