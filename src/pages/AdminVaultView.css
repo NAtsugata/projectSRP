@@ -525,6 +525,30 @@
   height: 0.875rem;
 }
 
+.btn-icon-share {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--vault-copper);
+  background: var(--vault-white);
+  color: var(--vault-copper);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-share:hover {
+  background: var(--vault-copper);
+  color: var(--vault-white);
+}
+
+.btn-icon-share svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 .btn-icon-danger {
   width: 2rem;
   height: 2rem;

@@ -14,7 +14,20 @@ import {
 } from '../components/SharedUI';
 import logger from '../utils/logger';
 import { storageService } from '../lib/supabase';
+import { permissionService } from '../services/permissionService';
+import ShareDocumentModal from '../components/admin/ShareDocumentModal';
 import './AdminVaultView.css';
+
+// Icone Share
+const ShareIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="18" cy="5" r="3"></circle>
+    <circle cx="6" cy="12" r="3"></circle>
+    <circle cx="18" cy="19" r="3"></circle>
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+  </svg>
+);
 
 // Icône X pour fermer
 const XIcon = () => (
@@ -24,8 +37,8 @@ const XIcon = () => (
   </svg>
 );
 
-// Composant Accordion pour chaque employé
-const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, formatDate }) => {
+// Composant Accordion pour chaque employe
+const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, onShare, formatDate }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -45,10 +58,13 @@ const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, form
               <FileTextIcon className="document-icon" />
               <div className="document-info">
                 <span className="document-name">{doc.file_name}</span>
-                <span className="document-date">Envoyé le {formatDate(doc.created_at)}</span>
+                <span className="document-date">Envoye le {formatDate(doc.created_at)}</span>
               </div>
               <div className="document-actions">
-                <button onClick={() => onDownload(doc)} className="btn-icon" title="Télécharger">
+                <button onClick={() => onShare(doc)} className="btn-icon-share" title="Partager avec d'autres employes">
+                  <ShareIcon />
+                </button>
+                <button onClick={() => onDownload(doc)} className="btn-icon" title="Telecharger">
                   <DownloadIcon />
                 </button>
                 <button onClick={() => onDeleteDocument(doc)} className="btn-icon-danger" title="Supprimer">
@@ -234,6 +250,11 @@ export default function AdminVaultView({
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+
+  // Etat pour le partage de documents
+  const [shareDocument, setShareDocument] = useState(null);
+  const [currentShares, setCurrentShares] = useState([]);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
 
   const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
 
@@ -447,8 +468,47 @@ export default function AdminVaultView({
     }
   };
 
+  // Ouvrir le modal de partage
+  const handleOpenShare = useCallback(async (doc) => {
+    setShareDocument(doc);
+    setIsLoadingShares(true);
+    try {
+      const { data, error: fetchError } = await permissionService.getDocumentShares(doc.id);
+      if (!fetchError && data) {
+        setCurrentShares(data);
+      }
+    } catch (err) {
+      logger.error('Erreur chargement partages:', err);
+    } finally {
+      setIsLoadingShares(false);
+    }
+  }, []);
+
+  // Sauvegarder les partages
+  const handleSaveShares = useCallback(async (documentId, userIds) => {
+    try {
+      await permissionService.updateDocumentShares(documentId, userIds);
+      logger.log('Partages mis a jour pour le document:', documentId);
+    } catch (err) {
+      logger.error('Erreur sauvegarde partages:', err);
+      throw err;
+    }
+  }, []);
+
   return (
     <div className="admin-vault">
+      {/* Modal de partage */}
+      {shareDocument && (
+        <ShareDocumentModal
+          isOpen={!!shareDocument}
+          onClose={() => setShareDocument(null)}
+          document={shareDocument}
+          employees={employees}
+          currentShares={currentShares}
+          onSave={handleSaveShares}
+          isLoading={isLoadingShares}
+        />
+      )}
       {/* Header avec titre et toolbar */}
       <div className="admin-vault-header">
         <h2 className="admin-vault-title">
@@ -677,6 +737,7 @@ export default function AdminVaultView({
                   documents={data.documents}
                   onDeleteDocument={onDeleteDocument}
                   onDownload={handleDownload}
+                  onShare={handleOpenShare}
                   formatDate={formatDate}
                 />
               ))
