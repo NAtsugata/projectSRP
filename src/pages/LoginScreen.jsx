@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { authService } from '../lib/supabase';
 import { MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
+import { useAuthStore } from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
 import './LoginScreen.css';
 
 export default function LoginScreen() {
@@ -8,6 +10,8 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const { setUser, setProfile } = useAuthStore();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -15,13 +19,23 @@ export default function LoginScreen() {
         setError('');
 
         try {
-            const { error: signInError } = await authService.signIn(email, password);
+            const result = await authService.signIn(email, password);
 
-            if (signInError) {
+            if (result.error) {
                 setError('Email ou mot de passe incorrect. Veuillez réessayer.');
+            } else if (result.isOfflineMode) {
+                // Mode hors ligne : définir manuellement la session et le profil
+                console.log('📴 Connexion hors ligne réussie');
+                if (result.data?.user) {
+                    setUser(result.data.user);
+                    setProfile(result.data.user);
+                }
+                // Rediriger vers le dashboard
+                navigate('/dashboard');
             }
-            // La redirection est gérée par App.js via onAuthStateChange
+            // Sinon, la redirection est gérée par App.js via onAuthStateChange (mode online)
         } catch (error) {
+            console.error('Erreur de connexion:', error);
             setError('Erreur de connexion. Veuillez réessayer.');
         } finally {
             setLoading(false);

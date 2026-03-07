@@ -114,9 +114,32 @@ export const authService = {
     return supabase.auth.onAuthStateChange(callback);
   },
 
-  /** Get current session */
-  getSession() {
-    return supabase.auth.getSession();
+  /** Get current session (avec support cache hors ligne) */
+  async getSession() {
+    // Essayer d'abord la session Supabase
+    const result = await supabase.auth.getSession();
+
+    // Si pas de session online, vérifier le cache hors ligne
+    if (!result.data?.session && !navigator.onLine) {
+      logger.emoji('📴', 'Vérification session hors ligne...');
+      const offlineSession = await offlineAuthService.getCachedAuthSession();
+      const offlineUser = await offlineAuthService.getOfflineUserData();
+      const isValid = await offlineAuthService.hasOfflineSession();
+
+      if (offlineSession && offlineUser && isValid) {
+        logger.emoji('✅', 'Session hors ligne valide trouvée');
+        return {
+          data: {
+            session: offlineSession,
+            user: offlineUser
+          },
+          error: null,
+          isOfflineMode: true
+        };
+      }
+    }
+
+    return result;
   },
 };
 

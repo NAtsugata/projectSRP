@@ -194,11 +194,16 @@ export async function syncOfflineData(supabase, userId) {
   }
 }
 
+// Réexporter les fonctions du cache pour un accès direct
+export { getCachedAuthSession, isSessionValid };
+
 export default {
   saveAuthData,
   signInOffline,
   clearOfflineAuth,
   hasOfflineSession,
   getOfflineUserData,
-  syncOfflineData
+  syncOfflineData,
+  getCachedAuthSession,
+  isSessionValid
 };

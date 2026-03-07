@@ -85,6 +85,21 @@ function App() {
     logger.log('alert() remplacé par des toasts');
   }, [showToast]);
 
+  // ✅ Vérifier session hors ligne au démarrage
+  useEffect(() => {
+    const checkOfflineSession = async () => {
+      if (!navigator.onLine) {
+        logger.log('📴 Mode hors ligne détecté - Vérification session cache');
+        const result = await authService.getSession();
+        if (result.data?.session && result.isOfflineMode) {
+          logger.log('✅ Session hors ligne trouvée');
+          setSession(result.data.session);
+        }
+      }
+    };
+    checkOfflineSession();
+  }, []);
+
   useEffect(() => {
     const {
       data: { subscription }
@@ -114,19 +129,38 @@ function App() {
   useEffect(() => {
     if (session?.user) {
       setLoading(true);
-      profileService
-        .getProfile(session.user.id)
-        .then(({ data: userProfile, error }) => {
-          if (error) {
-            showToast('Impossible de récupérer le profil.', 'error');
-            authService.signOut();
-          } else {
-            setProfile(userProfile);
-          }
-        })
-        .finally(() => {
-          setLoading(false);
+
+      // Si hors ligne, charger depuis le cache
+      if (!navigator.onLine) {
+        import('./services/offlineAuthService').then(({ getOfflineUserData }) => {
+          getOfflineUserData()
+            .then(cachedProfile => {
+              if (cachedProfile) {
+                logger.log('📴 Profil chargé depuis le cache');
+                setProfile(cachedProfile);
+              } else {
+                showToast('Profil non disponible hors ligne', 'warning');
+                setProfile(null);
+              }
+            })
+            .finally(() => setLoading(false));
         });
+      } else {
+        // Mode en ligne : charger depuis Supabase
+        profileService
+          .getProfile(session.user.id)
+          .then(({ data: userProfile, error }) => {
+            if (error) {
+              showToast('Impossible de récupérer le profil.', 'error');
+              authService.signOut();
+            } else {
+              setProfile(userProfile);
+            }
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     } else {
       setProfile(null);
       setLoading(false);
