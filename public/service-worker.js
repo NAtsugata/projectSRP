@@ -2,7 +2,7 @@
 // Service Worker pour gérer les notifications push natives et le mode hors ligne
 
 // Noms des caches (version unique)
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4'; // v4: Support authentification hors ligne + assets critiques
 const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
 const API_CACHE = `srp-api-${CACHE_VERSION}`;
@@ -18,7 +18,16 @@ const PRECACHE_ASSETS = [
   '/offline.html',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/logo192.png'
+];
+
+// Assets critiques pour fonctionnalités hors ligne (PDF CERFA, etc.)
+// Ces fichiers seront chargés en arrière-plan après l'installation
+const CRITICAL_ASSETS = [
+  '/models/best.onnx', // Modèle YOLO pour diagnostics
+  // Note: Les PDF CERFA sont importés comme assets Webpack/Vite
+  // et sont déjà inclus dans le bundle JS, donc disponibles hors ligne
 ];
 
 // Routes de l'app à pré-charger (React Router SPA)
@@ -53,6 +62,14 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         console.log('[Service Worker] Installation terminée');
+        // Charger les assets critiques en arrière-plan (non bloquant)
+        caches.open(CACHE_NAME).then(cache => {
+          CRITICAL_ASSETS.forEach(asset => {
+            cache.add(asset).catch(err => {
+              console.warn('[Service Worker] Asset critique non chargé:', asset, err);
+            });
+          });
+        });
         return self.skipWaiting(); // Activer immédiatement
       })
   );
