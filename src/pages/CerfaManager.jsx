@@ -4,6 +4,7 @@
 // =============================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -70,6 +71,7 @@ const ListIcon = ({ size = 18 }) => (
 );
 
 function CerfaManager() {
+    const navigate = useNavigate();
     const toast = useToast();
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -194,7 +196,7 @@ function CerfaManager() {
 
     // Ouvrir un template PDF
     const openTemplate = (template) => {
-        window.open(template.path, '_blank');
+        navigate(template.path);
     };
 
     // Gérer la sélection de fichier
