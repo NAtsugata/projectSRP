@@ -349,7 +349,7 @@ function CerfaPage() {
             const filename = `${ficheNumber}_${clientName}_${date}.pdf`;
 
             // Télécharger le PDF
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             // Enregistrer dans Supabase Storage
             try {

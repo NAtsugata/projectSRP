@@ -767,15 +767,84 @@ export const fillCerfa15498 = async (data) => {
  * @param {Blob} pdfBlob - Le PDF en Blob
  * @param {string} filename - Nom du fichier
  */
-export const downloadCerfa = (pdfBlob, filename = 'cerfa_15497_entretien.pdf') => {
-    const url = URL.createObjectURL(pdfBlob);
+export const downloadCerfa = async (pdfBlob, filename = 'cerfa_15497_entretien.pdf') => {
+    try {
+        // Créer un nouveau Blob avec le type MIME correct
+        const pdfFile = new File([pdfBlob], filename, {
+            type: 'application/pdf',
+            lastModified: Date.now()
+        });
+
+        // Détecter si on est sur mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Sur mobile, essayer d'utiliser l'API Web Share pour ouvrir dans l'app native
+        if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            logger.log('[CERFA] 📱 Mobile: Partage via Web Share API');
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: 'CERFA PDF',
+                    text: 'Télécharger le PDF CERFA'
+                });
+                logger.log('[CERFA] ✅ PDF partagé avec succès');
+                return;
+            } catch (shareError) {
+                // Si l'utilisateur annule le partage ou si ça échoue, continuer avec la méthode classique
+                logger.warn('[CERFA] Partage annulé ou erreur:', shareError);
+            }
+        }
+
+        // Méthode classique : téléchargement direct
+        // Sur mobile, window.open() ouvre le PDF dans le lecteur natif
+        // Sur desktop, download attribute force le téléchargement
+        const url = URL.createObjectURL(pdfFile);
+
+        if (isMobile) {
+            // Sur mobile : ouvrir dans un nouvel onglet (qui ouvrira l'app PDF native)
+            logger.log('[CERFA] 📱 Mobile: Ouverture dans lecteur PDF natif');
+            const newWindow = window.open(url, '_blank');
+
+            // Si le popup est bloqué, fallback sur le téléchargement
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                logger.warn('[CERFA] Popup bloqué, fallback sur téléchargement');
+                downloadFallback(url, filename);
+            } else {
+                // Libérer l'URL après 5 secondes (temps pour que le lecteur PDF se lance)
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
+        } else {
+            // Sur desktop : téléchargement direct
+            logger.log('[CERFA] 💻 Desktop: Téléchargement direct');
+            downloadFallback(url, filename);
+        }
+    } catch (error) {
+        logger.error('[CERFA] ❌ Erreur téléchargement:', error);
+        throw new Error('Erreur lors du téléchargement du PDF');
+    }
+};
+
+/**
+ * Fonction helper pour téléchargement classique
+ * @param {string} url - URL du blob
+ * @param {string} filename - Nom du fichier
+ */
+const downloadFallback = (url, filename) => {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+
+    // Certains navigateurs nécessitent que le lien soit dans le DOM
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    // Nettoyer
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
 };
 
 // =============================

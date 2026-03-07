@@ -241,7 +241,7 @@ function CerfaPage15498() {
             const filename = `${ficheNumber}_15498_${clientName}_${date}.pdf`;
 
             // Télécharger le PDF
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             // Enregistrer dans Supabase Storage
             try {

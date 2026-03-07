@@ -275,7 +275,7 @@ function CerfaPage1301() {
             // Télécharger
             const clientName = `${formData.clientPrenom} ${formData.clientNom}`.trim() || 'Client';
             const filename = `CERFA_1301_TVA10_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             // Sauvegarder dans l'historique
             saveGenerationRecord({
