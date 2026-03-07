@@ -81,7 +81,7 @@ export const authService = {
     return result;
   },
 
-  /** Sign out and clean local storage (y compris cache hors ligne) */
+  /** Sign out and clean local storage (garde credentials pour reconnexion offline) */
   async signOut() {
     logger.emoji('🚪', 'Déconnexion en cours...');
     try {
@@ -101,10 +101,10 @@ export const authService = {
         if (k.startsWith('supabase')) sessionStorage.removeItem(k);
       });
 
-      // Nettoyer le cache hors ligne
-      await offlineAuthService.clearOfflineAuth();
+      // Nettoyer seulement la session (garde credentials pour reconnexion offline)
+      await offlineAuthService.clearOfflineAuthSession();
 
-      logger.emoji('✅', 'Déconnexion réussie');
+      logger.emoji('✅', 'Déconnexion réussie (credentials conservés pour mode offline)');
       return { error: null };
     } catch (e) {
       logger.error('❌ Erreur inattendue lors de la déconnexion:', e);

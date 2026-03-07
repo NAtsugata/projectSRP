@@ -343,12 +343,21 @@ export const verifyOfflineCredentials = async (email, passwordHash) => {
 };
 
 /**
- * Supprime toutes les données d'authentification (logout)
+ * Supprime seulement la session (garde credentials et user data pour reconnexion offline)
+ */
+export const clearAuthSession = async () => {
+  await deleteFromStore(STORES.AUTH, 'session');
+  logger.log('[OfflineDB] Session supprimée (credentials conservés)');
+};
+
+/**
+ * Supprime toutes les données d'authentification (logout complet + clear cache)
+ * À utiliser uniquement pour nettoyage complet ou changement d'utilisateur
  */
 export const clearAuthCache = async () => {
   await clearStore(STORES.AUTH);
   await clearStore(STORES.USER_DATA);
-  logger.log('[OfflineDB] Données auth supprimées');
+  logger.log('[OfflineDB] Données auth supprimées complètement');
 };
 
 /**
@@ -432,6 +441,7 @@ export default {
   getCachedAuthSession,
   cacheAuthCredentials,
   verifyOfflineCredentials,
+  clearAuthSession,
   clearAuthCache,
   cacheUserData,
   getCachedUserData,

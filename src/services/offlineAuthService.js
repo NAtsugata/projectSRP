@@ -6,6 +6,7 @@ import {
   getCachedAuthSession,
   cacheAuthCredentials,
   verifyOfflineCredentials,
+  clearAuthSession,
   clearAuthCache,
   cacheUserData,
   getCachedUserData,
@@ -130,12 +131,28 @@ export async function signInOffline(email, password) {
 }
 
 /**
- * Nettoie toutes les données d'authentification
+ * Nettoie seulement la session (garde credentials pour reconnexion offline)
+ * À utiliser lors de la déconnexion normale
+ */
+export async function clearOfflineAuthSession() {
+  try {
+    await clearAuthSession();
+    logger.log('[OfflineAuth] ✅ Session effacée (credentials conservés pour offline)');
+    return true;
+  } catch (error) {
+    logger.error('[OfflineAuth] ❌ Erreur effacement session:', error);
+    return false;
+  }
+}
+
+/**
+ * Nettoie toutes les données d'authentification (credentials + session + user data)
+ * À utiliser uniquement pour changement d'utilisateur ou nettoyage complet
  */
 export async function clearOfflineAuth() {
   try {
     await clearAuthCache();
-    logger.log('[OfflineAuth] ✅ Données auth effacées');
+    logger.log('[OfflineAuth] ✅ Toutes les données auth effacées');
     return true;
   } catch (error) {
     logger.error('[OfflineAuth] ❌ Erreur effacement auth:', error);
@@ -212,6 +229,7 @@ export { getCachedAuthSession, isSessionValid };
 export default {
   saveAuthData,
   signInOffline,
+  clearOfflineAuthSession,
   clearOfflineAuth,
   hasOfflineSession,
   getOfflineUserData,
