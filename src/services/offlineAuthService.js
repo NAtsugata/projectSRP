@@ -11,7 +11,9 @@ import {
   cacheUserData,
   getCachedUserData,
   isSessionValid,
-  cacheProfiles
+  cacheProfiles,
+  cacheInterventions,
+  cacheContracts
 } from '../utils/offlineStorage';
 import logger from '../utils/logger';
 
@@ -185,12 +187,23 @@ export async function getOfflineUserData() {
 /**
  * Synchronise les données essentielles pour le mode hors ligne
  * À appeler après une connexion réussie avec internet
+ * @param {Object} supabase - Instance Supabase
+ * @param {string} userId - ID de l'utilisateur
+ * @param {Function} onProgress - Callback de progression (étape, total)
+ * @returns {Promise<{success: boolean, stats?: Object, error?: string}>}
  */
-export async function syncOfflineData(supabase, userId) {
+export async function syncOfflineData(supabase, userId, onProgress = null) {
   try {
-    logger.log('[OfflineAuth] Synchronisation données hors ligne...');
+    logger.log('[OfflineAuth] 🔄 Synchronisation données hors ligne...');
+    const stats = {
+      profiles: 0,
+      interventions: 0,
+      contracts: 0,
+      clients: 0
+    };
 
-    // Récupérer le profil utilisateur
+    // Étape 1/5 : Profil utilisateur
+    if (onProgress) onProgress(1, 5, 'Profil utilisateur...');
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -198,25 +211,71 @@ export async function syncOfflineData(supabase, userId) {
       .single();
 
     if (profileError) throw profileError;
+    await cacheUserData(profile);
+    logger.log('[OfflineAuth] ✅ Profil utilisateur mis en cache');
 
-    // Récupérer tous les profils (pour l'app)
+    // Étape 2/5 : Tous les profils (pour l'app)
+    if (onProgress) onProgress(2, 5, 'Profils équipe...');
     const { data: allProfiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
 
     if (profilesError) throw profilesError;
-
-    // Sauvegarder les profils
     await cacheProfiles(allProfiles || []);
+    stats.profiles = allProfiles?.length || 0;
+    logger.log(`[OfflineAuth] ✅ ${stats.profiles} profils mis en cache`);
 
-    // Sauvegarder les données utilisateur
-    await cacheUserData(profile);
+    // Étape 3/5 : Interventions des 60 derniers jours
+    if (onProgress) onProgress(3, 5, 'Interventions récentes...');
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    logger.log('[OfflineAuth] ✅ Synchronisation terminée');
-    return true;
+    const { data: interventions, error: interventionsError } = await supabase
+      .from('interventions')
+      .select('*')
+      .gte('scheduled_at', sixtyDaysAgo.toISOString())
+      .order('scheduled_at', { ascending: false });
+
+    if (!interventionsError && interventions) {
+      await cacheInterventions(interventions);
+      stats.interventions = interventions.length;
+      logger.log(`[OfflineAuth] ✅ ${stats.interventions} interventions mises en cache`);
+    }
+
+    // Étape 4/5 : Contrats actifs
+    if (onProgress) onProgress(4, 5, 'Contrats actifs...');
+    const { data: contracts, error: contractsError } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('status', 'active');
+
+    if (!contractsError && contracts) {
+      await cacheContracts(contracts);
+      stats.contracts = contracts.length;
+      logger.log(`[OfflineAuth] ✅ ${stats.contracts} contrats mis en cache`);
+    }
+
+    // Étape 5/5 : Clients
+    if (onProgress) onProgress(5, 5, 'Clients...');
+    const { data: clients, error: clientsError } = await supabase
+      .from('clients')
+      .select('*');
+
+    if (!clientsError && clients) {
+      // Stocker les clients dans IndexedDB
+      const { saveToStore, STORES_ENUM } = await import('../utils/offlineStorage');
+      for (const client of clients) {
+        await saveToStore(STORES_ENUM.CLIENTS, client);
+      }
+      stats.clients = clients.length;
+      logger.log(`[OfflineAuth] ✅ ${stats.clients} clients mis en cache`);
+    }
+
+    logger.log('[OfflineAuth] ✅ Synchronisation terminée:', stats);
+    return { success: true, stats };
   } catch (error) {
     logger.error('[OfflineAuth] ❌ Erreur synchronisation:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 }
 

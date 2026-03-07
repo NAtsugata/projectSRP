@@ -311,3 +311,193 @@
     font-size: 0.85rem;
   }
 }
+
+/* ============================================
+   Offline Mode Section
+   ============================================ */
+.offline-sync-info {
+  background: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.offline-sync-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 0.75rem;
+}
+
+.offline-sync-info ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #374151;
+}
+
+.offline-sync-info li {
+  margin-bottom: 0.5rem;
+}
+
+.sync-warning {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.sync-warning strong {
+  color: #92400e;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.sync-warning p {
+  margin: 0;
+  color: #78350f;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Sync Stats */
+.sync-stats {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.sync-stats h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #047857;
+  margin: 0 0 1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #047857;
+}
+
+/* Sync Progress */
+.sync-progress {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  transition: width 0.3s ease;
+  border-radius: 6px;
+}
+
+.progress-label {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Sync Button */
+.btn-sync {
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.btn-sync:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-sync:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Instructions */
+.offline-instructions {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.offline-instructions h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1rem;
+}
+
+.offline-instructions ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #475569;
+}
+
+.offline-instructions li {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.offline-instructions strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -4,7 +4,7 @@
 import logger from './logger';
 
 const DB_NAME = 'srp-offline-db';
-const DB_VERSION = 2; // v2: Ajout stores AUTH et USER_DATA pour mode hors ligne
+const DB_VERSION = 3; // v3: Ajout store CLIENTS pour mode hors ligne complet
 
 // Stores (tables) dans IndexedDB
 const STORES = {
@@ -12,6 +12,7 @@ const STORES = {
   PROFILES: 'profiles',
   EXPENSES: 'expenses',
   CONTRACTS: 'contracts',
+  CLIENTS: 'clients',
   AUTH: 'auth',
   USER_DATA: 'userData',
   SYNC_QUEUE: 'syncQueue',
@@ -69,6 +70,11 @@ export const openDatabase = () => {
       // Store pour les contrats
       if (!database.objectStoreNames.contains(STORES.CONTRACTS)) {
         database.createObjectStore(STORES.CONTRACTS, { keyPath: 'id' });
+      }
+
+      // Store pour les clients
+      if (!database.objectStoreNames.contains(STORES.CLIENTS)) {
+        database.createObjectStore(STORES.CLIENTS, { keyPath: 'id' });
       }
 
       // Store pour l'authentification (session, credentials hash)
