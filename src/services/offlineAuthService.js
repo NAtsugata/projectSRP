@@ -64,12 +64,15 @@ export async function saveAuthData(session, email, password, userProfile = null)
  */
 export async function signInOffline(email, password) {
   try {
-    logger.log('[OfflineAuth] Tentative de connexion hors ligne pour:', email);
+    logger.log('[OfflineAuth] 🔍 Tentative de connexion hors ligne pour:', email);
 
     // Vérifier si la session est valide
+    logger.log('[OfflineAuth] 1/4 Vérification validité session...');
     const sessionValid = await isSessionValid();
+    logger.log('[OfflineAuth] Session valide:', sessionValid);
+
     if (!sessionValid) {
-      logger.warn('[OfflineAuth] Session expirée (> 7 jours)');
+      logger.warn('[OfflineAuth] ❌ Session expirée (> 7 jours)');
       return {
         success: false,
         error: 'Session expirée. Connexion internet requise.'
@@ -77,12 +80,17 @@ export async function signInOffline(email, password) {
     }
 
     // Hasher le mot de passe fourni
+    logger.log('[OfflineAuth] 2/4 Hash du mot de passe...');
     const passwordHash = await hashPassword(password);
+    logger.log('[OfflineAuth] Hash généré:', passwordHash.substring(0, 20) + '...');
 
     // Vérifier les credentials
+    logger.log('[OfflineAuth] 3/4 Vérification credentials...');
     const credentialsValid = await verifyOfflineCredentials(email, passwordHash);
+    logger.log('[OfflineAuth] Credentials valides:', credentialsValid);
+
     if (!credentialsValid) {
-      logger.warn('[OfflineAuth] Credentials invalides');
+      logger.warn('[OfflineAuth] ❌ Credentials invalides');
       return {
         success: false,
         error: 'Email ou mot de passe incorrect.'
@@ -90,8 +98,12 @@ export async function signInOffline(email, password) {
     }
 
     // Récupérer la session et les données utilisateur
+    logger.log('[OfflineAuth] 4/4 Récupération session et user data...');
     const session = await getCachedAuthSession();
     const userData = await getCachedUserData();
+
+    logger.log('[OfflineAuth] Session récupérée:', session ? 'Oui' : 'Non');
+    logger.log('[OfflineAuth] User data récupéré:', userData ? 'Oui' : 'Non');
 
     if (!session || !userData) {
       logger.warn('[OfflineAuth] Données manquantes');

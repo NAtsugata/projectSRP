@@ -12,11 +12,14 @@ export const authService = {
 
     // Vérifier si on est en ligne
     const isOnline = navigator.onLine;
+    logger.log('[AuthService] État connexion:', isOnline ? '🌐 En ligne' : '📴 Hors ligne');
 
     if (!isOnline) {
       // Mode hors ligne : tenter connexion avec cache
       logger.emoji('📴', 'Mode hors ligne - Utilisation du cache local');
+      logger.log('[AuthService] Appel de signInOffline...');
       const offlineResult = await offlineAuthService.signInOffline(email, password);
+      logger.log('[AuthService] Résultat signInOffline:', offlineResult);
 
       if (offlineResult.success) {
         return {
