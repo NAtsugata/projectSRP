@@ -378,7 +378,16 @@ export const cacheUserData = async (userData) => {
  */
 export const getCachedUserData = async () => {
   const data = await getFromStore(STORES.USER_DATA, 'current_user');
-  return data || null;
+  if (!data) return null;
+
+  // Retirer les métadonnées (key, timestamp) pour avoir seulement le profil
+  const { key, timestamp, ...userData } = data;
+  logger.log('[OfflineDB] getCachedUserData:', {
+    hasData: !!userData,
+    userId: userData.id,
+    isAdmin: userData.is_admin
+  });
+  return userData;
 };
 
 /**

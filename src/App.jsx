@@ -132,16 +132,27 @@ function App() {
 
       // Si hors ligne, charger depuis le cache
       if (!navigator.onLine) {
+        logger.log('📴 [App] Mode hors ligne détecté - Chargement profil depuis cache');
         import('./services/offlineAuthService').then(({ getOfflineUserData }) => {
           getOfflineUserData()
             .then(cachedProfile => {
               if (cachedProfile) {
-                logger.log('📴 Profil chargé depuis le cache');
+                logger.log('📴 [App] ✅ Profil chargé depuis le cache:', {
+                  id: cachedProfile.id,
+                  email: cachedProfile.email,
+                  is_admin: cachedProfile.is_admin,
+                  full_name: cachedProfile.full_name
+                });
                 setProfile(cachedProfile);
               } else {
-                showToast('Profil non disponible hors ligne', 'warning');
+                logger.warn('📴 [App] ❌ Profil non disponible en cache');
+                showToast('Profil non disponible hors ligne. Reconnectez-vous en ligne une fois.', 'warning');
                 setProfile(null);
               }
+            })
+            .catch(err => {
+              logger.error('📴 [App] ❌ Erreur chargement profil hors ligne:', err);
+              setProfile(null);
             })
             .finally(() => setLoading(false));
         });
@@ -263,7 +274,15 @@ function App() {
           <Route path="/terms" element={<TermsOfServicePage />} />
 
           {!session || !profile ? (
-            <Route path="*" element={<LoginScreen />} />
+            <>
+              {/* Log pour débogage */}
+              {logger.log('[App] 🚫 Accès bloqué - Redirection vers LoginScreen', {
+                hasSession: !!session,
+                hasProfile: !!profile,
+                isOffline: !navigator.onLine
+              })}
+              <Route path="*" element={<LoginScreen />} />
+            </>
           ) : (
             <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} lastNotification={pushNotifications.lastNotification} />}>
               {profile.is_admin ? (
