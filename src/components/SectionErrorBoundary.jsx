@@ -27,7 +27,7 @@ class SectionErrorBoundary extends React.Component {
     this.setState({ error });
 
     // En production, envoyer à un service de monitoring
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.MODE === 'production') {
       // sendToErrorTracking(error, { section: this.props.section, ...errorInfo });
     }
   }
@@ -63,7 +63,7 @@ class SectionErrorBoundary extends React.Component {
             {this.props.message || 'Une erreur s\'est produite lors du chargement de cette section.'}
           </p>
 
-          {process.env.NODE_ENV === 'development' && this.state.error && (
+          {import.meta.env.MODE === 'development' && this.state.error && (
             <details style={{
               marginBottom: '1rem',
               padding: '0.75rem',

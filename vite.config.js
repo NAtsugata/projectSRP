@@ -59,11 +59,6 @@ export default defineConfig({
     },
   },
 
-  // Définir les variables d'environnement exposées
-  define: {
-    'process.env': {},
-  },
-
   // Optimisation des dépendances
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', '@supabase/supabase-js'],
