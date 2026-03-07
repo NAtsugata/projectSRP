@@ -67,57 +67,54 @@ export async function signInOffline(email, password) {
   try {
     logger.log('[OfflineAuth] 🔍 Tentative de connexion hors ligne pour:', email);
 
-    // Vérifier si la session est valide
-    logger.log('[OfflineAuth] 1/4 Vérification validité session...');
-    const sessionValid = await isSessionValid();
-    logger.log('[OfflineAuth] Session valide:', sessionValid);
-
-    if (!sessionValid) {
-      logger.warn('[OfflineAuth] ❌ Session expirée (> 7 jours)');
-      return {
-        success: false,
-        error: 'Session expirée. Connexion internet requise.'
-      };
-    }
-
     // Hasher le mot de passe fourni
-    logger.log('[OfflineAuth] 2/4 Hash du mot de passe...');
+    logger.log('[OfflineAuth] 1/3 Hash du mot de passe...');
     const passwordHash = await hashPassword(password);
     logger.log('[OfflineAuth] Hash généré:', passwordHash.substring(0, 20) + '...');
 
     // Vérifier les credentials
-    logger.log('[OfflineAuth] 3/4 Vérification credentials...');
+    logger.log('[OfflineAuth] 2/3 Vérification credentials...');
     const credentialsValid = await verifyOfflineCredentials(email, passwordHash);
     logger.log('[OfflineAuth] Credentials valides:', credentialsValid);
 
     if (!credentialsValid) {
-      logger.warn('[OfflineAuth] ❌ Credentials invalides');
+      logger.warn('[OfflineAuth] ❌ Credentials invalides (email ou mot de passe incorrect)');
       return {
         success: false,
         error: 'Email ou mot de passe incorrect.'
       };
     }
 
-    // Récupérer la session et les données utilisateur
-    logger.log('[OfflineAuth] 4/4 Récupération session et user data...');
-    const session = await getCachedAuthSession();
+    // Récupérer les données utilisateur (nécessaire pour le profil)
+    logger.log('[OfflineAuth] 3/3 Récupération user data...');
     const userData = await getCachedUserData();
-
-    logger.log('[OfflineAuth] Session récupérée:', session ? 'Oui' : 'Non');
     logger.log('[OfflineAuth] User data récupéré:', userData ? 'Oui' : 'Non');
 
-    if (!session || !userData) {
-      logger.warn('[OfflineAuth] Données manquantes');
+    if (!userData) {
+      logger.warn('[OfflineAuth] ❌ User data manquant');
       return {
         success: false,
         error: 'Données utilisateur introuvables. Connexion internet requise.'
       };
     }
 
+    // Créer une session offline basique (pas besoin de l'ancienne session)
+    const offlineSession = {
+      access_token: 'offline-mode-token',
+      refresh_token: 'offline-mode-refresh',
+      user: userData,
+      expires_at: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 jours
+      token_type: 'bearer'
+    };
+
+    // Sauvegarder la nouvelle session
+    await cacheAuthSession(offlineSession);
+    logger.log('[OfflineAuth] ✅ Nouvelle session offline créée');
+
     logger.log('[OfflineAuth] ✅ Connexion hors ligne réussie');
     return {
       success: true,
-      session,
+      session: offlineSession,
       user: userData,
       isOfflineMode: true
     };
