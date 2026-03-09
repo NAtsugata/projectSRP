@@ -3,7 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
-import { withOrgId } from '../utils/orgHelper';
+import { withOrgId, withOrgIdArray } from '../utils/orgHelper';
 
 export const interventionService = {
   async getInterventions(userId = null, isArchived = false) {
@@ -138,9 +138,12 @@ export const interventionService = {
         user_id: userId
       }));
 
+      // Ajouter organization_id à chaque assignation pour respecter les politiques RLS
+      const assignmentsWithOrg = withOrgIdArray(assignments);
+
       const { error: insertError } = await supabase
         .from('intervention_assignments')
-        .insert(assignments);
+        .insert(assignmentsWithOrg);
 
       if (insertError) {
         logger.error('❌ Erreur création nouvelles assignations:', insertError);
