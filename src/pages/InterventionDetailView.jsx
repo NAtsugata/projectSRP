@@ -884,7 +884,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <div style={{ marginTop: '1rem' }}>
                 <FileUploader
                   interventionId={interventionId}
+                  folder="report"
                   onLocalPreview={handleLocalPreview}
+                  onUploadProgress={handleUploadProgress}
+                  onUploadComplete={handleUploadComplete}
                   onBeginCritical={lock}
                   onEndCritical={unlock}
                 />
