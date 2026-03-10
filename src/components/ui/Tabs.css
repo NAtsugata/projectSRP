@@ -113,20 +113,19 @@
 /* Mobile */
 @media (max-width: 640px) {
   .tab-button {
-    padding: 0.75rem 1rem;
-    font-size: 0.8125rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .tab-icon {
-    font-size: 1rem;
+    font-size: 1.25rem;
   }
 
   .tab-label {
-    display: none;
-  }
-
-  .tab-button.active .tab-label {
-    display: inline-block;
+    font-size: 0.6875rem;
+    line-height: 1;
   }
 
   .tabs-content {
