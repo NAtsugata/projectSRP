@@ -65,6 +65,55 @@
   font-size: 0.875rem;
 }
 
+/* Contrôles de recherche et sélection rapide */
+.edit-team-controls {
+  margin-bottom: 1rem;
+}
+
+.edit-team-search {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.edit-team-search:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+.edit-team-quick-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.quick-action-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-action-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .edit-team-users {
   display: flex;
   flex-direction: column;
@@ -99,16 +148,93 @@
   height: 1.25rem;
   accent-color: #0ea5e9;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
 }
 
 .edit-team-user-checkbox .user-name {
   font-weight: 500;
   color: #374151;
-  flex: 1;
+  font-size: 0.875rem;
 }
 
-.edit-team-user-checkbox input:checked + .checkmark + .user-name {
+.user-email {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.edit-team-user-checkbox input:checked ~ .user-info .user-name {
   color: #0284c7;
+  font-weight: 600;
+}
+
+.edit-team-user-checkbox input:checked ~ .user-avatar {
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+/* Mode toggle */
+.edit-team-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.mode-btn.active {
+  background: white;
+  color: #0ea5e9;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-team-days-count {
+  font-weight: 600;
+  color: #0ea5e9;
 }
 
 .no-employees {
