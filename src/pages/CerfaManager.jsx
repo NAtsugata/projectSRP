@@ -259,8 +259,14 @@ function CerfaManager() {
             });
             loadDocuments();
         } catch (error) {
-            logger.error('Erreur upload:', error);
-            toast.error(`Erreur: ${error.message}`);
+            logger.error('Erreur upload CERFA:', error);
+
+            // Gestion spécifique de l'erreur de numéro dupliqué
+            if (error.code === '23505' && error.message?.includes('cerfa_documents_numero_key')) {
+                toast.error(`❌ Le numéro ${uploadData.numero} existe déjà. Veuillez utiliser un autre numéro.`);
+            } else {
+                toast.error(`Erreur: ${error.message}`);
+            }
         } finally {
             setUploading(false);
         }
@@ -302,7 +308,12 @@ function CerfaManager() {
             setEditingNumero(null);
             loadDocuments();
         } catch (error) {
-            toast.error(`Erreur: ${error.message}`);
+            // Gestion spécifique de l'erreur de numéro dupliqué
+            if (error.code === '23505' && error.message?.includes('cerfa_documents_numero_key')) {
+                toast.error(`❌ Le numéro ${newNumero} existe déjà. Veuillez utiliser un autre numéro.`);
+            } else {
+                toast.error(`Erreur: ${error.message}`);
+            }
         }
     };
 
