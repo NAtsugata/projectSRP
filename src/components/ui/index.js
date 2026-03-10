@@ -6,3 +6,4 @@ export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as EmptyState } from './EmptyState';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { Skeleton, SkeletonList } from './LoadingSpinner';
+export { Tabs, Tab } from './Tabs';

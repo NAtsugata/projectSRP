@@ -25,7 +25,10 @@ import {
   SignatureModal,
   FileUploader,
   VoiceRecorder,
+  StatusCard,
+  ArrivalDeparture,
 } from '../components/intervention';
+import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import { EditTeamModal } from '../components/planning';
@@ -645,6 +648,28 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
+  // Calcul des statistiques pour StatusCard
+  const calculateDuration = () => {
+    if (!report.arrivalTime) return null;
+    const now = report.departureTime ? new Date(report.departureTime) : new Date();
+    const start = new Date(report.arrivalTime);
+    const diff = Math.floor((now - start) / 1000 / 60);
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    return `${hours}h ${minutes.toString().padStart(2, '0')}min`;
+  };
+
+  const stats = {
+    duration: calculateDuration(),
+    photoCount: report.files?.filter(f => f.type?.startsWith('image/')).length || 0,
+    checkpointProgress: report.quick_checkpoints?.length > 0
+      ? `${report.quick_checkpoints.filter(c => c.done).length}/${report.quick_checkpoints.length}`
+      : null,
+    team: intervention.intervention_assignments?.length > 0
+      ? intervention.intervention_assignments.map(a => a.profiles?.full_name || 'Employé').join(', ')
+      : 'Non assigné'
+  };
+
   return (
     <div className="intervention-detail-modern">
       {/* NOUVEAU HEADER MODERNE */}
@@ -654,6 +679,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       />
 
       <div className="intervention-content">
+        {/* CARTE DE RÉSUMÉ */}
+        <StatusCard
+          intervention={intervention}
+          report={report}
+          stats={stats}
+        />
+
         {/* ALERTES INTELLIGENTES */}
         <SmartAlerts
           report={report}
@@ -762,35 +794,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </div>
 
-          {/* Arrivé / Départ */}
+          {/* Arrivé / Départ - Nouveau composant */}
           <div className="section">
-            <h3>⏱️ Temps sur site</h3>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="card-slim">
-                <div className="text-muted" style={{ marginBottom: 4 }}>Arrivé sur site</div>
-                <div className="flex items-center justify-between" style={{ gap: 8 }}>
-                  <div><b>{fmtTime(report.arrivalTime)}</b></div>
-                  <button className="btn btn-secondary" disabled={!!report.arrivalTime} onClick={() => markWithGeo('arrival')}>
-                    {report.arrivalTime ? 'Déjà enregistré' : 'Marquer l\'arrivée'}
-                  </button>
-                </div>
-                {report.arrivalGeo && (
-                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.arrivalGeo.lat?.toFixed?.(5)} · lng {report.arrivalGeo.lng?.toFixed?.(5)} (±{Math.round(report.arrivalGeo.acc || 0)} m)</div>
-                )}
-              </div>
-              <div className="card-slim">
-                <div className="text-muted" style={{ marginBottom: 4 }}>Départ du site</div>
-                <div className="flex items-center justify-between" style={{ gap: 8 }}>
-                  <div><b>{fmtTime(report.departureTime)}</b></div>
-                  <button className="btn btn-secondary" disabled={!!report.departureTime || !report.arrivalTime} onClick={() => markWithGeo('departure')}>
-                    {report.departureTime ? 'Déjà enregistré' : (!report.arrivalTime ? 'Attente arrivée' : 'Marquer le départ')}
-                  </button>
-                </div>
-                {report.departureGeo && (
-                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.departureGeo.lat?.toFixed?.(5)} · lng {report.departureGeo.lng?.toFixed?.(5)} (±{Math.round(report.departureGeo.acc || 0)} m)</div>
-                )}
-              </div>
-            </div>
+            <ArrivalDeparture
+              report={report}
+              onMarkArrival={() => markWithGeo('arrival')}
+              onMarkDeparture={() => markWithGeo('departure')}
+              disabled={!!isAdmin}
+            />
           </div>
 
           {/* Admin Note Section */}

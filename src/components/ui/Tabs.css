@@ -1,0 +1,135 @@
+/* src/components/ui/Tabs.css */
+
+.tabs-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tabs-header {
+  display: flex;
+  border-bottom: 2px solid #f3f4f6;
+  background: #fafbfc;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tabs-header::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-button {
+  flex: 1;
+  min-width: fit-content;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+  white-space: nowrap;
+}
+
+.tab-button::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0ea5e9;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.tab-button.active {
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+.tab-button.active::after {
+  transform: scaleX(1);
+}
+
+.tab-button:hover:not(.active) {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.tab-icon {
+  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+}
+
+.tab-label {
+  display: inline-block;
+}
+
+.tab-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  min-width: 1.25rem;
+  text-align: center;
+}
+
+.tab-button.active .tab-badge {
+  background: #0ea5e9;
+}
+
+.tabs-content {
+  padding: 1.5rem;
+}
+
+.tab-pane {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .tab-icon {
+    font-size: 1rem;
+  }
+
+  .tab-label {
+    display: none;
+  }
+
+  .tab-button.active .tab-label {
+    display: inline-block;
+  }
+
+  .tabs-content {
+    padding: 1rem;
+  }
+}

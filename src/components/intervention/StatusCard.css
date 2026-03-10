@@ -1,0 +1,124 @@
+/* src/components/intervention/StatusCard.css */
+
+.status-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  color: white;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.status-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.status-indicator {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.status-pulse {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.status-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  color: white;
+}
+
+.status-subtitle {
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0 0;
+  opacity: 0.9;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-card-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.metric-icon {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.metric-value {
+  white-space: nowrap;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .status-card {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .status-title {
+    font-size: 1.125rem;
+  }
+
+  .status-subtitle {
+    font-size: 0.8125rem;
+  }
+
+  .status-card-metrics {
+    gap: 0.75rem;
+  }
+
+  .metric {
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.625rem;
+  }
+}
