@@ -222,6 +222,7 @@
 /* ============================================= */
 /* DARK MODE */
 /* ============================================= */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .notification-status-card {
     background: #1f2937 !important;
@@ -240,3 +241,4 @@
     background: #4b5563;
   }
 }
+*/

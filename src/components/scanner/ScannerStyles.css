@@ -837,6 +837,7 @@
 }
 
 /* Dark mode support */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .scanner-header {
     background: #111;
@@ -858,6 +859,7 @@
     border-color: var(--scanner-copper);
   }
 }
+*/
 
 /* Input file caché */
 .scanner-file-input {

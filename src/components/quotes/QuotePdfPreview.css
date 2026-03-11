@@ -352,6 +352,7 @@
 }
 
 /* Dark mode */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .quote-pdf-preview {
     background: #1e293b;
@@ -372,6 +373,7 @@
     background: white;
   }
 }
+*/
 
 /* Responsive - panneau plus étroit */
 @media (max-width: 1200px) {

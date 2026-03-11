@@ -908,6 +908,7 @@
 }
 
 /* ==================== DARK MODE ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .employee-agenda {
     background: var(--bg-secondary);
@@ -946,6 +947,7 @@
     background: var(--bg-tertiary);
   }
 }
+*/
 
 /* ==================== ACCESSIBILITE ==================== */
 @media (prefers-reduced-motion: reduce) {

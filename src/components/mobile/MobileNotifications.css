@@ -362,6 +362,7 @@
 /* ============================================= */
 /* DARK MODE (optionnel) */
 /* ============================================= */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .mobile-modal {
     background: #1f2937;
@@ -385,6 +386,7 @@
     background: #4b5563;
   }
 }
+*/
 
 /* ============================================= */
 /* SAFE AREA (iOS) */

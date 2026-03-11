@@ -397,6 +397,7 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .login-card {
     background: rgba(17, 24, 39, 0.95);
@@ -418,6 +419,7 @@
     border-top-color: var(--color-gray-700);
   }
 }
+*/
 
 /* ==================== ACCESSIBILITY ==================== */
 @media (prefers-reduced-motion: reduce) {

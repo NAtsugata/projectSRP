@@ -432,6 +432,7 @@
 
 /* ==================== DARK MODE SUPPORT ==================== */
 /* ==================== DARK MODE SUPPORT ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .agenda-view .empty-state {
     background: linear-gradient(135deg,
@@ -452,6 +453,7 @@
     border-color: var(--color-danger-dark);
   }
 }
+*/
 
 /* ==================== ACTIONS BAR ==================== */
 .agenda-actions-bar {

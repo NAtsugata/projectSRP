@@ -617,6 +617,7 @@
 }
 
 /* ==================== THEME SOMBRE ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .alert {
     background: #1f2937;
@@ -641,3 +642,4 @@
     color: #d1d5db;
   }
 }
+*/

@@ -757,6 +757,7 @@
 }
 
 /* Dark mode */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .layout-editor {
     background: var(--bg-primary, #111827);
@@ -816,3 +817,4 @@
     background: var(--bg-tertiary, #374151);
   }
 }
+*/

@@ -850,6 +850,7 @@
    ========================================== */
 
 /* Appliquer le theme sombre quand les variables sont definies */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .stat-card,
   .client-card,
@@ -940,6 +941,7 @@
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
 }
+*/
 
 /* Support explicite via classe .dark-theme sur body ou html */
 .dark-theme .stat-card,
@@ -1113,6 +1115,7 @@ body[data-theme="dark"] .info-item .type-prospect {
   color: #1e3a8a !important;
 }
 
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .type-standard,
   .type-badge.type-standard,
@@ -1138,3 +1141,4 @@ body[data-theme="dark"] .info-item .type-prospect {
     color: #1e3a8a !important;
   }
 }
+*/

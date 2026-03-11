@@ -366,6 +366,7 @@
 }
 
 /* Dark mode */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .quote-attachments {
     background: var(--bg-secondary, #1f2937);
@@ -395,3 +396,4 @@
     background: var(--bg-primary, #111827);
   }
 }
+*/
