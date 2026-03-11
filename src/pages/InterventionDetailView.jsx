@@ -27,6 +27,7 @@ import {
   VoiceRecorder,
   StatusCard,
   ArrivalDeparture,
+  PVReception,
 } from '../components/intervention';
 import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
@@ -301,6 +302,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   }, [intervention, onSaveSilent]);
 
   const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
+
+  // Sauvegarde du PV de réception
+  const handlePVSave = useCallback(async (pvData) => {
+    const updated = { ...report, pv_reception: pvData };
+    await persistReport(updated);
+    alert('✓ Procès-Verbal de Réception enregistré');
+  }, [report, persistReport]);
 
   // Reusable upload completion handler
   const handleUploadComplete = useCallback(async (uploaded) => {
@@ -1094,6 +1102,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     </button>
                   </div>
                 )}
+
+              {/* Procès-Verbal de Réception */}
+              <div className="section">
+                <PVReception
+                  intervention={intervention}
+                  client={null}
+                  report={report}
+                  onSave={handlePVSave}
+                  readOnly={!!isAdmin}
+                />
+              </div>
             </div>
           </Tab>
         </Tabs>

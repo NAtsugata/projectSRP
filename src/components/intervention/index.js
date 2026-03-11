@@ -17,3 +17,4 @@ export { default as CallButtons } from './CallButtons';
 export { default as ScheduledDatesEditor } from './ScheduledDatesEditor';
 export { default as StatusCard } from './StatusCard';
 export { default as ArrivalDeparture } from './ArrivalDeparture';
+export { default as PVReception } from './PVReception';
