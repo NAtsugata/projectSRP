@@ -606,3 +606,142 @@
     border-color: #444;
   }
 }
+
+/* ============================================
+   OVERRIDE GLOBAL STYLES - FIX BLANC SUR BLANC
+   ============================================ */
+
+/* Fix mobile-dashboard.css qui force color: white !important */
+.intervention-detail-modern .form-control,
+.intervention-detail-modern input[type="text"],
+.intervention-detail-modern input[type="number"],
+.intervention-detail-modern input[type="date"],
+.intervention-detail-modern input[type="time"],
+.intervention-detail-modern input[type="email"],
+.intervention-detail-modern input[type="tel"],
+.intervention-detail-modern textarea,
+.intervention-detail-modern select {
+  color: var(--text-primary) !important;
+  background: var(--bg-primary) !important;
+  border: 2px solid var(--border-color) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: var(--spacing-3) var(--spacing-4) !important;
+  font-size: var(--text-base) !important;
+  transition: all var(--transition-base);
+}
+
+.intervention-detail-modern .form-control:focus,
+.intervention-detail-modern input:focus,
+.intervention-detail-modern textarea:focus,
+.intervention-detail-modern select:focus {
+  border-color: var(--color-primary-500) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-100) !important;
+  outline: none !important;
+}
+
+.intervention-detail-modern .form-control::placeholder,
+.intervention-detail-modern input::placeholder,
+.intervention-detail-modern textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+/* Fix pour les boutons */
+.intervention-detail-modern .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: var(--font-sans);
+}
+
+.intervention-detail-modern .btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-secondary-600)) !important;
+  color: var(--text-inverse) !important;
+  box-shadow: var(--shadow-md);
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.intervention-detail-modern .btn-secondary {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.intervention-detail-modern .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--color-primary-400) !important;
+  transform: translateY(-1px);
+}
+
+.intervention-detail-modern .btn-success {
+  background: var(--color-success) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-success:hover:not(:disabled) {
+  background: var(--color-success-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.intervention-detail-modern .btn-danger {
+  background: var(--color-danger) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.intervention-detail-modern .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Fix pour les labels */
+.intervention-detail-modern label {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium);
+}
+
+/* Fix pour les sections de texte */
+.intervention-detail-modern h1,
+.intervention-detail-modern h2,
+.intervention-detail-modern h3,
+.intervention-detail-modern h4,
+.intervention-detail-modern h5,
+.intervention-detail-modern h6 {
+  color: var(--text-primary) !important;
+}
+
+.intervention-detail-modern p,
+.intervention-detail-modern span,
+.intervention-detail-modern div {
+  color: var(--text-primary);
+}
+
+/* Fix spécifique pour les sections */
+.intervention-detail-modern .section-title {
+  color: var(--text-primary) !important;
+}
+
+.intervention-detail-modern .section-subtitle {
+  color: var(--text-secondary) !important;
+}
