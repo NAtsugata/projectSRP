@@ -625,7 +625,7 @@ button:active,
 }
 
 /* ==================== DARK MODE MOBILE ==================== */
-
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (max-width: 640px) and (prefers-color-scheme: dark) {
   .mobile-nav {
     background: #1a1a1a;
@@ -641,6 +641,7 @@ button:active,
     );
   }
 }
+*/
 
 /* ==================== MOBILE ACCESSIBILITY ==================== */
 

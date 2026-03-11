@@ -307,10 +307,9 @@
 }
 
 /* ✅ OPTIMISATIONS POUR LE MODE SOMBRE */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
-    /* Améliore les performances en mode sombre */
     .mobile-optimized-image {
-        /* Réduit la luminosité pour économiser la batterie sur OLED */
         filter: brightness(0.9);
     }
 
@@ -330,6 +329,7 @@
         background-color: rgba(0, 0, 0, 0.8);
     }
 }
+*/
 
 /* ✅ OPTIMISATIONS POUR LE CONTRASTE ÉLEVÉ */
 @media (prefers-contrast: high) {
