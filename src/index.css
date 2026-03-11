@@ -7,7 +7,8 @@
 @import './styles/design-system.css';
 
 /* 1b. Dark Theme - Global Overrides */
-@import './styles/dark-theme.css';
+/* DÉSACTIVÉ - Force thème clair uniquement */
+/* @import './styles/dark-theme.css'; */
 
 /* 2. Animations - Keyframes et transitions */
 @import './styles/animations.css';
