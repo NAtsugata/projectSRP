@@ -520,7 +520,7 @@
 }
 
 .pv-reception-container .btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #db2777) !important;
+  background: #4f46e5 !important;
   color: #ffffff !important;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: none !important;

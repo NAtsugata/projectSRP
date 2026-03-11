@@ -317,12 +317,9 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--spacing-4);
   padding: var(--spacing-5);
-  background: linear-gradient(135deg,
-    var(--color-primary-50),
-    var(--color-secondary-50)
-  );
+  background: #ffffff;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-primary);
+  border: 1px solid #e5e7eb;
   animation: fadeInUp 0.5s ease-out 0.2s backwards;
 }
 
@@ -583,6 +580,7 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
+/* DÉSACTIVÉ pour forcer le thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .intervention-detail-modern {
     background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
@@ -606,6 +604,7 @@
     border-color: #444;
   }
 }
+*/
 
 /* ============================================
    OVERRIDE GLOBAL STYLES - FIX BLANC SUR BLANC
@@ -662,7 +661,7 @@
 }
 
 .intervention-detail-modern .btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #db2777) !important;
+  background: #4f46e5 !important;
   color: #ffffff !important;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: none !important;
