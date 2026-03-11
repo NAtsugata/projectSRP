@@ -57,7 +57,8 @@
 .quick-action svg {
   position: relative;
   z-index: 1;
-  color: #667eea;
+  color: #4338ca;
+  font-size: 1.75rem;
   transition: all 0.2s ease;
 }
 
@@ -68,9 +69,9 @@
 .quick-action span {
   position: relative;
   z-index: 1;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1f2937;
   text-align: center;
   line-height: 1.3;
 }

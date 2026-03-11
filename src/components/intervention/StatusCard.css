@@ -60,9 +60,11 @@
 }
 
 .status-subtitle {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   margin: 0.25rem 0 0 0;
-  opacity: 0.9;
+  opacity: 1;
+  color: #ffffff;
+  font-weight: 500;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -82,16 +84,17 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .metric-icon {
-  font-size: 1rem;
-  opacity: 0.9;
+  font-size: 1.125rem;
+  opacity: 1;
 }
 
 .metric-value {
