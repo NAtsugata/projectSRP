@@ -96,7 +96,11 @@ body {
 }
 
 /* Utility Classes */
-.text-muted { color: #64748b; }
+.text-muted {
+  color: #475569;
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
 .font-semibold { font-weight: 600; }
 .w-full { width: 100%; }
 .mb-6 { margin-bottom: 1.5rem; }
