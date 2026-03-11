@@ -66,8 +66,8 @@
 
 .time-label {
   font-size: 0.875rem;
-  color: #6b7280;
-  font-weight: 500;
+  color: #4b5563;
+  font-weight: 600;
 }
 
 .time-value {
@@ -79,8 +79,9 @@
 
 .geo-info {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-bottom: 0.75rem;
+  font-weight: 500;
 }
 
 .time-action-btn {
@@ -128,8 +129,9 @@
 
 .time-hint {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-style: italic;
+  font-weight: 500;
 }
 
 .duration-display {
