@@ -67,7 +67,7 @@
 }
 
 .tab-icon {
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   display: flex;
   align-items: center;
 }
@@ -120,7 +120,7 @@
   }
 
   .tab-icon {
-    font-size: 1.25rem;
+    font-size: 1.75rem;
   }
 
   .tab-label {
