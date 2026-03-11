@@ -1,120 +1,162 @@
-/* src/components/intervention/PVReception.css */
+/* ============================================
+   PV de Réception - Style moderne cohérent
+   Utilise les variables du Design System
+   ============================================ */
 
+/* Container Principal */
 .pv-reception-container {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  padding: 1.5rem;
-  margin-top: 1rem;
-  color: #111827;
+  position: relative;
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-base);
+  animation: fadeInUp 0.5s ease-out backwards;
+  overflow: hidden;
+  margin-top: var(--spacing-6);
 }
 
+.pv-reception-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    var(--color-primary-500),
+    var(--color-secondary-500)
+  );
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.pv-reception-container:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.pv-reception-container:hover::before {
+  opacity: 1;
+}
+
+/* ==================== HEADER ==================== */
 .pv-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: var(--spacing-5);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 2px solid var(--border-color);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--spacing-4);
 }
 
 .pv-header h3 {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827 !important;
+  font-size: var(--text-xl);
+  font-weight: var(--font-extrabold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .pv-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   white-space: nowrap;
 }
 
 .pv-badge-sans-reserve {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  border: 1px solid var(--color-success);
 }
 
 .pv-badge-avec-reserves {
-  background: #fef9c3;
-  color: #854d0e;
-  border: 1px solid #fde047;
+  background: var(--color-warning-light);
+  color: var(--color-warning-dark);
+  border: 1px solid var(--color-warning);
 }
 
 .pv-badge-refuse {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+  border: 1px solid var(--color-danger);
 }
 
-/* Section d'informations */
+/* ==================== INFO SECTION ==================== */
 .pv-info-section {
-  background: #f9fafb;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-5);
+  border: 1px solid var(--border-color);
 }
 
 .pv-info-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-4);
 }
 
 .pv-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
   min-width: 0;
 }
 
 .pv-info-item label {
   display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6b7280 !important;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.025em;
-  margin-bottom: 0.375rem;
+  letter-spacing: 0.05em;
 }
 
 .pv-info-value {
-  color: #111827 !important;
-  font-weight: 500;
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
   background: transparent;
+  padding: var(--spacing-1) 0;
 }
 
-/* Sections du PV */
+/* ==================== SECTIONS ==================== */
 .pv-section {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: var(--spacing-5);
+  padding-bottom: var(--spacing-5);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .pv-section:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .pv-section h4 {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #374151 !important;
-  margin: 0 0 1rem 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-4) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
-/* Sélecteur de type */
+/* ==================== TYPE SELECTION ==================== */
 .pv-type-selector {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-3);
 }
 
 .pv-type-btn {
@@ -122,215 +164,282 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem 0.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #111827 !important;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4) var(--spacing-3);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-  min-height: 80px;
+  transition: all var(--transition-base);
+  font-family: var(--font-sans);
+  min-height: 90px;
+  position: relative;
+  overflow: hidden;
 }
 
-.pv-type-btn:hover:not(:disabled) {
-  border-color: #d1d5db;
-  background: #f9fafb;
-  transform: translateY(-1px);
+.pv-type-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+
+.pv-type-btn:hover::before {
+  width: 200px;
+  height: 200px;
+}
+
+.pv-type-btn:hover:not(:disabled):not(.active) {
+  border-color: var(--color-primary-400);
+  background: var(--bg-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .pv-type-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .pv-type-btn.active {
-  font-weight: 600;
-  transform: translateY(0);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  font-weight: var(--font-semibold);
 }
 
 .pv-type-btn.active.success {
-  border-color: #22c55e;
-  background: #dcfce7;
-  color: #166534 !important;
+  border-color: var(--color-success);
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
 }
 
 .pv-type-btn.active.warning {
-  border-color: #f59e0b;
-  background: #fef9c3;
-  color: #854d0e !important;
+  border-color: var(--color-warning);
+  background: var(--color-warning-light);
+  color: var(--color-warning-dark);
 }
 
 .pv-type-btn.active.danger {
-  border-color: #ef4444;
-  background: #fee2e2;
-  color: #991b1b !important;
+  border-color: var(--color-danger);
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
 }
 
 .pv-type-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-none);
   color: inherit;
 }
 
 .pv-type-label {
-  font-size: 0.875rem;
-  line-height: 1.25;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-tight);
   text-align: center;
   color: inherit;
 }
 
-/* Liste des réserves */
+/* ==================== RESERVES LIST ==================== */
 .pv-empty-reserves {
-  padding: 1rem;
+  padding: var(--spacing-4);
   text-align: center;
-  color: #6b7280;
+  color: var(--text-muted);
   font-style: italic;
-  background: #f9fafb;
-  border-radius: 6px;
-  border: 1px dashed #d1d5db;
-  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+  font-size: var(--text-sm);
 }
 
 .pv-reserves-list {
   list-style: decimal;
-  padding-left: 1.75rem;
-  margin: 0 0 1rem 0;
+  padding-left: var(--spacing-6);
+  margin: 0 0 var(--spacing-4) 0;
 }
 
 .pv-reserves-list li {
-  padding: 0.75rem 0.875rem;
-  margin-bottom: 0.5rem;
-  background: #f9fafb;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  padding: var(--spacing-3) var(--spacing-4);
+  margin-bottom: var(--spacing-2);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #374151 !important;
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  transition: all var(--transition-fast);
+}
+
+.pv-reserves-list li:hover {
+  background: var(--bg-tertiary);
+  transform: translateX(4px);
 }
 
 .pv-reserves-list li span {
   flex: 1;
-  padding-right: 0.5rem;
+  padding-right: var(--spacing-2);
 }
 
 .pv-remove-btn {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
   border: none;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-2);
   cursor: pointer;
-  font-size: 0.75rem;
-  transition: all 0.15s ease;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
 .pv-remove-btn:hover {
-  background: #fecaca;
+  background: var(--color-danger);
+  color: var(--text-inverse);
+  transform: scale(1.05);
 }
 
-/* Ajouter une réserve */
+/* ==================== ADD RESERVE ==================== */
 .pv-add-reserve {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
 }
 
 .pv-add-reserve input {
   flex: 1;
-  font-size: 0.9375rem;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition: all var(--transition-fast);
 }
 
-/* Date de levée des réserves */
+.pv-add-reserve input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* ==================== DATE LEVEE ==================== */
 .pv-date-levee {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #fffbeb;
-  border-radius: 6px;
-  border: 1px solid #fde047;
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-warning-light);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning);
 }
 
 .pv-date-levee label {
   display: block;
-  font-weight: 600;
-  color: #92400e;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  font-weight: var(--font-semibold);
+  color: var(--color-warning-dark);
+  margin-bottom: var(--spacing-2);
+  font-size: var(--text-sm);
 }
 
 .pv-date-levee input {
-  font-size: 0.9375rem;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  width: 100%;
+  max-width: 250px;
 }
 
-/* Signatures */
+/* ==================== SIGNATURES ==================== */
 .pv-signatures {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-5);
+  margin-top: var(--spacing-5);
 }
 
 .pv-signature-box {
-  border: 2px dashed #d1d5db;
-  border-radius: 6px;
-  padding: 1rem;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
   text-align: center;
-  background: #fafafa;
+  background: var(--bg-secondary);
+  transition: all var(--transition-base);
+}
+
+.pv-signature-box:hover {
+  border-color: var(--color-primary-400);
+  background: var(--bg-primary);
 }
 
 .pv-signature-box label {
   display: block;
-  font-weight: 600;
-  color: #374151 !important;
-  margin-bottom: 0.75rem;
-  font-size: 0.9375rem;
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-3);
+  font-size: var(--text-base);
 }
 
 .pv-signature-placeholder {
-  min-height: 60px;
+  min-height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  border-radius: 4px;
-  margin-bottom: 0.75rem;
-  color: #6b7280 !important;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--border-color);
+  color: var(--text-muted);
   font-style: italic;
-  font-size: 0.875rem;
-  border: 1px solid #e5e7eb;
-  padding: 0.5rem;
+  font-size: var(--text-sm);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
+  transition: all var(--transition-base);
 }
 
-/* Conseils */
+.pv-signature-placeholder:hover {
+  border-color: var(--color-primary-400);
+  background: var(--bg-secondary);
+}
+
+/* ==================== TIPS ==================== */
 .pv-tips {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-top: 1.5rem;
+  background: var(--color-info-light);
+  border: 1px solid var(--color-info);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  margin-top: var(--spacing-5);
 }
 
 .pv-tips-header {
-  font-weight: 600;
-  color: #1e40af;
-  margin-bottom: 0.75rem;
-  font-size: 0.9375rem;
+  font-weight: var(--font-semibold);
+  color: var(--color-info-dark);
+  margin-bottom: var(--spacing-3);
+  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .pv-tips ul {
   margin: 0;
-  padding-left: 1.5rem;
-  color: #1e3a8a;
-  font-size: 0.875rem;
-  line-height: 1.6;
+  padding-left: var(--spacing-5);
+  color: var(--color-info-dark);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
 }
 
 .pv-tips li {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-2);
 }
 
 .pv-tips li:last-child {
@@ -338,36 +447,63 @@
 }
 
 .pv-tips strong {
-  color: #1e40af;
-  font-weight: 600;
+  color: var(--color-info-dark);
+  font-weight: var(--font-semibold);
 }
 
-/* Actions */
+/* ==================== ACTIONS ==================== */
 .pv-actions {
-  margin-top: 1.5rem;
+  margin-top: var(--spacing-5);
   display: flex;
   justify-content: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  gap: var(--spacing-3);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .pv-actions .btn {
-  min-width: 200px;
-  font-weight: 600;
-  font-size: 0.9375rem;
+  min-width: 180px;
+  padding: var(--spacing-3) var(--spacing-6);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
 }
 
-/* Mobile responsive */
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .pv-reception-container {
-    padding: 1rem;
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
   }
 
-  .pv-type-selector {
-    grid-template-columns: 1fr;
+  .pv-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+
+  .pv-header h3 {
+    font-size: var(--text-lg);
   }
 
   .pv-info-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  .pv-type-selector {
     grid-template-columns: 1fr;
   }
 
@@ -379,12 +515,30 @@
     flex-direction: column;
   }
 
-  .pv-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .pv-type-btn {
     min-height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pv-reception-container {
+    padding: var(--spacing-3);
+    margin-top: var(--spacing-4);
+  }
+
+  .pv-header h3 {
+    font-size: var(--text-base);
+  }
+
+  .pv-type-icon {
+    font-size: var(--text-2xl);
+  }
+
+  .pv-actions {
+    flex-direction: column;
+  }
+
+  .pv-actions .btn {
+    width: 100%;
   }
 }
