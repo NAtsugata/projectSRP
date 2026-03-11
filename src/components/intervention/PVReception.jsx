@@ -61,9 +61,9 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
   };
 
   return (
-    <div className="pv-reception-container">
+    <div className="pv-reception-container" style={{ border: '2px solid #3b82f6', padding: '1rem', minHeight: '200px' }}>
       <div className="pv-header">
-        <h3>📋 Procès-Verbal de Réception</h3>
+        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>📋 Procès-Verbal de Réception</h3>
         {pvData.type && (
           <span className={`pv-badge pv-badge-${pvData.type.replace('_', '-')}`}>
             {pvData.type === 'sans_reserve' && '✓ Sans réserve'}
