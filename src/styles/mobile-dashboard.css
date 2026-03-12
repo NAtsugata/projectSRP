@@ -197,11 +197,11 @@ select,
 }
 
 .employee-planning-empty-title {
-    color: #f8fafc !important;
+    color: #111827 !important;
 }
 
 .employee-planning-empty-description {
-    color: #94a3b8 !important;
+    color: #6b7280 !important;
 }
 
 /* ==================== BUTTONS ==================== */
@@ -215,18 +215,18 @@ button,
 .btn-secondary,
 .btn-secondary-modern,
 button.bg-gray-100 {
-    background: rgba(148, 163, 184, 0.1) !important;
-    color: #f8fafc !important;
-    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border: 1px solid #e5e7eb !important;
 }
 
 .btn-danger,
 .btn-danger-modern,
 button.bg-red-500,
 button.text-red-600 {
-    background: rgba(220, 38, 38, 0.2) !important;
-    color: #fca5a5 !important;
-    border: 1px solid rgba(220, 38, 38, 0.5) !important;
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+    border: 1px solid #fecaca !important;
 }
 
 .btn-primary,
