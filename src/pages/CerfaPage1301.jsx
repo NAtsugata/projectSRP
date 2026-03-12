@@ -264,7 +264,7 @@ function CerfaPage1301() {
 
         try {
             // Obtenir le prochain numéro de fiche
-            const ficheNumber = getNextFicheNumber();
+            const ficheNumber = getNextFicheNumber('1301');
 
             // Générer le PDF
             const pdfBlob = await fillCerfa1301({

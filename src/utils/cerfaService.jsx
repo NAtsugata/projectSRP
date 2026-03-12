@@ -35,7 +35,7 @@ const DEFAULT_COMPANY_INFO = {
 
 const STORAGE_KEY_COMPANY = 'cerfa_company_info';
 const STORAGE_KEY_HISTORY = 'cerfa_generation_history';
-const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
+const STORAGE_KEY_COUNTERS = 'cerfa_fiche_counters'; // Compteurs multiples par type
 
 // =============================
 // NUMÉROTATION DES FICHES
@@ -43,65 +43,116 @@ const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
 
 /**
  * Récupère le prochain numéro de fiche CERFA
- * Format: CERFA-YYYY-NNNN (ex: CERFA-2026-0001)
+ * Format: CERFA-{type}-YYYY-NNNN (ex: CERFA-15497-2026-0001)
+ * Chaque type de CERFA a son propre compteur
+ * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
  * @returns {string} Numéro de fiche formaté
  */
-export const getNextFicheNumber = () => {
+export const getNextFicheNumber = (cerfaType = '15497') => {
     try {
         const currentYear = new Date().getFullYear();
-        const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
 
-        // Réinitialiser le compteur si on change d'année
-        if (stored.year !== currentYear) {
-            stored.year = currentYear;
-            stored.count = 0;
+        // Initialiser le compteur pour ce type s'il n'existe pas
+        if (!allCounters[cerfaType]) {
+            allCounters[cerfaType] = { year: currentYear, count: 0 };
         }
 
-        // Incrémenter le compteur
-        stored.count = (stored.count || 0) + 1;
-        safeStorage.setJSON(STORAGE_KEY_COUNTER, stored);
+        const typeCounter = allCounters[cerfaType];
 
-        // Formater le numéro (CERFA-2026-0001)
-        const paddedCount = String(stored.count).padStart(4, '0');
-        return `CERFA-${currentYear}-${paddedCount}`;
+        // Réinitialiser le compteur si on change d'année
+        if (typeCounter.year !== currentYear) {
+            typeCounter.year = currentYear;
+            typeCounter.count = 0;
+        }
+
+        // Incrémenter le compteur pour ce type spécifique
+        typeCounter.count = (typeCounter.count || 0) + 1;
+        allCounters[cerfaType] = typeCounter;
+        safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+
+        // Formater le numéro (CERFA-15497-2026-0001)
+        const paddedCount = String(typeCounter.count).padStart(4, '0');
+        return `CERFA-${cerfaType}-${currentYear}-${paddedCount}`;
     } catch (e) {
         logger.error('Erreur génération numéro fiche:', e);
-        return `CERFA-${Date.now()}`;
+        return `CERFA-${cerfaType || 'UNKN'}-${Date.now()}`;
     }
 };
 
 /**
  * Récupère le numéro actuel sans incrémenter
- * @returns {Object} { year, count, formatted }
+ * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
+ * @returns {Object} { year, count, formatted, nextNumber }
  */
-export const getCurrentFicheInfo = () => {
-    const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
-    const year = stored.year || new Date().getFullYear();
-    const count = stored.count || 0;
+export const getCurrentFicheInfo = (cerfaType = '15497') => {
+    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+    const typeCounter = allCounters[cerfaType] || {};
+    const year = typeCounter.year || new Date().getFullYear();
+    const count = typeCounter.count || 0;
     const paddedCount = String(count).padStart(4, '0');
     return {
         year,
         count,
-        formatted: `CERFA-${year}-${paddedCount}`,
-        nextNumber: count + 1
+        formatted: `CERFA-${cerfaType}-${year}-${paddedCount}`,
+        nextNumber: count + 1,
+        cerfaType
     };
 };
 
 /**
- * Réinitialise le compteur de fiches (admin uniquement)
+ * Récupère les informations de tous les compteurs CERFA
+ * @returns {Object} Tous les compteurs par type
+ */
+export const getAllCountersInfo = () => {
+    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+    const result = {};
+
+    for (const [type, data] of Object.entries(allCounters)) {
+        const year = data.year || new Date().getFullYear();
+        const count = data.count || 0;
+        const paddedCount = String(count).padStart(4, '0');
+        result[type] = {
+            year,
+            count,
+            formatted: `CERFA-${type}-${year}-${paddedCount}`,
+            nextNumber: count + 1
+        };
+    }
+
+    return result;
+};
+
+/**
+ * Réinitialise le compteur d'un type de CERFA (admin uniquement)
+ * @param {string} cerfaType - Type de CERFA à réinitialiser (ou 'all' pour tous)
  * @param {number} startNumber - Numéro de départ (défaut: 0)
  * @returns {boolean} Succès
  */
-export const resetFicheCounter = (startNumber = 0) => {
-    const currentYear = new Date().getFullYear();
-    const success = safeStorage.setJSON(STORAGE_KEY_COUNTER, {
-        year: currentYear,
-        count: startNumber
-    });
-    if (!success) {
-        logger.error('Erreur réinitialisation compteur');
+export const resetFicheCounter = (cerfaType = '15497', startNumber = 0) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+
+        if (cerfaType === 'all') {
+            // Réinitialiser tous les compteurs
+            Object.keys(allCounters).forEach(type => {
+                allCounters[type] = { year: currentYear, count: startNumber };
+            });
+        } else {
+            // Réinitialiser un type spécifique
+            allCounters[cerfaType] = { year: currentYear, count: startNumber };
+        }
+
+        const success = safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+        if (!success) {
+            logger.error('Erreur réinitialisation compteur');
+        }
+        return success;
+    } catch (e) {
+        logger.error('Erreur réinitialisation compteur:', e);
+        return false;
     }
-    return success;
 };
 
 // =============================

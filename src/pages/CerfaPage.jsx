@@ -326,7 +326,7 @@ function CerfaPage() {
         setIsGenerating(true);
         try {
             // Générer le numéro de fiche
-            const ficheNumber = getNextFicheNumber();
+            const ficheNumber = getNextFicheNumber('15497');
             const clientName = (formData.detenteurNom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
             const date = new Date().toISOString().split('T')[0];
 
