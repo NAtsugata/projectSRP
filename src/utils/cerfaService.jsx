@@ -304,6 +304,10 @@ export const fillCerfa15497 = async (data) => {
                     // Toujours écrire, même si vide (pour debug)
                     const textValue = value ? String(value) : '';
                     field.setText(textValue);
+                    // Forcer la couleur du texte en noir pour visibilité
+                    field.setFontColor(rgb(0, 0, 0));
+                    // Mettre à jour l'apparence du champ
+                    field.updateAppearances();
                     if (textValue) {
                         logger.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
                     }
@@ -556,6 +560,9 @@ export const fillCerfa15497 = async (data) => {
         fillTextField('Sign_Detenteur_Qualite', data.clientQualite || data.detenteurQualite || 'Propriétaire');
         fillTextField('Sign_Detenteur_Date', data.clientSignatureDate || data.date || dateIntervention);
 
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
+
         // Aplatir le formulaire pour figer les données
         form.flatten();
 
@@ -751,6 +758,9 @@ export const fillCerfa15498 = async (data) => {
         fillTextField('sig_acq', data.sig_acq || '');
         fillTextField('sig_inst', data.sig_inst || '');
         fillTextField('sig_dist', data.sig_dist || '');
+
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
         form.flatten();
@@ -1212,6 +1222,9 @@ export const fillCerfa1301 = async (data) => {
         // a12 (y=160, x=370): Date
         fillTextField('a11', data.lieu || '');
         fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
+
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
         form.flatten();
