@@ -55,12 +55,12 @@
 
 /* Primary - Nouvelle intervention */
 .quick-action-primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
   color: white;
 }
 
 .quick-action-primary:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, var(--color-copper-dark), var(--color-copper-darker));
 }
 
 /* Warning - Assigner */

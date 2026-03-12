@@ -326,12 +326,12 @@
 }
 
 .visit-item.completed {
-    border-left-color: #10b981;
+    border-left-color: var(--color-copper);
 }
 
 .visit-item.pending,
 .visit-item.scheduled {
-    border-left-color: #3b82f6;
+    border-left-color: var(--color-copper);
 }
 
 .visit-item.missed {
@@ -667,7 +667,7 @@
 }
 
 .signed-badge {
-    color: #10b981;
+    color: var(--color-copper);
     font-weight: 500;
 }
 

@@ -45,12 +45,12 @@
 }
 
 .step.active .step-num {
-    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    background: linear-gradient(135deg, #8b5cf6, var(--color-copper));
     color: #fff;
 }
 
 .step.completed .step-num {
-    background: #10b981;
+    background: var(--color-copper);
 }
 
 .step.completed .step-num::after {
@@ -209,7 +209,7 @@
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
     border: none;
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
@@ -221,7 +221,7 @@
 
 .btn-success:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(184, 115, 51, 0.4);
 }
 
 .btn-success:disabled {

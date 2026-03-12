@@ -9,7 +9,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: white;
   padding: 1rem;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
@@ -81,7 +81,7 @@
 
 .notification-permission-button-enable {
   background: white;
-  color: #2563eb;
+  color: var(--color-copper-dark);
 }
 
 .notification-permission-button-enable:active {
@@ -145,18 +145,18 @@
   border-radius: 0.5rem;
   font-size: 1rem;
   font-weight: 600;
-  background: #3b82f6;
+  background: var(--color-copper);
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
   -webkit-tap-highlight-color: transparent;
 }
 
 .notification-status-button:active {
-  background: #2563eb;
+  background: var(--color-copper-dark);
   transform: scale(0.95);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 2px 8px rgba(184, 115, 51, 0.4);
 }
 
 .notification-status-button-secondary {

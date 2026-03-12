@@ -97,7 +97,7 @@ button.bg-white span {
 }
 
 .mobile-nav-item.active {
-    color: #4f46e5 !important;
+    color: var(--color-copper) !important;
 }
 
 /* ==================== FORM INPUTS ==================== */
@@ -180,11 +180,11 @@ select,
 /* ==================== ACCENT COLORS ==================== */
 .info-icon,
 .agenda-date {
-    color: #6366f1 !important;
+    color: var(--color-copper) !important;
 }
 
 .expense-amount {
-    color: #10b981 !important;
+    color: var(--color-copper) !important;
 }
 
 /* ==================== EMPTY STATES ==================== */
@@ -232,14 +232,14 @@ button.text-red-600 {
 .btn-primary,
 button.bg-indigo-500,
 button.bg-blue-500 {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper) 100%) !important;
     color: white !important;
     border: none !important;
 }
 
 .btn-success,
 button.bg-green-500 {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%) !important;
     color: white !important;
 }
 
@@ -312,11 +312,11 @@ svg {
 
     /* Links */
     a {
-        color: #4f46e5 !important;
+        color: var(--color-copper) !important;
     }
 
     a:hover {
-        color: #6366f1 !important;
+        color: var(--color-copper) !important;
     }
 
     /* Modal overlays */

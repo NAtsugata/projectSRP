@@ -588,9 +588,9 @@
 }
 
 .cerfa-toast-success {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
     color: #fff;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 15px rgba(184, 115, 51, 0.4);
 }
 
 .cerfa-toast-error {

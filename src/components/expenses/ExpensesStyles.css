@@ -11,7 +11,7 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: white;
   padding: 1rem;
   border-radius: 0.75rem;
@@ -19,7 +19,7 @@
 }
 
 .stat-card.success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 .stat-card.warning {
@@ -174,7 +174,7 @@
 /* Paid Info */
 .paid-info {
   background: #eff6ff;
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid var(--color-copper);
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   border-radius: 0.25rem;
@@ -252,7 +252,7 @@
 }
 
 .receipts-modal-link {
-  color: #6366f1;
+  color: var(--color-copper);
   text-decoration: underline;
   font-size: 0.9rem;
 }
@@ -326,8 +326,8 @@
 }
 
 .user-stat-value.pending { color: #d97706; }
-.user-stat-value.approved { color: #059669; }
-.user-stat-value.paid { color: #4f46e5; }
+.user-stat-value.approved { color: var(--color-copper-dark); }
+.user-stat-value.paid { color: var(--color-copper); }
 .user-stat-value.rejected { color: #dc2626; }
 
 /* Admin Expense Card */
@@ -390,7 +390,7 @@
 .admin-expense-receipts-btn {
   background: none;
   border: none;
-  color: #60a5fa;
+  color: var(--color-copper-light);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -413,8 +413,8 @@
 .admin-expense-paid-date {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: rgba(99, 102, 241, 0.15);
-  border-left: 3px solid #6366f1;
+  background: rgba(184, 115, 51, 0.15);
+  border-left: 3px solid var(--color-copper);
   border-radius: 0 4px 4px 0;
   color: #a5b4fc;
   font-size: 0.85rem;
@@ -447,7 +447,7 @@
 
 /* Admin Action Buttons */
 .btn-approve {
-  background: #10b981;
+  background: var(--color-copper);
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -470,13 +470,13 @@
 }
 
 .btn-pay {
-  background: #6366f1;
+  background: var(--color-copper);
   color: white;
   border: none;
   padding: 0.6rem 1.25rem;
   border-radius: 0.5rem;
   font-weight: 600;
-  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 6px -1px rgba(184, 115, 51, 0.4);
   cursor: pointer;
   transition: transform 0.2s;
 }

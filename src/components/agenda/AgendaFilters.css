@@ -21,7 +21,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: #fff;
-  background-color: #3b82f6;
+  background-color: var(--color-copper);
   border-radius: 999px;
 }
 
@@ -62,8 +62,8 @@
 
 .filter-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-copper);
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .filter-input::placeholder {
@@ -85,7 +85,7 @@
   cursor: pointer;
   padding: 0.375rem 0;
   transition: color 0.15s ease;
-  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+  -webkit-tap-highlight-color: rgba(184, 115, 51, 0.1);
 }
 
 .filter-checkbox-label:hover {
@@ -93,8 +93,8 @@
 }
 
 .filter-checkbox-label:active {
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.05);
+  color: var(--color-copper);
+  background-color: rgba(184, 115, 51, 0.05);
 }
 
 .filter-checkbox {
@@ -104,21 +104,21 @@
   border: 1px solid #d1d5db;
   cursor: pointer;
   transition: all 0.15s ease;
-  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+  -webkit-tap-highlight-color: rgba(184, 115, 51, 0.2);
 }
 
 .filter-checkbox:checked {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--color-copper);
+  border-color: var(--color-copper);
 }
 
 .filter-checkbox:active {
   transform: scale(0.95);
-  border-color: #3b82f6;
+  border-color: var(--color-copper);
 }
 
 .filter-checkbox:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-copper);
   outline-offset: 2px;
 }
 

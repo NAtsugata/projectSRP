@@ -13,7 +13,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #1e3a5f 0%, var(--color-copper-dark) 100%);
   color: white;
 }
 
@@ -124,7 +124,7 @@
 }
 
 .calendar-day.today .day-number {
-  background: #2563eb;
+  background: var(--color-copper-dark);
   color: white;
   border-radius: 50%;
   width: 28px;
@@ -135,7 +135,7 @@
 }
 
 .calendar-day.has-interventions {
-  border-left: 3px solid #2563eb;
+  border-left: 3px solid var(--color-copper-dark);
 }
 
 .calendar-day.has-absences {
@@ -165,7 +165,7 @@
 .intervention-chip {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-copper);
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -296,12 +296,12 @@
 }
 
 .today-dot {
-  background: #2563eb;
+  background: var(--color-copper-dark);
 }
 
 .has-dot {
-  background: #3b82f6;
-  border-left: 3px solid #1d4ed8;
+  background: var(--color-copper);
+  border-left: 3px solid var(--color-copper-darker);
 }
 
 .completed-dot {

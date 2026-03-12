@@ -68,7 +68,7 @@
 }
 
 .stat-icon.active {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .stat-icon.expired {
@@ -319,8 +319,8 @@
 }
 
 .contract-status.active {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
+    background: rgba(184, 115, 51, 0.2);
+    color: var(--color-copper);
 }
 
 .contract-status.expired {
@@ -363,7 +363,7 @@
 
 .price-value {
     font-weight: 600;
-    color: #10b981 !important;
+    color: var(--color-copper) !important;
 }
 
 .contract-card-footer {
@@ -659,8 +659,8 @@
 }
 
 .toggle-group.active {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: rgba(184, 115, 51, 0.1);
+    border: 1px solid rgba(184, 115, 51, 0.3);
 }
 
 .toggle-container {
@@ -691,7 +691,7 @@
 }
 
 .toggle-switch.on {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .toggle-switch.on .toggle-knob {

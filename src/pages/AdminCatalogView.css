@@ -61,11 +61,11 @@
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid var(--color-primary, #6366f1);
+  border-left: 4px solid var(--color-primary, var(--color-copper));
 }
 
 .stat-card.stat-info {
-  border-left-color: #3b82f6;
+  border-left-color: var(--color-copper);
 }
 
 .stat-card.stat-success {
@@ -114,12 +114,12 @@
 }
 
 .catalog-tab:hover {
-  color: var(--color-primary, #6366f1);
+  color: var(--color-primary, var(--color-copper));
 }
 
 .catalog-tab.active {
-  color: var(--color-primary, #6366f1);
-  border-bottom-color: var(--color-primary, #6366f1);
+  color: var(--color-primary, var(--color-copper));
+  border-bottom-color: var(--color-primary, var(--color-copper));
 }
 
 /* Toolbar */
@@ -146,8 +146,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary, var(--color-copper));
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .filter-select {
@@ -262,7 +262,7 @@
 
 .type-badge.product {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-copper-darker);
 }
 
 .type-badge.service {
@@ -302,8 +302,8 @@
 }
 
 .btn-action.btn-edit:hover {
-  border-color: var(--color-primary, #6366f1);
-  color: var(--color-primary, #6366f1);
+  border-color: var(--color-primary, var(--color-copper));
+  color: var(--color-primary, var(--color-copper));
 }
 
 .btn-action.btn-delete {
@@ -316,7 +316,7 @@
 }
 
 .btn-action.btn-default {
-  color: #059669;
+  color: var(--color-copper-dark);
   border-color: #a7f3d0;
 }
 
@@ -327,7 +327,7 @@
 /* Common buttons */
 .btn-primary {
   padding: 0.5rem 1rem;
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary, var(--color-copper));
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -391,7 +391,7 @@
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #6366f1;
+  border-left: 4px solid var(--color-copper);
 }
 
 .category-header {
@@ -442,8 +442,8 @@
 }
 
 .tax-card.is-default {
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.2);
+  border-color: var(--color-primary, var(--color-copper));
+  box-shadow: 0 1px 3px rgba(184, 115, 51, 0.2);
 }
 
 .tax-header {
@@ -465,7 +465,7 @@
 }
 
 .default-badge {
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary, var(--color-copper));
   color: white;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
@@ -501,12 +501,12 @@
 }
 
 .template-card.is-default {
-  border-color: var(--color-primary, #6366f1);
+  border-color: var(--color-primary, var(--color-copper));
 }
 
 .template-preview {
   padding: 1.25rem;
-  border-top: 4px solid #3b82f6;
+  border-top: 4px solid var(--color-copper);
 }
 
 .template-preview h3 {
@@ -645,8 +645,8 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary, var(--color-copper));
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .form-group input[type="color"] {

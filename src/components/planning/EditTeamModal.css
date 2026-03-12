@@ -82,8 +82,8 @@
 
 .edit-team-search:focus {
   outline: none;
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+  border-color: var(--color-copper-light);
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .edit-team-quick-actions {
@@ -140,13 +140,13 @@
 
 .edit-team-user-checkbox:hover {
   background: #f0f9ff;
-  border-color: #0ea5e9;
+  border-color: var(--color-copper-light);
 }
 
 .edit-team-user-checkbox input[type="checkbox"] {
   width: 1.25rem;
   height: 1.25rem;
-  accent-color: #0ea5e9;
+  accent-color: var(--color-copper-light);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -155,7 +155,7 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -184,13 +184,13 @@
 }
 
 .edit-team-user-checkbox input:checked ~ .user-info .user-name {
-  color: #0284c7;
+  color: var(--color-copper);
   font-weight: 600;
 }
 
 .edit-team-user-checkbox input:checked ~ .user-avatar {
-  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+  background: linear-gradient(135deg, var(--color-copper-light) 0%, #06b6d4 100%);
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.2);
 }
 
 /* Mode toggle */
@@ -222,7 +222,7 @@
 
 .mode-btn.active {
   background: white;
-  color: #0ea5e9;
+  color: var(--color-copper-light);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -234,7 +234,7 @@
 
 .edit-team-days-count {
   font-weight: 600;
-  color: #0ea5e9;
+  color: var(--color-copper-light);
 }
 
 .no-employees {

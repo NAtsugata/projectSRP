@@ -88,8 +88,8 @@
 .quick-client-body .form-group input:focus,
 .quick-client-body .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary, var(--color-copper));
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .quick-client-footer .modal-close {
@@ -115,7 +115,7 @@
 
 .quick-client-footer .btn-primary {
   padding: 0.5rem 1rem;
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary, var(--color-copper));
   color: white;
   border: none;
   border-radius: 0.5rem;

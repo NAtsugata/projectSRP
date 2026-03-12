@@ -21,8 +21,8 @@
 
 .selector-input:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary, var(--color-copper));
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 .selector-spinner {
@@ -33,7 +33,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid #e5e7eb;
-  border-top-color: var(--color-primary, #6366f1);
+  border-top-color: var(--color-primary, var(--color-copper));
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -74,8 +74,8 @@
 }
 
 .selector-tab.active {
-  color: var(--color-primary, #6366f1);
-  border-bottom-color: var(--color-primary, #6366f1);
+  color: var(--color-primary, var(--color-copper));
+  border-bottom-color: var(--color-primary, var(--color-copper));
 }
 
 .selector-results {
@@ -117,7 +117,7 @@
 
 .selector-type-badge.product {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-copper-darker);
 }
 
 .selector-type-badge.service {

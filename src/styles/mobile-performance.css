@@ -302,7 +302,7 @@
     .loading-spinner {
         animation: none !important;
         /* Remplace par un indicateur statique */
-        background: linear-gradient(90deg, #3b82f6 25%, transparent 50%, #3b82f6 75%);
+        background: linear-gradient(90deg, var(--color-copper) 25%, transparent 50%, var(--color-copper) 75%);
     }
 }
 
@@ -388,7 +388,7 @@
     select,
     a,
     .clickable {
-        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.15);
+        -webkit-tap-highlight-color: rgba(184, 115, 51, 0.15);
     }
 
     /* Optimise les Canvas pour le tactile */

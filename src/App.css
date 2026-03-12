@@ -17,12 +17,12 @@
 
 /* --- Variables CSS pour la palette de couleurs --- */
 :root {
-    --color-primary: #4f46e5;       /* Indigo 600 */
-    --color-primary-dark: #4338ca;  /* Indigo 700 */
+    --color-primary: var(--color-copper);       /* Indigo 600 */
+    --color-primary-dark: var(--color-copper-dark);  /* Indigo 700 */
     --color-secondary: #6b7280;     /* Gray 500 */
     --color-secondary-dark: #4b5563;/* Gray 600 */
-    --color-success: #10b981;       /* Emerald 500 */
-    --color-success-dark: #059669;  /* Emerald 600 */
+    --color-success: var(--color-copper);       /* Emerald 500 */
+    --color-success-dark: var(--color-copper-dark);  /* Emerald 600 */
     --color-danger: #ef4444;        /* Red 500 */
     --color-danger-dark: #dc2626;   /* Red 600 */
     --color-warning: #f59e0b;       /* Amber 500 */
@@ -141,7 +141,7 @@ body {
     width: 32px;
     height: 32px;
     border: 3px solid #e5e7eb;
-    border-top-color: #3b82f6;
+    border-top-color: var(--color-copper);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -304,8 +304,8 @@ body {
 
 .form-control:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-copper);
+    box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
 /* Header & Navigation - Mobile First */
@@ -371,7 +371,7 @@ body {
 
 .nav-button.active {
     background-color: #dbeafe;
-    color: #3b82f6;
+    color: var(--color-copper);
 }
 
 .nav-label {
@@ -457,7 +457,7 @@ body {
 
 .mobile-nav-button.active {
     background-color: #dbeafe;
-    color: #3b82f6;
+    color: var(--color-copper);
 }
 
 .mobile-nav-label {
@@ -587,7 +587,7 @@ body {
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-bottom: 0.75rem;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--color-copper);
     overflow: hidden;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -603,7 +603,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #3b82f6;
+    color: var(--color-copper);
     font-weight: 600;
     margin-bottom: 1.5rem;
     background: none;
@@ -613,7 +613,7 @@ body {
     border-radius: 0.375rem;
     min-height: 44px;
     transition: all 0.2s ease;
-    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    -webkit-tap-highlight-color: rgba(184, 115, 51, 0.1);
 }
 
 .back-button:hover {
@@ -754,9 +754,9 @@ body {
 }
 
 .btn.btn-secondary.w-full.flex-center:hover:not(:disabled) {
-    border-color: #3b82f6;
+    border-color: var(--color-copper);
     background: #f8fafc;
-    color: #3b82f6;
+    color: var(--color-copper);
 }
 
 .btn.btn-secondary.w-full.flex-center:disabled {
@@ -766,7 +766,7 @@ body {
 
 /* ✅ OPTIMISATION DRAG & DROP POUR DESKTOP */
 .btn.drag-over {
-    border-color: #3b82f6 !important;
+    border-color: var(--color-copper) !important;
     background-color: #f0f9ff !important;
     transform: scale(1.02);
     transition: all 0.2s ease;
@@ -879,7 +879,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1014,7 +1014,7 @@ body {
 
 /* 🚨 Message d'optimisation mobile pour admin */
 .mobile-admin-notice {
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    background: linear-gradient(90deg, var(--color-copper), var(--color-copper-darker));
     color: white;
     padding: 0.75rem 1rem;
     text-align: center;
@@ -1140,7 +1140,7 @@ body {
 
 .upload-progress-bar {
     height: 100%;
-    background-color: #3b82f6;
+    background-color: var(--color-copper);
     transition: width 0.3s ease;
     border-radius: 2px;
 }
@@ -1161,7 +1161,7 @@ body {
 }
 
 .upload-status-icon.loading {
-    color: #3b82f6;
+    color: var(--color-copper);
     animation: spin 1s linear infinite;
 }
 
@@ -1587,16 +1587,16 @@ body {
 
 /* États interactifs */
 .mobile-file-input-label:hover:not(.disabled) {
-    border-color: #3b82f6;
+    border-color: var(--color-copper);
     background-color: #f8fafc;
-    color: #3b82f6;
+    color: var(--color-copper);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 4px 12px rgba(184, 115, 51, 0.15);
 }
 
 .mobile-file-input-label:active:not(.disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 2px 4px rgba(184, 115, 51, 0.2);
 }
 
 .mobile-file-input-label.disabled {
@@ -1608,10 +1608,10 @@ body {
 }
 
 .mobile-file-input-label.drag-over {
-    border-color: #3b82f6 !important;
+    border-color: var(--color-copper) !important;
     background-color: #f0f9ff !important;
     transform: scale(1.02);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 8px 25px rgba(184, 115, 51, 0.15);
 }
 
 /* STYLES SPÉCIFIQUES MOBILE */
@@ -1676,8 +1676,8 @@ body {
 
     .mobile-file-input-label:hover:not(.disabled) {
         background-color: #374151;
-        border-color: #60a5fa;
-        color: #60a5fa;
+        border-color: var(--color-copper-light);
+        color: var(--color-copper-light);
     }
 
     .mobile-file-input-label.disabled {
@@ -1688,7 +1688,7 @@ body {
 
     .mobile-file-input-label.drag-over {
         background-color: #1e3a8a !important;
-        border-color: #60a5fa !important;
+        border-color: var(--color-copper-light) !important;
     }
 }
 */
@@ -1701,8 +1701,8 @@ body {
     }
 
     .mobile-file-input-label:hover:not(.disabled) {
-        border-color: #1d4ed8;
-        color: #1d4ed8;
+        border-color: var(--color-copper-darker);
+        color: var(--color-copper-darker);
     }
 }
 
@@ -1773,7 +1773,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #3b82f6;
+    color: var(--color-copper);
     font-weight: 600;
     margin-bottom: 1.5rem;
     background: none;
@@ -1783,7 +1783,7 @@ body {
     border-radius: 0.375rem;
     min-height: 44px;
     transition: all 0.2s ease;
-    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    -webkit-tap-highlight-color: rgba(184, 115, 51, 0.1);
     touch-action: manipulation;
 }
 

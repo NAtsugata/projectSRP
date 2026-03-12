@@ -2,7 +2,7 @@
 /* Version Admin améliorée */
 
 .agenda-dashboard {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
@@ -149,11 +149,11 @@
 }
 
 .mini-cal-day.has-events {
-  background: rgba(59, 130, 246, 0.4);
+  background: rgba(184, 115, 51, 0.4);
 }
 
 .mini-cal-day.has-events.today {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(255, 255, 255, 0.3));
+  background: linear-gradient(135deg, rgba(184, 115, 51, 0.5), rgba(255, 255, 255, 0.3));
 }
 
 .event-dot {
@@ -198,8 +198,8 @@
 }
 
 .dashboard-card.card-highlight {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(99, 102, 241, 0.3));
-  border-color: rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, rgba(184, 115, 51, 0.4), rgba(184, 115, 51, 0.3));
+  border-color: rgba(184, 115, 51, 0.4);
 }
 
 .dashboard-card.card-urgent {
@@ -235,7 +235,7 @@
 }
 
 .card-icon-primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .card-icon-warning {
@@ -247,7 +247,7 @@
 }
 
 .card-icon-secondary {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .card-content {
@@ -368,7 +368,7 @@
 }
 
 .status-completed .status-dot { background: #22c55e; }
-.status-inprogress .status-dot { background: #3b82f6; }
+.status-inprogress .status-dot { background: var(--color-copper); }
 .status-pending .status-dot { background: #f59e0b; }
 
 .status-label {
@@ -438,7 +438,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
   display: flex;
   align-items: center;
   justify-content: center;

@@ -37,7 +37,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: white;
   padding: 6px 12px;
   border-radius: 16px;
@@ -91,11 +91,11 @@
 }
 
 .employee-select-trigger:hover {
-  border-color: #667eea;
+  border-color: var(--color-copper);
 }
 
 .employee-select-trigger.is-open {
-  border-color: #667eea;
+  border-color: var(--color-copper);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -195,9 +195,9 @@
 }
 
 .action-button:hover:not(:disabled) {
-  background: #667eea;
+  background: var(--color-copper);
   color: white;
-  border-color: #667eea;
+  border-color: var(--color-copper);
 }
 
 .action-button:disabled {

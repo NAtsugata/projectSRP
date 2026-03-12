@@ -53,7 +53,7 @@
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border-left: 4px solid var(--team-border, #3b82f6);
+  border-left: 4px solid var(--team-border, var(--color-copper));
 }
 
 .team-header {
@@ -129,7 +129,7 @@
 }
 
 .stat-today {
-  color: #2563eb !important;
+  color: var(--color-copper-dark) !important;
   font-weight: 500;
 }
 
@@ -139,7 +139,7 @@
 }
 
 .stat-progress {
-  color: #10b981 !important;
+  color: var(--color-copper) !important;
 }
 
 /* Liste des interventions */
@@ -269,7 +269,7 @@
 
 .badge-à-venir {
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--color-copper-dark);
 }
 
 .badge-en-cours {
@@ -279,7 +279,7 @@
 
 .badge-terminée {
   background: #ecfdf5;
-  color: #059669;
+  color: var(--color-copper-dark);
 }
 
 /* Empty state */

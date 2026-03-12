@@ -86,7 +86,7 @@
 }
 
 .toast--info {
-  border-left-color: #3b82f6;
+  border-left-color: var(--color-copper);
   background: #eff6ff;
 }
 

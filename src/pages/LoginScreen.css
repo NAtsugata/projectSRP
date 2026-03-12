@@ -16,7 +16,7 @@
 .login-background {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   z-index: -1;
 }
 
@@ -112,7 +112,7 @@
 .logo-icon {
   width: 88px;
   height: 88px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 1.75rem;
   display: flex;
   align-items: center;
@@ -219,7 +219,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border: none;
   border-radius: var(--radius-xl);
   cursor: pointer;

@@ -205,8 +205,8 @@
 }
 
 .notification-item.unread {
-    background: rgba(59, 130, 246, 0.15);
-    border-left-color: #3b82f6;
+    background: rgba(184, 115, 51, 0.15);
+    border-left-color: var(--color-copper);
 }
 
 .notification-item.urgent {
@@ -285,9 +285,9 @@
     right: 14px;
     width: 10px;
     height: 10px;
-    background: #3b82f6;
+    background: var(--color-copper);
     border-radius: 50%;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 8px rgba(184, 115, 51, 0.6);
 }
 
 /* ===== Responsive ===== */

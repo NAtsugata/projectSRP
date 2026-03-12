@@ -83,7 +83,7 @@
 .pdf-title {
   font-size: 24px;
   font-weight: bold;
-  color: #3b82f6;
+  color: var(--color-copper);
   margin: 0 0 2mm 0;
 }
 
@@ -189,7 +189,7 @@
 }
 
 .pdf-table thead tr {
-  background: #3b82f6;
+  background: var(--color-copper);
   color: white;
 }
 
@@ -279,8 +279,8 @@
 .total-row.final {
   font-weight: bold;
   font-size: 11px;
-  color: #3b82f6;
-  border-bottom: 2px solid #3b82f6;
+  color: var(--color-copper);
+  border-bottom: 2px solid var(--color-copper);
   padding-top: 2mm;
 }
 
@@ -531,7 +531,7 @@
 
 /* Total TTC avec couleur personnalisée */
 .total-row.final {
-  background: var(--primary-color, #3b82f6);
+  background: var(--primary-color, var(--color-copper));
   color: var(--header-text-color, white);
   border-radius: 2mm;
   padding: 2mm 3mm;

@@ -44,12 +44,12 @@
 }
 
 .upload-zone:hover {
-  border-color: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, var(--color-copper));
   background: var(--primary-light, #eff6ff);
 }
 
 .upload-zone.drag-over {
-  border-color: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, var(--color-copper));
   background: var(--primary-light, #eff6ff);
   border-style: solid;
 }
@@ -96,7 +96,7 @@
 
 .progress-fill {
   height: 100%;
-  background: var(--primary-color, #3b82f6);
+  background: var(--primary-color, var(--color-copper));
   transition: width 0.3s ease;
 }
 
@@ -185,7 +185,7 @@
 
 .attachment-caption:focus {
   outline: none;
-  border-color: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, var(--color-copper));
 }
 
 /* Options */
@@ -242,7 +242,7 @@
 
 .attachment-actions .action-btn:hover:not(:disabled) {
   background: var(--bg-secondary, #f8fafc);
-  border-color: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, var(--color-copper));
 }
 
 .attachment-actions .action-btn:disabled {
@@ -380,7 +380,7 @@
   .upload-zone:hover,
   .upload-zone.drag-over {
     background: var(--primary-dark, #1e3a5f);
-    border-color: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, var(--color-copper));
   }
 
   .attachment-item {

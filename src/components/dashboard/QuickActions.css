@@ -89,14 +89,14 @@
 .quick-action-btn:nth-child(2),
 .quick-action-btn:nth-child(3),
 .quick-action-btn:nth-child(4) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 .quick-action-btn:nth-child(2):hover,
 .quick-action-btn:nth-child(3):hover,
 .quick-action-btn:nth-child(4):hover {
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
+  box-shadow: 0 8px 30px rgba(184, 115, 51, 0.5);
 }
 
 .quick-action-btn svg {

@@ -18,7 +18,7 @@
 .header-icon {
   width: 20px;
   height: 20px;
-  color: #667eea;
+  color: var(--color-copper);
 }
 
 .header-title {
@@ -44,13 +44,13 @@
 }
 
 .preset-card:hover {
-  border-color: #667eea;
+  border-color: var(--color-copper);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 .preset-card.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  border-color: var(--color-copper);
 }
 
 .preset-button {
@@ -249,7 +249,7 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--color-copper);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -274,13 +274,13 @@
 }
 
 .icon-option:hover {
-  border-color: #667eea;
+  border-color: var(--color-copper);
   transform: scale(1.05);
 }
 
 .icon-option.selected {
   background: #eef2ff;
-  border-color: #667eea;
+  border-color: var(--color-copper);
   box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 

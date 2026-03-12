@@ -103,13 +103,13 @@
 
 /* Variants */
 .activity-item-primary .activity-icon {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: rgba(184, 115, 51, 0.15);
+  color: var(--color-copper);
 }
 
 .activity-item-success .activity-icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: rgba(184, 115, 51, 0.15);
+  color: var(--color-copper);
 }
 
 .activity-item-warning .activity-icon {

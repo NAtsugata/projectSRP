@@ -108,7 +108,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -127,7 +127,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -222,7 +222,7 @@
 
 .edit-numero-input {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #3b82f6;
+    border: 1px solid var(--color-copper);
     border-radius: 4px;
     padding: 0.25rem 0.5rem;
     color: white;
@@ -348,7 +348,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-copper);
 }
 
 .form-group small {
@@ -385,8 +385,8 @@
 }
 
 .file-input-label:hover {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--color-copper);
+    background: rgba(184, 115, 51, 0.1);
 }
 
 .modal-actions {
@@ -409,7 +409,7 @@
 .btn-submit {
     flex: 1;
     padding: 0.75rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
     border: none;
     border-radius: 8px;
     color: white;
@@ -457,8 +457,8 @@
 }
 
 .view-btn.active {
-    background: rgba(59, 130, 246, 0.3);
-    color: #3b82f6;
+    background: rgba(184, 115, 51, 0.3);
+    color: var(--color-copper);
 }
 
 /* Client Actions */
@@ -474,7 +474,7 @@
 .btn-text {
     background: none;
     border: none;
-    color: #3b82f6;
+    color: var(--color-copper);
     cursor: pointer;
     font-size: 0.85rem;
     padding: 0.25rem 0.5rem;
@@ -518,7 +518,7 @@
 }
 
 .client-header.expanded {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(184, 115, 51, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -554,7 +554,7 @@
 }
 
 .client-meta .doc-count {
-    color: #10b981;
+    color: var(--color-copper);
     font-weight: 500;
 }
 
@@ -599,8 +599,8 @@
 }
 
 .doc-template {
-    color: #3b82f6;
-    background: rgba(59, 130, 246, 0.15);
+    color: var(--color-copper);
+    background: rgba(184, 115, 51, 0.15);
     padding: 0.15rem 0.5rem;
     border-radius: 4px;
 }

@@ -76,7 +76,7 @@
 }
 
 .allday-chip:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-copper);
   outline-offset: 2px;
 }
 
@@ -113,7 +113,7 @@
 }
 
 .badge-sav {
-  background: #3b82f6;
+  background: var(--color-copper);
   color: #fff;
 }
 
@@ -184,7 +184,7 @@
 }
 
 .event-card:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-copper);
   outline-offset: 2px;
   z-index: 10;
 }

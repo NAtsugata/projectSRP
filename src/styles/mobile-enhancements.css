@@ -134,9 +134,9 @@
 
     .filter-tab.active,
     .tab-button.active {
-        background: #3b82f6;
+        background: var(--color-copper);
         color: white;
-        border-color: #3b82f6;
+        border-color: var(--color-copper);
     }
 
     .filter-tab:hover,
@@ -146,7 +146,7 @@
 
     .filter-tab.active:hover,
     .tab-button.active:hover {
-        background: #2563eb;
+        background: var(--color-copper-dark);
     }
 
     /* ========== MODALS PLEIN ÉCRAN ========== */
@@ -233,7 +233,7 @@
     }
 
     .upload-zone.drag-over {
-        border-color: #3b82f6;
+        border-color: var(--color-copper);
         background: #f0f9ff;
     }
 
@@ -342,7 +342,7 @@
 
     .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        background: linear-gradient(90deg, var(--color-copper), #8b5cf6);
         transition: width 0.3s ease;
         border-radius: 3px;
     }
@@ -386,7 +386,7 @@
     .upload-info svg {
         width: 20px;
         height: 20px;
-        color: #3b82f6;
+        color: var(--color-copper);
         flex-shrink: 0;
     }
 
@@ -422,7 +422,7 @@
     .upload-icon-badge svg {
         width: 20px;
         height: 20px;
-        color: #3b82f6;
+        color: var(--color-copper);
     }
 
     .upload-icon-badge .badge {
@@ -473,7 +473,7 @@
 
     .cache-fill {
         height: 100%;
-        background: #10b981;
+        background: var(--color-copper);
         transition: width 0.3s ease, background-color 0.3s ease;
         border-radius: 4px;
     }
@@ -520,7 +520,7 @@
 
     /* ========== OPTIMISATIONS TACTILES ========== */
     * {
-        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+        -webkit-tap-highlight-color: rgba(184, 115, 51, 0.1);
     }
 
     button,

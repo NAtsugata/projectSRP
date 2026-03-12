@@ -47,13 +47,13 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #0ea5e9;
+  background: var(--color-copper-light);
   transform: scaleX(0);
   transition: transform 0.2s ease;
 }
 
 .tab-button.active {
-  color: #0ea5e9;
+  color: var(--color-copper-light);
   font-weight: 600;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .tab-button.active .tab-badge {
-  background: #0ea5e9;
+  background: var(--color-copper-light);
 }
 
 .tabs-content {

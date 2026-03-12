@@ -9,7 +9,7 @@
   --scanner-black: #1a1a1a;
   --scanner-white: #ffffff;
   --scanner-gray: #6b7280;
-  --scanner-success: #10b981;
+  --scanner-success: var(--color-copper);
   --scanner-danger: #ef4444;
 }
 
@@ -255,8 +255,8 @@
 }
 
 .scanner-btn.success:hover {
-  background: #059669;
-  border-color: #059669;
+  background: var(--color-copper-dark);
+  border-color: var(--color-copper-dark);
 }
 
 .scanner-btn.danger {
@@ -513,8 +513,8 @@
 }
 
 .detector-badge.yolo-seg {
-  background: linear-gradient(135deg, #10b981, #059669);
-  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
+  box-shadow: 0 2px 12px rgba(184, 115, 51, 0.4);
 }
 
 .detector-badge.opencv {

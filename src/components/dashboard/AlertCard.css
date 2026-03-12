@@ -33,13 +33,13 @@
 }
 
 .alert-card-info {
-  border-left-color: #3b82f6;
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border-left-color: var(--color-copper);
+  background: linear-gradient(90deg, rgba(184, 115, 51, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
 }
 
 .alert-card-success {
-  border-left-color: #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border-left-color: var(--color-copper);
+  background: linear-gradient(90deg, rgba(184, 115, 51, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
 }
 
 /* Icon */
@@ -70,13 +70,13 @@
 }
 
 .alert-card-info .alert-card-icon {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
+  background: rgba(184, 115, 51, 0.2);
+  color: var(--color-copper);
 }
 
 .alert-card-success .alert-card-icon {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
+  background: rgba(184, 115, 51, 0.2);
+  color: var(--color-copper);
 }
 
 /* Content */

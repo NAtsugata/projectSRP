@@ -93,7 +93,7 @@
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: #fff;
   border-radius: 999px;
-  box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 10px 40px rgba(184, 115, 51, 0.4);
   font-size: 0.9375rem;
   font-weight: 600;
   z-index: 9999;

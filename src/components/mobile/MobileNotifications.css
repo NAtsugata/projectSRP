@@ -163,7 +163,7 @@
 /* TYPES DE NOTIFICATIONS */
 /* ============================================= */
 .mobile-notification.success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 .mobile-notification.error {
@@ -175,7 +175,7 @@
 }
 
 .mobile-notification.info {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 /* ============================================= */
@@ -314,14 +314,14 @@
 }
 
 .mobile-modal-button-confirm {
-  background: #3b82f6;
+  background: var(--color-copper);
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
 }
 
 .mobile-modal-button-confirm:active {
-  background: #2563eb;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  background: var(--color-copper-dark);
+  box-shadow: 0 2px 8px rgba(184, 115, 51, 0.4);
 }
 
 /* ============================================= */

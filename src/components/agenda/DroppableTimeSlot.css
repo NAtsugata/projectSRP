@@ -15,12 +15,12 @@
 .droppable-time-slot.drag-over {
   background: linear-gradient(
     135deg,
-    rgba(59, 130, 246, 0.05) 0%,
-    rgba(59, 130, 246, 0.1) 100%
+    rgba(184, 115, 51, 0.05) 0%,
+    rgba(184, 115, 51, 0.1) 100%
   );
-  border: 2px dashed #3b82f6;
+  border: 2px dashed var(--color-copper);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.2);
 }
 
 .droppable-time-slot.drag-over.drop-invalid {
@@ -112,8 +112,8 @@
   border-radius: 12px;
   background: linear-gradient(
     135deg,
-    rgba(59, 130, 246, 0.2),
-    rgba(59, 130, 246, 0.1)
+    rgba(184, 115, 51, 0.2),
+    rgba(184, 115, 51, 0.1)
   );
   animation: dropZonePulse 1.5s ease infinite;
   pointer-events: none;

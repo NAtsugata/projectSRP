@@ -49,16 +49,16 @@
 
 /* Variantes */
 .btn-primary {
-  background-color: #3b82f6;
+  background-color: var(--color-copper);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: var(--color-copper-dark);
 }
 
 .btn-primary:active:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: var(--color-copper-darker);
 }
 
 .btn-secondary {
