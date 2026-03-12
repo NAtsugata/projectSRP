@@ -1,24 +1,46 @@
 /* src/styles/mobile-performance.css - CSS optimisé pour les performances mobile */
 
 /* ✅ OPTIMISATIONS GÉNÉRALES MOBILE */
-* {
-    /* Optimisation GPU */
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-
-    /* Optimisation du rendu de texte */
+/* Optimisation du rendu de texte (sur body uniquement pour performances) */
+body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
 }
 
-/* ✅ RÉDUCTION DES REPAINTS POUR LES ÉLÉMENTS ANIMÉS */
-.loading-spinner,
-.upload-progress-bar,
-.signature-canvas,
-.mobile-optimized-image {
-    will-change: transform, opacity;
+/* GPU acceleration seulement sur éléments qui bougent */
+.animated,
+.transitioning,
+.dragging,
+.scrolling {
+    -webkit-transform: translateZ(0);
     transform: translateZ(0);
+}
+
+/* ✅ RÉDUCTION DES REPAINTS POUR LES ÉLÉMENTS ANIMÉS */
+/* will-change uniquement pendant l'animation (important pour éviter memory leaks) */
+.loading-spinner {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.upload-progress-bar {
+    will-change: width;
+    transform: translateZ(0);
+}
+
+.signature-canvas {
+    will-change: contents;
+    transform: translateZ(0);
+}
+
+.mobile-optimized-image {
+    transform: translateZ(0);
+}
+
+/* Retirer will-change après animation (auto-cleanup via JS ou animation-end) */
+.animation-complete {
+    will-change: auto;
 }
 
 /* ✅ OPTIMISATION DES IMAGES MOBILES */
@@ -464,3 +486,104 @@
         image-rendering: auto;
     }
 }
+/* ✅ OPTIMISATIONS SCROLL MOBILE */
+@media (max-width: 768px) {
+    /* Scroll momentum sur iOS */
+    .scrollable,
+    .scroll-container,
+    .list-container {
+        -webkit-overflow-scrolling: touch;
+        overflow-scrolling: touch;
+    }
+
+    /* Réduire les reflows sur scroll */
+    .fixed-header,
+    .sticky-nav {
+        position: fixed;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+    }
+
+    /* Optimisation des listes longues */
+    .virtual-list-item {
+        contain: layout style paint;
+        content-visibility: auto;
+    }
+
+    /* Lazy loading pour contenu hors viewport */
+    .lazy-content {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 500px;
+    }
+}
+
+/* ✅ OPTIMISATION TOUCH FEEDBACK */
+@media (hover: none) and (pointer: coarse) {
+    /* Devices tactiles uniquement */
+    button:active,
+    .btn:active,
+    .touchable:active {
+        transform: scale(0.98) translateZ(0);
+        transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Disable hover states sur mobile */
+    *:hover {
+        /* Évite les états hover "collants" sur mobile */
+    }
+}
+
+/* ✅ OPTIMISATION IMAGES RESPONSIVE */
+@media (max-width: 768px) {
+    img,
+    picture {
+        /* Optimisation mémoire */
+        max-width: 100%;
+        height: auto;
+        
+        /* Lazy loading natif */
+        loading: lazy;
+        decoding: async;
+    }
+
+    /* Images de fond optimisées */
+    .bg-image {
+        background-size: cover;
+        background-position: center;
+        background-attachment: scroll; /* Pas fixed sur mobile */
+        will-change: auto;
+    }
+}
+
+/* ✅ RÉDUCTION ANIMATIONS SUR PREFERENCE USER */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Garder les will-change nécessaires */
+    .loading-spinner {
+        will-change: auto;
+    }
+}
+
+/* ✅ OPTIMISATION BATTERIE (DARK MODE AUTO) */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    /* Note: dark-theme.css est désactivé, mais on garde la structure */
+    /* pour activation future si besoin */
+}
+
+/* ✅ DIAGNOSTIC PERFORMANCE (DEV ONLY) */
+/* Décommenter pour voir les éléments qui déclenchent des layers GPU */
+/* * {
+    outline: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.gpu-accelerated {
+    outline: 2px solid rgba(0, 255, 0, 0.5);
+} */
