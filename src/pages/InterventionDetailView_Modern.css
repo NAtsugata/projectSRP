@@ -599,7 +599,7 @@
 
   .stats-bar {
     background: linear-gradient(135deg,
-      rgba(99, 102, 241, 0.15),
+      rgba(184, 115, 51, 0.15),
       rgba(236, 72, 153, 0.15)
     );
     border-color: #444;
@@ -635,8 +635,8 @@
 .intervention-detail-modern input:focus,
 .intervention-detail-modern textarea:focus,
 .intervention-detail-modern select:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  border-color: var(--color-copper) !important;
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1) !important;
   outline: none !important;
 }
 
@@ -663,7 +663,7 @@
 }
 
 .intervention-detail-modern .btn-primary {
-  background: #4f46e5 !important;
+  background: var(--color-copper) !important;
   color: #ffffff !important;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: none !important;
@@ -682,20 +682,20 @@
 
 .intervention-detail-modern .btn-secondary:hover:not(:disabled) {
   background: #f3f4f6 !important;
-  border-color: #818cf8 !important;
+  border-color: var(--color-copper-light) !important;
   transform: translateY(-1px);
 }
 
 .intervention-detail-modern .btn-success {
-  background: #10b981 !important;
+  background: var(--color-copper) !important;
   color: #ffffff !important;
   border: none !important;
 }
 
 .intervention-detail-modern .btn-success:hover:not(:disabled) {
-  background: #059669 !important;
+  background: var(--color-copper-dark) !important;
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 10px 15px rgba(184, 115, 51, 0.3);
 }
 
 .intervention-detail-modern .btn-danger {

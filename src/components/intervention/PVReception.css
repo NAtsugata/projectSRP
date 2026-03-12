@@ -186,7 +186,7 @@
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(184, 115, 51, 0.1);
   transform: translate(-50%, -50%);
   transition: width 0.4s, height 0.4s;
 }
@@ -352,8 +352,8 @@
 .pv-reception-container input:focus,
 .pv-reception-container textarea:focus,
 .pv-reception-container select:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  border-color: var(--color-copper) !important;
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1) !important;
   outline: none !important;
 }
 
@@ -520,9 +520,9 @@
 }
 
 .pv-reception-container .btn-primary {
-  background: #4f46e5 !important;
+  background: var(--color-copper) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(184, 115, 51, 0.3);
   border: none !important;
 }
 
@@ -539,7 +539,7 @@
 
 .pv-reception-container .btn-secondary:hover:not(:disabled) {
   background: #f3f4f6 !important;
-  border-color: #818cf8 !important;
+  border-color: var(--color-copper-light) !important;
   transform: translateY(-1px);
 }
 

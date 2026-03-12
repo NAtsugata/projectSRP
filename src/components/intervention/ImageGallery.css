@@ -24,7 +24,7 @@
 
 .image-thumbnail:hover {
   transform: scale(1.05);
-  border-color: #3b82f6;
+  border-color: var(--color-copper);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -453,7 +453,7 @@
 
 .gallery-uploading {
   font-size: 0.875rem;
-  color: #3b82f6;
+  color: var(--color-copper);
   font-weight: 500;
 }
 
@@ -481,8 +481,8 @@
 
 .pagination-btn:hover:not(:disabled) {
   background: #f9fafb;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-copper);
+  color: var(--color-copper);
 }
 
 .pagination-btn:disabled {

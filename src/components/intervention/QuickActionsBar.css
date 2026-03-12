@@ -35,7 +35,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -47,7 +47,7 @@
 .quick-action:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
-  border-color: #667eea;
+  border-color: var(--color-copper);
 }
 
 .quick-action:active {
@@ -57,7 +57,7 @@
 .quick-action svg {
   position: relative;
   z-index: 1;
-  color: #4338ca;
+  color: var(--color-copper-darker);
   font-size: 1.75rem;
   transition: all 0.2s ease;
 }
@@ -77,7 +77,7 @@
 }
 
 .quick-action:hover span {
-  color: #667eea;
+  color: var(--color-copper);
 }
 
 /* Toast Notification */
@@ -90,7 +90,7 @@
   align-items: center;
   gap: 0.625rem;
   padding: 0.875rem 1.25rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: #fff;
   border-radius: 999px;
   box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);

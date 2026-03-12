@@ -1,7 +1,7 @@
 /* src/components/intervention/InterventionHeader.css */
 
 .intervention-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   color: #fff;
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
@@ -172,12 +172,12 @@
 }
 
 .action-call:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-color: transparent;
 }
 
 .action-navigate:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-color: transparent;
 }
 

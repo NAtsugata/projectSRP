@@ -34,15 +34,15 @@
 
 /* État en cours */
 .time-running {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-color: #86efac;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+  background: linear-gradient(135deg, var(--color-copper-lightest) 0%, var(--color-copper-lighter) 100%);
+  border-color: var(--color-copper-light);
+  box-shadow: 0 4px 20px rgba(184, 115, 51, 0.15);
 }
 
 /* État terminé */
 .time-completed {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #93c5fd;
+  background: linear-gradient(135deg, var(--color-copper-lightest) 0%, var(--color-copper-lighter) 100%);
+  border-color: var(--color-copper-light);
 }
 
 /* Chronomètre Principal */
@@ -63,31 +63,31 @@
 }
 
 .time-running .time-label {
-  color: #059669;
+  color: var(--color-copper-dark);
 }
 
 .time-completed .time-label {
-  color: #2563eb;
+  color: var(--color-copper-dark);
 }
 
 .pulse-dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--color-copper);
   animation: pulse 2s ease-in-out infinite;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 0 0 rgba(184, 115, 51, 0.7);
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgba(184, 115, 51, 0.7);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 10px rgba(184, 115, 51, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 0 rgba(184, 115, 51, 0);
   }
 }
 
@@ -103,7 +103,7 @@
 }
 
 .time-running .time-value {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--color-copper-dark) 0%, var(--color-copper) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -170,12 +170,12 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(184, 115, 51, 0.1);
   border-radius: 8px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #1e40af;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--color-copper-darker);
+  border: 1px solid rgba(184, 115, 51, 0.2);
 }
 
 .time-estimation svg {

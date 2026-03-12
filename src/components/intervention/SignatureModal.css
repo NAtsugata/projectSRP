@@ -57,7 +57,7 @@
 }
 
 .signature-canvas:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-copper);
   outline-offset: 2px;
 }
 
