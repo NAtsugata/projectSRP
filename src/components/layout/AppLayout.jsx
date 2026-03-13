@@ -64,6 +64,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
         { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
         { name: 'Parametres', href: '/settings', icon: SettingsIcon, color: 'text-slate-500', bg: 'bg-slate-50' },
+        { name: 'Config Entreprise', href: '/company-settings', icon: BuildingIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' },
     ];
 
     // Pages additionnelles basees sur les permissions
