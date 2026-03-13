@@ -38,6 +38,7 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [newReserve, setNewReserve] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Charger les données du PV depuis le rapport si elles existent
   useEffect(() => {
@@ -58,7 +59,21 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
         nomClient: client?.name || intervention?.client || '',
       }));
     }
+    setIsInitialized(true);
   }, [report, intervention, client]);
+
+  // Sauvegarder automatiquement quand pvData change (avec debounce)
+  useEffect(() => {
+    if (!isInitialized) return; // Ne pas sauvegarder pendant l'initialisation
+
+    const timeoutId = setTimeout(() => {
+      if (onSave) {
+        onSave(pvData);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [pvData, onSave, isInitialized]);
 
   // Sauvegarder le PV
   const handleSave = () => {
@@ -124,6 +139,16 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
       type,
       reserves: type === 'sans_reserve' ? [] : prev.reserves
     }));
+  };
+
+  // Vérifier si une signature est valide
+  const isSignatureValid = (signature) => {
+    return signature && typeof signature === 'string' && signature.length > 0;
+  };
+
+  // Vérifier si les deux signatures sont valides
+  const areBothSignaturesValid = () => {
+    return isSignatureValid(pvData.signatureClient) && isSignatureValid(pvData.signatureEntrepreneur);
   };
 
   return (
@@ -369,28 +394,18 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               {!readOnly ? (
                 <SignaturePad
                   onSave={(signature) => {
-                    const updatedData = {
-                      ...pvData,
+                    setPvData(prev => ({
+                      ...prev,
                       signatureEntrepreneur: signature,
                       dateSignatureEntrepreneur: new Date().toISOString()
-                    };
-                    setPvData(updatedData);
-                    // Sauvegarder automatiquement
-                    if (onSave) {
-                      setTimeout(() => onSave(updatedData), 100);
-                    }
+                    }));
                   }}
                   onClear={() => {
-                    const updatedData = {
-                      ...pvData,
+                    setPvData(prev => ({
+                      ...prev,
                       signatureEntrepreneur: null,
                       dateSignatureEntrepreneur: ''
-                    };
-                    setPvData(updatedData);
-                    // Sauvegarder automatiquement
-                    if (onSave) {
-                      setTimeout(() => onSave(updatedData), 100);
-                    }
+                    }));
                   }}
                   initialValue={pvData.signatureEntrepreneur}
                   width={400}
@@ -426,28 +441,18 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               {!readOnly ? (
                 <SignaturePad
                   onSave={(signature) => {
-                    const updatedData = {
-                      ...pvData,
+                    setPvData(prev => ({
+                      ...prev,
                       signatureClient: signature,
                       dateSignatureClient: new Date().toISOString()
-                    };
-                    setPvData(updatedData);
-                    // Sauvegarder automatiquement
-                    if (onSave) {
-                      setTimeout(() => onSave(updatedData), 100);
-                    }
+                    }));
                   }}
                   onClear={() => {
-                    const updatedData = {
-                      ...pvData,
+                    setPvData(prev => ({
+                      ...prev,
                       signatureClient: null,
                       dateSignatureClient: ''
-                    };
-                    setPvData(updatedData);
-                    // Sauvegarder automatiquement
-                    if (onSave) {
-                      setTimeout(() => onSave(updatedData), 100);
-                    }
+                    }));
                   }}
                   initialValue={pvData.signatureClient}
                   width={400}
@@ -524,14 +529,14 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
           <button
             className="btn btn-primary"
             onClick={handleGeneratePDF}
-            disabled={isGeneratingPDF || !pvData.signatureClient || !pvData.signatureEntrepreneur}
+            disabled={isGeneratingPDF || !areBothSignaturesValid()}
           >
             {isGeneratingPDF ? '⏳ Génération...' : '📄 Générer le PDF'}
           </button>
         </div>
       )}
 
-      {!readOnly && pvData.type && (!pvData.signatureClient || !pvData.signatureEntrepreneur) && (
+      {!readOnly && pvData.type && !areBothSignaturesValid() && (
         <div className="pv-warning">
           ⚠️ Les deux signatures sont requises pour générer le PDF
         </div>
