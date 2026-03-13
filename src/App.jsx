@@ -43,6 +43,7 @@ const AdminInvoicesViewContainer = lazy(() => import('./pages/AdminInvoicesViewC
 const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewContainer'));
 const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
 const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage'));
+const CompanySettings = lazy(() => import('./pages/CompanySettings'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -402,6 +403,11 @@ function App() {
                   <Route path="settings" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <OrganizationSettingsPage />
+                    </Suspense>
+                  } />
+                  <Route path="company-settings" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CompanySettings />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
