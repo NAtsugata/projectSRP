@@ -1046,7 +1046,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 {report.signature ? (
                   <div>
                     <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
-                    <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
+                    <button onClick={async () => {
+                      handleReportChange('signature', null);
+                      const updated = { ...report, signature: null };
+                      await persistReport(updated);
+                    }} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
                   </div>
                 ) : (
                   <div>
@@ -1173,7 +1177,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       </div>
 
       {/* Modale signature */}
-      {showSignatureModal && <SignatureModal onSave={(sig) => { handleReportChange('signature', sig); setShowSignatureModal(false); }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
+      {showSignatureModal && <SignatureModal onSave={async (sig) => {
+        handleReportChange('signature', sig);
+        const updated = { ...report, signature: sig };
+        await persistReport(updated);
+        setShowSignatureModal(false);
+      }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
 
       {/* Modal CERFA */}
       <CerfaGeneratorModal
