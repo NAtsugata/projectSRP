@@ -1,5 +1,5 @@
 // src/components/intervention/PVReception.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import SignaturePad from '../SignaturePad';
 import { generatePVReceptionPDF, downloadPVPDF } from '../../utils/pvService';
 import logger from '../../utils/logger';
@@ -38,7 +38,6 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [newReserve, setNewReserve] = useState('');
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Charger les données du PV depuis le rapport si elles existent
   useEffect(() => {
@@ -59,21 +58,7 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
         nomClient: client?.name || intervention?.client || '',
       }));
     }
-    setIsInitialized(true);
   }, [report, intervention, client]);
-
-  // Sauvegarder automatiquement quand pvData change (avec debounce)
-  useEffect(() => {
-    if (!isInitialized) return; // Ne pas sauvegarder pendant l'initialisation
-
-    const timeoutId = setTimeout(() => {
-      if (onSave) {
-        onSave(pvData);
-      }
-    }, 500); // Debounce de 500ms
-
-    return () => clearTimeout(timeoutId);
-  }, [pvData, onSave, isInitialized]);
 
   // Sauvegarder le PV
   const handleSave = () => {
@@ -150,6 +135,40 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
   const areBothSignaturesValid = () => {
     return isSignatureValid(pvData.signatureClient) && isSignatureValid(pvData.signatureEntrepreneur);
   };
+
+  // Callbacks stables pour SignaturePad entrepreneur
+  const handleEntrepreneurSave = useCallback((signature) => {
+    setPvData(prev => ({
+      ...prev,
+      signatureEntrepreneur: signature,
+      dateSignatureEntrepreneur: new Date().toISOString()
+    }));
+  }, []);
+
+  const handleEntrepreneurClear = useCallback(() => {
+    setPvData(prev => ({
+      ...prev,
+      signatureEntrepreneur: null,
+      dateSignatureEntrepreneur: ''
+    }));
+  }, []);
+
+  // Callbacks stables pour SignaturePad client
+  const handleClientSave = useCallback((signature) => {
+    setPvData(prev => ({
+      ...prev,
+      signatureClient: signature,
+      dateSignatureClient: new Date().toISOString()
+    }));
+  }, []);
+
+  const handleClientClear = useCallback(() => {
+    setPvData(prev => ({
+      ...prev,
+      signatureClient: null,
+      dateSignatureClient: ''
+    }));
+  }, []);
 
   return (
     <div className="pv-reception-container">
@@ -393,20 +412,9 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               />
               {!readOnly ? (
                 <SignaturePad
-                  onSave={(signature) => {
-                    setPvData(prev => ({
-                      ...prev,
-                      signatureEntrepreneur: signature,
-                      dateSignatureEntrepreneur: new Date().toISOString()
-                    }));
-                  }}
-                  onClear={() => {
-                    setPvData(prev => ({
-                      ...prev,
-                      signatureEntrepreneur: null,
-                      dateSignatureEntrepreneur: ''
-                    }));
-                  }}
+                  key="signature-entrepreneur"
+                  onSave={handleEntrepreneurSave}
+                  onClear={handleEntrepreneurClear}
                   initialValue={pvData.signatureEntrepreneur}
                   width={400}
                   height={150}
@@ -440,20 +448,9 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               />
               {!readOnly ? (
                 <SignaturePad
-                  onSave={(signature) => {
-                    setPvData(prev => ({
-                      ...prev,
-                      signatureClient: signature,
-                      dateSignatureClient: new Date().toISOString()
-                    }));
-                  }}
-                  onClear={() => {
-                    setPvData(prev => ({
-                      ...prev,
-                      signatureClient: null,
-                      dateSignatureClient: ''
-                    }));
-                  }}
+                  key="signature-client"
+                  onSave={handleClientSave}
+                  onClear={handleClientClear}
                   initialValue={pvData.signatureClient}
                   width={400}
                   height={150}
