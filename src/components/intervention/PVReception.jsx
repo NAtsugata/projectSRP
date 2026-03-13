@@ -369,18 +369,28 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               {!readOnly ? (
                 <SignaturePad
                   onSave={(signature) => {
-                    setPvData(prev => ({
-                      ...prev,
+                    const updatedData = {
+                      ...pvData,
                       signatureEntrepreneur: signature,
                       dateSignatureEntrepreneur: new Date().toISOString()
-                    }));
+                    };
+                    setPvData(updatedData);
+                    // Sauvegarder automatiquement
+                    if (onSave) {
+                      setTimeout(() => onSave(updatedData), 100);
+                    }
                   }}
                   onClear={() => {
-                    setPvData(prev => ({
-                      ...prev,
+                    const updatedData = {
+                      ...pvData,
                       signatureEntrepreneur: null,
                       dateSignatureEntrepreneur: ''
-                    }));
+                    };
+                    setPvData(updatedData);
+                    // Sauvegarder automatiquement
+                    if (onSave) {
+                      setTimeout(() => onSave(updatedData), 100);
+                    }
                   }}
                   initialValue={pvData.signatureEntrepreneur}
                   width={400}
@@ -416,18 +426,28 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
               {!readOnly ? (
                 <SignaturePad
                   onSave={(signature) => {
-                    setPvData(prev => ({
-                      ...prev,
+                    const updatedData = {
+                      ...pvData,
                       signatureClient: signature,
                       dateSignatureClient: new Date().toISOString()
-                    }));
+                    };
+                    setPvData(updatedData);
+                    // Sauvegarder automatiquement
+                    if (onSave) {
+                      setTimeout(() => onSave(updatedData), 100);
+                    }
                   }}
                   onClear={() => {
-                    setPvData(prev => ({
-                      ...prev,
+                    const updatedData = {
+                      ...pvData,
                       signatureClient: null,
                       dateSignatureClient: ''
-                    }));
+                    };
+                    setPvData(updatedData);
+                    // Sauvegarder automatiquement
+                    if (onSave) {
+                      setTimeout(() => onSave(updatedData), 100);
+                    }
                   }}
                   initialValue={pvData.signatureClient}
                   width={400}

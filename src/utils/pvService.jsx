@@ -41,8 +41,8 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         const marginRight = width - 50;
         const lineHeight = 20;
 
-        // ===== EN-TÊTE =====
-        page.drawText('PROCÈS-VERBAL DE RÉCEPTION', {
+        // ===== EN-TETE =====
+        page.drawText('PROCES-VERBAL DE RECEPTION', {
             x: marginLeft,
             y: yPosition,
             size: 18,
@@ -121,7 +121,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         yPosition -= 10;
 
         // ===== INFORMATIONS DU CLIENT =====
-        page.drawText('LE MAÎTRE D\'OUVRAGE :', {
+        page.drawText('LE MAITRE D\'OUVRAGE :', {
             x: marginLeft,
             y: yPosition,
             size: 12,
@@ -191,7 +191,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         });
         yPosition -= lineHeight;
 
-        page.drawText(`Référence devis/marché : ${devisRef}`, {
+        page.drawText(`Reference devis/marche : ${devisRef}`, {
             x: marginLeft + 20,
             y: yPosition,
             size: 9,
@@ -215,7 +215,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         const dateFin = pvData.dateFin || intervention?.date || '';
 
         if (dateDebut) {
-            page.drawText(`Date début travaux : ${new Date(dateDebut).toLocaleDateString('fr-FR')}`, {
+            page.drawText(`Date debut travaux : ${new Date(dateDebut).toLocaleDateString('fr-FR')}`, {
                 x: marginLeft + 20,
                 y: yPosition,
                 size: 9,
@@ -238,8 +238,8 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
 
         yPosition -= 15;
 
-        // ===== DÉCLARATION DE RÉCEPTION =====
-        page.drawText('DÉCLARATION DE RÉCEPTION :', {
+        // ===== DECLARATION DE RECEPTION =====
+        page.drawText('DECLARATION DE RECEPTION :', {
             x: marginLeft,
             y: yPosition,
             size: 12,
@@ -249,7 +249,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         yPosition -= lineHeight;
 
         const dateReception = pvData.dateReception || new Date().toISOString().split('T')[0];
-        page.drawText(`Date de réception : ${new Date(dateReception).toLocaleDateString('fr-FR')}`, {
+        page.drawText(`Date de reception : ${new Date(dateReception).toLocaleDateString('fr-FR')}`, {
             x: marginLeft + 20,
             y: yPosition,
             size: 10,
@@ -262,13 +262,13 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         let typeColor = blackColor;
 
         if (pvData.type === 'sans_reserve') {
-            typeText = '✓ RÉCEPTION SANS RÉSERVE';
+            typeText = '[OK] RECEPTION SANS RESERVE';
             typeColor = rgb(0.2, 0.6, 0.2); // Vert
         } else if (pvData.type === 'avec_reserves') {
-            typeText = '⚠ RÉCEPTION AVEC RÉSERVES';
+            typeText = '[!] RECEPTION AVEC RESERVES';
             typeColor = rgb(0.8, 0.5, 0); // Orange
         } else if (pvData.type === 'refuse') {
-            typeText = '✖ RÉCEPTION REFUSÉE';
+            typeText = '[X] RECEPTION REFUSEE';
             typeColor = rgb(0.8, 0.2, 0.2); // Rouge
         }
 
@@ -290,9 +290,9 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
 
         yPosition -= 35;
 
-        // ===== LISTE DES RÉSERVES =====
+        // ===== LISTE DES RESERVES =====
         if (pvData.type !== 'sans_reserve' && pvData.reserves && pvData.reserves.length > 0) {
-            page.drawText(pvData.type === 'refuse' ? 'MOTIFS DE REFUS :' : 'LISTE DES RÉSERVES :', {
+            page.drawText(pvData.type === 'refuse' ? 'MOTIFS DE REFUS :' : 'LISTE DES RESERVES :', {
                 x: marginLeft,
                 y: yPosition,
                 size: 11,
@@ -343,7 +343,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
             yPosition -= 5;
 
             if (pvData.type === 'avec_reserves' && pvData.dateLeveeReserves) {
-                page.drawText(`Délai de levée des réserves : ${new Date(pvData.dateLeveeReserves).toLocaleDateString('fr-FR')}`, {
+                page.drawText(`Delai de levee des reserves : ${new Date(pvData.dateLeveeReserves).toLocaleDateString('fr-FR')}`, {
                     x: marginLeft + 20,
                     y: yPosition,
                     size: 9,
@@ -356,8 +356,8 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
 
         yPosition -= 15;
 
-        // ===== MENTIONS LÉGALES =====
-        page.drawText('MENTIONS LÉGALES :', {
+        // ===== MENTIONS LEGALES =====
+        page.drawText('MENTIONS LEGALES :', {
             x: marginLeft,
             y: yPosition,
             size: 11,
@@ -367,13 +367,13 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         yPosition -= lineHeight;
 
         const mentions = [
-            'La réception marque le point de départ des garanties légales :',
-            '• Garantie de parfait achèvement (1 an) - Article 1792-6 du Code Civil',
-            '• Garantie de bon fonctionnement (2 ans) - Article 1792-3 du Code Civil',
-            '• Garantie décennale (10 ans) - Article 1792 du Code Civil',
+            'La reception marque le point de depart des garanties legales :',
+            '- Garantie de parfait achevement (1 an) - Article 1792-6 du Code Civil',
+            '- Garantie de bon fonctionnement (2 ans) - Article 1792-3 du Code Civil',
+            '- Garantie decennale (10 ans) - Article 1792 du Code Civil',
             '',
-            'En cas de réception avec réserves, le maître d\'ouvrage peut consigner 5% du montant',
-            'total des travaux jusqu\'à la levée complète des réserves.',
+            'En cas de reception avec reserves, le maitre d\'ouvrage peut consigner 5% du montant',
+            'total des travaux jusqu\'a la levee complete des reserves.',
         ];
 
         mentions.forEach((mention) => {
@@ -391,7 +391,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
 
         // ===== ASSURANCES =====
         if (pvData.assuranceDecennale || company?.assuranceDecennale) {
-            page.drawText('ASSURANCE DÉCENNALE :', {
+            page.drawText('ASSURANCE DECENNALE :', {
                 x: marginLeft,
                 y: yPosition,
                 size: 10,
@@ -493,7 +493,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
             borderWidth: 1,
         });
 
-        page.drawText('Le Maître d\'Ouvrage', {
+        page.drawText('Le Maitre d\'Ouvrage', {
             x: clientX + 5,
             y: signatureY - 15,
             size: 9,
@@ -538,7 +538,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
         }
 
         // ===== PIED DE PAGE =====
-        page.drawText('Document généré électroniquement - Procès-Verbal de Réception de Travaux', {
+        page.drawText('Document genere electroniquement - Proces-Verbal de Reception de Travaux', {
             x: marginLeft,
             y: 30,
             size: 7,
@@ -546,7 +546,7 @@ export const generatePVReceptionPDF = async (pvData, intervention, client, compa
             color: grayColor,
         });
 
-        page.drawText(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, {
+        page.drawText(`Genere le ${new Date().toLocaleDateString('fr-FR')} a ${new Date().toLocaleTimeString('fr-FR')}`, {
             x: marginRight - 150,
             y: 30,
             size: 7,
