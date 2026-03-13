@@ -718,7 +718,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <TimeTrackerEnhanced
             report={report}
             onUpdateReport={persistReport}
-            disabled={!!isAdmin}
+            disabled={false}
           />
         </div>
 
@@ -811,7 +811,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   report={report}
                   onMarkArrival={() => markWithGeo('arrival')}
                   onMarkDeparture={() => markWithGeo('departure')}
-                  disabled={!!isAdmin}
+                  disabled={false}
                 />
               </div>
 
@@ -939,7 +939,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                       };
                       persistReport({ ...report, quick_checkpoints: updated });
                     }}
-                    disabled={isAdmin}
+                    disabled={false}
                     style={{
                       width: '1.25rem',
                       height: '1.25rem',
@@ -969,7 +969,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               {/* Rapport */}
               <div className="section" style={{ marginTop: 0 }}>
                 <h3>📝 Rapport de chantier</h3>
-                <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin} />
+                <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={false} />
                 <VoiceRecorder
                   interventionId={interventionId}
                   onUploaded={async (uploaded) => {
@@ -1073,7 +1073,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     placeholder="Ex: 45430"
                     className="form-control"
                     style={{ maxWidth: '200px' }}
-                    readOnly={!!isAdmin}
+                    readOnly={false}
                   />
                   {intervention.km_start && report.km_end && (
                     <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
@@ -1114,7 +1114,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   client={null}
                   report={report}
                   onSave={handlePVSave}
-                  readOnly={!!isAdmin}
+                  readOnly={false}
                 />
               </div>
             </div>
