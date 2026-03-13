@@ -392,26 +392,110 @@
   max-width: 250px;
 }
 
+/* ==================== FORM FIELDS ==================== */
+.pv-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.pv-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.pv-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.pv-form-group label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+/* ==================== LEGAL NOTICES ==================== */
+.pv-legal-notice {
+  background: rgba(184, 115, 51, 0.05);
+  border: 1px solid rgba(184, 115, 51, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.pv-legal-notice small {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.pv-legal-section {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-top: var(--spacing-5);
+}
+
+.pv-legal-text {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.pv-legal-text p {
+  margin-bottom: var(--spacing-3);
+}
+
+.pv-legal-text ul {
+  padding-left: var(--spacing-5);
+  margin: var(--spacing-2) 0;
+}
+
+.pv-legal-text li {
+  margin-bottom: var(--spacing-3);
+  color: var(--text-primary);
+}
+
+.pv-legal-text li small {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  display: block;
+  margin-top: var(--spacing-1);
+}
+
+.pv-legal-highlight {
+  background: var(--color-warning-light);
+  border-left: 4px solid var(--color-warning);
+  padding: var(--spacing-3);
+  margin-top: var(--spacing-3);
+  border-radius: var(--radius-md);
+  color: var(--color-warning-dark) !important;
+  font-size: var(--text-sm) !important;
+}
+
 /* ==================== SIGNATURES ==================== */
 .pv-signatures {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--spacing-5);
   margin-top: var(--spacing-5);
 }
 
 .pv-signature-box {
-  border: 2px dashed var(--border-color);
+  border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
-  text-align: center;
   background: var(--bg-secondary);
   transition: all var(--transition-base);
 }
 
 .pv-signature-box:hover {
   border-color: var(--color-primary-400);
-  background: var(--bg-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .pv-signature-box label {
@@ -420,6 +504,38 @@
   color: var(--text-primary);
   margin-bottom: var(--spacing-3);
   font-size: var(--text-base);
+}
+
+.pv-signature-readonly {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-color);
+  padding: var(--spacing-4);
+  margin-top: var(--spacing-3);
+}
+
+.pv-signature-readonly img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
+.pv-no-signature {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+.pv-signature-date {
+  margin-top: var(--spacing-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  font-style: italic;
 }
 
 .pv-signature-placeholder {
@@ -481,6 +597,19 @@
 .pv-tips strong {
   color: var(--color-info-dark);
   font-weight: var(--font-semibold);
+}
+
+/* ==================== WARNING ==================== */
+.pv-warning {
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3);
+  margin-top: var(--spacing-3);
+  text-align: center;
+  color: var(--color-warning-dark);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
 }
 
 /* ==================== ACTIONS ==================== */

@@ -1,10 +1,13 @@
 // src/components/intervention/PVReception.jsx
 import React, { useState, useEffect } from 'react';
+import SignaturePad from '../SignaturePad';
+import { generatePVReceptionPDF, downloadPVPDF } from '../../utils/pvService';
+import logger from '../../utils/logger';
 import './PVReception.css';
 
 /**
  * Composant pour créer et afficher un Procès-Verbal de Réception
- * S'adapte automatiquement aux données de l'intervention et du client
+ * Conforme aux exigences légales du Code Civil (Articles 1792 et suivants)
  */
 const PVReception = ({ intervention, client, report, onSave, readOnly = false }) => {
   const [pvData, setPvData] = useState({
@@ -12,23 +15,86 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
     reserves: [],
     dateLeveeReserves: '',
     dateReception: new Date().toISOString().split('T')[0],
-    signatureClient: false,
-    signatureEntrepreneur: false
+
+    // Informations détaillées des travaux
+    travauxDescription: '',
+    devisReference: '',
+    montantTravaux: '',
+    dateDebut: '',
+    dateFin: '',
+
+    // Informations signatures
+    signatureClient: null, // Base64 de la signature
+    signatureEntrepreneur: null, // Base64 de la signature
+    nomClient: '',
+    nomEntrepreneur: '',
+    dateSignatureClient: '',
+    dateSignatureEntrepreneur: '',
+
+    // Assurances
+    assuranceDecennale: '',
   });
+
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [newReserve, setNewReserve] = useState('');
 
   // Charger les données du PV depuis le rapport si elles existent
   useEffect(() => {
     if (report?.pv_reception) {
-      setPvData(report.pv_reception);
+      setPvData(prev => ({
+        ...prev,
+        ...report.pv_reception
+      }));
+    } else {
+      // Pré-remplir avec les données de l'intervention
+      setPvData(prev => ({
+        ...prev,
+        travauxDescription: intervention?.description || '',
+        devisReference: intervention?.id || '',
+        montantTravaux: intervention?.totalPrice || '',
+        dateDebut: intervention?.startDate || '',
+        dateFin: intervention?.date || intervention?.endDate || '',
+        nomClient: client?.name || intervention?.client || '',
+      }));
     }
-  }, [report]);
+  }, [report, intervention, client]);
 
   // Sauvegarder le PV
   const handleSave = () => {
     if (onSave) {
       onSave(pvData);
+    }
+  };
+
+  // Générer et télécharger le PDF
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true);
+      logger.log('[PV] Génération PDF...', pvData);
+
+      // Récupérer les infos de l'entreprise (depuis localStorage ou config)
+      const companyData = {
+        name: localStorage.getItem('companyName') || 'Nom de l\'entreprise',
+        address: localStorage.getItem('companyAddress') || '',
+        siret: localStorage.getItem('companySiret') || '',
+        phone: localStorage.getItem('companyPhone') || '',
+        email: localStorage.getItem('companyEmail') || '',
+        assuranceDecennale: localStorage.getItem('companyAssuranceDecennale') || '',
+      };
+
+      const pdfBytes = await generatePVReceptionPDF(pvData, intervention, client, companyData);
+
+      const filename = `PV-Reception-${intervention?.id || 'Document'}-${new Date().toISOString().split('T')[0]}.pdf`;
+      downloadPVPDF(pdfBytes, filename);
+
+      logger.log('[PV] PDF généré et téléchargé');
+      alert('✓ PDF du Procès-Verbal généré avec succès');
+    } catch (error) {
+      logger.log('[PV] Erreur génération PDF', error);
+      alert('✗ Erreur lors de la génération du PDF: ' + error.message);
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -136,7 +202,7 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
       {pvData.type && pvData.type !== 'sans_reserve' && (
         <div className="pv-section">
           <h4>
-            2. Liste des réserves {pvData.type === 'refuse' ? '/ Motifs de refus' : ''}
+            4. Liste des réserves {pvData.type === 'refuse' ? '/ Motifs de refus' : ''}
           </h4>
 
           {pvData.reserves.length === 0 ? (
@@ -197,37 +263,189 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
         </div>
       )}
 
-      {/* Signatures */}
+      {/* Informations détaillées des travaux */}
       {pvData.type && (
         <div className="pv-section">
-          <h4>3. Signatures</h4>
+          <h4>2. Informations détaillées des travaux</h4>
+          <div className="pv-form-grid">
+            <div className="pv-form-group">
+              <label>Description des travaux</label>
+              <textarea
+                className="form-control"
+                rows={3}
+                value={pvData.travauxDescription}
+                onChange={(e) => setPvData(prev => ({ ...prev, travauxDescription: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Description détaillée des travaux réalisés..."
+              />
+            </div>
+
+            <div className="pv-form-row">
+              <div className="pv-form-group">
+                <label>Référence devis/marché</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={pvData.devisReference}
+                  onChange={(e) => setPvData(prev => ({ ...prev, devisReference: e.target.value }))}
+                  disabled={readOnly}
+                />
+              </div>
+
+              <div className="pv-form-group">
+                <label>Montant des travaux (€)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={pvData.montantTravaux}
+                  onChange={(e) => setPvData(prev => ({ ...prev, montantTravaux: e.target.value }))}
+                  disabled={readOnly}
+                />
+              </div>
+            </div>
+
+            <div className="pv-form-row">
+              <div className="pv-form-group">
+                <label>Date début travaux</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={pvData.dateDebut}
+                  onChange={(e) => setPvData(prev => ({ ...prev, dateDebut: e.target.value }))}
+                  disabled={readOnly}
+                />
+              </div>
+
+              <div className="pv-form-group">
+                <label>Date fin travaux</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={pvData.dateFin}
+                  onChange={(e) => setPvData(prev => ({ ...prev, dateFin: e.target.value }))}
+                  disabled={readOnly}
+                />
+              </div>
+            </div>
+
+            <div className="pv-form-group">
+              <label>Assurance décennale</label>
+              <input
+                type="text"
+                className="form-control"
+                value={pvData.assuranceDecennale}
+                onChange={(e) => setPvData(prev => ({ ...prev, assuranceDecennale: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Compagnie, N° police, validité..."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signatures numériques */}
+      {pvData.type && (
+        <div className="pv-section">
+          <h4>3. Signatures numériques</h4>
+          <div className="pv-legal-notice">
+            <small>
+              ⚖️ La signature marque le point de départ des garanties légales :
+              Parfait achèvement (1 an), Bon fonctionnement (2 ans), Décennale (10 ans)
+            </small>
+          </div>
+
           <div className="pv-signatures">
             <div className="pv-signature-box">
               <label>L'Entrepreneur</label>
-              <div className="pv-signature-placeholder">
-                {pvData.signatureEntrepreneur ? '✓ Signé' : 'En attente de signature'}
-              </div>
-              {!readOnly && (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setPvData(prev => ({ ...prev, signatureEntrepreneur: !prev.signatureEntrepreneur }))}
-                >
-                  {pvData.signatureEntrepreneur ? 'Annuler' : 'Signer'}
-                </button>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nom et qualité du signataire"
+                value={pvData.nomEntrepreneur}
+                onChange={(e) => setPvData(prev => ({ ...prev, nomEntrepreneur: e.target.value }))}
+                disabled={readOnly}
+                style={{ marginBottom: '10px' }}
+              />
+              {!readOnly ? (
+                <SignaturePad
+                  onSave={(signature) => {
+                    setPvData(prev => ({
+                      ...prev,
+                      signatureEntrepreneur: signature,
+                      dateSignatureEntrepreneur: new Date().toISOString()
+                    }));
+                  }}
+                  onClear={() => {
+                    setPvData(prev => ({
+                      ...prev,
+                      signatureEntrepreneur: null,
+                      dateSignatureEntrepreneur: ''
+                    }));
+                  }}
+                  initialValue={pvData.signatureEntrepreneur}
+                  width={400}
+                  height={150}
+                />
+              ) : (
+                <div className="pv-signature-readonly">
+                  {pvData.signatureEntrepreneur ? (
+                    <img src={pvData.signatureEntrepreneur} alt="Signature entrepreneur" />
+                  ) : (
+                    <div className="pv-no-signature">Non signé</div>
+                  )}
+                </div>
+              )}
+              {pvData.dateSignatureEntrepreneur && (
+                <div className="pv-signature-date">
+                  Signé le {new Date(pvData.dateSignatureEntrepreneur).toLocaleString('fr-FR')}
+                </div>
               )}
             </div>
+
             <div className="pv-signature-box">
-              <label>Le Client</label>
-              <div className="pv-signature-placeholder">
-                {pvData.signatureClient ? '✓ Signé' : 'En attente de signature'}
-              </div>
-              {!readOnly && (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setPvData(prev => ({ ...prev, signatureClient: !prev.signatureClient }))}
-                >
-                  {pvData.signatureClient ? 'Annuler' : 'Signer'}
-                </button>
+              <label>Le Maître d'Ouvrage (Client)</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nom et qualité du signataire"
+                value={pvData.nomClient}
+                onChange={(e) => setPvData(prev => ({ ...prev, nomClient: e.target.value }))}
+                disabled={readOnly}
+                style={{ marginBottom: '10px' }}
+              />
+              {!readOnly ? (
+                <SignaturePad
+                  onSave={(signature) => {
+                    setPvData(prev => ({
+                      ...prev,
+                      signatureClient: signature,
+                      dateSignatureClient: new Date().toISOString()
+                    }));
+                  }}
+                  onClear={() => {
+                    setPvData(prev => ({
+                      ...prev,
+                      signatureClient: null,
+                      dateSignatureClient: ''
+                    }));
+                  }}
+                  initialValue={pvData.signatureClient}
+                  width={400}
+                  height={150}
+                />
+              ) : (
+                <div className="pv-signature-readonly">
+                  {pvData.signatureClient ? (
+                    <img src={pvData.signatureClient} alt="Signature client" />
+                  ) : (
+                    <div className="pv-no-signature">Non signé</div>
+                  )}
+                </div>
+              )}
+              {pvData.dateSignatureClient && (
+                <div className="pv-signature-date">
+                  Signé le {new Date(pvData.dateSignatureClient).toLocaleString('fr-FR')}
+                </div>
               )}
             </div>
           </div>
@@ -250,11 +468,63 @@ const PVReception = ({ intervention, client, report, onSave, readOnly = false })
         </div>
       )}
 
-      {/* Bouton de sauvegarde */}
+      {/* Mentions légales */}
+      {pvData.type && (
+        <div className="pv-section pv-legal-section">
+          <h4>⚖️ Mentions légales</h4>
+          <div className="pv-legal-text">
+            <p><strong>Point de départ des garanties légales :</strong></p>
+            <ul>
+              <li><strong>Garantie de parfait achèvement (1 an)</strong> - Article 1792-6 du Code Civil<br />
+                <small>Couvre tous les désordres signalés pendant la première année</small>
+              </li>
+              <li><strong>Garantie de bon fonctionnement (2 ans)</strong> - Article 1792-3 du Code Civil<br />
+                <small>Couvre les éléments d'équipement dissociables</small>
+              </li>
+              <li><strong>Garantie décennale (10 ans)</strong> - Article 1792 du Code Civil<br />
+                <small>Couvre les dommages compromettant la solidité ou rendant l'ouvrage impropre à sa destination</small>
+              </li>
+            </ul>
+            {pvData.type === 'avec_reserves' && (
+              <p className="pv-legal-highlight">
+                <strong>⚠️ Consignation :</strong> En cas de réception avec réserves, le maître d'ouvrage peut consigner
+                jusqu'à 5% du montant total des travaux jusqu'à la levée complète des réserves.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Boutons d'actions */}
       {!readOnly && pvData.type && (
         <div className="pv-actions">
-          <button className="btn btn-primary" onClick={handleSave}>
-            Enregistrer le PV
+          <button className="btn btn-secondary" onClick={handleSave}>
+            💾 Enregistrer le PV
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF || !pvData.signatureClient || !pvData.signatureEntrepreneur}
+          >
+            {isGeneratingPDF ? '⏳ Génération...' : '📄 Générer le PDF'}
+          </button>
+        </div>
+      )}
+
+      {!readOnly && pvData.type && (!pvData.signatureClient || !pvData.signatureEntrepreneur) && (
+        <div className="pv-warning">
+          ⚠️ Les deux signatures sont requises pour générer le PDF
+        </div>
+      )}
+
+      {readOnly && pvData.type && (
+        <div className="pv-actions">
+          <button
+            className="btn btn-primary"
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
+          >
+            {isGeneratingPDF ? '⏳ Génération...' : '📄 Télécharger le PDF'}
           </button>
         </div>
       )}
