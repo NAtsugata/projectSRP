@@ -505,6 +505,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   const [needsOpen, setNeedsOpen] = useState(true);
+  const [adminNoteExpanded, setAdminNoteExpanded] = useState(false);
   const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum, n) => sum + (Number(n.estimated_price) || 0), 0) : 0;
 
   const addNeed = async () => {
@@ -817,7 +818,18 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
               {/* Admin Note Section */}
               <div className="section">
-                <h3>📝 Note Admin</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <h3 style={{ margin: 0 }}>📝 Note Admin</h3>
+                  {!isAdmin && intervention.admin_note && (
+                    <button
+                      onClick={() => setAdminNoteExpanded(!adminNoteExpanded)}
+                      className="btn btn-sm btn-outline-secondary"
+                      style={{ padding: '0.25rem 0.75rem' }}
+                    >
+                      {adminNoteExpanded ? '🔽 Réduire' : '🔼 Agrandir'}
+                    </button>
+                  )}
+                </div>
                 {isAdmin ? (
                   <textarea
                     className="form-control"
@@ -830,7 +842,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     rows={3}
                   />
                 ) : (
-                  <div className="admin-note-display p-3 bg-gray-50 rounded border">
+                  <div
+                    className="admin-note-display p-3 bg-gray-50 rounded border"
+                    style={{
+                      maxHeight: adminNoteExpanded ? 'none' : '150px',
+                      overflow: adminNoteExpanded ? 'visible' : 'auto',
+                      transition: 'max-height 0.3s ease'
+                    }}
+                  >
                     {intervention.admin_note ? (
                       <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{intervention.admin_note}</p>
                     ) : (
