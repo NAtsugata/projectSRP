@@ -62,13 +62,16 @@ const calculateStats = (interventions, employees) => {
 
   const today = toLocalDateStr(new Date());
 
-  // Initialiser la charge de chaque employé
+  // Initialiser la charge de chaque employé (total et par jour)
+  const employeeDailyLoad = {}; // Format: { userId: { date: hours } }
+
   employees.forEach(emp => {
     stats.employeeLoad[emp.id] = {
       name: emp.full_name,
       count: 0,
       hours: 0
     };
+    employeeDailyLoad[emp.id] = {};
   });
 
   // Analyser chaque intervention
@@ -111,12 +114,19 @@ const calculateStats = (interventions, employees) => {
 
     // Calculer la charge par employé (utilise estimated_duration ou 2h par défaut)
     const duration = parseFloat(itv.estimated_duration) || 2;
+    const itvDate = itv.date;
+
     if (assignments && Array.isArray(assignments)) {
       assignments.forEach(assignment => {
         const userId = assignment.user_id;
         if (stats.employeeLoad[userId]) {
           stats.employeeLoad[userId].count++;
           stats.employeeLoad[userId].hours += duration;
+
+          // Tracker par jour
+          if (itvDate && employeeDailyLoad[userId]) {
+            employeeDailyLoad[userId][itvDate] = (employeeDailyLoad[userId][itvDate] || 0) + duration;
+          }
         }
       });
     } else if (itv.assigned_to && Array.isArray(itv.assigned_to)) {
@@ -124,6 +134,11 @@ const calculateStats = (interventions, employees) => {
         if (stats.employeeLoad[userId]) {
           stats.employeeLoad[userId].count++;
           stats.employeeLoad[userId].hours += duration;
+
+          // Tracker par jour
+          if (itvDate && employeeDailyLoad[userId]) {
+            employeeDailyLoad[userId][itvDate] = (employeeDailyLoad[userId][itvDate] || 0) + duration;
+          }
         }
       });
     }
@@ -134,14 +149,25 @@ const calculateStats = (interventions, employees) => {
     ? Math.round((stats.completed / stats.total) * 100)
     : 0;
 
-  // Identifier les employés surchargés (>8h)
-  Object.entries(stats.employeeLoad).forEach(([userId, load]) => {
-    if (load.hours > 8) {
+  // Identifier les employés surchargés (>8h PAR JOUR)
+  Object.entries(employeeDailyLoad).forEach(([userId, dailyHours]) => {
+    // Trouver les jours où l'employé dépasse 8h
+    const overloadedDays = Object.entries(dailyHours).filter(([date, hours]) => hours > 8);
+
+    if (overloadedDays.length > 0) {
+      // Trouver le jour avec le plus d'heures
+      const maxDay = overloadedDays.reduce((max, [date, hours]) =>
+        hours > max.hours ? { date, hours } : max,
+        { date: '', hours: 0 }
+      );
+
       stats.overloadedEmployees.push({
         id: userId,
-        name: load.name,
-        count: load.count,
-        hours: load.hours
+        name: stats.employeeLoad[userId]?.name || 'Inconnu',
+        count: stats.employeeLoad[userId]?.count || 0,
+        hours: maxDay.hours, // Heures du jour le plus chargé
+        maxDate: maxDay.date, // Date du jour le plus chargé
+        overloadedDaysCount: overloadedDays.length // Nombre de jours surchargés
       });
     }
   });
@@ -434,8 +460,8 @@ const AgendaDashboard = ({
               <div className="alert-list">
                 {stats.overloadedEmployees.map(emp => (
                   <div key={emp.id} className="alert-item">
-                    <strong>{emp.name}</strong> : {emp.count} interventions
-                    ({emp.hours}h estimées)
+                    <strong>{emp.name}</strong> : Pic de {emp.hours}h le {emp.maxDate}
+                    {emp.overloadedDaysCount > 1 && ` (${emp.overloadedDaysCount} jours >8h)`}
                   </div>
                 ))}
               </div>
