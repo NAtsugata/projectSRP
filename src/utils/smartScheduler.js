@@ -207,7 +207,7 @@ export const calculateOptimalDuration = (intervention) => {
  * @param {string[]} dates - Dates planifiées
  * @returns {Object} - Planning par jour { "2026-03-15": { task, progress, ... }, ... }
  */
-export const splitIntoD ailyTasks = (intervention, dates) => {
+export const splitIntoDailyTasks = (intervention, dates) => {
   const {
     type = 'maintenance',
     description = '',
