@@ -1,0 +1,322 @@
+/* src/components/SecureSignaturePad.css */
+/* Styles pour le composant de signature conforme eIDAS & RGPD */
+
+.secure-signature-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.secure-signature-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+}
+
+.secure-signature-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.secure-signature-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.8rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.secure-signature-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: normal;
+}
+
+.secure-signature-content {
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Consentement RGPD */
+.consent-section {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.consent-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+  color: #4fc3f7;
+}
+
+.consent-text {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.consent-text p {
+  margin: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.consent-checkbox {
+  background: rgba(33, 150, 243, 0.1);
+  border: 2px solid rgba(33, 150, 243, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.consent-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.consent-checkbox input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.consent-info {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.consent-info p {
+  margin: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.consent-info ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.consent-info li {
+  margin: 0.25rem 0;
+}
+
+.consent-info strong {
+  color: #4caf50;
+}
+
+/* Zone de signature */
+.signature-canvas {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  display: block;
+  margin: 0 auto 1.5rem;
+}
+
+.signature-info {
+  background: rgba(33, 150, 243, 0.1);
+  border-left: 4px solid #2196F3;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.signature-info p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Footer avec boutons */
+.secure-signature-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.secure-signature-footer button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.btn-primary:disabled {
+  background: rgba(76, 175, 80, 0.3);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  color: #f44336;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.3);
+  border-color: #f44336;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* État de traitement */
+.secure-signature-processing {
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.secure-signature-processing h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.secure-signature-processing p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(33, 150, 243, 0.2);
+  border-top-color: #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .secure-signature-modal {
+    max-width: 100%;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .secure-signature-header {
+    padding: 1.5rem 1rem 1rem;
+  }
+
+  .secure-signature-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .secure-signature-content {
+    padding: 1rem;
+  }
+
+  .consent-text {
+    font-size: 0.85rem;
+    padding: 1rem;
+  }
+
+  .secure-signature-footer {
+    padding: 1rem;
+    flex-direction: column;
+  }
+
+  .secure-signature-footer button {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .signature-canvas {
+    max-width: 100%;
+  }
+}
+
+/* Scrollbar custom pour zone de consentement */
+.consent-text::-webkit-scrollbar,
+.consent-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.consent-text::-webkit-scrollbar-track,
+.consent-section::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.consent-text::-webkit-scrollbar-thumb,
+.consent-section::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.consent-text::-webkit-scrollbar-thumb:hover,
+.consent-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
