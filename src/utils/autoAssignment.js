@@ -180,7 +180,7 @@ export const autoAssignTechnicians = (
   if (qualified.length === 0) {
     logger.warn('[AutoAssignment] Aucun technicien qualifié trouvé');
     return {
-      assigned Users: [],
+      assignedUsers: [],
       dailyAssignments: {},
       confidence: 0,
       reason: 'no_qualified_users'
