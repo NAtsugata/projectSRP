@@ -44,6 +44,7 @@ const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewCon
 const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
 const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage'));
 const CompanySettings = lazy(() => import('./pages/CompanySettings'));
+const SmartPlanningManager = lazy(() => import('./components/SmartPlanningManager'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -398,6 +399,11 @@ function App() {
                   <Route path="catalog" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminCatalogViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="multi-day-planning" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <SmartPlanningManager />
                     </Suspense>
                   } />
                   <Route path="settings" element={
