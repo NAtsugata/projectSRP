@@ -1,0 +1,349 @@
+/**
+ * ====================================================================
+ * STYLES: SignatureViewer
+ * ====================================================================
+ */
+
+.signature-viewer {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 800px;
+  margin: 20px auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.signature-viewer.compact {
+  padding: 15px;
+  max-width: 600px;
+}
+
+.signature-viewer.revoked {
+  border-color: #f39c12;
+  background: #fffbf0;
+}
+
+/* Loading */
+.signature-viewer.loading,
+.signature-viewer.error {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+}
+
+.spinner-small {
+  border: 3px solid rgba(52, 152, 219, 0.2);
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 15px;
+}
+
+/* Statut */
+.signature-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.signature-status.valid {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.signature-status.invalid {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.status-icon {
+  font-size: 20px;
+}
+
+.status-text {
+  font-size: 15px;
+}
+
+/* Image de signature */
+.signature-image-container {
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.signature-image {
+  max-width: 100%;
+  height: auto;
+  max-height: 200px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 4px;
+}
+
+/* Sections d'information */
+.signature-info,
+.signature-document,
+.signature-certificate,
+.signature-metadata,
+.signature-revocation {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.signature-info h4,
+.signature-document h4,
+.signature-certificate h4,
+.signature-metadata h4,
+.signature-revocation h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signature-certificate {
+  background: #e8f4f8;
+  border: 1px solid #bee5eb;
+}
+
+.signature-revocation {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+}
+
+/* Grille d'informations */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.info-value.code {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: #6c757d;
+  word-break: break-all;
+}
+
+.info-value.badge {
+  display: inline-block;
+  background: #3498db;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Certificat */
+.certificate-summary {
+  margin-bottom: 15px;
+}
+
+.certificate-integrity {
+  margin-top: 15px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+}
+
+.certificate-integrity h5 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.hash-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.hash-label {
+  font-size: 11px;
+  color: #7f8c8d;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.hash-value {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: #e74c3c;
+  background: #ecf0f1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Bouton toggle certificat */
+.btn-toggle-certificate {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #3498db;
+  color: #3498db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-toggle-certificate:hover {
+  background: #3498db;
+  color: white;
+}
+
+/* Certificat complet */
+.certificate-full {
+  margin-top: 15px;
+  background: #2c3e50;
+  border-radius: 6px;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.certificate-full pre {
+  margin: 0;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  color: #ecf0f1;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Métadonnées */
+.signature-metadata details {
+  cursor: pointer;
+}
+
+.signature-metadata summary {
+  font-size: 13px;
+  color: #3498db;
+  font-weight: 600;
+  padding: 8px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.signature-metadata summary::-webkit-details-marker {
+  display: none;
+}
+
+.metadata-content {
+  margin-top: 10px;
+  background: #2c3e50;
+  border-radius: 6px;
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.metadata-content pre {
+  margin: 0;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  color: #ecf0f1;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Footer */
+.signature-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #dee2e6;
+}
+
+.footer-text {
+  font-size: 11px;
+  color: #7f8c8d;
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .signature-viewer {
+    padding: 15px;
+    margin: 10px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signature-image {
+    max-height: 150px;
+  }
+
+  .certificate-full,
+  .metadata-content {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signature-viewer {
+    padding: 10px;
+  }
+
+  .signature-info h4,
+  .signature-document h4,
+  .signature-certificate h4 {
+    font-size: 14px;
+  }
+
+  .info-value,
+  .hash-value {
+    font-size: 12px;
+  }
+}
