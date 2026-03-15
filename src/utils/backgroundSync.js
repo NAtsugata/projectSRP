@@ -8,7 +8,7 @@ import { STORES_ENUM } from './offlineStorage';
 /**
  * Tags de synchronisation
  */
-const SYNC_TAGS = {
+export const SYNC_TAGS = {
   INTERVENTIONS: 'sync-interventions',
   EXPENSES: 'sync-expenses',
   PROFILES: 'sync-profiles',
