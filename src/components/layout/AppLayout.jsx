@@ -21,6 +21,8 @@ import {
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import ThemeToggle from '../ThemeToggle';
+import { MobileThemeToggleCompact } from '../MobileThemeSelector';
 import './AppLayout.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
@@ -179,6 +181,9 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     ))}
                 </nav>
                 <div className="sidebar-footer">
+                    <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                        <ThemeToggle showLabel={true} />
+                    </div>
                     <button onClick={handleLogout} className="logout-button">
                         <LogOutIcon className="nav-icon" />
                         Deconnexion
@@ -193,6 +198,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     <h1>SRP</h1>
                 </div>
                 <div className="mobile-header-actions">
+                    <MobileThemeToggleCompact />
                     <NotificationBadge
                         count={0}
                         onClick={() => setShowNotifications(true)}
