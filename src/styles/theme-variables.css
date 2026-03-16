@@ -1,0 +1,230 @@
+/**
+ * ====================================================================
+ * VARIABLES CSS GLOBALES POUR LES THÈMES
+ * ====================================================================
+ * Variables qui changent selon le thème (clair/sombre)
+ * Appliquées automatiquement via .light-theme et .dark-theme sur <html>
+ * ====================================================================
+ */
+
+/* ==================== MODE CLAIR (défaut) ==================== */
+:root,
+.light-theme {
+  /* Couleurs de fond */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --bg-app: #f8f9fa;
+
+  /* Couleurs de texte */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-muted: #64748b;
+
+  /* Bordures */
+  --border-color: #e5e7eb;
+  --border-color-dark: #d1d5db;
+
+  /* Cartes et surfaces */
+  --card-bg: #ffffff;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /* Couleurs pour composants spécifiques (remplace les variables locales) */
+  --scanner-bg: #ffffff;
+  --scanner-text: #1f2937;
+  --scanner-border: #e5e7eb;
+
+  --user-bg: #ffffff;
+  --user-text: #1f2937;
+  --user-border: #e5e7eb;
+
+  --vault-bg: #ffffff;
+  --vault-text: #1f2937;
+  --vault-border: #e5e7eb;
+
+  --perm-bg: #ffffff;
+  --perm-text: #1f2937;
+  --perm-border: #e5e7eb;
+
+  --share-bg: #ffffff;
+  --share-text: #1f2937;
+  --share-border: #e5e7eb;
+
+  /* Couleurs métier (invariantes) */
+  --color-copper: #b87333;
+  --color-copper-dark: #9a5f28;
+  --color-copper-light: #d4a574;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Valeurs sombres pour headers, cartes, etc. (MODE CLAIR) */
+  --scanner-black: #1f2937;  /* Texte sombre en mode clair */
+  --scanner-white: #ffffff;  /* Fond blanc en mode clair */
+  --user-black: #1f2937;
+  --user-white: #ffffff;
+  --vault-black: #1f2937;
+  --vault-white: #ffffff;
+  --perm-black: #1f2937;
+  --perm-white: #ffffff;
+  --share-black: #1f2937;
+  --share-white: #ffffff;
+  --color-black: #1f2937;
+}
+
+/* ==================== MODE SOMBRE ==================== */
+.dark-theme {
+  /* Couleurs de fond */
+  --bg-primary: #1e293b;      /* Slate 800 */
+  --bg-secondary: #0f1419;    /* Presque noir */
+  --bg-tertiary: #111827;     /* Gray 900 */
+  --bg-app: #0f1419;
+
+  /* Couleurs de texte */
+  --text-primary: #e5e7eb;    /* Gray 200 */
+  --text-secondary: #9ca3af;  /* Gray 400 */
+  --text-tertiary: #6b7280;   /* Gray 500 */
+  --text-muted: #94a3b8;      /* Slate 400 */
+
+  /* Bordures */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-dark: rgba(255, 255, 255, 0.2);
+
+  /* Cartes et surfaces */
+  --card-bg: #1e293b;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --card-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.6);
+
+  /* Couleurs pour composants spécifiques */
+  --scanner-bg: #1e293b;
+  --scanner-text: #e5e7eb;
+  --scanner-border: rgba(255, 255, 255, 0.1);
+
+  --user-bg: #1e293b;
+  --user-text: #e5e7eb;
+  --user-border: rgba(255, 255, 255, 0.1);
+
+  --vault-bg: #1e293b;
+  --vault-text: #e5e7eb;
+  --vault-border: rgba(255, 255, 255, 0.1);
+
+  --perm-bg: #1e293b;
+  --perm-text: #e5e7eb;
+  --perm-border: rgba(255, 255, 255, 0.1);
+
+  --share-bg: #1e293b;
+  --share-text: #e5e7eb;
+  --share-border: rgba(255, 255, 255, 0.1);
+
+  /* Couleurs métier (légèrement ajustées pour le sombre) */
+  --color-copper: #d4a574;
+  --color-copper-dark: #b87333;
+  --color-copper-light: #e5c8a0;
+
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+
+  /* Valeurs sombres pour headers, cartes, etc. (MODE SOMBRE) */
+  --scanner-black: #0f1419;  /* Fond très sombre */
+  --scanner-white: #1e293b;  /* Fond "clair" en mode sombre */
+  --user-black: #0f1419;
+  --user-white: #1e293b;
+  --vault-black: #0f1419;
+  --vault-white: #1e293b;
+  --perm-black: #0f1419;
+  --perm-white: #1e293b;
+  --share-black: #0f1419;
+  --share-white: #1e293b;
+  --color-black: #0f1419;
+}
+
+/* ==================== SUPPORT SPÉCIFIQUE PAGES ==================== */
+
+/* Pour les pages qui utilisaient isDashboard */
+.dark-mode-layout {
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+/* Cards héritent du thème */
+.card-white,
+.stat-card,
+.expense-form-card,
+.client-card,
+.user-card,
+.vault-item {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Headers de sections */
+.view-title,
+.section-header,
+.page-title {
+  color: var(--text-primary) !important;
+}
+
+/* Textes secondaires */
+.text-muted,
+.text-secondary,
+.label-secondary {
+  color: var(--text-secondary) !important;
+}
+
+/* Formulaires */
+.form-control,
+.input-field,
+input,
+textarea,
+select {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Modals */
+.modal-content,
+.modal-overlay {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Tableaux */
+table,
+.table-row,
+.table-cell {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* ==================== TRANSITIONS ==================== */
+
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ==================== PRIORITÉ COMPOSANTS ==================== */
+
+/* Empêcher les backgrounds hardcodés de prévaloir en mode clair */
+.light-theme .stat-card:not([style*="background"]),
+.light-theme .expense-form-card,
+.light-theme .client-card,
+.light-theme .user-card {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* En mode sombre, laisser les dégradés */
+.dark-theme .stat-card.success,
+.dark-theme .stat-card.warning,
+.dark-theme .stat-card.danger {
+  /* Garde les gradients de couleur */
+}

@@ -4,10 +4,9 @@
    Design simple et fonctionnel
    ============================================ */
 
-/* Variables couleurs */
+/* Variables couleurs (--vault-black/white viennent de theme-variables.css) */
 :root {
-  --vault-white: #ffffff;
-  --vault-black: #1a1a1a;
+  /* --vault-white et --vault-black sont définis dans theme-variables.css */
   --vault-gray-light: #f5f5f5;
   --vault-gray: #e0e0e0;
   --vault-gray-dark: #666666;

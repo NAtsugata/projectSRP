@@ -1,12 +1,12 @@
 /* src/components/admin/ShareDocumentModal.css */
 /* Design: Blanc, Noir, Cuivre - Style moderne et professionnel */
 
+/* Variables locales (--share-black/white viennent de theme-variables.css) */
 :root {
   --share-copper: #b87333;
   --share-copper-light: #d4a574;
   --share-copper-dark: #8b5a2b;
-  --share-black: #1a1a1a;
-  --share-white: #ffffff;
+  /* --share-black et --share-white sont définis dans theme-variables.css */
   --share-gray-light: #f8f9fa;
   --share-gray: #e9ecef;
   --share-gray-dark: #6c757d;

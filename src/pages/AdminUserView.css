@@ -1,12 +1,12 @@
 /* src/pages/AdminUserView.css */
 /* Design: Blanc, Noir, Cuivre - Style moderne et professionnel */
 
+/* Variables locales (--user-black/white viennent de theme-variables.css) */
 :root {
   --user-copper: #b87333;
   --user-copper-light: #d4a574;
   --user-copper-dark: #8b5a2b;
-  --user-black: #1a1a1a;
-  --user-white: #ffffff;
+  /* --user-black et --user-white sont définis dans theme-variables.css */
   --user-gray-light: #f8f9fa;
   --user-gray: #e9ecef;
   --user-gray-dark: #6c757d;
