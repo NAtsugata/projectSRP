@@ -4,15 +4,15 @@
    Design simple et fonctionnel
    ============================================ */
 
-/* Variables couleurs (--vault-black/white viennent de theme-variables.css) */
+/* Variables couleurs - DYNAMIQUES selon le thème ✅ */
 :root {
   /* --vault-white et --vault-black sont définis dans theme-variables.css */
   --vault-gray-light: #f5f5f5;
   --vault-gray: #e0e0e0;
   --vault-gray-dark: #666666;
-  --vault-copper: #b87333;
-  --vault-copper-light: #d4a574;
-  --vault-copper-dark: #8b5a2b;
+  --vault-copper: var(--color-copper);          /* Change avec le thème! */
+  --vault-copper-light: var(--color-copper-light);
+  --vault-copper-dark: var(--color-copper-dark);
 }
 
 .admin-vault {

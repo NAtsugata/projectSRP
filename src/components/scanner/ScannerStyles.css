@@ -2,11 +2,11 @@
  * Styles pour DocumentScannerView - Design moderne blanc/noir/cuivre
  */
 
-/* Variables locales (les couleurs de fond/texte viennent de theme-variables.css) */
+/* Variables locales - DYNAMIQUES selon le thème ✅ */
 :root {
-  --scanner-copper: #b87333;
-  --scanner-copper-light: #d4956a;
-  --scanner-copper-dark: #8b5a2b;
+  --scanner-copper: var(--color-copper);        /* Change avec le thème! */
+  --scanner-copper-light: var(--color-copper-light);
+  --scanner-copper-dark: var(--color-copper-dark);
   /* --scanner-black et --scanner-white sont définis dans theme-variables.css */
   --scanner-gray: #6b7280;
   --scanner-success: var(--color-copper);
