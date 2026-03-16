@@ -14,10 +14,10 @@
 .light-theme,
 .warm-copper-theme {
   /* === Couleurs de fond === */
-  --bg-app: #fefcfb;              /* Blanc crème très pâle */
+  --bg-app: #fff5eb;              /* ORANGE PÂLE - TRÈS VISIBLE! */
   --bg-primary: #ffffff;          /* Blanc pur */
-  --bg-secondary: #fef8f4;        /* Crème rosé pâle */
-  --bg-tertiary: #fef2e8;         /* Beige très clair */
+  --bg-secondary: #ffe8d1;        /* Pêche pâle - VISIBLE */
+  --bg-tertiary: #ffd9b3;         /* Orange crème - VISIBLE */
 
   /* === Couleurs de texte === */
   --text-primary: #1f1410;        /* Brun très foncé - Presque noir */
@@ -35,10 +35,10 @@
   --card-shadow-hover: 0 12px 32px rgba(184, 115, 51, 0.2), 0 4px 12px rgba(184, 115, 51, 0.15);
 
   /* === COULEURS CUIVRE - PRINCIPALE === */
-  --color-primary: #b87333;       /* Cuivre classique - BASE */
-  --color-primary-light: #d4a574; /* Cuivre clair doré */
-  --color-primary-dark: #9a5f28;  /* Cuivre foncé */
-  --color-primary-glow: rgba(184, 115, 51, 0.25);
+  --color-primary: #d97706;       /* CUIVRE VIF - ORANGE INTENSE! */
+  --color-primary-light: #f59e0b; /* CUIVRE ÉCLATANT */
+  --color-primary-dark: #b45309;  /* Cuivre foncé */
+  --color-primary-glow: rgba(217, 119, 6, 0.35);
 
   --color-secondary: #c9844d;     /* Cuivre rosé */
   --color-secondary-light: #dda76b; /* Cuivre sable */
@@ -107,10 +107,10 @@
 .dark-theme,
 .dark-copper-theme {
   /* === Couleurs de fond === */
-  --bg-app: #0d0a08;              /* Noir chocolat - Très sombre */
-  --bg-primary: #1a1310;          /* Brun très sombre */
-  --bg-secondary: #2a1f18;        /* Brun sombre */
-  --bg-tertiary: #3d2e23;         /* Brun moyen-sombre */
+  --bg-app: #1a0f0a;              /* BRUN CHOCOLAT FONCÉ - TRÈS VISIBLE! */
+  --bg-primary: #2d1810;          /* BRUN CUIVRÉ SOMBRE */
+  --bg-secondary: #3d2517;        /* BRUN CHAUD */
+  --bg-tertiary: #4d301f;         /* BRUN MOYEN */
 
   /* === Couleurs de texte === */
   --text-primary: #fef8f4;        /* Crème très clair - Presque blanc */
@@ -128,10 +128,10 @@
   --card-shadow-hover: 0 20px 48px rgba(184, 115, 51, 0.5), 0 8px 24px rgba(212, 165, 116, 0.3);
 
   /* === COULEURS CUIVRE - LUMINEUX === */
-  --color-primary: #d4a574;       /* Cuivre doré clair - LUMINEUX pour dark */
-  --color-primary-light: #e6c299; /* Cuivre très clair */
-  --color-primary-dark: #b87333;  /* Cuivre classique */
-  --color-primary-glow: rgba(212, 165, 116, 0.5);
+  --color-primary: #fbbf24;       /* OR CUIVRÉ BRILLANT - SUPER VISIBLE! */
+  --color-primary-light: #fcd34d; /* OR ÉCLATANT */
+  --color-primary-dark: #f59e0b;  /* ORANGE CUIVRÉ */
+  --color-primary-glow: rgba(251, 191, 36, 0.6);
 
   --color-secondary: #cd7f32;     /* Bronze lumineux */
   --color-secondary-light: #e09856; /* Bronze clair */
@@ -205,6 +205,39 @@ body {
   color: var(--text-primary);
   transition: background-color 0.4s ease, color 0.4s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+}
+
+/* MARQUEUR VISUEL - VOUS VERREZ LA DIFFÉRENCE! */
+.light-theme body::before {
+  content: "🌞 MODE CLAIR - CUIVRE CHAUD";
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 999999;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+  pointer-events: none;
+}
+
+.dark-theme body::before {
+  content: "🌙 MODE SOMBRE - CUIVRE DORÉ";
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #fbbf24, #fcd34d);
+  color: #1a0f0a;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 999999;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6);
+  pointer-events: none;
 }
 
 /* Smooth transitions pour tous les éléments */
