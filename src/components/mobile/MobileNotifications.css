@@ -211,7 +211,7 @@
 /* MODALE */
 /* ============================================= */
 .mobile-modal {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   padding: 2rem 1.5rem;
   max-width: 400px;
@@ -264,7 +264,7 @@
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
@@ -274,7 +274,7 @@
 .mobile-modal-message {
   margin: 0 0 2rem 0;
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   line-height: 1.5;
 }
 
@@ -305,8 +305,8 @@
 }
 
 .mobile-modal-button-cancel {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
 }
 
 .mobile-modal-button-cancel:active {

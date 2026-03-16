@@ -6,7 +6,7 @@
   bottom: 20px;
   right: 20px;
   z-index: 9999;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;

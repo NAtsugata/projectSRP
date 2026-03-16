@@ -80,12 +80,12 @@
 }
 
 .notification-permission-button-enable {
-  background: white;
+  background: var(--bg-primary);
   color: var(--color-copper-dark);
 }
 
 .notification-permission-button-enable:active {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
   transform: scale(0.95);
 }
 
@@ -135,7 +135,7 @@
 .notification-status-message {
   margin: 0 0 1.5rem 0;
   font-size: 0.9375rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   line-height: 1.5;
 }
 
@@ -160,8 +160,8 @@
 }
 
 .notification-status-button-secondary {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   box-shadow: none;
 }
 

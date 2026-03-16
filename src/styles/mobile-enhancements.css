@@ -125,9 +125,9 @@
         font-size: 0.875rem;
         white-space: nowrap;
         min-height: 40px;
-        border: 2px solid #e5e7eb;
-        background: white;
-        color: #475569;
+        border: 2px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-primary);
         font-weight: 600;
         transition: all 0.2s;
     }
@@ -141,7 +141,7 @@
 
     .filter-tab:hover,
     .tab-button:hover {
-        background: #f1f5f9;
+        background: var(--bg-secondary);
     }
 
     .filter-tab.active:hover,
@@ -166,10 +166,10 @@
     .modal-header {
         position: sticky;
         top: 0;
-        background: white;
+        background: var(--bg-primary);
         z-index: 10;
         padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .modal-body {
@@ -181,9 +181,9 @@
     .modal-footer {
         position: sticky;
         bottom: 0;
-        background: white;
+        background: var(--bg-primary);
         padding: 1rem;
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
@@ -222,7 +222,7 @@
     .file-upload-area {
         min-height: 120px;
         padding: 1.5rem 1rem;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed var(--border-color-dark);
         border-radius: 0.75rem;
         display: flex;
         flex-direction: column;
@@ -234,24 +234,24 @@
 
     .upload-zone.drag-over {
         border-color: var(--color-copper);
-        background: #f0f9ff;
+        background: var(--bg-secondary);
     }
 
     .upload-icon {
         width: 48px;
         height: 48px;
-        color: #94a3b8;
+        color: var(--text-muted);
     }
 
     .upload-text {
         font-size: 0.875rem;
-        color: #64748b;
+        color: var(--text-tertiary);
     }
 
     /* ========== LISTES OPTIMISÉES ========== */
     .list-item {
         padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .list-item:last-child {
@@ -266,7 +266,7 @@
 
     .list-item-meta {
         font-size: 0.8125rem;
-        color: #64748b;
+        color: var(--text-tertiary);
     }
 
     /* ========== ACCORDÉONS ========== */
@@ -334,7 +334,7 @@
     /* ========== INDICATEURS DE PROGRESSION ========== */
     .progress-bar {
         height: 6px;
-        background: #e5e7eb;
+        background: var(--bg-tertiary);
         border-radius: 3px;
         overflow: hidden;
         width: 100%;
@@ -342,14 +342,14 @@
 
     .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, var(--color-copper), #8b5cf6);
+        background: linear-gradient(90deg, var(--color-copper), var(--color-copper-dark));
         transition: width 0.3s ease;
         border-radius: 3px;
     }
 
     .progress-text {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--text-tertiary);
         margin-top: 0.25rem;
     }
 
@@ -365,7 +365,7 @@
         bottom: calc(5rem + env(safe-area-inset-bottom));
         left: 1rem;
         right: 1rem;
-        background: white;
+        background: var(--bg-primary);
         border-radius: 0.75rem;
         padding: 1rem;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
@@ -405,7 +405,7 @@
         position: fixed;
         top: 1rem;
         right: 1rem;
-        background: white;
+        background: var(--bg-primary);
         border-radius: 0.75rem;
         padding: 0.75rem 1rem;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -429,7 +429,7 @@
         position: absolute;
         top: -6px;
         right: -6px;
-        background: #ef4444;
+        background: var(--color-danger);
         color: white;
         font-size: 0.625rem;
         font-weight: 700;
@@ -451,21 +451,21 @@
     }
 
     .upload-size {
-        color: #64748b;
+        color: var(--text-tertiary);
         font-size: 0.6875rem !important;
     }
 
     /* ========== INDICATEUR DE CACHE ========== */
     .cache-indicator {
         padding: 0.75rem;
-        background: #f8fafc;
+        background: var(--bg-secondary);
         border-radius: 0.5rem;
         margin-bottom: 1rem;
     }
 
     .cache-bar {
         height: 8px;
-        background: #e5e7eb;
+        background: var(--bg-tertiary);
         border-radius: 4px;
         overflow: hidden;
         margin-bottom: 0.5rem;
@@ -480,7 +480,7 @@
 
     .cache-text {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--text-tertiary);
         display: block;
         text-align: center;
     }

@@ -254,18 +254,18 @@
 }
 
 .light-preview {
-  background: #ffffff;
+  background: var(--bg-primary);
 }
 
 .light-preview .preview-header {
   height: 20px;
-  background: #f3f4f6;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .light-preview .preview-content {
   height: 40px;
-  background: #ffffff;
+  background: var(--bg-primary);
 }
 
 .dark-preview {
@@ -297,7 +297,7 @@
 }
 
 .preview-half.light {
-  background: #ffffff;
+  background: var(--bg-primary);
   border-right: 1px solid #e5e7eb;
 }
 

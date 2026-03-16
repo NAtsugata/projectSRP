@@ -13,7 +13,7 @@
 }
 
 .signature-modal-content {
-  background-color: white;
+  background-color: var(--bg-primary);
   border-radius: 12px;
   padding: 1.5rem;
   max-width: 90vw;
@@ -33,7 +33,7 @@
 
 .signature-modal-help {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 1rem 0;
   text-align: center;
 }
@@ -43,13 +43,13 @@
   align-items: center;
   justify-content: center;
   min-height: 300px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .signature-canvas {
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
-  background-color: white;
+  background-color: var(--bg-primary);
   cursor: crosshair;
   touch-action: none;
   margin: 0 auto;

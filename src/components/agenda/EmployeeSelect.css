@@ -12,13 +12,13 @@
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 8px;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .label-icon {
   width: 18px;
   height: 18px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Badges */
@@ -28,9 +28,9 @@
   gap: 8px;
   margin-bottom: 12px;
   padding: 8px;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
 }
 
 .employee-badge {
@@ -82,8 +82,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: white;
-  border: 2px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -100,13 +100,13 @@
 }
 
 .trigger-text {
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .trigger-icon {
   width: 20px;
   height: 20px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   transition: transform 0.2s ease;
 }
 
@@ -120,8 +120,8 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -145,17 +145,17 @@
 /* Recherche */
 .dropdown-search {
   padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .search-icon {
   width: 18px;
   height: 18px;
-  color: #9ca3af;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -165,11 +165,11 @@
   background: transparent;
   font-size: 14px;
   outline: none;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .search-input::placeholder {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 /* Actions */
@@ -177,19 +177,19 @@
   display: flex;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .action-button {
   flex: 1;
   padding: 6px 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -215,7 +215,7 @@
 .dropdown-empty {
   padding: 32px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -230,12 +230,12 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
   border: none;
   border-radius: 6px;
   font-weight: 600;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -255,7 +255,7 @@
 
 .group-count {
   font-weight: 400;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 12px;
 }
 
@@ -274,11 +274,11 @@
   cursor: pointer;
   transition: background 0.2s ease;
   font-size: 14px;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .employee-item:hover {
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .employee-checkbox {

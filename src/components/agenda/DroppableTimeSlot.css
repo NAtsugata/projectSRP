@@ -44,7 +44,7 @@
   align-items: center;
   gap: 8px;
   padding: 16px 24px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 100;
@@ -80,7 +80,7 @@
 .drop-text {
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 

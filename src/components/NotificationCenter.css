@@ -221,7 +221,7 @@
 
 .notification-item.cancelled {
     background: rgba(107, 114, 128, 0.15);
-    border-left-color: #6b7280;
+    border-left-color: var(--text-tertiary);
 }
 
 .notification-icon {

@@ -481,7 +481,7 @@
 }
 
 .day-cell.is-selected .day-count {
-  background: white;
+  background: var(--bg-primary);
   color: var(--color-primary-600);
 }
 

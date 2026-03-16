@@ -10,7 +10,7 @@
   gap: 0.5rem;
   padding: 0.75rem;
   margin-top: 0.75rem;
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
   border-radius: 6px;
   color: #991b1b;
   font-size: 0.875rem;
@@ -34,9 +34,9 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
-  background-color: #f9fafb;
+  background-color: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   transition: all 0.2s;
 }
 
@@ -52,7 +52,7 @@
 
 .upload-status-error {
   border-color: #dc2626;
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
 }
 
 .upload-queue-icon {
@@ -77,13 +77,13 @@
 .upload-queue-name {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--text-primary);
   word-break: break-word;
 }
 
 .upload-queue-size {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin-top: 0.25rem;
 }
 

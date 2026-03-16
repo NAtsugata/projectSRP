@@ -1,7 +1,7 @@
 /* src/components/planning/PlanningCalendarView.css */
 
 .planning-calendar {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -99,7 +99,7 @@
 
 .calendar-day {
   min-height: 120px;
-  background: white;
+  background: var(--bg-primary);
   padding: 0.5rem;
   cursor: pointer;
   transition: background 0.2s ease;

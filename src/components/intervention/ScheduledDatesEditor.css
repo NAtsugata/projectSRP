@@ -17,7 +17,7 @@
 
 .section-description {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 1rem 0;
 }
 
@@ -31,7 +31,7 @@
   flex: 1;
   padding: 0.625rem;
   font-size: 0.9375rem;
-  color: #1f2937;
+  color: var(--text-primary);
   background-color: #fff;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -45,8 +45,8 @@
 }
 
 .date-input:disabled {
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -127,17 +127,17 @@
 }
 
 .btn-remove-date:hover:not(:disabled) {
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
 }
 
 .btn-remove-date:disabled {
-  color: #9ca3af;
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .empty-state {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-style: italic;
   text-align: center;
   padding: 1rem;

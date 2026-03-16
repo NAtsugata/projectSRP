@@ -628,16 +628,16 @@ button:active,
 /* DÉSACTIVÉ - Force thème clair uniquement
 @media (max-width: 640px) and (prefers-color-scheme: dark) {
   .mobile-nav {
-    background: #1a1a1a;
-    border-top-color: #333;
+    background: var(--color-black);
+    border-top-color: var(--border-color-dark);
   }
 
   .skeleton {
     background: linear-gradient(
       90deg,
-      #2a2a2a 25%,
-      #333 50%,
-      #2a2a2a 75%
+      var(--bg-tertiary) 25%,
+      var(--border-color-dark) 50%,
+      var(--bg-tertiary) 75%
     );
   }
 }

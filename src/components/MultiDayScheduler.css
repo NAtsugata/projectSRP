@@ -4,20 +4,20 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .multi-day-scheduler h2 {
   margin-bottom: 24px;
-  color: #1f2937;
+  color: var(--text-primary);
   font-size: 24px;
 }
 
 .multi-day-scheduler h3 {
   margin: 20px 0 12px;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
@@ -34,7 +34,7 @@
 
 .suggestion-card {
   padding: 16px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -59,7 +59,7 @@
 
 .suggestion-label {
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .suggestion-description {
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 14px;
   margin: 8px 0;
 }
@@ -98,12 +98,12 @@
   gap: 12px;
   margin-top: 12px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Planification manuelle */
 .manual-planning {
-  background: #f9fafb;
+  background: var(--bg-secondary);
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 24px;
@@ -122,7 +122,7 @@
   gap: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .form-row input[type="date"],
@@ -178,7 +178,7 @@
 
 .date-card {
   min-width: 200px;
-  background: white;
+  background: var(--bg-primary);
   padding: 12px;
   border-radius: 8px;
   border: 2px solid #fbbf24;
@@ -206,13 +206,13 @@
 
 .phase-name {
   font-size: 13px;
-  color: #374151;
+  color: var(--text-secondary);
   margin: 0 0 4px 0;
 }
 
 .estimated-hours {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Validation */
@@ -238,7 +238,7 @@
 .conflict-item {
   padding: 8px;
   margin: 8px 0;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 4px;
   font-size: 13px;
 }
@@ -258,7 +258,7 @@
 .can-override {
   margin-top: 12px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Actions */
@@ -268,12 +268,12 @@
   gap: 12px;
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .btn-cancel {
   padding: 12px 24px;
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
@@ -283,7 +283,7 @@
 }
 
 .btn-cancel:hover {
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .btn-confirm {

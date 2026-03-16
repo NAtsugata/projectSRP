@@ -2,13 +2,13 @@
 
 .smart-planning-manager {
   min-height: 100vh;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   padding: 24px;
 }
 
 /* Header */
 .planning-header {
-  background: white;
+  background: var(--bg-primary);
   padding: 20px 24px;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -21,7 +21,7 @@
 .planning-header h1 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .header-status {
@@ -48,7 +48,7 @@
 }
 
 .connection-status.offline {
-  background: #fee2e2;
+  background: var(--color-danger-light);
   color: #991b1b;
 }
 
@@ -182,7 +182,7 @@
 
 /* Contenu principal */
 .planning-content {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 24px;

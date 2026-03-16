@@ -51,7 +51,7 @@
 
 /* Modal */
 .quick-alert-modal {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   width: 100%;
   max-width: 400px;
@@ -120,7 +120,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1.25rem 1rem;
-  background: white;
+  background: var(--bg-primary);
   border: 2px solid #e2e8f0;
   border-radius: 0.75rem;
   cursor: pointer;

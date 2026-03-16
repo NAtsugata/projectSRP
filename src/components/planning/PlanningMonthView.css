@@ -1,7 +1,7 @@
 /* src/components/planning/PlanningMonthView.css */
 
 .planning-month {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   overflow: hidden;

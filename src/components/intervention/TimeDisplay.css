@@ -5,7 +5,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -27,7 +27,7 @@
 
 .time-empty-text {
   font-size: 0.9375rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
   font-weight: 500;
 }
@@ -147,19 +147,19 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .time-detail-value {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .time-separator {
   font-size: 1.25rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-weight: 300;
 }
 

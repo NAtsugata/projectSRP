@@ -1,7 +1,7 @@
 /* src/components/planning/TeamStatistics.css */
 
 .team-statistics {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
@@ -40,7 +40,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-primary);
   padding: 1rem;
   text-align: center;
 }

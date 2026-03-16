@@ -6,7 +6,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
 }
 
 /* Header */
@@ -22,7 +22,7 @@
 .tracker-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -63,7 +63,7 @@
 /* Cartes de temps */
 .time-card {
   background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   padding: 1.25rem;
   text-align: center;
@@ -92,21 +92,21 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #4b5563;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .time-card-value {
   font-size: 1.875rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
 }
 
 .time-card-meta {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin-top: 0.25rem;
 }
 
@@ -236,7 +236,7 @@
 .pause-history summary {
   cursor: pointer;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
   padding: 0.5rem;
   border-radius: 8px;
   transition: background 0.2s ease;
@@ -244,7 +244,7 @@
 }
 
 .pause-history summary:hover {
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .pause-list {
@@ -259,27 +259,27 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   border-radius: 8px;
   margin-bottom: 0.5rem;
 }
 
 .pause-label {
   font-weight: 600;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
 .pause-duration {
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
 }
 
 .pause-time {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Responsive */

@@ -7,7 +7,7 @@
   gap: 1rem;
   padding: 1rem;
   background: #fff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   transition: all 0.15s ease;
 }
@@ -42,14 +42,14 @@
 .request-user-name {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .request-reason {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #4b5563;
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -77,13 +77,13 @@
 }
 
 .status-rejected {
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
   color: #991b1b;
 }
 
 .status-default {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 .leave-request-info {
@@ -97,7 +97,7 @@
   align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.8125rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
@@ -135,7 +135,7 @@
     width: 100%;
     justify-content: flex-end;
     padding-top: 0.75rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
   }
 }
 

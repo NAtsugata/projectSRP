@@ -210,7 +210,7 @@ body {
     .modal-content,
     .document-item-optimized {
         box-shadow: none !important;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--border-color);
     }
 }
 
@@ -337,14 +337,14 @@ body {
 
     .signature-canvas,
     .signature-canvas-small {
-        background-color: #1f2937;
-        border-color: #4b5563;
+        background-color: var(--bg-secondary);
+        border-color: var(--border-color-dark);
     }
 
     .document-item-optimized {
-        background-color: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
+        background-color: var(--bg-tertiary);
+        border-color: var(--border-color-dark);
+        color: var(--text-primary);
     }
 
     .modal-overlay {
@@ -422,7 +422,7 @@ body {
 
 /* ✅ CLASSE UTILITAIRE POUR LE LAZY LOADING */
 .lazy-load-placeholder {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite ease-in-out;
 }
@@ -436,7 +436,7 @@ body {
 @media (prefers-reduced-motion: reduce), (prefers-reduced-data) {
     .lazy-load-placeholder {
         animation: none;
-        background: #f0f0f0;
+        background: var(--bg-tertiary);
     }
 }
 
@@ -451,9 +451,9 @@ body {
 
 /* ✅ STYLES POUR LA GESTION D'ERREUR */
 .upload-error-state {
-    background-color: #fee2e2;
-    border-color: #fecaca;
-    color: #b91c1c;
+    background-color: var(--color-danger-light);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
 
     /* Évite les reflows lors de l'affichage d'erreurs */
     min-height: 2.5rem;

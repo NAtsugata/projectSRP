@@ -215,7 +215,7 @@
 
 .scanner-btn {
   background: var(--scanner-white);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   color: var(--scanner-black);
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -291,7 +291,7 @@
 }
 
 .docs-gallery::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
   border-radius: 3px;
 }
 
@@ -527,15 +527,15 @@
   gap: 0.5rem;
   padding: 0.75rem;
   overflow-x: auto;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .filter-btn {
   flex: 1;
   min-width: 80px;
   padding: 0.75rem 1rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 0.75rem;
   background: var(--scanner-white);
   color: var(--scanner-black);
@@ -635,9 +635,9 @@
   flex-wrap: wrap;
   justify-content: center;
   padding: 1.25rem;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   border-radius: 1rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   max-width: 100%;
 }
 
@@ -685,7 +685,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 0.75rem;
   background: var(--scanner-white);
   cursor: pointer;
@@ -726,7 +726,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,7 +1,7 @@
 /* src/components/ui/Tabs.css */
 
 .tabs-container {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -27,7 +27,7 @@
   padding: 1rem 1.5rem;
   border: none;
   background: transparent;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
@@ -62,7 +62,7 @@
 }
 
 .tab-button:hover:not(.active) {
-  color: #1f2937;
+  color: var(--text-primary);
   background: rgba(0, 0, 0, 0.04);
 }
 
@@ -77,7 +77,7 @@
 }
 
 .tab-badge {
-  background: #ef4444;
+  background: var(--color-danger);
   color: white;
   font-size: 0.625rem;
   font-weight: 600;

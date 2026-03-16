@@ -70,7 +70,7 @@
   aspect-ratio: 3/4;
   border-radius: 0.5rem;
   overflow: hidden;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   background: #f8f9fa;
 }
 
@@ -84,7 +84,7 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  background: #ef4444;
+  background: var(--color-danger);
   color: white;
   border: none;
   border-radius: 50%;
@@ -101,8 +101,8 @@
 
 /* Expense Items */
 .expense-item {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   padding: 1rem;
   margin-bottom: 0.75rem;
@@ -137,7 +137,7 @@
 }
 
 .expense-description {
-  color: #4b5563;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
 }
@@ -147,7 +147,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Status Badge */
@@ -188,8 +188,8 @@
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
-  color: #374151;
-  background: white;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
   border: 1px solid #d1d5db;
 }
 
@@ -217,7 +217,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: white;
+  background: var(--bg-primary);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -322,7 +322,7 @@
 .user-stat-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937; /* Couleur par défaut sombre pour fond clair */
+  color: var(--text-primary); /* Couleur par défaut sombre pour fond clair */
 }
 
 .user-stat-value.pending { color: #d97706; }
@@ -504,7 +504,7 @@
 }
 
 .btn-icon.btn-delete {
-  background: #ef4444;
+  background: var(--color-danger);
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
