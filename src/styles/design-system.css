@@ -345,25 +345,94 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-/* DÉSACTIVÉ - Force thème clair uniquement
+/* Thème sombre activé - Harmonisation complète */
+
+/* Classe pour forcer le thème sombre */
+[data-theme="dark"],
+.dark-theme {
+  /* Backgrounds - Tons sombres avec touches de cuivre */
+  --bg-primary: #0f1419;          /* Noir profond */
+  --bg-secondary: #1a1f26;        /* Gris très sombre */
+  --bg-tertiary: #252a31;         /* Gris sombre */
+  --bg-app: #0a0d11;              /* Noir intense */
+
+  /* Text Colors - Tons clairs pour contraste */
+  --text-primary: #e5e7eb;        /* Blanc cassé */
+  --text-secondary: #9ca3af;      /* Gris clair */
+  --text-tertiary: #6b7280;       /* Gris moyen */
+  --text-muted: #4b5563;          /* Gris sombre */
+  --text-inverse: #111827;        /* Noir pour fond clair */
+
+  /* Borders - Subtils mais visibles */
+  --border-color: #2d3139;        /* Gris sombre */
+  --border-color-light: #252a31;  /* Gris très sombre */
+  --border-color-dark: #3a4048;   /* Gris moyen */
+
+  /* Primary Color - Cuivre plus lumineux pour le dark */
+  --color-copper: #d4a574;        /* Cuivre clair */
+  --color-copper-light: #e5c8a8;  /* Cuivre très clair */
+  --color-copper-dark: #b87333;   /* Cuivre standard */
+  --color-primary: #d4a574;
+
+  /* Shadows - Plus subtils sur fond sombre */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+
+  /* Semantic Colors - Ajustés pour le dark */
+  --color-success-light: #1a4d2e;
+  --color-warning: #fbbf24;
+  --color-warning-light: #3d2f00;
+  --color-danger: #f87171;
+  --color-danger-light: #4a1a1a;
+}
+
+/* Support du prefers-color-scheme pour détection auto */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #111827;
-    --bg-secondary: #1f2937;
-    --bg-tertiary: #374151;
-    --bg-app: #0f172a;
+  :root:not([data-theme="light"]) {
+    /* Backgrounds */
+    --bg-primary: #0f1419;
+    --bg-secondary: #1a1f26;
+    --bg-tertiary: #252a31;
+    --bg-app: #0a0d11;
 
-    --text-primary: #f9fafb;
-    --text-secondary: #d1d5db;
-    --text-tertiary: #9ca3af;
-    --text-muted: #6b7280;
+    /* Text Colors */
+    --text-primary: #e5e7eb;
+    --text-secondary: #9ca3af;
+    --text-tertiary: #6b7280;
+    --text-muted: #4b5563;
+    --text-inverse: #111827;
 
-    --border-color: #374151;
-    --border-color-light: #4b5563;
-    --border-color-dark: #1f2937;
+    /* Borders */
+    --border-color: #2d3139;
+    --border-color-light: #252a31;
+    --border-color-dark: #3a4048;
+
+    /* Primary Color */
+    --color-copper: #d4a574;
+    --color-copper-light: #e5c8a8;
+    --color-copper-dark: #b87333;
+    --color-primary: #d4a574;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+
+    /* Semantic Colors */
+    --color-success-light: #1a4d2e;
+    --color-warning: #fbbf24;
+    --color-warning-light: #3d2f00;
+    --color-danger: #f87171;
+    --color-danger-light: #4a1a1a;
   }
 }
-*/
 
 /* ==================== PRINT STYLES ==================== */
 @media print {
