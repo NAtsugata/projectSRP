@@ -22,7 +22,7 @@
 .contracts-header h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary, #1f2937);
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -42,19 +42,20 @@
 }
 
 .stat-card {
-    background: linear-gradient(135deg, rgba(30, 30, 45, 0.9), rgba(20, 20, 35, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
     border-radius: 16px;
     padding: 1.25rem;
     display: flex;
     align-items: center;
     gap: 1rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--card-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
 .stat-icon {
@@ -85,7 +86,7 @@
 
 .stat-content h3 {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 0.25rem 0;
@@ -94,7 +95,7 @@
 .stat-content .value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary, #1f2937);
 }
 
 /* ========== Toolbar ========== */
@@ -127,10 +128,10 @@
 .search-input {
     width: 100%;
     padding: 0.75rem 2.5rem 0.75rem 2.75rem;
-    background: rgba(30, 30, 45, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 12px;
-    color: #fff;
+    color: var(--text-primary, #1f2937);
     font-size: 0.9rem;
     transition: all 0.2s ease;
 }
@@ -142,7 +143,7 @@
 }
 
 .search-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-tertiary, #9ca3af);
 }
 
 .search-clear {
@@ -177,11 +178,11 @@
 }
 
 .filter-select {
-    background: rgba(30, 30, 45, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 8px;
     padding: 0.5rem 1rem;
-    color: #fff;
+    color: var(--text-primary, #1f2937);
     font-size: 0.875rem;
     cursor: pointer;
     transition: border-color 0.2s ease;
@@ -745,4 +746,122 @@
 .btn-danger:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* ==================== LIGHT THEME OVERRIDES ==================== */
+/* Adapte les éléments pour le mode clair */
+
+.light-theme .contracts-header h1,
+:root:not(.dark-theme) .contracts-header h1 {
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .stat-card,
+:root:not(.dark-theme) .stat-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.light-theme .stat-content h3,
+:root:not(.dark-theme) .stat-content h3 {
+    color: var(--text-secondary, #6b7280);
+}
+
+.light-theme .stat-content .value,
+:root:not(.dark-theme) .stat-content .value {
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .search-input,
+:root:not(.dark-theme) .search-input {
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .search-input::placeholder,
+:root:not(.dark-theme) .search-input::placeholder {
+    color: var(--text-tertiary, #9ca3af);
+}
+
+.light-theme .search-clear,
+:root:not(.dark-theme) .search-clear {
+    color: var(--text-secondary, #6b7280);
+    background: var(--bg-secondary, #f3f4f6);
+}
+
+.light-theme .search-icon,
+:root:not(.dark-theme) .search-icon {
+    color: var(--text-secondary, #6b7280);
+}
+
+.light-theme .filter-select,
+:root:not(.dark-theme) .filter-select {
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .results-info,
+:root:not(.dark-theme) .results-info {
+    color: var(--text-secondary, #6b7280);
+}
+
+.light-theme .contract-card,
+:root:not(.dark-theme) .contract-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.light-theme .contract-card:hover,
+:root:not(.dark-theme) .contract-card:hover {
+    box-shadow: var(--card-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.light-theme .client-name,
+:root:not(.dark-theme) .client-name {
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .contract-reference,
+:root:not(.dark-theme) .contract-reference {
+    color: var(--text-secondary, #6b7280);
+}
+
+.light-theme .info-label,
+:root:not(.dark-theme) .info-label {
+    color: var(--text-tertiary, #9ca3af);
+}
+
+.light-theme .info-value,
+:root:not(.dark-theme) .info-value {
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .empty-state h3,
+:root:not(.dark-theme) .empty-state h3 {
+    color: var(--text-primary, #1f2937);
+}
+
+.light-theme .empty-state p,
+:root:not(.dark-theme) .empty-state p {
+    color: var(--text-secondary, #6b7280);
+}
+
+/* Boutons primaires gardent leur gradient violet */
+.light-theme .btn-primary,
+:root:not(.dark-theme) .btn-primary {
+    /* Garde le gradient - texte blanc OK */
+}
+
+/* Boutons danger gardent leur gradient rouge */
+.light-theme .btn-danger,
+:root:not(.dark-theme) .btn-danger {
+    /* Garde le gradient - texte blanc OK */
+}
+
+/* Badges de statut gardent leurs couleurs */
+.light-theme .status-badge,
+:root:not(.dark-theme) .status-badge {
+    /* Gardent leurs backgrounds colorés */
 }
