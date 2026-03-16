@@ -1,23 +1,23 @@
 /* ============================================
-   MOBILE DASHBOARD THEME - UNIFIED
-   Dark Glassmorphism for all mobile views
+   MOBILE DASHBOARD THEME - HARMONIZED
+   Supports both Light and Dark themes
    ============================================ */
 
 /* ==================== GLOBAL MOBILE BACKGROUND ==================== */
 body {
-    background-color: #ffffff !important;
-    color: #111827 !important;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
 }
 
 /* ==================== MOBILE CONTAINERS ==================== */
 .mobile-menu-container,
 .min-h-screen.bg-gray-50,
 .mobile-upload-page {
-    background-color: #f9fafb !important;
+    background-color: var(--bg-secondary);
     min-height: 100vh;
 }
 
-/* ==================== MOBILE CARDS (Glassmorphism) ==================== */
+/* ==================== MOBILE CARDS ==================== */
 .mobile-menu-item,
 .card-white,
 .card-slim,
@@ -42,24 +42,24 @@ body {
 .shower-form-section,
 .upload-queue-item,
 button.bg-white {
-    background: #ffffff !important;
-    backdrop-filter: none !important;
-    border: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    color: #111827 !important;
+    background: var(--bg-primary);
+    backdrop-filter: none;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    color: var(--text-primary);
 }
 
 button.bg-white span {
-    color: #111827 !important;
+    color: var(--text-primary);
 }
 
 /* ==================== MOBILE HEADER ==================== */
 .mobile-header,
 .mobile-upload-header,
 .intervention-header {
-    background: #ffffff !important;
-    border-bottom: 1px solid #e5e7eb !important;
-    color: #111827 !important;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .mobile-header h1,
@@ -67,37 +67,37 @@ button.bg-white span {
 .header-main,
 .client-info,
 .client-name {
-    color: #111827 !important;
+    color: var(--text-primary);
 }
 
 /* ==================== UPLOAD DROPZONE ==================== */
 .upload-dropzone {
-    background: #f9fafb !important;
-    border: 2px dashed #d1d5db !important;
-    border-radius: 1rem !important;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-color-dark);
+    border-radius: var(--radius-xl);
 }
 
 .file-name {
-    color: #111827 !important;
+    color: var(--text-primary);
 }
 
 .file-status-text {
-    color: #6b7280 !important;
+    color: var(--text-tertiary);
 }
 
 /* ==================== BOTTOM NAVIGATION ==================== */
 .mobile-nav {
-    background: #ffffff !important;
-    backdrop-filter: none !important;
-    border-top: 1px solid #e5e7eb !important;
+    background: var(--bg-primary);
+    backdrop-filter: none;
+    border-top: 1px solid var(--border-color);
 }
 
 .mobile-nav-item {
-    color: #6b7280 !important;
+    color: var(--text-tertiary);
 }
 
 .mobile-nav-item.active {
-    color: var(--color-copper) !important;
+    color: var(--color-primary);
 }
 
 /* ==================== FORM INPUTS ==================== */
@@ -111,9 +111,9 @@ select,
 .form-input-modern,
 .form-textarea-modern,
 .form-control {
-    background-color: #ffffff !important;
-    border-color: #e5e7eb !important;
-    color: #111827 !important;
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 /* ==================== VIEW BACKGROUNDS ==================== */
@@ -139,7 +139,7 @@ select,
 .admin-user-view,
 .admin-planning-view,
 .ir-shower-forms-view {
-    background-color: #f9fafb !important;
+    background-color: var(--bg-secondary);
     min-height: 100vh;
 }
 
@@ -157,7 +157,7 @@ select,
 .modern-section h3,
 .card-white h2,
 .card-white h3 {
-    color: #111827 !important;
+    color: var(--text-primary);
 }
 
 /* ==================== SUBTITLES & MUTED TEXT ==================== */
@@ -174,17 +174,17 @@ select,
 .user-role,
 .call-button-label,
 .service-type {
-    color: #6b7280 !important;
+    color: var(--text-tertiary);
 }
 
 /* ==================== ACCENT COLORS ==================== */
 .info-icon,
 .agenda-date {
-    color: var(--color-copper) !important;
+    color: var(--color-primary);
 }
 
 .expense-amount {
-    color: var(--color-copper) !important;
+    color: var(--color-primary);
 }
 
 /* ==================== EMPTY STATES ==================== */
@@ -192,90 +192,90 @@ select,
 .empty-state,
 .no-data,
 .placeholder {
-    background: #f9fafb !important;
-    border: 2px dashed #d1d5db !important;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-color-dark);
 }
 
 .employee-planning-empty-title {
-    color: #111827 !important;
+    color: var(--text-primary);
 }
 
 .employee-planning-empty-description {
-    color: #6b7280 !important;
+    color: var(--text-tertiary);
 }
 
 /* ==================== BUTTONS ==================== */
 button,
 .btn,
 .action-btn {
-    opacity: 1 !important;
-    visibility: visible !important;
+    opacity: 1;
+    visibility: visible;
 }
 
 .btn-secondary,
 .btn-secondary-modern,
 button.bg-gray-100 {
-    background: #f3f4f6 !important;
-    color: #111827 !important;
-    border: 1px solid #e5e7eb !important;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
 
 .btn-danger,
 .btn-danger-modern,
 button.bg-red-500,
 button.text-red-600 {
-    background: #fef2f2 !important;
-    color: #dc2626 !important;
-    border: 1px solid #fecaca !important;
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
 }
 
 .btn-primary,
 button.bg-indigo-500,
 button.bg-blue-500 {
-    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper) 100%) !important;
-    color: white !important;
-    border: none !important;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-copper-dark) 100%);
+    color: var(--text-inverse);
+    border: none;
 }
 
 .btn-success,
 button.bg-green-500 {
-    background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%) !important;
-    color: white !important;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-copper-dark) 100%);
+    color: var(--text-inverse);
 }
 
 /* ==================== ICONS ==================== */
 svg {
-    color: currentColor !important;
+    color: currentColor;
 }
 
 /* ==================== GLOBAL MOBILE OVERRIDES ==================== */
 @media (max-width: 768px) {
 
-    /* Force LIGHT background on all containers */
+    /* Harmonized backgrounds on all containers */
     .main-content,
     .app-container,
     .page-container,
     [class*="container"],
     [class*="View"] {
-        background-color: #f9fafb !important;
+        background-color: var(--bg-secondary);
     }
 
-    /* Force backgrounds to WHITE */
+    /* Card backgrounds */
     .bg-white,
     [class*="bg-white"],
     .card,
     .panel {
-        background: #ffffff !important;
-        backdrop-filter: none !important;
-        border: 1px solid #e5e7eb !important;
-        color: #111827 !important;
+        background: var(--bg-primary);
+        backdrop-filter: none;
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
     }
 
-    /* Force light grays */
+    /* Light gray backgrounds */
     .bg-gray-50,
     .bg-gray-100,
     .bg-slate-50 {
-        background-color: #f9fafb !important;
+        background-color: var(--bg-secondary);
     }
 
     /* Universal text colors */
@@ -287,49 +287,49 @@ svg {
     h6,
     .title,
     .heading {
-        color: #111827 !important;
+        color: var(--text-primary);
     }
 
     p,
     span,
     div,
     li {
-        color: #111827 !important;
+        color: var(--text-primary);
     }
 
     /* Tables */
     table,
     th,
     td {
-        background: transparent !important;
-        color: #111827 !important;
-        border-color: #e5e7eb !important;
+        background: transparent;
+        color: var(--text-primary);
+        border-color: var(--border-color);
     }
 
     th {
-        background: #f3f4f6 !important;
+        background: var(--bg-tertiary);
     }
 
     /* Links */
     a {
-        color: var(--color-copper) !important;
+        color: var(--color-primary);
     }
 
     a:hover {
-        color: var(--color-copper) !important;
+        color: var(--color-copper-dark);
     }
 
     /* Modal overlays */
     .modal-overlay,
     .overlay {
-        background: rgba(0, 0, 0, 0.5) !important;
-        backdrop-filter: blur(4px) !important;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
     }
 
     .modal-content,
     .modal-body {
-        background: #ffffff !important;
-        border: 1px solid #e5e7eb !important;
-        color: #111827 !important;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
     }
 }
