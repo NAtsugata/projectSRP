@@ -21,6 +21,7 @@ import {
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../ThemeToggle';
 import { MobileThemeToggleCompact } from '../MobileThemeSelector';
 import './AppLayout.css';
@@ -31,6 +32,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const { hasPermission, isAdmin } = usePermissions();
+    const { isDark } = useTheme();
 
     // Navigation de base pour les employes
     const baseNavigation = [
@@ -135,15 +137,13 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         return nav;
     }, [isAdmin, hasPermission]);
 
-    const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
-
     const handleMenuNavigation = (href) => {
         navigate(href);
         setShowMobileMenu(false);
     };
 
     return (
-        <div className={`app-layout ${isDashboard ? 'dark-mode-layout' : ''}`}>
+        <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`}>
             {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
