@@ -53,22 +53,53 @@ const CheckIcon = () => (
   </svg>
 );
 
+// Configuration des étapes du wizard
+const WIZARD_STEPS = [
+  { num: 1, title: 'Votre profil', icon: '👤' },
+  { num: 2, title: 'Caractéristiques PAC', icon: '💨' },
+  { num: 3, title: 'Configuration technique', icon: '⚙️' },
+  { num: 4, title: 'Émetteurs & Remplacement', icon: '🔧' },
+  { num: 5, title: 'Vos revenus', icon: '💰' },
+  { num: 6, title: 'Résultats', icon: '✨' }
+];
+
 function CalculateurAidesView() {
-  // État du formulaire
+  // État du formulaire - COMPLET STYLE CEDEO
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
+    // ÉTAPE 1: PROFIL
+    estProprietaire: true, // true = propriétaire, false = locataire
+    ancienneteBatiment: 'PLUS_15_ANS', // MOINS_2_ANS, ENTRE_2_15_ANS, PLUS_15_ANS
+    codePostal: '',
     typeProjet: 'INDIVIDUEL', // INDIVIDUEL ou COPROPRIETE
-    typePAC: 'AIR_EAU',
+
+    // ÉTAPE 2: CARACTÉRISTIQUES PAC
+    typePAC: 'AIR_EAU', // AIR_EAU, GEOTHERMIQUE, AIR_AIR
+    surfaceChauffee: '',
+    typeApplication: 'BASSE_TEMPERATURE', // BASSE, MOYENNE, HAUTE
+    usagePAC: 'CHAUFFAGE_ECS', // CHAUFFAGE, CHAUFFAGE_ECS, AUTRE
+
+    // ÉTAPE 3: CONFIGURATION TECHNIQUE
+    avecRegulateur: true,
+    etas: '', // % - Efficacité énergétique saisonnière
+    puissanceNominale: '', // kW
+    associationAutreSysteme: false,
+
+    // ÉTAPE 4: ÉMETTEURS ET REMPLACEMENT
+    typeEmetteurs: 'PLANCHER_CHAUFFANT', // PLANCHER_CHAUFFANT, MIXTES, RADIATEURS
+    systemeDeporteECS: false,
+    typeRemplacementChaudiere: 'FIOUL', // CHARBON, FIOUL, GAZ, ELECTRIQUE, AUTRE, AUCUN
+
+    // ÉTAPE 5: REVENUS (si individuel)
     rfr: '',
     nbPersonnes: 2,
     isIDF: false,
-    surfaceChauffee: 100,
+
+    // AUTRES
     montantTravaux: '',
-    ancienneteLogement: 15,
     avecCoupDePouce: true,
-    remplacementChauffage: true,
-    residencePrincipale: true,
-    estProprietaire: true,
-    // Champs spécifiques copropriété
+
+    // Champs spécifiques copropriété (si applicable)
     nbLogements: 10,
     gainEnergetique: 35,
     sortiePassoire: false,
@@ -143,6 +174,29 @@ function CalculateurAidesView() {
   // Gérer les changements de formulaire
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Navigation wizard
+  const goToNextStep = () => {
+    // Sauter l'étape revenus si copropriété
+    if (currentStep === 4 && formData.typeProjet === 'COPROPRIETE') {
+      setCurrentStep(6); // Aller directement aux résultats
+    } else {
+      setCurrentStep(prev => Math.min(prev + 1, 6));
+    }
+  };
+
+  const goToPreviousStep = () => {
+    // Revenir de résultats si copropriété
+    if (currentStep === 6 && formData.typeProjet === 'COPROPRIETE') {
+      setCurrentStep(4); // Revenir à émetteurs
+    } else {
+      setCurrentStep(prev => Math.max(prev - 1, 1));
+    }
+  };
+
+  const goToStep = (step) => {
+    setCurrentStep(step);
   };
 
   // Vérifier l'éligibilité
