@@ -61,6 +61,7 @@ const CerfaManager = lazy(() => import('./pages/CerfaManager'));
 const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 const CerfaPage15498 = lazy(() => import('./pages/CerfaPage15498'));
 const CerfaPage1301 = lazy(() => import('./pages/CerfaPage1301'));
+const CalculateurAidesView = lazy(() => import('./pages/CalculateurAidesView'));
 
 
 
@@ -461,6 +462,13 @@ function App() {
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
+                  <Route path="calculateur-aides" element={
+                    <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CalculateurAidesView />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </>
               ) : (
@@ -553,6 +561,13 @@ function App() {
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage1301 />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
+                  <Route path="calculateur-aides" element={
+                    <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
