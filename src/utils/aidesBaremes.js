@@ -242,6 +242,178 @@ export function calculerCEE(typePAC, categorie, surfaceChauffee = 100, avecCoupD
   return cee.BASE + (cee.PAR_M2 * surface);
 }
 
+// ============================================================
+// AIDES COMPLÉMENTAIRES 2026
+// ============================================================
+
+/**
+ * ÉCO-PTZ (Prêt à Taux Zéro)
+ * Prêt sans intérêts pour financer le reste à charge
+ */
+export const ECO_PTZ = {
+  MONTANTS: {
+    UN_POSTE: 15000,      // 1 poste de travaux
+    DEUX_POSTES: 25000,   // 2 postes de travaux
+    TROIS_POSTES: 30000,  // 3 postes et plus
+    RENOVATION_GLOBALE: 50000  // Rénovation d'ampleur
+  },
+  DUREE_MAX: 15, // ans
+  CONDITIONS: {
+    sans_plafond_revenus: true,
+    anciennete_logement: 2, // ans minimum
+    residence_principale: true,
+    prolonge_jusqua: '2027-12-31'
+  }
+};
+
+/**
+ * Calcule le montant éco-PTZ disponible
+ * @param {number} resteACharge - Reste à charge après autres aides
+ * @param {number} nbPostes - Nombre de postes de travaux (1-3+)
+ * @returns {number} Montant du prêt disponible
+ */
+export function calculerEcoPTZ(resteACharge, nbPostes = 1) {
+  let plafond = ECO_PTZ.MONTANTS.UN_POSTE;
+
+  if (nbPostes >= 3) {
+    plafond = ECO_PTZ.MONTANTS.TROIS_POSTES;
+  } else if (nbPostes === 2) {
+    plafond = ECO_PTZ.MONTANTS.DEUX_POSTES;
+  }
+
+  // Le prêt ne peut pas dépasser le reste à charge ni le plafond
+  return Math.min(resteACharge, plafond);
+}
+
+/**
+ * TVA RÉDUITE à 5.5%
+ * Économie fiscale automatique sur les travaux éligibles
+ */
+export const TVA_REDUITE = {
+  TAUX_NORMAL: 20,      // %
+  TAUX_REDUIT: 5.5,     // %
+  ECONOMIE: 14.5,       // % d'économie
+  CONDITIONS: {
+    anciennete_logement: 2, // ans minimum
+    residence_principale_ou_secondaire: true,
+    pac_air_air_exclue: true, // PAC Air/Air NON éligible
+    artisan_rge_obligatoire: true
+  }
+};
+
+/**
+ * Calcule l'économie de TVA
+ * @param {number} montantHT - Montant HT des travaux
+ * @param {string} typePAC - Type de PAC
+ * @returns {Object} Économie et montants TTC
+ */
+export function calculerEconomieTVA(montantHT, typePAC) {
+  // PAC Air/Air non éligible à la TVA réduite
+  if (typePAC === 'AIR_AIR') {
+    return {
+      tvaAppliquee: TVA_REDUITE.TAUX_NORMAL,
+      montantTTC: montantHT * (1 + TVA_REDUITE.TAUX_NORMAL / 100),
+      economie: 0
+    };
+  }
+
+  const montantTTC_Normal = montantHT * (1 + TVA_REDUITE.TAUX_NORMAL / 100);
+  const montantTTC_Reduit = montantHT * (1 + TVA_REDUITE.TAUX_REDUIT / 100);
+  const economie = montantTTC_Normal - montantTTC_Reduit;
+
+  return {
+    tvaAppliquee: TVA_REDUITE.TAUX_REDUIT,
+    montantTTC: montantTTC_Reduit,
+    economie: economie
+  };
+}
+
+/**
+ * MaPrimeRénov' COPROPRIÉTÉ
+ * Pour travaux en parties communes
+ */
+export const MAPRIMERENOV_COPRO = {
+  // Taux selon gain énergétique
+  TAUX_30: 0.30,  // Gain ≥ 35%
+  TAUX_45: 0.45,  // Gain ≥ 50%
+
+  // Plafonds
+  PLAFOND_PAR_LOGEMENT: 25000, // € HT par logement
+
+  // Bonus
+  BONUS_SORTIE_PASSOIRE: 0.10,  // +10% si sortie F/G
+  BONUS_COPRO_FRAGILE: 0.20,    // +20% si impayés ≥ 8%
+
+  // Primes individuelles
+  PRIME_MODESTE: 1500,          // € pour revenus modestes
+  PRIME_TRES_MODESTE: 3000,     // € pour revenus très modestes
+
+  CONDITIONS: {
+    min_residence_principale: 0.65,  // 65% pour ≤20 lots
+    min_residence_principale_grande: 0.75, // 75% pour >20 lots
+    anciennete: 15,  // ans
+    gain_energie_min: 0.35,  // 35%
+    gain_energie_bonus: 0.50, // 50%
+    amo_obligatoire: true,
+    audit_obligatoire: true
+  }
+};
+
+/**
+ * Calcule l'aide MaPrimeRénov' Copropriété
+ * @param {Object} params - Paramètres du calcul
+ * @returns {Object} Détail de l'aide copro
+ */
+export function calculerMaPrimeRenovCopro(params) {
+  const {
+    montantTravauxHT,
+    nbLogements,
+    gainEnergetique,
+    sortiePassoire = false,
+    coproFragile = false,
+    nbCoproprietairesModestes = 0,
+    nbCoproprietairesTresModestes = 0
+  } = params;
+
+  // Déterminer le taux selon le gain énergétique
+  let taux = gainEnergetique >= MAPRIMERENOV_COPRO.CONDITIONS.gain_energie_bonus
+    ? MAPRIMERENOV_COPRO.TAUX_45
+    : MAPRIMERENOV_COPRO.TAUX_30;
+
+  // Ajouter les bonus
+  if (sortiePassoire) {
+    taux += MAPRIMERENOV_COPRO.BONUS_SORTIE_PASSOIRE;
+  }
+  if (coproFragile) {
+    taux += MAPRIMERENOV_COPRO.BONUS_COPRO_FRAGILE;
+  }
+
+  // Calculer l'aide collective (plafonnée)
+  const plafondTotal = MAPRIMERENOV_COPRO.PLAFOND_PAR_LOGEMENT * nbLogements;
+  const montantEligible = Math.min(montantTravauxHT, plafondTotal);
+  const aideCollective = montantEligible * taux;
+
+  // Calculer les primes individuelles
+  const primesIndividuelles =
+    (nbCoproprietairesTresModestes * MAPRIMERENOV_COPRO.PRIME_TRES_MODESTE) +
+    (nbCoproprietairesModestes * MAPRIMERENOV_COPRO.PRIME_MODESTE);
+
+  const total = aideCollective + primesIndividuelles;
+
+  return {
+    aideCollective,
+    primesIndividuelles,
+    total,
+    taux,
+    details: {
+      tauxBase: gainEnergetique >= 0.50 ? '45%' : '30%',
+      bonusSortiePassoire: sortiePassoire ? '+10%' : '',
+      bonusCoproFragile: coproFragile ? '+20%' : '',
+      tauxFinal: `${Math.round(taux * 100)}%`
+    }
+  };
+}
+
 /**
  * Calcule le total des aides disponibles
  * @param {Object} params - Paramètres du calcul
@@ -255,21 +427,43 @@ export function calculerTotalAides(params) {
     isIDF,
     surfaceChauffee = 100,
     avecCoupDePouce = true,
-    ancienneteLogement = 15
+    ancienneteLogement = 15,
+    montantTravaux = 0,
+    montantHT = 0,
+    incluEcoPTZ = true,
+    incluTVA = true
   } = params;
 
   // Déterminer la catégorie
   const categorie = determinerCategorie(rfr, nbPersonnes, isIDF);
 
-  // Calculer chaque aide
+  // Calculer chaque aide DIRECTE
   const mpr = ancienneteLogement >= CONDITIONS_MPR.anciennete_logement
     ? calculerMaPrimeRenov(typePAC, categorie)
     : 0;
 
   const cee = calculerCEE(typePAC, categorie, surfaceChauffee, avecCoupDePouce);
 
-  // Total
-  const total = mpr + cee;
+  // Total aides directes (subventions)
+  const totalAidesDirectes = mpr + cee;
+
+  // Calculer le reste à charge AVANT éco-PTZ
+  const resteAChargeAvantPret = Math.max(0, montantTravaux - totalAidesDirectes);
+
+  // Éco-PTZ (prêt à taux zéro) - finance le reste à charge
+  const ecoPTZ = incluEcoPTZ && ancienneteLogement >= ECO_PTZ.CONDITIONS.anciennete_logement
+    ? calculerEcoPTZ(resteAChargeAvantPret, 1)
+    : 0;
+
+  // TVA réduite (économie fiscale)
+  const montantHTCalcule = montantHT > 0 ? montantHT : (montantTravaux / 1.20); // Estimation si non fourni
+  const tva = incluTVA ? calculerEconomieTVA(montantHTCalcule, typePAC) : null;
+
+  // Total aides + économies
+  const totalAvecTVA = totalAidesDirectes + (tva?.economie || 0);
+
+  // Reste à charge FINAL (après subventions + TVA, avant prêt)
+  const resteAChargeFinal = Math.max(0, montantTravaux - totalAvecTVA);
 
   return {
     categorie,
@@ -277,11 +471,17 @@ export function calculerTotalAides(params) {
     aides: {
       maPrimeRenov: mpr,
       cee: cee,
-      total: total
+      ecoPTZ: ecoPTZ,
+      economieTVA: tva?.economie || 0,
+      totalSubventions: totalAidesDirectes,
+      totalAvecTVA: totalAvecTVA
     },
+    tva: tva,
     plafondDepenses: PLAFONDS_DEPENSES_MPR[typePAC] || 0,
-    tauxAide: total > 0 && params.montantTravaux
-      ? Math.round((total / params.montantTravaux) * 100)
+    resteACharge: resteAChargeFinal,
+    resteAChargeAvecPret: Math.max(0, resteAChargeFinal - ecoPTZ),
+    tauxAide: totalAvecTVA > 0 && montantTravaux
+      ? Math.round((totalAvecTVA / montantTravaux) * 100)
       : 0
   };
 }
@@ -294,9 +494,15 @@ export default {
   PLAFONDS_REVENUS,
   CATEGORIES_LABELS,
   MAPRIMERENOV_PAC,
+  MAPRIMERENOV_COPRO,
   COUP_DE_POUCE_MONTANTS,
+  ECO_PTZ,
+  TVA_REDUITE,
   determinerCategorie,
   calculerMaPrimeRenov,
+  calculerMaPrimeRenovCopro,
   calculerCEE,
+  calculerEcoPTZ,
+  calculerEconomieTVA,
   calculerTotalAides
 };

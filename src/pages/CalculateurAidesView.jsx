@@ -111,11 +111,16 @@ function CalculateurAidesView() {
     return checks;
   }, [formData]);
 
-  // Reste à charge
+  // Reste à charge (utilise le nouveau calcul)
   const resteACharge = useMemo(() => {
-    if (!resultats || !formData.montantTravaux) return 0;
-    return Math.max(0, parseFloat(formData.montantTravaux) - resultats.aides.total);
-  }, [resultats, formData.montantTravaux]);
+    if (!resultats) return 0;
+    return resultats.resteACharge || 0;
+  }, [resultats]);
+
+  const resteAChargeAvecPret = useMemo(() => {
+    if (!resultats) return 0;
+    return resultats.resteAChargeAvecPret || 0;
+  }, [resultats]);
 
   return (
     <div className="calculateur-aides-page">
@@ -125,7 +130,7 @@ function CalculateurAidesView() {
           <CalculatorIcon />
           <div>
             <h1>Calculateur d'Aides État 2026</h1>
-            <p>MaPrimeRénov' + CEE + Coup de Pouce Chauffage</p>
+            <p>MaPrimeRénov' + CEE + Coup de Pouce + Éco-PTZ + TVA 5.5%</p>
           </div>
         </div>
       </div>
@@ -321,12 +326,12 @@ function CalculateurAidesView() {
 
               {/* Aides détaillées */}
               <div className="calc-card aides-detail-card">
-                <h2><EuroIcon /> Aides disponibles</h2>
+                <h2><EuroIcon /> Aides et économies disponibles</h2>
 
                 <div className="aide-item">
                   <div className="aide-label">
                     <strong>MaPrimeRénov'</strong>
-                    <span className="aide-desc">Aide de l'État</span>
+                    <span className="aide-desc">Subvention de l'État</span>
                   </div>
                   <div className="aide-montant">
                     {resultats.aides.maPrimeRenov.toLocaleString('fr-FR')} €
@@ -343,32 +348,74 @@ function CalculateurAidesView() {
                   </div>
                 </div>
 
-                <div className="aide-total">
-                  <div className="aide-label">
-                    <strong>TOTAL DES AIDES</strong>
+                {resultats.aides.economieTVA > 0 && (
+                  <div className="aide-item">
+                    <div className="aide-label">
+                      <strong>TVA réduite 5.5%</strong>
+                      <span className="aide-desc">Économie fiscale (au lieu de 20%)</span>
+                    </div>
+                    <div className="aide-montant">
+                      {resultats.aides.economieTVA.toLocaleString('fr-FR')} €
+                    </div>
                   </div>
-                  <div className="aide-montant total">
-                    {resultats.aides.total.toLocaleString('fr-FR')} €
+                )}
+
+                <div className="aide-subtotal" style={{borderTop: '2px solid var(--border-color)', paddingTop: '16px', marginTop: '12px'}}>
+                  <div className="aide-label">
+                    <strong>TOTAL SUBVENTIONS + TVA</strong>
+                  </div>
+                  <div className="aide-montant" style={{fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)'}}>
+                    {resultats.aides.totalAvecTVA.toLocaleString('fr-FR')} €
                   </div>
                 </div>
+
+                {resultats.aides.ecoPTZ > 0 && (
+                  <div className="aide-item" style={{marginTop: '16px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px'}}>
+                    <div className="aide-label">
+                      <strong>Éco-PTZ disponible</strong>
+                      <span className="aide-desc">Prêt à taux zéro (sans intérêts)</span>
+                    </div>
+                    <div className="aide-montant" style={{color: 'var(--color-secondary)'}}>
+                      {resultats.aides.ecoPTZ.toLocaleString('fr-FR')} €
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Reste à charge */}
               {formData.montantTravaux && (
                 <div className="calc-card reste-charge-card">
-                  <h2>💰 Financement</h2>
+                  <h2>💰 Financement détaillé</h2>
                   <div className="finance-row">
-                    <span>Coût des travaux</span>
+                    <span>Coût des travaux TTC</span>
                     <strong>{parseFloat(formData.montantTravaux).toLocaleString('fr-FR')} €</strong>
                   </div>
                   <div className="finance-row">
-                    <span>Aides totales</span>
-                    <strong className="text-success">- {resultats.aides.total.toLocaleString('fr-FR')} €</strong>
+                    <span>Subventions (MaPrimeRénov' + CEE)</span>
+                    <strong className="text-success">- {resultats.aides.totalSubventions.toLocaleString('fr-FR')} €</strong>
                   </div>
-                  <div className="finance-row total-row">
+                  {resultats.aides.economieTVA > 0 && (
+                    <div className="finance-row">
+                      <span>Économie TVA (5.5% au lieu de 20%)</span>
+                      <strong className="text-success">- {resultats.aides.economieTVA.toLocaleString('fr-FR')} €</strong>
+                    </div>
+                  )}
+                  <div className="finance-row" style={{borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', marginTop: '8px'}}>
                     <span>Reste à charge</span>
                     <strong className="text-primary">{resteACharge.toLocaleString('fr-FR')} €</strong>
                   </div>
+                  {resultats.aides.ecoPTZ > 0 && (
+                    <>
+                      <div className="finance-row">
+                        <span>Éco-PTZ (prêt à 0%)</span>
+                        <strong style={{color: '#fbbf24'}}>- {resultats.aides.ecoPTZ.toLocaleString('fr-FR')} €</strong>
+                      </div>
+                      <div className="finance-row total-row">
+                        <span><strong>Reste à payer comptant</strong></span>
+                        <strong className="text-primary">{resteAChargeAvecPret.toLocaleString('fr-FR')} €</strong>
+                      </div>
+                    </>
+                  )}
                   {resultats.tauxAide > 0 && (
                     <div className="taux-aide">
                       Taux d'aide: <strong>{resultats.tauxAide}%</strong>
