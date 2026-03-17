@@ -45,6 +45,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
         { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+        { name: 'Aides État', href: '/calculateur-aides', icon: DollarSignIcon, color: 'text-[#d97706]', bg: 'bg-[#fff5eb]' },
     ];
 
     // Navigation complete admin
@@ -66,6 +67,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
         { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
         { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+        { name: 'Aides État', href: '/calculateur-aides', icon: DollarSignIcon, color: 'text-[#d97706]', bg: 'bg-[#fff5eb]' },
         { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
         { name: 'Parametres', href: '/settings', icon: SettingsIcon, color: 'text-slate-500', bg: 'bg-slate-50' },
         { name: 'Config Entreprise', href: '/company-settings', icon: BuildingIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' },
