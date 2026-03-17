@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   calculerTotalAides,
+  calculerMaPrimeRenovCopro,
   CATEGORIES_LABELS,
   CONDITIONS_MPR,
   CONDITIONS_CEE,
@@ -55,6 +56,7 @@ const CheckIcon = () => (
 function CalculateurAidesView() {
   // État du formulaire
   const [formData, setFormData] = useState({
+    typeProjet: 'INDIVIDUEL', // INDIVIDUEL ou COPROPRIETE
     typePAC: 'AIR_EAU',
     rfr: '',
     nbPersonnes: 2,
@@ -65,7 +67,14 @@ function CalculateurAidesView() {
     avecCoupDePouce: true,
     remplacementChauffage: true,
     residencePrincipale: true,
-    estProprietaire: true
+    estProprietaire: true,
+    // Champs spécifiques copropriété
+    nbLogements: 10,
+    gainEnergetique: 35,
+    sortiePassoire: false,
+    coproFragile: false,
+    nbCoproModestes: 0,
+    nbCoproTresModestes: 0
   });
 
   // Résultats du calcul
@@ -74,20 +83,57 @@ function CalculateurAidesView() {
 
   // Calculer automatiquement quand les données changent
   useEffect(() => {
-    if (formData.rfr && formData.montantTravaux) {
-      const params = {
-        typePAC: formData.typePAC,
-        rfr: parseFloat(formData.rfr),
-        nbPersonnes: parseInt(formData.nbPersonnes),
-        isIDF: formData.isIDF,
-        surfaceChauffee: parseInt(formData.surfaceChauffee),
-        montantTravaux: parseFloat(formData.montantTravaux),
-        ancienneteLogement: parseInt(formData.ancienneteLogement),
-        avecCoupDePouce: formData.avecCoupDePouce
-      };
+    if (formData.montantTravaux) {
+      // COPROPRIÉTÉ - Calcul spécifique
+      if (formData.typeProjet === 'COPROPRIETE') {
+        const montantHT = parseFloat(formData.montantTravaux) / 1.055; // Estimation HT avec TVA 5.5%
 
-      const resultatsCalcul = calculerTotalAides(params);
-      setResultats(resultatsCalcul);
+        const resultatscopro = calculerMaPrimeRenovCopro({
+          montantTravauxHT: montantHT,
+          nbLogements: parseInt(formData.nbLogements),
+          gainEnergetique: parseFloat(formData.gainEnergetique) / 100,
+          sortiePassoire: formData.sortiePassoire,
+          coproFragile: formData.coproFragile,
+          nbCoproprietairesModestes: parseInt(formData.nbCoproModestes),
+          nbCoproprietairesTresModestes: parseInt(formData.nbCoproTresModestes)
+        });
+
+        // Format compatible avec l'affichage
+        setResultats({
+          isCopropriete: true,
+          categorieLabel: 'Copropriété',
+          aides: {
+            maPrimeRenov: resultatscopro.aideCollective,
+            primesIndividuelles: resultatscopro.primesIndividuelles,
+            cee: 0, // Pas de CEE pour copro dans ce calcul simplifié
+            ecoPTZ: 0,
+            economieTVA: parseFloat(formData.montantTravaux) * 0.145 / 1.20,
+            totalSubventions: resultatscopro.total,
+            totalAvecTVA: resultatscopro.total + (parseFloat(formData.montantTravaux) * 0.145 / 1.20)
+          },
+          detailsCopro: resultatscopro.details,
+          resteACharge: parseFloat(formData.montantTravaux) - resultatscopro.total,
+          tauxAide: Math.round((resultatscopro.total / parseFloat(formData.montantTravaux)) * 100)
+        });
+      }
+      // INDIVIDUEL - Calcul standard
+      else if (formData.rfr) {
+        const params = {
+          typePAC: formData.typePAC,
+          rfr: parseFloat(formData.rfr),
+          nbPersonnes: parseInt(formData.nbPersonnes),
+          isIDF: formData.isIDF,
+          surfaceChauffee: parseInt(formData.surfaceChauffee),
+          montantTravaux: parseFloat(formData.montantTravaux),
+          ancienneteLogement: parseInt(formData.ancienneteLogement),
+          avecCoupDePouce: formData.avecCoupDePouce
+        };
+
+        const resultatsCalcul = calculerTotalAides(params);
+        setResultats({...resultatsCalcul, isCopropriete: false});
+      } else {
+        setResultats(null);
+      }
     } else {
       setResultats(null);
     }
@@ -141,6 +187,27 @@ function CalculateurAidesView() {
           <div className="calc-card">
             <h2>📋 Informations du projet</h2>
 
+            {/* TYPE DE PROJET - NOUVEAU ! */}
+            <div className="form-group">
+              <label style={{fontSize: '16px', fontWeight: '700', color: 'var(--color-primary)'}}>
+                🏠 Type de projet
+              </label>
+              <select
+                value={formData.typeProjet}
+                onChange={(e) => handleChange('typeProjet', e.target.value)}
+                className="form-select"
+                style={{borderColor: 'var(--color-primary)', borderWidth: '2px'}}
+              >
+                <option value="INDIVIDUEL">🏡 Maison ou Appartement individuel</option>
+                <option value="COPROPRIETE">🏢 Copropriété (parties communes)</option>
+              </select>
+              <small className="form-hint">
+                {formData.typeProjet === 'COPROPRIETE'
+                  ? '✅ Calcul spécial MaPrimeRénov\' Copropriété activé'
+                  : 'Pour travaux individuels (maison ou appartement)'}
+              </small>
+            </div>
+
             {/* Type de PAC */}
             <div className="form-group">
               <label>Type de pompe à chaleur</label>
@@ -181,6 +248,83 @@ function CalculateurAidesView() {
               />
               <small className="form-hint">Plafonné à 100 m² pour le calcul CEE</small>
             </div>
+
+            {/* CHAMPS SPÉCIFIQUES COPROPRIÉTÉ */}
+            {formData.typeProjet === 'COPROPRIETE' && (
+              <>
+                <h2 className="section-title" style={{color: 'var(--color-primary)'}}>🏢 Informations Copropriété</h2>
+
+                <div className="form-group">
+                  <label>Nombre de logements dans la copropriété</label>
+                  <input
+                    type="number"
+                    value={formData.nbLogements}
+                    onChange={(e) => handleChange('nbLogements', e.target.value)}
+                    className="form-input"
+                    min="2"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Gain énergétique prévu (%)</label>
+                  <input
+                    type="number"
+                    value={formData.gainEnergetique}
+                    onChange={(e) => handleChange('gainEnergetique', e.target.value)}
+                    className="form-input"
+                    min="15"
+                    max="100"
+                  />
+                  <small className="form-hint">
+                    Minimum 35% requis - 45% pour taux bonifié - 50% pour taux maximal
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.sortiePassoire}
+                      onChange={(e) => handleChange('sortiePassoire', e.target.checked)}
+                    />
+                    <span>Sortie de passoire thermique (F/G → A-D) <strong style={{color: 'var(--color-primary)'}}>+10%</strong></span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.coproFragile}
+                      onChange={(e) => handleChange('coproFragile', e.target.checked)}
+                    />
+                    <span>Copropriété fragile (impayés ≥ 8%) <strong style={{color: 'var(--color-primary)'}}>+20%</strong></span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label>Nb copropriétaires revenus très modestes (prime 3000€)</label>
+                  <input
+                    type="number"
+                    value={formData.nbCoproTresModestes}
+                    onChange={(e) => handleChange('nbCoproTresModestes', e.target.value)}
+                    className="form-input"
+                    min="0"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Nb copropriétaires revenus modestes (prime 1500€)</label>
+                  <input
+                    type="number"
+                    value={formData.nbCoproModestes}
+                    onChange={(e) => handleChange('nbCoproModestes', e.target.value)}
+                    className="form-input"
+                    min="0"
+                  />
+                </div>
+              </>
+            )}
 
             <h2 className="section-title">👥 Votre situation</h2>
 
@@ -328,25 +472,61 @@ function CalculateurAidesView() {
               <div className="calc-card aides-detail-card">
                 <h2><EuroIcon /> Aides et économies disponibles</h2>
 
-                <div className="aide-item">
-                  <div className="aide-label">
-                    <strong>MaPrimeRénov'</strong>
-                    <span className="aide-desc">Subvention de l'État</span>
-                  </div>
-                  <div className="aide-montant">
-                    {resultats.aides.maPrimeRenov.toLocaleString('fr-FR')} €
-                  </div>
-                </div>
+                {/* AFFICHAGE COPROPRIÉTÉ */}
+                {resultats.isCopropriete ? (
+                  <>
+                    <div className="aide-item" style={{backgroundColor: 'var(--bg-tertiary)', padding: '12px', borderRadius: '8px'}}>
+                      <div className="aide-label">
+                        <strong>🏢 MaPrimeRénov' Copropriété</strong>
+                        <span className="aide-desc">
+                          Aide collective ({resultats.detailsCopro?.tauxFinal} du montant HT)
+                          {resultats.detailsCopro?.bonusSortiePassoire && ' + Bonus sortie passoire'}
+                          {resultats.detailsCopro?.bonusCoproFragile && ' + Bonus copro fragile'}
+                        </span>
+                      </div>
+                      <div className="aide-montant">
+                        {resultats.aides.maPrimeRenov.toLocaleString('fr-FR')} €
+                      </div>
+                    </div>
 
-                <div className="aide-item">
-                  <div className="aide-label">
-                    <strong>CEE {formData.avecCoupDePouce && '+ Coup de Pouce'}</strong>
-                    <span className="aide-desc">Certificats d'Économies d'Énergie</span>
-                  </div>
-                  <div className="aide-montant">
-                    {resultats.aides.cee.toLocaleString('fr-FR')} €
-                  </div>
-                </div>
+                    {resultats.aides.primesIndividuelles > 0 && (
+                      <div className="aide-item">
+                        <div className="aide-label">
+                          <strong>👥 Primes individuelles</strong>
+                          <span className="aide-desc">
+                            Pour copropriétaires modestes/très modestes
+                          </span>
+                        </div>
+                        <div className="aide-montant">
+                          {resultats.aides.primesIndividuelles.toLocaleString('fr-FR')} €
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* AFFICHAGE INDIVIDUEL */
+                  <>
+                    <div className="aide-item">
+                      <div className="aide-label">
+                        <strong>MaPrimeRénov'</strong>
+                        <span className="aide-desc">Subvention de l'État</span>
+                      </div>
+                      <div className="aide-montant">
+                        {resultats.aides.maPrimeRenov.toLocaleString('fr-FR')} €
+                      </div>
+                    </div>
+
+                    <div className="aide-item">
+                      <div className="aide-label">
+                        <strong>CEE {formData.avecCoupDePouce && '+ Coup de Pouce'}</strong>
+                        <span className="aide-desc">Certificats d'Économies d'Énergie</span>
+                      </div>
+                      <div className="aide-montant">
+                        {resultats.aides.cee.toLocaleString('fr-FR')} €
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {resultats.aides.economieTVA > 0 && (
                   <div className="aide-item">
