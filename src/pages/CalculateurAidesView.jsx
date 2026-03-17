@@ -71,6 +71,7 @@ function CalculateurAidesView() {
     estProprietaire: true, // true = propriétaire, false = locataire
     ancienneteBatiment: 'PLUS_15_ANS', // MOINS_2_ANS, ENTRE_2_15_ANS, PLUS_15_ANS
     codePostal: '',
+    zoneClimatique: 'H1', // H1 (Nord), H2 (Centre), H3 (Sud)
     typeProjet: 'INDIVIDUEL', // INDIVIDUEL ou COPROPRIETE
 
     // ÉTAPE 2: CARACTÉRISTIQUES PAC
@@ -155,7 +156,10 @@ function CalculateurAidesView() {
           rfr: parseFloat(formData.rfr),
           nbPersonnes: parseInt(formData.nbPersonnes),
           isIDF: formData.isIDF,
-          surfaceChauffee: parseInt(formData.surfaceChauffee),
+          surfaceChauffee: parseInt(formData.surfaceChauffee) || 100,
+          zoneClimatique: formData.zoneClimatique || 'H1',                          // NOUVEAU 2026
+          etas: parseFloat(formData.etas) || 126,                                    // NOUVEAU 2026
+          typeRemplacementChaudiere: formData.typeRemplacementChaudiere || 'AUCUN', // NOUVEAU 2026
           montantTravaux: parseFloat(formData.montantTravaux),
           ancienneteLogement: parseInt(formData.ancienneteLogement),
           avecCoupDePouce: formData.avecCoupDePouce
@@ -263,6 +267,26 @@ function CalculateurAidesView() {
               </small>
             </div>
 
+            {/* ZONE CLIMATIQUE - IMPORTANT POUR CEE 2026 ! */}
+            <div className="form-group">
+              <label style={{fontSize: '16px', fontWeight: '700', color: 'var(--color-primary)'}}>
+                🌡️ Zone climatique (CEE 2026)
+              </label>
+              <select
+                value={formData.zoneClimatique}
+                onChange={(e) => handleChange('zoneClimatique', e.target.value)}
+                className="form-select"
+                style={{borderColor: 'var(--color-primary)', borderWidth: '2px'}}
+              >
+                <option value="H1">H1 - Nord / Est (+ froid)</option>
+                <option value="H2">H2 - Centre / Ouest (tempéré)</option>
+                <option value="H3">H3 - Sud / Méditerranée (+ chaud)</option>
+              </select>
+              <small className="form-hint">
+                ℹ️ Impact direct sur le calcul CEE (barème BAR-TH-171)
+              </small>
+            </div>
+
             {/* Type de PAC */}
             <div className="form-group">
               <label>Type de pompe à chaleur</label>
@@ -302,6 +326,65 @@ function CalculateurAidesView() {
                 max="300"
               />
               <small className="form-hint">Plafonné à 100 m² pour le calcul CEE</small>
+            </div>
+
+            {/* ===== SECTION TECHNIQUE PAC (CEE 2026) ===== */}
+            <h2 className="section-title" style={{color: 'var(--color-primary)', marginTop: '30px'}}>
+              ⚙️ Caractéristiques techniques de la PAC
+            </h2>
+
+            {/* ETAS - OBLIGATOIRE CEE 2026 */}
+            <div className="form-group">
+              <label style={{fontWeight: '700'}}>
+                📊 ETAS - Efficacité Énergétique Saisonnière (%)
+                <span style={{color: 'red'}}> *</span>
+              </label>
+              <input
+                type="number"
+                value={formData.etas}
+                onChange={(e) => handleChange('etas', e.target.value)}
+                className="form-input"
+                min="111"
+                max="250"
+                placeholder="Ex: 126"
+                style={{
+                  borderColor: formData.etas && parseFloat(formData.etas) < 111 ? 'red' : 'var(--color-primary)',
+                  borderWidth: '2px'
+                }}
+              />
+              <small className="form-hint" style={{
+                color: formData.etas && parseFloat(formData.etas) < 111 ? 'red' : 'inherit'
+              }}>
+                {formData.etas && parseFloat(formData.etas) < 111
+                  ? '❌ ETAS minimum requis : 111% (CEE 2026)'
+                  : '✅ Minimum : 111% | Bonus si ≥ 140% ou ≥ 200%'}
+              </small>
+            </div>
+
+            {/* Type de remplacement - IMPORTANT POUR COUP DE POUCE */}
+            <div className="form-group">
+              <label style={{fontWeight: '700'}}>
+                🔄 Remplacement d'une ancienne chaudière ?
+              </label>
+              <select
+                value={formData.typeRemplacementChaudiere}
+                onChange={(e) => handleChange('typeRemplacementChaudiere', e.target.value)}
+                className="form-select"
+                style={{borderColor: 'var(--color-primary)', borderWidth: '2px'}}
+              >
+                <option value="AUCUN">Aucun remplacement</option>
+                <option value="FIOUL">🛢️ Chaudière FIOUL (Bonus MPR + CEE)</option>
+                <option value="GAZ">🔥 Chaudière GAZ (CEE uniquement)</option>
+                <option value="CHARBON">⚫ Chaudière CHARBON (CEE uniquement)</option>
+                <option value="ELECTRIQUE">⚡ Chaudière ÉLECTRIQUE (CEE uniquement)</option>
+              </select>
+              <small className="form-hint">
+                {formData.typeRemplacementChaudiere === 'FIOUL'
+                  ? '✅ Bonus dépose fioul : +400€ à +1200€ selon revenus (MPR)'
+                  : formData.typeRemplacementChaudiere !== 'AUCUN'
+                  ? '✅ Coup de Pouce Chauffage activé (CEE x5)'
+                  : 'ℹ️ Coup de Pouce réservé aux remplacements de chaudières fossiles'}
+              </small>
             </div>
 
             {/* CHAMPS SPÉCIFIQUES COPROPRIÉTÉ */}
@@ -603,6 +686,29 @@ function CalculateurAidesView() {
                     {resultats.aides.totalAvecTVA.toLocaleString('fr-FR')} €
                   </div>
                 </div>
+
+                {/* AVERTISSEMENT ÉCRÊTEMENT (NOUVEAU 2026) */}
+                {resultats.ecretement && resultats.ecretement.actif && (
+                  <div className="aide-item" style={{
+                    marginTop: '16px',
+                    backgroundColor: '#fff3cd',
+                    border: '2px solid #ffc107',
+                    padding: '12px',
+                    borderRadius: '8px'
+                  }}>
+                    <div className="aide-label">
+                      <strong style={{color: '#856404'}}>⚠️ Écrêtement appliqué (2026)</strong>
+                      <span className="aide-desc" style={{color: '#856404'}}>
+                        Cumul CEE + MPR plafonné à {Math.round(resultats.ecretement.tauxMax * 100)}% de 12 000€ = {resultats.ecretement.plafondCumul.toLocaleString('fr-FR')} €
+                        <br />
+                        <small>Montant écrêté : {resultats.ecretement.montantEcrete.toLocaleString('fr-FR')} €</small>
+                      </span>
+                    </div>
+                    <div className="aide-montant" style={{color: '#856404', fontSize: '14px'}}>
+                      Plafond atteint
+                    </div>
+                  </div>
+                )}
 
                 {resultats.aides.ecoPTZ > 0 && (
                   <div className="aide-item" style={{marginTop: '16px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px'}}>

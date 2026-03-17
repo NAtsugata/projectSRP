@@ -109,18 +109,64 @@ export const CEE_STANDARD = {
 };
 
 /**
- * Bonifications "Coup de Pouce Chauffage" 2026
- * Prolongé jusqu'au 31/12/2026
+ * ============================================================
+ * BARÈME CEE BAR-TH-171 (2026) - OFFICIEL
+ * ============================================================
+ * Arrêté du 15 décembre 2025 - Nouveau calcul CEE pour PAC air/eau
+ * Source: https://www.tereva.fr/document/A-715994-tereva-experts-cee-2026-nouveau-bareme-des-primes-pour-pac-air-eau
+ *
+ * Formule: kWh_cumac × Prix_kWh_CEE × Coefficient_Coup_de_Pouce
  */
-export const COUP_DE_POUCE_BONIFICATION = {
-  AIR_EAU: 3,        // Multiplication par 3
-  GEOTHERMIQUE: 5,   // Multiplication par 5
-  AIR_AIR: 0         // Non éligible
+
+/**
+ * Barème kWh cumac de référence par zone climatique et ETAS
+ * Pour une surface de référence (100 m²)
+ */
+export const BAREME_CEE_BARTH171_2026 = {
+  // Zone H1 (Nord/Est - climat froid)
+  H1: {
+    ETAS_111_140: 98000,    // kWh cumac si 111% ≤ ETAS < 140%
+    ETAS_140_200: 104000,   // kWh cumac si 140% ≤ ETAS < 200%
+    ETAS_PLUS_200: 108000   // kWh cumac si ETAS ≥ 200%
+  },
+  // Zone H2 (Centre/Ouest - climat tempéré)
+  H2: {
+    ETAS_111_140: 76000,
+    ETAS_140_200: 81000,
+    ETAS_PLUS_200: 84000
+  },
+  // Zone H3 (Sud/Méditerranée - climat chaud)
+  H3: {
+    ETAS_111_140: 54000,
+    ETAS_140_200: 58000,
+    ETAS_PLUS_200: 60000
+  }
 };
 
 /**
+ * Coefficient de correction surface (simplifié 2026)
+ * Surface prise en compte = min(surface_réelle, 100 m²)
+ * Coefficient plafonné à 1
+ */
+function calculerCoefficientSurface(surfaceRelle) {
+  return Math.min(surfaceRelle / 100, 1);
+}
+
+/**
+ * Prix moyen du kWh cumac CEE (estimé 2026)
+ * Variable selon le marché, valeur indicative
+ */
+const PRIX_KWH_CUMAC_2026 = 0.0055; // 0.0055€ par kWh cumac
+
+/**
+ * Coefficient Coup de Pouce 2026 (si remplacement chaudière fossile)
+ */
+const COEFF_COUP_DE_POUCE = 5; // Multiplicateur x5
+
+/**
  * Montants Coup de Pouce selon revenus (modestes vs autres)
- * Valeurs pour remplacement chaudière gaz/fioul par PAC
+ * DÉPRÉCIÉ - Remplacé par calcul BAR-TH-171
+ * Conservé pour compatibilité
  */
 export const COUP_DE_POUCE_MONTANTS = {
   AIR_EAU: {
@@ -218,28 +264,61 @@ export function calculerMaPrimeRenov(typePAC, categorie) {
 }
 
 /**
- * Calcule le montant CEE + Coup de Pouce
+ * ============================================================
+ * CALCUL CEE BAR-TH-171 (2026) - NOUVELLE MÉTHODE OFFICIELLE
+ * ============================================================
+ * Calcule le montant CEE + Coup de Pouce selon barème officiel 2026
+ *
  * @param {string} typePAC - 'AIR_EAU', 'GEOTHERMIQUE', ou 'AIR_AIR'
  * @param {string} categorie - Catégorie de revenus
- * @param {number} surfaceChauffee - Surface en m² (plafonné à 100)
- * @param {boolean} avecCoupDePouce - Activer le Coup de Pouce
+ * @param {number} surfaceChauffee - Surface en m²
+ * @param {string} zoneClimatique - 'H1', 'H2', ou 'H3'
+ * @param {number} etas - ETAS (%) - Efficacité Énergétique Saisonnière
+ * @param {string} typeRemplacement - Type de chauffage remplacé ('FIOUL', 'GAZ', 'CHARBON', 'ELECTRIQUE', 'AUCUN')
  * @returns {number} Montant en euros
  */
-export function calculerCEE(typePAC, categorie, surfaceChauffee = 100, avecCoupDePouce = true) {
-  // Si Coup de Pouce activé, utiliser les montants forfaitaires
-  if (avecCoupDePouce && COUP_DE_POUCE_MONTANTS[typePAC]) {
+export function calculerCEE(typePAC, categorie, surfaceChauffee = 100, zoneClimatique = 'H1', etas = 126, typeRemplacement = 'AUCUN') {
+  // PAC Air/Air non éligible
+  if (typePAC === 'AIR_AIR') return 0;
+
+  // ETAS minimum requis : 111%
+  if (etas < 111) return 0;
+
+  // Pour PAC géothermique, utiliser ancien calcul (pas encore barème 2026 spécifique)
+  if (typePAC === 'GEOTHERMIQUE') {
     const modeste = estModeste(categorie);
-    return modeste
-      ? COUP_DE_POUCE_MONTANTS[typePAC].MODESTE
-      : COUP_DE_POUCE_MONTANTS[typePAC].AUTRE;
+    return modeste ? 5000 : 4000;
   }
 
-  // Sinon calcul CEE standard
-  const surface = Math.min(surfaceChauffee, 100); // Plafonné à 100 m²
-  const cee = CEE_STANDARD[typePAC];
-  if (!cee) return 0;
+  // === CALCUL BAR-TH-171 pour PAC AIR/EAU ===
 
-  return cee.BASE + (cee.PAR_M2 * surface);
+  // 1. Déterminer le kWh cumac de référence selon zone et ETAS
+  const baremeZone = BAREME_CEE_BARTH171_2026[zoneClimatique];
+  if (!baremeZone) return 0;
+
+  let kwhCumacRef;
+  if (etas >= 200) {
+    kwhCumacRef = baremeZone.ETAS_PLUS_200;
+  } else if (etas >= 140) {
+    kwhCumacRef = baremeZone.ETAS_140_200;
+  } else {
+    kwhCumacRef = baremeZone.ETAS_111_140;
+  }
+
+  // 2. Appliquer coefficient surface (plafonné à 1)
+  const coeffSurface = calculerCoefficientSurface(surfaceChauffee);
+  const kwhCumac = kwhCumacRef * coeffSurface;
+
+  // 3. Calculer montant CEE de base
+  let montantCEE = kwhCumac * PRIX_KWH_CUMAC_2026;
+
+  // 4. Appliquer Coup de Pouce si remplacement chaudière fossile
+  const avecCoupDePouce = ['FIOUL', 'GAZ', 'CHARBON', 'ELECTRIQUE'].includes(typeRemplacement);
+  if (avecCoupDePouce) {
+    montantCEE *= COEFF_COUP_DE_POUCE;
+  }
+
+  return Math.round(montantCEE);
 }
 
 // ============================================================
@@ -426,7 +505,9 @@ export function calculerTotalAides(params) {
     nbPersonnes,
     isIDF,
     surfaceChauffee = 100,
-    avecCoupDePouce = true,
+    zoneClimatique = 'H1',           // NOUVEAU 2026
+    etas = 126,                       // NOUVEAU 2026
+    typeRemplacementChaudiere = 'AUCUN', // NOUVEAU 2026
     ancienneteLogement = 15,
     montantTravaux = 0,
     montantHT = 0,
@@ -442,10 +523,32 @@ export function calculerTotalAides(params) {
     ? calculerMaPrimeRenov(typePAC, categorie)
     : 0;
 
-  const cee = calculerCEE(typePAC, categorie, surfaceChauffee, avecCoupDePouce);
+  // Calcul CEE BAR-TH-171 (2026) avec nouveaux paramètres
+  let cee = calculerCEE(typePAC, categorie, surfaceChauffee, zoneClimatique, etas, typeRemplacementChaudiere);
 
-  // Total aides directes (subventions)
-  const totalAidesDirectes = mpr + cee;
+  // ===== ÉCRÊTEMENT CUMULÉ CEE + MPR (NOUVEAU 2026) =====
+  // Plafond de cumul selon catégorie de revenus (base 12 000€)
+  const PLAFOND_BASE_CUMUL = 12000;
+  const TAUX_ECRETEMENT = {
+    BLEU: 0.90,    // 90% max = 10 800€
+    JAUNE: 0.70,   // 70% max = 8 400€
+    VIOLET: 0.50,  // 50% max = 6 000€
+    ROSE: 0        // Non éligible
+  };
+
+  const plafondCumul = PLAFOND_BASE_CUMUL * TAUX_ECRETEMENT[categorie];
+  const totalAvantEcretement = mpr + cee;
+
+  // Appliquer l'écrêtement si nécessaire
+  let totalAidesDirectes = totalAvantEcretement;
+  let montantEcrete = 0;
+
+  if (totalAvantEcretement > plafondCumul) {
+    // Réduire proportionnellement CEE (MPR est fixe)
+    montantEcrete = totalAvantEcretement - plafondCumul;
+    cee = Math.max(0, plafondCumul - mpr); // CEE écrêté
+    totalAidesDirectes = plafondCumul;
+  }
 
   // Calculer le reste à charge AVANT éco-PTZ
   const resteAChargeAvantPret = Math.max(0, montantTravaux - totalAidesDirectes);
@@ -475,6 +578,14 @@ export function calculerTotalAides(params) {
       economieTVA: tva?.economie || 0,
       totalSubventions: totalAidesDirectes,
       totalAvecTVA: totalAvecTVA
+    },
+    // Informations écrêtement (NOUVEAU 2026)
+    ecretement: {
+      actif: montantEcrete > 0,
+      montantEcrete: montantEcrete,
+      plafondCumul: plafondCumul,
+      totalAvantEcretement: totalAvantEcretement,
+      tauxMax: TAUX_ECRETEMENT[categorie]
     },
     tva: tva,
     plafondDepenses: PLAFONDS_DEPENSES_MPR[typePAC] || 0,
