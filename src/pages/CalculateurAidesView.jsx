@@ -101,6 +101,7 @@ function CalculateurAidesView() {
         // Format compatible avec l'affichage
         setResultats({
           isCopropriete: true,
+          categorie: 'copropriete', // Pour la classe CSS
           categorieLabel: 'Copropriété',
           aides: {
             maPrimeRenov: resultatscopro.aideCollective,
@@ -461,8 +462,8 @@ function CalculateurAidesView() {
           {resultats ? (
             <>
               {/* Catégorie */}
-              <div className={`calc-card category-card category-${resultats.categorie.toLowerCase()}`}>
-                <h3>📊 Votre catégorie</h3>
+              <div className={`calc-card category-card category-${resultats.categorie?.toLowerCase() || 'default'}`}>
+                <h3>📊 {resultats.isCopropriete ? 'Type de projet' : 'Votre catégorie'}</h3>
                 <div className="category-badge">
                   {resultats.categorieLabel}
                 </div>

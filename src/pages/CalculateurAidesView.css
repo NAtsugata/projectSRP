@@ -287,6 +287,10 @@
   background: linear-gradient(135deg, #ec4899, #db2777);
 }
 
+.category-card.category-copropriete .category-badge {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+}
+
 /* ============================================================
    AIDES DÉTAILLÉES
    ============================================================ */
