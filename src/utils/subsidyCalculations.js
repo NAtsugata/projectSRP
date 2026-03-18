@@ -6,6 +6,7 @@ import {
   MPR_RATES,
   MPR_BONUSES,
   CEILING_RATES,
+  CEILING_ABSOLUTE,
   MAX_ELIGIBLE_EXPENSE,
   REPLACEMENT_BONUSES,
   TECHNICAL_CRITERIA,
@@ -57,30 +58,43 @@ export const validateTechnicalEligibility = (pacSpecs) => {
 };
 
 /**
- * Calcule le montant de la Prime Énergie (CEE)
+ * Calcule le montant de la Prime Énergie (CEE) 2026
+ * Selon BAR-TH-171 révisé au 01/01/2026
  * @param {Object} params - Paramètres de calcul
  * @returns {Object} - Montants CEE par profil
  */
 export const calculateCEE = (params) => {
   const {
     postal_code,
-    usage,           // 'heating' ou 'heating_and_dhw'
-    surface,         // Surface habitable (m²)
+    housing_type,    // 'house' ou 'apartment'
+    surface,         // Surface habitable chauffée (m²)
   } = params;
 
   const zone = getClimateZone(postal_code);
-  const usageType = usage === 'heating_and_dhw' ? 'heating_and_dhw' : 'heating_only';
+  const type = housing_type === 'apartment' ? 'apartment' : 'house';
 
-  const rates = CEE_RATES[usageType][zone];
+  // Déterminer la catégorie de surface
+  let surfaceCategory;
+  if (type === 'house') {
+    if (surface < 70) surfaceCategory = 'small';
+    else if (surface >= 70 && surface <= 90) surfaceCategory = 'medium';
+    else surfaceCategory = 'large'; // > 90m²
+  } else {
+    // Apartment
+    if (surface < 35) surfaceCategory = 'small';
+    else if (surface >= 35 && surface <= 60) surfaceCategory = 'medium';
+    else surfaceCategory = 'large'; // > 60m²
+  }
 
-  // Les montants CEE sont forfaitaires, pas proportionnels à la surface
-  // (sauf si surface < 35m² où il peut y avoir décote, mais simplifié ici)
+  const rates = CEE_RATES[type][zone][surfaceCategory];
 
   return {
-    very_modest: rates.base,
-    modest: rates.moderate,
-    classic: rates.classic,
+    very_modest: rates.very_modest, // Bleu + Jaune (Coup de pouce)
+    modest: rates.very_modest,      // Même montant pour Jaune
+    classic: rates.classic,         // Violet + Rose (CEE classique)
     zone: zone.toUpperCase(),
+    surface_category: surfaceCategory,
+    housing_type: type,
   };
 };
 
@@ -130,15 +144,10 @@ export const calculateMPR = (params) => {
     };
   }
 
-  // Bonus remplacement
-  const replacementBonus = REPLACEMENT_BONUSES[replacement_type] || 0;
-  if (replacementBonus > 0) {
-    bonuses.replacement = {
-      blue: replacementBonus,
-      yellow: replacementBonus,
-      violet: replacementBonus,
-      rose: replacementBonus,
-    };
+  // Bonus remplacement (varie selon le profil)
+  const replacementBonuses = REPLACEMENT_BONUSES[replacement_type] || REPLACEMENT_BONUSES.none;
+  if (replacementBonuses.blue > 0 || replacementBonuses.yellow > 0 || replacementBonuses.violet > 0) {
+    bonuses.replacement = replacementBonuses;
   }
 
   // Calculer les totaux
@@ -160,25 +169,42 @@ export const calculateMPR = (params) => {
 };
 
 /**
- * Applique l'écrêtement (plafond de cumul des aides)
- * @param {number} totalSubsidy - Total des aides (CEE + MPR)
+ * Applique l'écrêtement 2026 (plafond de cumul des aides)
+ * Double plafond : absolu ET % du coût
+ * @param {number} totalSubsidy - Total des aides (CEE + MPR + Bonus)
  * @param {number} projectCost - Coût total du projet
  * @param {string} category - Catégorie MPR
  * @returns {Object} - Montants après écrêtement
  */
 export const applyCeiling = (totalSubsidy, projectCost, category) => {
+  // Plafond 1 : Montant absolu maximum
+  const absoluteCeiling = CEILING_ABSOLUTE[category];
+
+  // Plafond 2 : % du coût du projet
   const ceilingRate = CEILING_RATES[category];
-  const maxAllowed = Math.min(projectCost * ceilingRate, MAX_ELIGIBLE_EXPENSE * ceilingRate);
+  const percentCeiling = projectCost * ceilingRate;
+
+  // Prendre le minimum des deux plafonds
+  const maxAllowed = Math.min(absoluteCeiling, percentCeiling);
 
   const capped = Math.min(totalSubsidy, maxAllowed);
   const reduction = totalSubsidy - capped;
+  const isCapped = reduction > 0;
 
   return {
     original: totalSubsidy,
     capped,
     reduction,
+    is_capped: isCapped,
     ceiling_rate: ceilingRate * 100, // En %
+    absolute_ceiling: absoluteCeiling,
+    percent_ceiling: percentCeiling,
     max_allowed: maxAllowed,
+    capping_reason: isCapped
+      ? maxAllowed === absoluteCeiling
+        ? `Plafond absolu ${category.toUpperCase()} (${absoluteCeiling}€)`
+        : `${ceilingRate * 100}% du coût des travaux`
+      : null,
   };
 };
 
@@ -245,8 +271,8 @@ export const calculateFullSubsidy = (formData) => {
   // 2. Calcul CEE
   const ceeAmounts = calculateCEE({
     postal_code,
-    usage,
-    surface: heated_surface,
+    housing_type: formData.housing_type || 'house', // 'house' ou 'apartment'
+    surface: heated_surface || 90, // Surface par défaut si non fournie
   });
 
   // 3. Calcul MPR

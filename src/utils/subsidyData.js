@@ -42,49 +42,114 @@ export const getMPRCategory = (rfr, household, postalCode) => {
 };
 
 /**
- * Barèmes Prime Énergie (CEE) pour PAC air/eau
- * Montants en € selon zone climatique et surface
+ * Barèmes Prime Énergie (CEE) 2026 pour PAC air/eau
+ * Basés sur BAR-TH-171 révisé au 01/01/2026
+ * Montants en € selon zone climatique, surface et niveau de revenus
+ *
+ * IMPORTANT : Forfaits moyens estimés
+ * En réalité, le montant exact dépend du calcul kWh cumac × prix CEE
+ * Hypothèses : ETAS > 140%, Prix CEE Précarité ~11€/MWhc, Classique ~7.8€/MWhc
  */
 export const CEE_RATES = {
-  // Zones climatiques H1, H2, H3
-  heating_only: {
-    // Zone H1 (Nord, Est)
+  // Maisons individuelles
+  house: {
     h1: {
-      base: 3636,      // Très modeste
-      moderate: 3181.5, // Modeste
-      classic: 3181.5,  // Classique
+      // Zone H1 (Nord, Est) - climat froid
+      small: {
+        // < 70 m²
+        very_modest: 3500,  // Bleu + Jaune (Coup de pouce × 5)
+        classic: 2200,      // Violet + Rose (CEE classique)
+      },
+      medium: {
+        // 70-90 m²
+        very_modest: 4400,
+        classic: 2750,
+      },
+      large: {
+        // > 90 m²
+        very_modest: 5300,
+        classic: 3300,
+      },
     },
-    // Zone H2 (Ouest, Centre)
     h2: {
-      base: 3300,
-      moderate: 2887.5,
-      classic: 2887.5,
+      // Zone H2 (Ouest, Centre)
+      small: {
+        very_modest: 3200,
+        classic: 2000,
+      },
+      medium: {
+        very_modest: 4000,
+        classic: 2500,
+      },
+      large: {
+        very_modest: 4800,
+        classic: 3000,
+      },
     },
-    // Zone H3 (Sud, Méditerranée)
     h3: {
-      base: 2700,
-      moderate: 2362.5,
-      classic: 2362.5,
-    }
+      // Zone H3 (Sud, Méditerranée)
+      small: {
+        very_modest: 2600,
+        classic: 1600,
+      },
+      medium: {
+        very_modest: 3200,
+        classic: 2000,
+      },
+      large: {
+        very_modest: 3800,
+        classic: 2400,
+      },
+    },
   },
-  heating_and_dhw: {
-    // Chauffage + Eau chaude sanitaire
+  // Appartements
+  apartment: {
     h1: {
-      base: 4545,
-      moderate: 3977,
-      classic: 3977,
+      small: {
+        // < 35 m²
+        very_modest: 2200,
+        classic: 1400,
+      },
+      medium: {
+        // 35-60 m²
+        very_modest: 3000,
+        classic: 1900,
+      },
+      large: {
+        // > 60 m²
+        very_modest: 4000,
+        classic: 2500,
+      },
     },
     h2: {
-      base: 4125,
-      moderate: 3609,
-      classic: 3609,
+      small: {
+        very_modest: 2000,
+        classic: 1250,
+      },
+      medium: {
+        very_modest: 2700,
+        classic: 1700,
+      },
+      large: {
+        very_modest: 3600,
+        classic: 2250,
+      },
     },
     h3: {
-      base: 3375,
-      moderate: 2953,
-      classic: 2953,
-    }
-  }
+      small: {
+        very_modest: 1600,
+        classic: 1000,
+      },
+      medium: {
+        very_modest: 2200,
+        classic: 1400,
+      },
+      large: {
+        very_modest: 2900,
+        classic: 1800,
+      },
+    },
+  },
 };
 
 /**
@@ -145,14 +210,25 @@ export const MPR_BONUSES = {
 };
 
 /**
- * Taux d'écrêtement (plafond de cumul des aides)
- * % maximum de la dépense éligible pouvant être couvert par les aides
+ * Plafonds d'écrêtement 2026 (montants absolus maximum)
+ * Montant maximum total des aides cumulées (CEE + MaPrimeRénov' + Bonus)
+ */
+export const CEILING_ABSOLUTE = {
+  blue: 10800,     // 10 800€ maximum total
+  yellow: 9000,    // 9 000€ maximum total
+  violet: 7200,    // 7 200€ maximum total
+  rose: 4800,      // 4 800€ maximum total (si éligible)
+};
+
+/**
+ * Taux d'écrêtement alternatifs (% du coût des travaux)
+ * Utilisé si le plafond absolu n'est pas atteint
  */
 export const CEILING_RATES = {
-  blue: 0.90,      // 90% max
-  yellow: 0.75,    // 75% max
-  violet: 0.60,    // 60% max
-  rose: 0.40,      // 40% max
+  blue: 0.90,      // 90% max du coût
+  yellow: 0.75,    // 75% max du coût
+  violet: 0.60,    // 60% max du coût
+  rose: 0.40,      // 40% max du coût
 };
 
 /**
@@ -163,13 +239,44 @@ export const MAX_ELIGIBLE_EXPENSE = 12000; // €
 /**
  * Bonus de remplacement d'ancien système
  * Montants supplémentaires selon type de chauffage remplacé
+ * Barèmes 2026 officiels
  */
 export const REPLACEMENT_BONUSES = {
-  coal: 800,      // Charbon
-  fuel: 1200,     // Fioul
-  gas: 400,       // Gaz
-  electric: 200,  // Électrique (convecteurs)
-  none: 0         // Pas de remplacement
+  coal: {
+    // Charbon
+    blue: 800,
+    yellow: 800,
+    violet: 400,
+    rose: 0,
+  },
+  fuel: {
+    // Fioul
+    blue: 1200,
+    yellow: 800,
+    violet: 400,
+    rose: 0,
+  },
+  gas: {
+    // Gaz
+    blue: 400,
+    yellow: 400,
+    violet: 0,
+    rose: 0,
+  },
+  electric: {
+    // Électrique (convecteurs)
+    blue: 0,
+    yellow: 0,
+    violet: 0,
+    rose: 0,
+  },
+  none: {
+    // Pas de remplacement
+    blue: 0,
+    yellow: 0,
+    violet: 0,
+    rose: 0,
+  },
 };
 
 /**
@@ -210,6 +317,7 @@ export default {
   MPR_RATES,
   MPR_BONUSES,
   CEILING_RATES,
+  CEILING_ABSOLUTE,
   MAX_ELIGIBLE_EXPENSE,
   REPLACEMENT_BONUSES,
   TECHNICAL_CRITERIA,
