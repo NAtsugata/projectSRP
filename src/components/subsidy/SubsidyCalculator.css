@@ -678,11 +678,200 @@
   }
 }
 
+/* Mode Selector */
+.mode-selector {
+  max-width: 1200px;
+}
+
+.mode-selection {
+  padding: 20px 0;
+}
+
+.mode-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.mode-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 3px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.mode-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: #0066cc;
+}
+
+.mode-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.mode-card h4 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.mode-card p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.mode-features {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.mode-features li {
+  padding: 8px 0;
+  color: #333;
+  font-size: 15px;
+}
+
+.mode-card .btn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.mode-comparison {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 8px;
+  margin-top: 40px;
+}
+
+.mode-comparison h4 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.comparison-table th {
+  background: #0066cc;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+}
+
+.comparison-table td:first-child {
+  font-weight: 600;
+  background: #f8f9fa;
+}
+
+.comparison-table td:nth-child(2),
+.comparison-table td:nth-child(3) {
+  text-align: center;
+}
+
+/* Copropriété Result Specific */
+.copro-result .subsidy-card {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.copro-result .subsidy-details-section {
+  margin-bottom: 30px;
+}
+
+.copro-result .subsidy-details-section h3 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 20px;
+  border-left: 4px solid #28a745;
+  padding-left: 15px;
+}
+
+.copro-result .details-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.copro-result .detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.copro-result .detail-row:last-child {
+  border-bottom: none;
+}
+
+.copro-result .detail-row.total {
+  border-top: 2px solid #333;
+  padding-top: 15px;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+.copro-result .detail-amount {
+  color: #28a745;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.copro-result .detail-rate {
+  color: #666;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.copro-result .amount-sublabel {
+  font-size: 16px;
+  opacity: 0.9;
+  margin-top: 5px;
+}
+
+/* Responsive for mode selector */
+@media (max-width: 768px) {
+  .mode-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-table {
+    font-size: 13px;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 10px 5px;
+  }
+}
+
 @media print {
   .form-navigation,
   .result-actions,
   .refinement-form,
-  .refinement-prompt {
+  .refinement-prompt,
+  .mode-selection {
     display: none;
   }
 
