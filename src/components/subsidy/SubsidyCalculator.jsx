@@ -15,6 +15,7 @@ const SubsidyCalculator = () => {
 
     // Étape 2 : Bâtiment
     building_age: 'more_than_15',
+    housing_type: 'house', // 'house' ou 'apartment'
     postal_code: '',
     heated_surface: '',
 
@@ -287,6 +288,30 @@ const SubsidyCalculator = () => {
                   onChange={(e) => handleChange('building_age', e.target.value)}
                 />
                 Plus de 15 ans
+              </label>
+            </div>
+
+            <h3>Type de logement :</h3>
+            <div className="radio-group">
+              <label className={formData.housing_type === 'house' ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="housing_type"
+                  value="house"
+                  checked={formData.housing_type === 'house'}
+                  onChange={(e) => handleChange('housing_type', e.target.value)}
+                />
+                Maison individuelle
+              </label>
+              <label className={formData.housing_type === 'apartment' ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="housing_type"
+                  value="apartment"
+                  checked={formData.housing_type === 'apartment'}
+                  onChange={(e) => handleChange('housing_type', e.target.value)}
+                />
+                Appartement
               </label>
             </div>
 
