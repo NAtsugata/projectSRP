@@ -3,12 +3,27 @@
 
 import React, { useState } from 'react';
 import { RESOURCE_THRESHOLDS } from '../../utils/subsidyData';
+import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
+import LegalNotices from './LegalNotices';
 import './SubsidyCalculator.css';
 
 const SubsidyResult = ({ result, formData, onBack, onReset, onRefine }) => {
   const [showRefinement, setShowRefinement] = useState(!formData.rfr || !formData.household_size);
   const [householdSize, setHouseholdSize] = useState(formData.household_size || 1);
   const [rfr, setRfr] = useState(formData.rfr || '');
+
+  // Gestion export PDF
+  const handlePDFExport = () => {
+    const pdfData = preparePDFExport({
+      type: 'individual',
+      title: 'Estimation Primes Énergétiques - Logement Individuel',
+      data: formData,
+    });
+
+    exportToPDF(pdfData.metadata.title, {
+      filename: pdfData.filename,
+    });
+  };
 
   // Si non éligible
   if (!result.eligible) {
@@ -300,6 +315,9 @@ const SubsidyResult = ({ result, formData, onBack, onReset, onRefine }) => {
       {/* Prime recommandée */}
       {result.recommended_scenario && renderRecommendedSubsidy()}
 
+      {/* Mentions légales */}
+      <LegalNotices calculationType="individual" generatedDate={new Date()} />
+
       {/* Actions */}
       <div className="result-actions">
         <button className="btn btn-secondary" onClick={onBack}>
@@ -308,8 +326,8 @@ const SubsidyResult = ({ result, formData, onBack, onReset, onRefine }) => {
         <button className="btn btn-secondary" onClick={onReset}>
           🔄 Nouveau calcul
         </button>
-        <button className="btn btn-primary" onClick={() => window.print()}>
-          🖨️ Imprimer
+        <button className="btn btn-primary" onClick={handlePDFExport}>
+          📄 Exporter PDF
         </button>
       </div>
     </div>

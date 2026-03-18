@@ -2,9 +2,24 @@
 // Affichage des résultats MaPrimeRénov' Copropriété
 
 import React from 'react';
+import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
+import LegalNotices from './LegalNotices';
 import './SubsidyCalculator.css';
 
 const SubsidyCoproResult = ({ result, formData, onBack, onReset }) => {
+  // Gestion export PDF
+  const handlePDFExport = () => {
+    const pdfData = preparePDFExport({
+      type: 'copro',
+      title: 'Estimation MaPrimeRénov\' Copropriété',
+      data: formData,
+    });
+
+    exportToPDF(pdfData.metadata.title, {
+      filename: pdfData.filename,
+    });
+  };
+
   if (!result.eligible) {
     return (
       <div className="subsidy-result ineligible">
@@ -260,6 +275,9 @@ const SubsidyCoproResult = ({ result, formData, onBack, onReset }) => {
         </div>
       </div>
 
+      {/* Mentions légales */}
+      <LegalNotices calculationType="copro" generatedDate={new Date()} />
+
       {/* Actions */}
       <div className="result-actions">
         <button className="btn btn-secondary" onClick={onBack}>
@@ -268,8 +286,8 @@ const SubsidyCoproResult = ({ result, formData, onBack, onReset }) => {
         <button className="btn btn-secondary" onClick={onReset}>
           🔄 Nouveau calcul
         </button>
-        <button className="btn btn-primary" onClick={() => window.print()}>
-          🖨️ Imprimer
+        <button className="btn btn-primary" onClick={handlePDFExport}>
+          📄 Exporter PDF
         </button>
       </div>
     </div>

@@ -866,17 +866,169 @@
   }
 }
 
+/* Styles d'impression pour PDF */
 @media print {
+  @page {
+    size: A4;
+    margin: 2cm 1.5cm;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000;
+    background: white;
+  }
+
+  /* Masquer éléments interactifs */
   .form-navigation,
   .result-actions,
   .refinement-form,
   .refinement-prompt,
-  .mode-selection {
-    display: none;
+  .mode-selection,
+  button,
+  .btn {
+    display: none !important;
   }
 
+  /* Container principal */
   .subsidy-calculator,
   .subsidy-result {
     box-shadow: none;
+    border: none;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* En-tête page */
+  .calculator-header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+  }
+
+  .calculator-header h2 {
+    font-size: 20pt;
+    color: #000;
+  }
+
+  .calculator-subtitle {
+    font-size: 11pt;
+    color: #333;
+  }
+
+  /* Cartes de résultat */
+  .subsidy-card {
+    background: #f0f0f0 !important;
+    border: 2px solid #000 !important;
+    page-break-inside: avoid;
+    padding: 20px;
+    color: #000 !important;
+  }
+
+  .subsidy-card * {
+    color: #000 !important;
+  }
+
+  .amount-value {
+    font-size: 32pt;
+    text-shadow: none;
+  }
+
+  /* Détails */
+  .subsidy-details,
+  .details-card {
+    background: white;
+    border: 1px solid #000;
+    page-break-inside: avoid;
+    margin-bottom: 15px;
+  }
+
+  .subsidy-details-section {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+  }
+
+  /* Tableaux */
+  .scenarios-table,
+  .comparison-table {
+    border: 1px solid #000;
+    page-break-inside: avoid;
+  }
+
+  .scenarios-table th,
+  .scenarios-table td,
+  .comparison-table th,
+  .comparison-table td {
+    border: 1px solid #000;
+    padding: 8px;
+    font-size: 9pt;
+  }
+
+  .scenarios-table th,
+  .comparison-table th {
+    background: #e0e0e0 !important;
+    color: #000 !important;
+  }
+
+  /* Mentions légales */
+  .legal-notices {
+    page-break-before: always;
+    background: white;
+    border: 1px solid #000;
+    padding: 15px;
+    font-size: 8pt;
+  }
+
+  .legal-section {
+    page-break-inside: avoid;
+    border-left: 2px solid #000;
+    margin-bottom: 10px;
+  }
+
+  .legal-section h4 {
+    color: #000;
+    font-size: 10pt;
+  }
+
+  /* Liens - afficher URL */
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 7pt;
+    color: #666;
+  }
+
+  /* Optimisation couleurs */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Forcer sauts de page */
+  .recommended-subsidy {
+    page-break-inside: avoid;
+  }
+
+  .scenario-section {
+    page-break-inside: avoid;
+  }
+
+  /* Pied de page informatif */
+  .subsidy-result::after {
+    content: "Document généré par le Calculateur de Primes Énergétiques - Estimation indicative non contractuelle";
+    display: block;
+    text-align: center;
+    font-size: 8pt;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #000;
+    color: #666;
   }
 }

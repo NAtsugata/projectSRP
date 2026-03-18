@@ -7,6 +7,7 @@ export { default as SubsidyCalculator } from './SubsidyCalculator';
 export { default as SubsidyResult } from './SubsidyResult';
 export { default as SubsidyCoproCalculator } from './SubsidyCoproCalculator';
 export { default as SubsidyCoproResult } from './SubsidyCoproResult';
+export { default as LegalNotices } from './LegalNotices';
 
 // Calculs individuels
 export {
@@ -57,3 +58,14 @@ export {
   calculateCoproCeiling,
   getAccompanimentRate,
 } from '../../utils/subsidyCoproData';
+
+// Export PDF et mentions légales
+export {
+  exportToPDF,
+  generateFilename,
+  formatDateForPDF,
+  generatePDFHeader,
+  generatePDFFooter,
+  preparePDFExport,
+  getPrintStyles,
+} from '../../utils/pdfExport';
