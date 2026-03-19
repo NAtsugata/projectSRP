@@ -2,15 +2,55 @@
 // Sélecteur Individuel / Copropriété
 
 import React, { useState } from 'react';
+import ProjectTypeSelector from './ProjectTypeSelector';
 import SubsidyCalculator from './SubsidyCalculator';
 import SubsidyCoproCalculator from './SubsidyCoproCalculator';
 import './SubsidyCalculator.css';
 
 const SubsidyModeSelector = () => {
+  const [projectType, setProjectType] = useState(null); // null | 'house' | 'apartment' | 'collective' | 'business'
   const [mode, setMode] = useState(null); // null | 'individual' | 'copro'
 
-  if (mode === 'individual') {
-    return <SubsidyCalculator onBack={() => setMode(null)} />;
+  // Première étape : sélection du type de projet
+  if (!projectType) {
+    return <ProjectTypeSelector onSelectType={setProjectType} />;
+  }
+
+  // Business → message "non disponible" pour l'instant
+  if (projectType === 'business') {
+    return (
+      <div className="subsidy-calculator">
+        <div className="calculator-header">
+          <h2>Secteur Tertiaire - Bientôt disponible</h2>
+          <p className="calculator-subtitle">
+            Les calculateurs pour entreprises et collectivités sont en cours de développement.
+          </p>
+        </div>
+        <div className="mode-selection" style={{ textAlign: 'center', padding: '40px' }}>
+          <p style={{ marginBottom: '20px', color: '#666' }}>
+            Pour l'instant, veuillez utiliser le calculateur pour logements individuels ou copropriétés.
+          </p>
+          <button className="btn btn-primary" onClick={() => setProjectType(null)}>
+            ← Retour au choix du projet
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Collective → Copropriété
+  if (projectType === 'collective') {
+    return <SubsidyCoproCalculator onBack={() => setProjectType(null)} />;
+  }
+
+  // House / Apartment → Individuel
+  if (mode === 'individual' || projectType === 'house' || projectType === 'apartment') {
+    return (
+      <SubsidyCalculator
+        projectType={projectType}
+        onBack={() => setProjectType(null)}
+      />
+    );
   }
 
   if (mode === 'copro') {

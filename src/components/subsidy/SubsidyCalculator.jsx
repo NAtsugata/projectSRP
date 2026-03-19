@@ -10,36 +10,39 @@ import './SubsidyCalculator.css';
 const SubsidyCalculator = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Étape 1 : Identité
-    applicant_type: 'owner',
-    entity_type: 'individual',
+    // Étape 1 : Identité et statut juridique
+    applicant_type: 'owner',             // 'owner' | 'tenant'
+    entity_type: 'individual',           // 'individual' | 'company'
+    occupancy_status: 'owner_occupied',  // 'owner_occupied' | 'rented' | 'vacant'
+    is_main_residence: true,             // Au moins 8 mois/an
 
     // Étape 2 : Bâtiment
-    building_age: 'more_than_15',
-    housing_type: 'house', // 'house' ou 'apartment'
+    building_age: 'more_than_15',       // '<2' | '2_to_15' | 'more_than_15'
+    housing_type: 'house',              // 'house' | 'apartment'
     postal_code: '',
     heated_surface: '',
 
     // Étape 3 : PAC - Type et usage
-    application_type: 'low_temp',
-    usage: 'heating',
+    application_type: 'low_temp',       // 'low_temp' | 'medium_temp' | 'high_temp'
+    usage: 'heating',                   // 'heating' | 'heating_dhw' | 'other'
     has_regulator: true,
-    regulator_class: 4,
+    regulator_class: 4,                 // 4 | 5 | 6 | 7 | 8
 
     // Étape 4 : PAC - Performances
     etas: '',
     thermal_power: '',
-    starting_intensity: 'mono_45A',
+    starting_intensity: 'mono_45A',     // 'mono_45A' | 'tri_60A' | 'other'
 
     // Étape 5 : Configuration système
     has_other_heating: false,
-    emitter_type: 'radiant',
+    has_wood_heating: false,            // Appareil bois indépendant dans pièce non connectée
+    emitter_type: 'radiant',            // 'radiant' | 'mixed' | 'other'
     has_dhw_system: false,
     dhw_consumes_energy: false,
     dhw_has_backup: false,
 
     // Étape 6 : Contexte et remplacement
-    replacement_type: 'none',
+    replacement_type: 'none',           // 'coal' | 'fuel' | 'gas' | 'electric' | 'none'
     has_exit_sieve: false,
     has_bbc_target: false,
 
@@ -250,6 +253,64 @@ const SubsidyCalculator = () => {
                   onChange={(e) => handleChange('entity_type', e.target.value)}
                 />
                 Une personne morale
+              </label>
+            </div>
+
+            <h3>Votre situation :</h3>
+            <div className="radio-group">
+              <label className={formData.occupancy_status === 'owner_occupied' ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="occupancy_status"
+                  value="owner_occupied"
+                  checked={formData.occupancy_status === 'owner_occupied'}
+                  onChange={(e) => handleChange('occupancy_status', e.target.value)}
+                />
+                Propriétaire occupant
+              </label>
+              <label className={formData.occupancy_status === 'rented' ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="occupancy_status"
+                  value="rented"
+                  checked={formData.occupancy_status === 'rented'}
+                  onChange={(e) => handleChange('occupancy_status', e.target.value)}
+                />
+                Le bien est loué
+              </label>
+              <label className={formData.occupancy_status === 'vacant' ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="occupancy_status"
+                  value="vacant"
+                  checked={formData.occupancy_status === 'vacant'}
+                  onChange={(e) => handleChange('occupancy_status', e.target.value)}
+                />
+                Le bien est libre
+              </label>
+            </div>
+
+            <h3>Votre logement est occupé à titre de résidence principale (au moins 8 mois par an) :</h3>
+            <div className="radio-group">
+              <label className={formData.is_main_residence === true ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="is_main_residence"
+                  value="true"
+                  checked={formData.is_main_residence === true}
+                  onChange={() => handleChange('is_main_residence', true)}
+                />
+                Oui
+              </label>
+              <label className={formData.is_main_residence === false ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="is_main_residence"
+                  value="false"
+                  checked={formData.is_main_residence === false}
+                  onChange={() => handleChange('is_main_residence', false)}
+                />
+                Non
               </label>
             </div>
           </div>
@@ -597,6 +658,30 @@ const SubsidyCalculator = () => {
                   value="false"
                   checked={formData.has_other_heating === false}
                   onChange={() => handleChange('has_other_heating', false)}
+                />
+                Non
+              </label>
+            </div>
+
+            <h3>La PAC est-elle associée à un appareil indépendant de chauffage au bois dans une pièce non connectée au réseau de chauffage alimenté par la PAC ?</h3>
+            <div className="radio-group">
+              <label className={formData.has_wood_heating === true ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="has_wood_heating"
+                  value="true"
+                  checked={formData.has_wood_heating === true}
+                  onChange={() => handleChange('has_wood_heating', true)}
+                />
+                Oui
+              </label>
+              <label className={formData.has_wood_heating === false ? 'selected' : ''}>
+                <input
+                  type="radio"
+                  name="has_wood_heating"
+                  value="false"
+                  checked={formData.has_wood_heating === false}
+                  onChange={() => handleChange('has_wood_heating', false)}
                 />
                 Non
               </label>
