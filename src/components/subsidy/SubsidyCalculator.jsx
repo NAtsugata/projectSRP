@@ -357,7 +357,18 @@ const SubsidyCalculator = () => {
         {/* Étape 3 : Type et usage PAC */}
         {step === 3 && (
           <div className="form-step">
-            <h3>Quel est son type d'application ?</h3>
+            <h3>
+              Quel est son type d'application ?
+              <InfoTooltip title="Type d'application PAC">
+                <p>Température de fonctionnement de votre PAC :</p>
+                <ul>
+                  <li><strong>Basse température</strong> : ≤35°C (plancher chauffant)</li>
+                  <li><strong>Moyenne température</strong> : 35-55°C (radiateurs basse T°)</li>
+                  <li><strong>Haute température</strong> : &gt;55°C (radiateurs classiques)</li>
+                </ul>
+                <p>Cette info se trouve sur la fiche technique de votre PAC.</p>
+              </InfoTooltip>
+            </h3>
             <div className="radio-group">
               <label className={formData.application_type === 'low_temp' ? 'selected' : ''}>
                 <input
@@ -425,7 +436,19 @@ const SubsidyCalculator = () => {
               </label>
             </div>
 
-            <h3>La PAC est-elle équipée d'un régulateur ?</h3>
+            <h3>
+              La PAC est-elle équipée d'un régulateur ?
+              <InfoTooltip title="Régulateur - Obligatoire" position="right">
+                <p><strong>Régulateur de température</strong> (thermostat programmable)</p>
+                <p><strong>Obligatoire</strong> pour les aides CEE et MaPrimeRénov'</p>
+                <p>Classes requises :</p>
+                <ul>
+                  <li><strong>Classe IV minimum</strong> pour être éligible</li>
+                  <li>Classe V, VI, VII, VIII : meilleures performances</li>
+                </ul>
+                <p>Le régulateur optimise le fonctionnement de la PAC selon vos besoins.</p>
+              </InfoTooltip>
+            </h3>
             <div className="radio-group">
               <label className={formData.has_regulator === true ? 'selected' : ''}>
                 <input
@@ -698,7 +721,26 @@ const SubsidyCalculator = () => {
         {/* Étape 6 : Remplacement et contexte */}
         {step === 6 && (
           <div className="form-step">
-            <h3>Les travaux comprennent le remplacement d'une chaudière individuelle ou convecteur fonctionnant :</h3>
+            <h3>
+              Les travaux comprennent le remplacement d'une chaudière individuelle ou convecteur fonctionnant :
+              <InfoTooltip title="Bonus de remplacement" position="right">
+                <p><strong>Bonus MaPrimeRénov' selon l'ancien système :</strong></p>
+                <table style={{fontSize: '12px', marginTop: '10px'}}>
+                  <thead>
+                    <tr><th>Type</th><th>Bleu</th><th>Jaune</th><th>Violet</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><strong>Fioul</strong></td><td>+1200€</td><td>+800€</td><td>+400€</td></tr>
+                    <tr><td><strong>Charbon</strong></td><td>+800€</td><td>+800€</td><td>+400€</td></tr>
+                    <tr><td><strong>Gaz</strong></td><td>+400€</td><td>+400€</td><td>0€</td></tr>
+                    <tr><td><strong>Électrique</strong></td><td>0€</td><td>0€</td><td>0€</td></tr>
+                  </tbody>
+                </table>
+                <p style={{marginTop: '10px'}}>
+                  Le remplacement d'énergie fossile est <strong>fortement encouragé</strong> !
+                </p>
+              </InfoTooltip>
+            </h3>
             <div className="radio-group">
               <label className={formData.replacement_type === 'coal' ? 'selected' : ''}>
                 <input
@@ -777,7 +819,23 @@ const SubsidyCalculator = () => {
         {/* Étape 7 : Financier */}
         {step === 7 && (
           <div className="form-step">
-            <h3>Coût total du projet (fourniture + pose en €) :</h3>
+            <h3>
+              Coût total du projet (fourniture + pose en €) :
+              <InfoTooltip title="Plafond de dépenses" position="right">
+                <p><strong>Dépense éligible maximum : 12 000 € HT</strong></p>
+                <p>
+                  Si votre projet coûte plus de 12 000€, les aides seront calculées sur 12 000€ maximum.
+                </p>
+                <p><strong>Le coût doit inclure :</strong></p>
+                <ul>
+                  <li>Fourniture de la PAC</li>
+                  <li>Pose et installation</li>
+                  <li>Mise en service</li>
+                  <li>Attestation sur l'honneur</li>
+                </ul>
+                <p>Prix indicatif : <strong>8 000€ à 15 000€</strong> selon puissance</p>
+              </InfoTooltip>
+            </h3>
             <input
               type="number"
               className={`form-input ${errors.project_cost ? 'error' : ''}`}
