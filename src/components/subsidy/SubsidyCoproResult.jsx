@@ -4,6 +4,7 @@
 import React from 'react';
 import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
 import LegalNotices from './LegalNotices';
+import HowItWorks from './HowItWorks';
 import './SubsidyCalculator.css';
 
 const SubsidyCoproResult = ({ result, formData, onBack, onReset }) => {
@@ -274,6 +275,9 @@ const SubsidyCoproResult = ({ result, formData, onBack, onReset }) => {
           </div>
         </div>
       </div>
+
+      {/* Explications détaillées */}
+      <HowItWorks calculationType="copro" />
 
       {/* Mentions légales */}
       <LegalNotices calculationType="copro" generatedDate={new Date()} />

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { RESOURCE_THRESHOLDS } from '../../utils/subsidyData';
 import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
 import LegalNotices from './LegalNotices';
+import HowItWorks from './HowItWorks';
 import './SubsidyCalculator.css';
 
 const SubsidyResult = ({ result, formData, onBack, onReset, onRefine }) => {
@@ -314,6 +315,9 @@ const SubsidyResult = ({ result, formData, onBack, onReset, onRefine }) => {
 
       {/* Prime recommandée */}
       {result.recommended_scenario && renderRecommendedSubsidy()}
+
+      {/* Explications détaillées */}
+      <HowItWorks calculationType="individual" />
 
       {/* Mentions légales */}
       <LegalNotices calculationType="individual" generatedDate={new Date()} />
