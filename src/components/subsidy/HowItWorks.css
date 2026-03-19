@@ -1,0 +1,391 @@
+/* src/components/subsidy/HowItWorks.css */
+/* Styles pour la section "Comment ça marche" */
+
+.how-it-works {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 30px;
+  margin: 30px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.how-title {
+  color: #2c3e50;
+  font-size: 28px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.how-subtitle {
+  color: #7f8c8d;
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* Onglets */
+.how-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.how-tab {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #7f8c8d;
+}
+
+.how-tab:hover {
+  border-color: #3498db;
+  color: #3498db;
+  transform: translateY(-2px);
+}
+
+.how-tab.active {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border-color: #2980b9;
+  color: white;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* Contenu */
+.how-content {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+}
+
+.how-content h3 {
+  color: #2c3e50;
+  font-size: 24px;
+  margin-bottom: 20px;
+  border-bottom: 3px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.how-content h4 {
+  color: #34495e;
+  font-size: 18px;
+  margin: 25px 0 15px 0;
+}
+
+.how-section {
+  margin-bottom: 30px;
+}
+
+.how-section p {
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 15px;
+}
+
+.how-section ol, .how-section ul {
+  color: #555;
+  line-height: 1.8;
+  margin-left: 20px;
+}
+
+.how-section li {
+  margin: 8px 0;
+}
+
+.how-section li strong {
+  color: #2c3e50;
+}
+
+.how-section ul ul {
+  margin-top: 5px;
+  margin-left: 20px;
+}
+
+/* Tableaux */
+.bareme-table,
+.bonus-table,
+.ceiling-table,
+.eligibility-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bareme-table th,
+.bonus-table th,
+.ceiling-table th,
+.eligibility-table th {
+  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  color: white;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.bareme-table td,
+.bonus-table td,
+.ceiling-table td,
+.eligibility-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.bareme-table tbody tr:hover,
+.bonus-table tbody tr:hover,
+.ceiling-table tbody tr:hover,
+.eligibility-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+/* Catégories colorées */
+.cat-blue {
+  border-left: 4px solid #3498db;
+  background: rgba(52, 152, 219, 0.05);
+}
+
+.cat-yellow {
+  border-left: 4px solid #f39c12;
+  background: rgba(243, 156, 18, 0.05);
+}
+
+.cat-violet {
+  border-left: 4px solid #9b59b6;
+  background: rgba(155, 89, 182, 0.05);
+}
+
+.cat-rose {
+  border-left: 4px solid #e74c3c;
+  background: rgba(231, 76, 60, 0.05);
+}
+
+/* Boîte formule */
+.formula-box {
+  background: #2c3e50;
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  font-family: 'Courier New', monospace;
+}
+
+.formula-box code {
+  display: block;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #3498db;
+  font-weight: 600;
+}
+
+.formula-box p {
+  margin-top: 15px;
+  font-size: 13px;
+  color: #ecf0f1;
+  font-family: sans-serif;
+}
+
+.formula-detail {
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Boîte d'exemple */
+.example-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left: 5px solid #4caf50;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.example-box h4 {
+  color: #2e7d32;
+}
+
+/* Étapes de calcul */
+.calculation-steps {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.calc-step {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  margin: 8px 0;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.calc-step.total {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  color: white;
+  font-size: 18px;
+  margin-top: 15px;
+  padding: 15px;
+}
+
+.calc-step.warning {
+  background: #fff3cd;
+  border-left: 4px solid #f39c12;
+}
+
+.calc-step.reduction {
+  background: #f8d7da;
+  border-left: 4px solid #e74c3c;
+  color: #721c24;
+}
+
+.calc-step span {
+  flex: 1;
+}
+
+.calc-step strong {
+  font-size: 18px;
+  color: #27ae60;
+}
+
+.calc-step.total strong {
+  color: white;
+}
+
+.calc-step.reduction strong {
+  color: #c82333;
+}
+
+/* Boîte d'avertissement */
+.warning-box {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-left: 5px solid #f39c12;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.warning-box h4 {
+  color: #d68910;
+}
+
+.warning-box ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.warning-box li {
+  padding: 8px 0;
+  color: #856404;
+}
+
+/* Checklist */
+.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.checklist li {
+  padding: 10px 15px;
+  margin: 8px 0;
+  background: #f8f9fa;
+  border-left: 4px solid #27ae60;
+  border-radius: 4px;
+}
+
+/* Liens */
+.how-content a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.how-content a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .how-it-works {
+    padding: 20px 15px;
+  }
+
+  .how-title {
+    font-size: 22px;
+  }
+
+  .how-subtitle {
+    font-size: 14px;
+  }
+
+  .how-tabs {
+    flex-direction: column;
+  }
+
+  .how-tab {
+    width: 100%;
+  }
+
+  .how-content {
+    padding: 20px 15px;
+  }
+
+  .how-content h3 {
+    font-size: 20px;
+  }
+
+  .bareme-table,
+  .bonus-table,
+  .ceiling-table,
+  .eligibility-table {
+    font-size: 13px;
+  }
+
+  .bareme-table th,
+  .bonus-table th,
+  .ceiling-table th,
+  .eligibility-table th,
+  .bareme-table td,
+  .bonus-table td,
+  .ceiling-table td,
+  .eligibility-table td {
+    padding: 8px 6px;
+  }
+
+  .calc-step {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .calc-step strong {
+    font-size: 16px;
+  }
+}
+
+/* Impression */
+@media print {
+  .how-tabs {
+    display: none;
+  }
+
+  .how-it-works {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .how-content {
+    page-break-inside: avoid;
+  }
+
+  .bareme-table,
+  .bonus-table,
+  .ceiling-table,
+  .eligibility-table {
+    page-break-inside: avoid;
+  }
+}
