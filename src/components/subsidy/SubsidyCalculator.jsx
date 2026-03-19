@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { calculateFullSubsidy } from '../../utils/subsidyCalculations';
 import SubsidyResult from './SubsidyResult';
+import InfoTooltip from './InfoTooltip';
 import './SubsidyCalculator.css';
 
 const SubsidyCalculator = () => {
@@ -326,7 +327,21 @@ const SubsidyCalculator = () => {
             />
             {errors.postal_code && <span className="error-message">{errors.postal_code}</span>}
 
-            <h3>Quelle est la surface habitable chauffée par la PAC (en m²) :</h3>
+            <h3>
+              Quelle est la surface habitable chauffée par la PAC (en m²) :
+              <InfoTooltip title="Surface chauffée" position="right">
+                <p>
+                  Surface des pièces équipées d'émetteurs de chaleur (radiateurs, plancher chauffant)
+                  alimentés par la PAC.
+                </p>
+                <p><strong>Impact sur les CEE :</strong></p>
+                <ul>
+                  <li><strong>Maisons</strong> : Seuils 70m² et 90m²</li>
+                  <li><strong>Appartements</strong> : Seuils 35m² et 60m²</li>
+                </ul>
+                <p>Plus la surface est grande, plus la prime CEE est élevée.</p>
+              </InfoTooltip>
+            </h3>
             <input
               type="number"
               className={`form-input ${errors.heated_surface ? 'error' : ''}`}
@@ -459,7 +474,24 @@ const SubsidyCalculator = () => {
         {/* Étape 4 : Performances */}
         {step === 4 && (
           <div className="form-step">
-            <h3>Quelle est l'efficacité énergétique saisonnière (Etas) (en %) ?</h3>
+            <h3>
+              Quelle est l'efficacité énergétique saisonnière (ETAS) (en %) ?
+              <InfoTooltip title="ETAS - Critère CEE important" position="right">
+                <p>
+                  <strong>Efficacité Énergétique Saisonnière</strong> (norme EN 14825)
+                </p>
+                <p>Critère technique <strong>déterminant</strong> pour les aides :</p>
+                <ul>
+                  <li><strong>Minimum 111%</strong> pour être éligible</li>
+                  <li><strong>111-140%</strong> : Montant CEE standard</li>
+                  <li><strong>&gt;140%</strong> : Montant CEE bonifié (+20%)</li>
+                </ul>
+                <p>
+                  Valeur indiquée sur la fiche technique de votre PAC.
+                  Demandez à votre installateur RGE.
+                </p>
+              </InfoTooltip>
+            </h3>
             <input
               type="number"
               className={`form-input ${errors.etas ? 'error' : ''}`}
