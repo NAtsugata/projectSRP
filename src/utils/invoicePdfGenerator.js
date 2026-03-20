@@ -23,10 +23,11 @@ const COLORS = {
  * @returns {string} - Montant formate
  */
 const formatAmount = (amount) => {
+  const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(amount || 0);
+  }).format(safeAmount);
 };
 
 /**
@@ -122,13 +123,19 @@ const addLogoToPdf = (doc, logoDataUrl, x, y, maxWidth = 50, maxHeight = 20) => 
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateInvoicePDF(invoice, organization = {}, client = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation de la facture:', invoice?.invoice_number);
+  try {
+    logger.log('[PDF] Generation de la facture:', invoice?.invoice_number);
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+    // Validation des données essentielles
+    if (!invoice) {
+      throw new Error('Données de facture manquantes');
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -298,7 +305,7 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
   y += 25;
 
   // === TABLEAU DES LIGNES ===
-  const items = invoice?.invoice_items || [];
+  const items = Array.isArray(invoice?.invoice_items) ? invoice.invoice_items : [];
 
   // En-tete du tableau
   const tableY = y;
@@ -443,6 +450,10 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
 
   logger.log('[PDF] Facture generee avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation facture:', error);
+    throw new Error(`Échec génération PDF facture: ${error.message}`);
+  }
 }
 
 /**
@@ -454,13 +465,19 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateQuotePDF(quote, organization = {}, client = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation du devis:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation du devis:', quote?.quote_number);
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+    // Validation des données essentielles
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -632,7 +649,7 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
   y += 25;
 
   // === TABLEAU DES LIGNES ===
-  const items = quote?.quote_items || [];
+  const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
 
   // En-tete du tableau
   const tableY = y;
@@ -797,6 +814,10 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
 
   logger.log('[PDF] Devis genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis:', error);
+    throw new Error(`Échec génération PDF devis: ${error.message}`);
+  }
 }
 
 /**
@@ -864,10 +885,16 @@ function calculateTaxBreakdown(items) {
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateQuotePDFWithTemplate(quote, organization = {}, client = {}, template = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
 
-  // Couleur du template
-  const primaryColor = template.primary_color || '#3B82F6';
+    // Validation
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    // Couleur du template
+    const primaryColor = template.primary_color || '#3B82F6';
   const r = parseInt(primaryColor.slice(1, 3), 16);
   const g = parseInt(primaryColor.slice(3, 5), 16);
   const b = parseInt(primaryColor.slice(5, 7), 16);
@@ -987,7 +1014,7 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
   y += 20;
 
   // === TABLEAU ===
-  const items = quote?.quote_items || [];
+  const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
   const tableY = y;
   doc.setFillColor(...tplColor);
   doc.rect(MARGIN, tableY, pageWidth - MARGIN * 2, 8, 'F');
@@ -1175,6 +1202,10 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
 
   logger.log('[PDF] Devis avec template genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis avec template:', error);
+    throw new Error(`Échec génération PDF devis (template): ${error.message}`);
+  }
 }
 
 /**
@@ -1187,10 +1218,16 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
  * @returns {Promise<Blob>} - PDF sous forme de Blob
  */
 export async function generateQuotePDFWithLayout(quote, organization = {}, client = {}, layout = {}, attachments = []) {
-  logger.log('[PDF] Generation devis avec layout:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation devis avec layout:', quote?.quote_number);
 
-  // Theme colors
-  const THEME_COLORS = {
+    // Validation
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    // Theme colors
+    const THEME_COLORS = {
     default: [59, 130, 246],
     modern: [139, 92, 246],
     classic: [5, 150, 105],
@@ -1342,7 +1379,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
   };
 
   const renderItems = () => {
-    const items = quote?.quote_items || [];
+    const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
     const tableY = y;
     doc.setFillColor(...primaryColorRgb);
     doc.rect(margin, tableY, pageWidth - margin * 2, 8, 'F');
@@ -1600,6 +1637,10 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
 
   logger.log('[PDF] Devis avec layout genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis avec layout:', error);
+    throw new Error(`Échec génération PDF devis (layout): ${error.message}`);
+  }
 }
 
 /**
