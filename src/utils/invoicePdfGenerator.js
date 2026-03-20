@@ -6,10 +6,10 @@ import logger from './logger';
 
 // Constantes de mise en page
 const MARGIN = 15;
-const LINE_HEIGHT = 6;
+const LINE_HEIGHT = 7; // ✨ Augmenté de 6 à 7 pour plus d'espacement
 const COLORS = {
   primary: [59, 130, 246], // Bleu
-  text: [31, 41, 55],
+  text: [31, 41, 55], // ✅ Gris foncé pour texte lisible
   gray: [107, 114, 128],
   lightGray: [229, 231, 235],
   success: [34, 197, 94],
@@ -85,7 +85,7 @@ const loadImageAsDataUrl = async (url) => {
 };
 
 /**
- * Ajoute le logo au document PDF
+ * Ajoute le logo au document PDF en préservant son ratio d'aspect
  * @param {jsPDF} doc - Document PDF
  * @param {string} logoDataUrl - Data URL du logo
  * @param {number} x - Position X
@@ -104,10 +104,31 @@ const addLogoToPdf = (doc, logoDataUrl, x, y, maxWidth = 50, maxHeight = 20) => 
       format = 'JPEG';
     }
 
-    // Ajouter l'image avec les dimensions maximales
-    doc.addImage(logoDataUrl, format, x, y, maxWidth, maxHeight, undefined, 'FAST');
+    // Créer une image pour obtenir ses dimensions naturelles
+    const img = new Image();
+    img.src = logoDataUrl;
 
-    return y + maxHeight + 5;
+    // Calculer les dimensions en préservant le ratio d'aspect
+    let width = maxWidth;
+    let height = maxHeight;
+
+    if (img.width && img.height) {
+      const aspectRatio = img.width / img.height;
+
+      // Ajuster pour respecter les limites max tout en préservant le ratio
+      if (width / height > aspectRatio) {
+        // L'image est plus haute que large
+        width = height * aspectRatio;
+      } else {
+        // L'image est plus large que haute
+        height = width / aspectRatio;
+      }
+    }
+
+    // Ajouter l'image avec les dimensions calculées (ratio préservé)
+    doc.addImage(logoDataUrl, format, x, y, width, height, undefined, 'FAST');
+
+    return y + height + 5;
   } catch (error) {
     logger.log('[PDF] Erreur ajout logo au PDF:', error);
     return y;
@@ -338,15 +359,16 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
   items.forEach((item, index) => {
     const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
 
-    // Fond alternatif
+    // Fond alternatif avec plus d'espace
     if (index % 2 === 1) {
       doc.setFillColor(248, 250, 252);
-      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 2, 'F');
+      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 3, 'F');
     }
 
+    // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.text);
+    doc.setTextColor(...COLORS.text); // Texte gris foncé
 
     // Description (tronquee si trop longue)
     const description = item.description || '-';
@@ -362,7 +384,7 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
     doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
     doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-    y += LINE_HEIGHT + 1;
+    y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
   });
 
   // Ligne de separation
@@ -682,15 +704,16 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
   items.forEach((item, index) => {
     const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
 
-    // Fond alternatif
+    // Fond alternatif avec plus d'espace
     if (index % 2 === 1) {
       doc.setFillColor(248, 250, 252);
-      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 2, 'F');
+      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 3, 'F');
     }
 
+    // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.text);
+    doc.setTextColor(...COLORS.text); // Texte gris foncé
 
     const description = item.description || '-';
     const maxDescLength = 45;
@@ -705,7 +728,7 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
     doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
     doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-    y += LINE_HEIGHT + 1;
+    y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
   });
 
   // Ligne de separation
@@ -1412,12 +1435,13 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
 
       if (useAlternateRows && index % 2 === 1) {
         doc.setFillColor(...tableBgColorRgb);
-        doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 2, 'F');
+        doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 3, 'F');
       }
 
+      // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...COLORS.text);
+      doc.setTextColor(...COLORS.text); // Texte gris foncé toujours visible
 
       const desc = item.description || '-';
       const maxLen = 45;
@@ -1428,7 +1452,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
       doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
       doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-      y += LINE_HEIGHT + 1;
+      y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
     });
 
     y = drawLine(y + 2);
