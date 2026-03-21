@@ -4,7 +4,7 @@
 
 .company-settings-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  background: var(--bg-app);
   padding: var(--spacing-6);
 }
 
@@ -35,12 +35,12 @@
 
 /* ==================== SECTIONS ==================== */
 .settings-section {
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: var(--radius-2xl);
   padding: var(--spacing-6);
   margin-bottom: var(--spacing-6);
   box-shadow: var(--shadow-md);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   transition: all var(--transition-base);
 }
 
@@ -55,7 +55,7 @@
   color: var(--text-primary);
   margin: 0 0 var(--spacing-5) 0;
   padding-bottom: var(--spacing-3);
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* ==================== FORM GRID ==================== */
@@ -83,11 +83,11 @@
 
 .form-group .form-control {
   padding: var(--spacing-3);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
   font-size: var(--text-base);
-  color: #111827 !important;
-  background: #ffffff !important;
+  color: var(--text-primary) !important;
+  background: var(--bg-primary) !important;
   transition: all var(--transition-fast);
 }
 
@@ -98,7 +98,7 @@
 }
 
 .form-group .form-control::placeholder {
-  color: #9ca3af;
+  color: var(--text-muted);
   opacity: 0.7;
 }
 
@@ -114,7 +114,7 @@
   gap: var(--spacing-4);
   margin-top: var(--spacing-6);
   padding-top: var(--spacing-4);
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
@@ -129,7 +129,7 @@
 
 .settings-actions .btn-primary {
   background: var(--color-copper) !important;
-  color: #ffffff !important;
+  color: var(--bg-primary) !important;
   border: none !important;
   box-shadow: 0 4px 6px rgba(184, 115, 51, 0.3);
 }
@@ -140,13 +140,13 @@
 }
 
 .settings-actions .btn-secondary {
-  background: #f9fafb !important;
-  color: #111827 !important;
-  border: 2px solid #e5e7eb !important;
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
 }
 
 .settings-actions .btn-secondary:hover {
-  background: #f3f4f6 !important;
+  background: var(--bg-tertiary) !important;
   border-color: var(--color-copper-light) !important;
   transform: translateY(-1px);
 }
@@ -244,4 +244,15 @@
   .settings-section h2 {
     font-size: var(--text-lg);
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .company-settings-container,
+.dark-theme .company-settings-container {
+  /* Overrides spécifiques si nécessaires */
 }

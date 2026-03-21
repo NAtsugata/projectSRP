@@ -75,11 +75,11 @@
 /* ==================== VIEW MODE SELECTOR ==================== */
 .employee-planning-view .view-mode-selector {
   display: flex;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .employee-planning-view .view-mode-btn {
@@ -109,8 +109,8 @@
 
 .employee-planning-view .view-mode-btn.active {
   background: var(--comfort-accent);
-  color: white;
-  box-shadow: 0 2px 4px rgba(20, 184, 166, 0.3);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
 }
 
 .employee-planning-view .view-mode-label {
@@ -229,4 +229,15 @@
   .planning-title {
     font-size: 2.25rem;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .employee-planning-view,
+.dark-theme .employee-planning-view {
+  /* Overrides spécifiques si nécessaires */
 }

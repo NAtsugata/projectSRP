@@ -4,17 +4,6 @@
    Design simple et fonctionnel
    ============================================ */
 
-/* Variables couleurs - DYNAMIQUES selon le thème ✅ */
-:root {
-  /* --vault-white et --vault-black sont définis dans theme-variables.css */
-  --vault-gray-light: #f5f5f5;
-  --vault-gray: #e0e0e0;
-  --vault-gray-dark: #666666;
-  --vault-copper: var(--color-copper);          /* Change avec le thème! */
-  --vault-copper-light: var(--color-copper-light);
-  --vault-copper-dark: var(--color-copper-dark);
-}
-
 .coffre-view {
   max-width: 1200px;
   margin: 0 auto;
@@ -25,7 +14,7 @@
 .coffre-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid var(--vault-black);
+  border-bottom: 2px solid var(--text-primary);
 }
 
 .header-top {
@@ -38,19 +27,19 @@
   gap: 0.75rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .title-icon {
   width: 1.5rem;
   height: 1.5rem;
-  color: var(--vault-copper);
+  color: var(--color-copper);
 }
 
 .header-subtitle {
   font-size: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -66,25 +55,25 @@
   flex-direction: column;
   align-items: center;
   padding: 1rem 2rem;
-  background: var(--vault-white);
-  border: 1px solid var(--vault-gray);
+  background: var(--text-inverse);
+  border: 1px solid var(--border-color);
   min-width: 120px;
 }
 
 .stat-card-favorite {
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 .stat-number {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--vault-black);
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .stat-label {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -94,8 +83,8 @@
 .empty-vault {
   text-align: center;
   padding: 4rem 2rem;
-  background: var(--vault-gray-light);
-  border: 2px dashed var(--vault-gray);
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
 }
 
 .empty-icon {
@@ -106,22 +95,22 @@
 
 .empty-vault h3 {
   font-size: 1.25rem;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .empty-vault p {
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;
 }
 
 /* ==================== CONTROLS ==================== */
 .coffre-controls {
-  background: var(--vault-white);
+  background: var(--text-inverse);
   padding: 1rem;
-  border: 1px solid var(--vault-gray);
+  border: 1px solid var(--border-color);
   margin-bottom: 1.5rem;
 }
 
@@ -137,7 +126,7 @@
   transform: translateY(-50%);
   width: 1rem;
   height: 1rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   pointer-events: none;
 }
 
@@ -145,19 +134,19 @@
   width: 100%;
   padding: 0.625rem 0.75rem 0.625rem 2.5rem;
   font-size: 0.875rem;
-  border: 1px solid var(--vault-gray);
-  background: var(--vault-white);
-  color: var(--vault-black);
+  border: 1px solid var(--border-color);
+  background: var(--text-inverse);
+  color: var(--text-primary);
   font-family: inherit;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 .search-input::placeholder {
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .filters {
@@ -176,21 +165,21 @@
 .filter-icon {
   width: 1rem;
   height: 1rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .filter-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .filter-select {
   padding: 0.5rem 2rem 0.5rem 0.75rem;
   font-size: 0.875rem;
-  border: 1px solid var(--vault-gray);
-  background: var(--vault-white);
-  color: var(--vault-black);
+  border: 1px solid var(--border-color);
+  background: var(--text-inverse);
+  color: var(--text-primary);
   cursor: pointer;
   font-family: inherit;
   appearance: none;
@@ -202,26 +191,26 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 /* ==================== NO RESULTS ==================== */
 .no-results {
   text-align: center;
   padding: 3rem;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .no-results-icon {
   width: 3rem;
   height: 3rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 
 .no-results p {
   font-size: 1rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -242,21 +231,21 @@
   gap: 0.75rem;
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid var(--vault-copper);
+  border-bottom: 2px solid var(--color-copper);
 }
 
 .category-icon {
   width: 1.25rem;
   height: 1.25rem;
-  color: var(--vault-copper);
+  color: var(--color-copper);
 }
 
 .category-count {
   font-size: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   font-weight: 400;
 }
 
@@ -269,8 +258,8 @@
 
 /* ==================== DOCUMENT CARD ==================== */
 .document-card {
-  background: var(--vault-white);
-  border: 1px solid var(--vault-gray);
+  background: var(--text-inverse);
+  border: 1px solid var(--border-color);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -279,11 +268,11 @@
 }
 
 .document-card:hover {
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 .document-card.favorite {
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
   border-width: 2px;
 }
 
@@ -293,7 +282,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
   height: 100px;
 }
 
@@ -305,13 +294,13 @@
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
-  background: var(--vault-white);
-  color: var(--vault-black);
+  background: var(--text-inverse);
+  color: var(--text-primary);
   font-size: 0.625rem;
   font-weight: 700;
   padding: 0.125rem 0.375rem;
   text-transform: uppercase;
-  border: 1px solid var(--vault-gray);
+  border: 1px solid var(--border-color);
 }
 
 /* Document content */
@@ -325,7 +314,7 @@
 .document-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,7 +326,7 @@
 
 .document-description {
   font-size: 0.8125rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
   overflow: hidden;
@@ -356,8 +345,8 @@
 .tag {
   display: inline-block;
   padding: 0.125rem 0.5rem;
-  background: var(--vault-copper);
-  color: var(--vault-white);
+  background: var(--color-copper);
+  color: var(--text-inverse);
   font-size: 0.6875rem;
   font-weight: 500;
 }
@@ -373,13 +362,13 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .meta-icon {
   width: 0.875rem;
   height: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 /* Document actions */
@@ -387,7 +376,7 @@
   display: flex;
   gap: 0.5rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--vault-gray);
+  border-top: 1px solid var(--border-color);
 }
 
 .btn-action {
@@ -412,22 +401,22 @@
 }
 
 .btn-download {
-  background: var(--vault-black);
-  color: var(--vault-white);
+  background: var(--text-primary);
+  color: var(--text-inverse);
 }
 
 .btn-download:hover {
-  background: var(--vault-copper-dark);
+  background: var(--color-copper-dark);
 }
 
 .btn-view {
-  background: var(--vault-white);
-  color: var(--vault-black);
-  border: 1px solid var(--vault-black);
+  background: var(--text-inverse);
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
 }
 
 .btn-view:hover {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 /* ==================== SELECTION BAR ==================== */
@@ -437,8 +426,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1rem;
-  background: var(--vault-copper);
-  color: var(--vault-white);
+  background: var(--color-copper);
+  color: var(--text-inverse);
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
@@ -480,12 +469,12 @@
 }
 
 .selection-btn-download {
-  background: var(--vault-white);
-  color: var(--vault-black);
+  background: var(--text-inverse);
+  color: var(--text-primary);
 }
 
 .selection-btn-download:hover:not(:disabled) {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .selection-btn-download:disabled {
@@ -495,8 +484,8 @@
 
 .selection-btn-clear {
   background: transparent;
-  color: var(--vault-white);
-  border: 1px solid var(--vault-white);
+  color: var(--text-inverse);
+  border: 1px solid var(--text-inverse);
 }
 
 .selection-btn-clear:hover {
@@ -508,16 +497,16 @@
   padding: 0.5rem 1rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  background: var(--vault-white);
-  color: var(--vault-black);
-  border: 1px solid var(--vault-black);
+  background: var(--text-inverse);
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
 }
 
 .select-all-btn:hover {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 /* ==================== CHECKBOX ==================== */
@@ -540,14 +529,14 @@
   display: block;
   width: 1.25rem;
   height: 1.25rem;
-  background: var(--vault-white);
-  border: 2px solid var(--vault-gray);
+  background: var(--text-inverse);
+  border: 2px solid var(--border-color);
   transition: all 0.15s ease;
 }
 
 .doc-checkbox:checked + .doc-checkbox-custom {
-  background: var(--vault-copper);
-  border-color: var(--vault-copper);
+  background: var(--color-copper);
+  border-color: var(--color-copper);
 }
 
 .doc-checkbox:checked + .doc-checkbox-custom::after {
@@ -555,14 +544,14 @@
   display: block;
   width: 0.375rem;
   height: 0.625rem;
-  border: solid var(--vault-white);
+  border: solid var(--text-inverse);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
   margin: 0.125rem auto 0;
 }
 
 .doc-checkbox-wrapper:hover .doc-checkbox-custom {
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 /* Document card selected state */
@@ -571,13 +560,13 @@
 }
 
 .document-card.selected {
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
   border-width: 2px;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .document-card.selected .document-preview {
-  background: var(--vault-copper-light);
+  background: var(--color-copper-light);
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -655,4 +644,15 @@
   .btn-action {
     width: 100%;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .coffre-view,
+.dark-theme .coffre-view {
+  /* Overrides spécifiques si nécessaires */
 }
