@@ -24,6 +24,9 @@
   --text-secondary: #57473d;      /* Brun moyen */
   --text-tertiary: #8b7968;       /* Brun clair */
   --text-muted: #bfb3a8;          /* Beige grisé */
+  --text-inverse: #ffffff;        /* Blanc pour boutons/fonds colorés */
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #1f1410;    /* Texte sombre sur fond blanc */
 
   /* === Bordures === */
   --border-color: #f4e5d9;        /* Beige pâle */
@@ -117,6 +120,9 @@
   --text-secondary: #e8d4c2;      /* Beige rosé */
   --text-tertiary: #d4a574;       /* Cuivre clair - Même que l'accent ! */
   --text-muted: #b87333;          /* Cuivre moyen */
+  --text-inverse: #1a0f0a;        /* Texte sombre pour éléments clairs */
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #fef8f4;    /* Texte clair sur fond sombre */
 
   /* === Bordures === */
   --border-color: rgba(184, 115, 51, 0.2);   /* Cuivre avec transparence */
@@ -214,7 +220,7 @@ body {
   top: 10px;
   right: 10px;
   background: linear-gradient(135deg, #d97706, #f59e0b);
-  color: white;
+  color: var(--text-on-colored-bg);
   padding: 6px 12px;
   border-radius: 16px;
   font-size: 11px;
@@ -296,7 +302,7 @@ body {
 .btn-primary,
 button.primary {
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;

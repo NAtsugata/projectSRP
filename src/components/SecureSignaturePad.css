@@ -14,10 +14,7 @@
   justify-content: center;
   padding: 1rem;
   overflow-y: auto;
-}
-
-.secure-signature-modal {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}.secure-signature-modal {background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   max-width: 700px;
@@ -25,8 +22,7 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  color: #ffffff;
-}
+  color: var(--text-on-colored-bg);}
 
 .secure-signature-header {
   padding: 2rem 2rem 1rem;
@@ -178,13 +174,9 @@
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 120px;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
+}.btn-primary {background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);}
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);

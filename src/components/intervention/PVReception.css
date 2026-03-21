@@ -650,7 +650,7 @@
 
 .pv-reception-container .btn-primary {
   background: var(--color-copper) !important;
-  color: #ffffff !important;
+  color: var(--text-on-colored-bg) !important;
   box-shadow: 0 4px 6px rgba(184, 115, 51, 0.3);
   border: none !important;
 }

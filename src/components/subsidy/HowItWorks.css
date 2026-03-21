@@ -48,14 +48,10 @@
   border-color: #3498db;
   color: #3498db;
   transform: translateY(-2px);
-}
-
-.how-tab.active {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}.how-tab.active {background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   border-color: #2980b9;
-  color: white;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-}
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);}
 
 /* Contenu */
 .how-content {
@@ -116,18 +112,14 @@
   border-collapse: collapse;
   margin: 20px 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.bareme-table th,
+}.bareme-table th,
 .bonus-table th,
 .ceiling-table th,
-.eligibility-table th {
-  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-  color: white;
+.eligibility-table th {background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  color: var(--text-on-colored-bg);
   padding: 15px;
   text-align: left;
-  font-weight: 600;
-}
+  font-weight: 600;}
 
 .bareme-table td,
 .bonus-table td,
@@ -163,17 +155,13 @@
 .cat-rose {
   border-left: 4px solid #e74c3c;
   background: rgba(231, 76, 60, 0.05);
-}
-
-/* Boîte formule */
-.formula-box {
-  background: #2c3e50;
-  color: white;
+}/* Boîte formule */
+.formula-box {background: #2c3e50;
+  color: var(--text-on-colored-bg);
   padding: 20px;
   border-radius: 8px;
   margin: 20px 0;
-  font-family: 'Courier New', monospace;
-}
+  font-family: 'Courier New', monospace;}
 
 .formula-box code {
   display: block;
@@ -223,15 +211,11 @@
   margin: 8px 0;
   background: #f8f9fa;
   border-radius: 6px;
-}
-
-.calc-step.total {
-  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-  color: white;
+}.calc-step.total {background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  color: var(--text-on-colored-bg);
   font-size: 18px;
   margin-top: 15px;
-  padding: 15px;
-}
+  padding: 15px;}
 
 .calc-step.warning {
   background: #fff3cd;

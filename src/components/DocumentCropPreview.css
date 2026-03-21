@@ -147,13 +147,9 @@
 .toggle-btn:hover:not(:disabled):not(.active) {
   background: #f5f5f5;
   color: #333;
-}
-
-.toggle-btn.active {
-  background: #2196F3;
-  color: white;
-  border-color: #2196F3;
-}
+}.toggle-btn.active {background: #2196F3;
+  color: var(--text-on-colored-bg);
+  border-color: #2196F3;}
 
 .toggle-btn:disabled {
   opacity: 0.5;
@@ -196,25 +192,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-}
-
-.action-btn.primary {
-  background: #4CAF50;
-  color: white;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
-}
+}.action-btn.primary {background: #4CAF50;
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);}
 
 .action-btn.primary:hover:not(:disabled) {
   background: #45a049;
   box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
   transform: translateY(-1px);
-}
-
-.action-btn.secondary {
-  background: #2196F3;
-  color: white;
-  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
-}
+}.action-btn.secondary {background: #2196F3;
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);}
 
 .action-btn.secondary:hover:not(:disabled) {
   background: #1976D2;

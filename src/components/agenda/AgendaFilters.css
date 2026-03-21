@@ -8,10 +8,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-.filter-badge {
-  display: inline-flex;
+}.filter-badge {display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 1.25rem;
@@ -20,10 +17,9 @@
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-on-colored-bg);
   background-color: var(--color-copper);
-  border-radius: 999px;
-}
+  border-radius: 999px;}
 
 .agenda-filters-panel {
   margin-top: 1rem;

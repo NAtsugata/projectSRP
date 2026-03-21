@@ -149,21 +149,17 @@
   accent-color: var(--color-copper-light);
   cursor: pointer;
   flex-shrink: 0;
-}
-
-.user-avatar {
-  width: 2.5rem;
+}.user-avatar {width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: white;
+  color: var(--text-on-colored-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
-  flex-shrink: 0;
-}
+  flex-shrink: 0;}
 
 .user-info {
   display: flex;

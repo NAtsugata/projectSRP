@@ -21,13 +21,10 @@
 
 .info-tooltip-icon:hover {
   transform: scale(1.2);
-}
-
-.info-tooltip-content {
-  position: absolute;
+}.info-tooltip-content {position: absolute;
   z-index: 1000;
   background: #2c3e50;
-  color: white;
+  color: var(--text-on-colored-bg);
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -35,8 +32,7 @@
   max-width: 400px;
   font-size: 13px;
   line-height: 1.5;
-  text-align: left;
-}
+  text-align: left;}
 
 /* Positions */
 .info-tooltip-content.top {

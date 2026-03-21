@@ -130,14 +130,10 @@
         color: var(--text-primary);
         font-weight: 600;
         transition: all 0.2s;
-    }
-
-    .filter-tab.active,
-    .tab-button.active {
-        background: var(--color-copper);
-        color: white;
-        border-color: var(--color-copper);
-    }
+    }.filter-tab.active,
+    .tab-button.active {background: var(--color-copper);
+        color: var(--text-on-colored-bg);
+        border-color: var(--color-copper);}
 
     .filter-tab:hover,
     .tab-button:hover {
@@ -423,21 +419,17 @@
         width: 20px;
         height: 20px;
         color: var(--color-copper);
-    }
-
-    .upload-icon-badge .badge {
-        position: absolute;
+    }.upload-icon-badge .badge {position: absolute;
         top: -6px;
         right: -6px;
         background: var(--color-danger);
-        color: white;
+        color: var(--text-on-colored-bg);
         font-size: 0.625rem;
         font-weight: 700;
         padding: 0.125rem 0.375rem;
         border-radius: 1rem;
         min-width: 18px;
-        text-align: center;
-    }
+        text-align: center;}
 
     .upload-queue-indicator .upload-info {
         display: flex;

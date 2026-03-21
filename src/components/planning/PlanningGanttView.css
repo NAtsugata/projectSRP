@@ -7,17 +7,13 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   border: 1px solid #e2e8f0;
-}
-
-/* ==================== HEADER ==================== */
-.gantt-header {
-  display: flex;
+}/* ==================== HEADER ==================== */
+.gantt-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #06b6d4 0%, var(--color-copper) 50%, #8b5cf6 100%);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .gantt-nav {
   display: flex;
@@ -162,13 +158,9 @@
   outline: none;
   background-color: rgba(255, 255, 255, 0.35);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-}
-
-.team-filter-select option {
-  background: #1e293b;
-  color: white;
-  padding: 0.5rem;
-}
+}.team-filter-select option {background: #1e293b;
+  color: var(--text-on-colored-bg);
+  padding: 0.5rem;}
 
 /* ==================== GRILLE GANTT ==================== */
 .gantt-container {
@@ -347,19 +339,15 @@
   font-size: 1.125rem;
   font-weight: 700;
   color: #334155;
-}
-
-.gantt-day-cell.today .day-num {
-  background: linear-gradient(135deg, #06b6d4 0%, var(--color-copper) 100%);
-  color: white;
+}.gantt-day-cell.today .day-num {background: linear-gradient(135deg, #06b6d4 0%, var(--color-copper) 100%);
+  color: var(--text-on-colored-bg);
   width: 34px;
   height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(184, 115, 51, 0.4);
-}
+  box-shadow: 0 2px 8px rgba(184, 115, 51, 0.4);}
 
 /* ==================== BARRES D'INTERVENTION ==================== */
 .gantt-bar {

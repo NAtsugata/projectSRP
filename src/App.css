@@ -178,28 +178,28 @@ body {
 /* Couleurs spécifiques pour les boutons */
 .btn-primary {
     background-color: var(--color-primary);
-    color: #ffffff;
+    color: var(--text-on-colored-bg);
 }
 .btn-primary:hover:not(:disabled) {
     background-color: var(--color-primary-dark);
 }
 .btn-secondary {
     background-color: var(--color-secondary);
-    color: #ffffff;
+    color: var(--text-on-colored-bg);
 }
 .btn-secondary:hover:not(:disabled) {
     background-color: var(--color-secondary-dark);
 }
 .btn-success {
     background-color: var(--color-success);
-    color: #ffffff;
+    color: var(--text-on-colored-bg);
 }
 .btn-success:hover:not(:disabled) {
     background-color: var(--color-success-dark);
 }
 .btn-danger {
     background-color: var(--color-danger);
-    color: #ffffff;
+    color: var(--text-on-colored-bg);
 }
 .btn-danger:hover:not(:disabled) {
     background-color: var(--color-danger-dark);
@@ -856,7 +856,7 @@ body {
     padding: 1rem;
     border-radius: 0.5rem;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    color: white;
+    color: var(--text-on-colored-bg);
     z-index: 100;
     animation: fade-in 0.5s;
     text-align: center;
@@ -1015,7 +1015,7 @@ body {
 /* 🚨 Message d'optimisation mobile pour admin */
 .mobile-admin-notice {
     background: linear-gradient(90deg, var(--color-copper), var(--color-copper-darker));
-    color: white;
+    color: var(--text-on-colored-bg);
     padding: 0.75rem 1rem;
     text-align: center;
     font-size: 0.875rem;

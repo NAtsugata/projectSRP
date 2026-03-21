@@ -97,24 +97,16 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-}
-
-.arrival-btn {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
-}
+}.arrival-btn {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .arrival-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(184, 115, 51, 0.4);
-}
-
-.departure-btn {
-  background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
-}
+}.departure-btn {background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .departure-btn:hover:not(:disabled) {
   transform: translateY(-2px);

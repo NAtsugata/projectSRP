@@ -69,17 +69,13 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Header */
-.quick-alert-header {
-  display: flex;
+}/* Header */
+.quick-alert-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
   background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .quick-alert-header h3 {
   margin: 0;
@@ -226,13 +222,9 @@
 
 .delay-btn:hover {
   background: #e2e8f0;
-}
-
-.delay-btn.selected {
-  background: #f59e0b;
+}.delay-btn.selected {background: #f59e0b;
   border-color: #f59e0b;
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 /* Info intervention */
 .intervention-info {

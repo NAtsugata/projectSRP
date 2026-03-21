@@ -311,13 +311,9 @@
 
 .mobile-modal-button-cancel:active {
   background: #e5e7eb;
-}
-
-.mobile-modal-button-confirm {
-  background: var(--color-copper);
-  color: white;
-  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
-}
+}.mobile-modal-button-confirm {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .mobile-modal-button-confirm:active {
   background: var(--color-copper-dark);

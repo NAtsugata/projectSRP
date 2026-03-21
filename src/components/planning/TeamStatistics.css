@@ -6,17 +6,13 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
   overflow: hidden;
-}
-
-/* Header */
-.stats-header {
-  display: flex;
+}/* Header */
+.stats-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #8b5cf6 0%, var(--color-copper) 50%, var(--color-copper) 100%);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .stats-header h3 {
   margin: 0;

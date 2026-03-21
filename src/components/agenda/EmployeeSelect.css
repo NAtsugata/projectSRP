@@ -31,20 +31,16 @@
   background: var(--bg-secondary);
   border-radius: 8px;
   border: 1px solid var(--border-color);
-}
-
-.employee-badge {
-  display: inline-flex;
+}.employee-badge {display: inline-flex;
   align-items: center;
   gap: 6px;
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: white;
+  color: var(--text-on-colored-bg);
   padding: 6px 12px;
   border-radius: 16px;
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.2s ease;
-}
+  transition: all 0.2s ease;}
 
 .employee-badge:hover {
   transform: translateY(-1px);
@@ -192,13 +188,9 @@
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.action-button:hover:not(:disabled) {
-  background: var(--color-copper);
-  color: white;
-  border-color: var(--color-copper);
-}
+}.action-button:hover:not(:disabled) {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
+  border-color: var(--color-copper);}
 
 .action-button:disabled {
   opacity: 0.5;

@@ -57,19 +57,15 @@
 
 .btn-export:hover {
   background: var(--bg-secondary, #f3f4f6);
-}
-
-.btn-primary {
-  padding: 0.5rem 1rem;
+}.btn-primary {padding: 0.5rem 1rem;
   background: var(--primary-color, var(--color-copper));
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
-  transition: all 0.2s;
-}
+  transition: all 0.2s;}
 
 .btn-primary:hover:not(:disabled) {
   background: var(--primary-hover, var(--color-copper-dark));

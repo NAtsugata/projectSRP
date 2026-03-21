@@ -144,12 +144,8 @@
 .tab-btn:hover {
   color: var(--color-primary);
   background: var(--color-primary-100);
-}
-
-.tab-btn.active {
-  color: white;
-  background: var(--color-primary);
-}
+}.tab-btn.active {color: var(--text-on-colored-bg);
+  background: var(--color-primary);}
 
 /* =====================================================
    FILTERS
@@ -405,7 +401,7 @@
 .amount-row.total {
   font-weight: 700;
   font-size: 1rem;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
   padding: 0.75rem 1rem;
   margin: 0.5rem -1rem -1rem;
   background: var(--color-primary);
@@ -505,7 +501,7 @@
 
 .btn-primary {
   background: var(--color-primary) !important;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -696,7 +692,7 @@
   padding: 0;
   border-radius: var(--radius);
   background: var(--color-primary) !important;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
   border: none !important;
   cursor: pointer;
   transition: all 0.15s;
@@ -848,7 +844,7 @@
 .total-row.total-final {
   font-size: 1.125rem;
   font-weight: 700;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
   padding: 0.75rem 1rem;
   margin: 0.75rem -1rem -1rem;
   background: var(--color-primary);

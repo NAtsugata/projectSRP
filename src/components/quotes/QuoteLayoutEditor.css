@@ -702,13 +702,9 @@
 
 .layout-editor-footer .btn-secondary:hover {
   background: var(--bg-tertiary, #f3f4f6);
-}
-
-.layout-editor-footer .btn-primary {
-  border: none;
+}.layout-editor-footer .btn-primary {border: none;
   background: var(--primary-color, var(--color-copper));
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .layout-editor-footer .btn-primary:hover {
   background: var(--primary-dark, var(--color-copper-dark));

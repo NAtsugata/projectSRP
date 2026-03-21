@@ -50,18 +50,14 @@
 
 .sync-text {
   flex: 1;
-}
-
-.sync-badge {
-  background: #ff6b6b;
-  color: white;
+}.sync-badge {background: #ff6b6b;
+  color: var(--text-on-colored-bg);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: bold;
   min-width: 20px;
-  text-align: center;
-}
+  text-align: center;}
 
 /* Détails étendus */
 .sync-details {
@@ -110,15 +106,12 @@
 
 .sync-detail-value.warning {
   color: #ff9800;
-}
-
-/* Bouton sync manuelle */
-.sync-manual-button {
-  width: 100%;
+}/* Bouton sync manuelle */
+.sync-manual-button {width: 100%;
   margin-top: 12px;
   padding: 10px 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -128,8 +121,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-}
+  gap: 8px;}
 
 .sync-manual-button:hover:not(:disabled) {
   transform: translateY(-2px);

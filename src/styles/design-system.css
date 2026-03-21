@@ -86,6 +86,8 @@
   --text-tertiary: #6b7280;
   --text-muted: #9ca3af;
   --text-inverse: #ffffff;
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #111827;    /* Texte sombre sur fond blanc */
 
   /* Borders */
   --border-color: #e5e7eb;
@@ -362,6 +364,8 @@
   --text-tertiary: #6b7280;       /* Gris moyen */
   --text-muted: #4b5563;          /* Gris sombre */
   --text-inverse: #111827;        /* Noir pour fond clair */
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #e5e7eb;    /* Texte clair sur fond sombre */
 
   /* Borders - Subtils mais visibles */
   --border-color: #2d3139;        /* Gris sombre */
@@ -405,6 +409,8 @@
     --text-tertiary: #6b7280;
     --text-muted: #4b5563;
     --text-inverse: #111827;
+    --text-on-colored-bg: #ffffff;
+    --text-on-white-bg: #e5e7eb;
 
     /* Borders */
     --border-color: #2d3139;

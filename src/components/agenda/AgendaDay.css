@@ -110,12 +110,8 @@
 .badge-warn {
   background: #f59e0b;
   color: var(--text-primary);
-}
-
-.badge-sav {
-  background: var(--color-copper);
-  color: #fff;
-}
+}.badge-sav {background: var(--color-copper);
+  color: var(--text-on-colored-bg);}
 
 /* Timeline */
 .agenda-timeline {

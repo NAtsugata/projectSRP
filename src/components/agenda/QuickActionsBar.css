@@ -51,34 +51,22 @@
 
 .quick-action-btn:active {
   transform: translateY(0);
-}
-
-/* Primary - Nouvelle intervention */
-.quick-action-primary {
-  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
-  color: white;
-}
+}/* Primary - Nouvelle intervention */
+.quick-action-primary {background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
+  color: var(--text-on-colored-bg);}
 
 .quick-action-primary:hover {
   background: linear-gradient(135deg, var(--color-copper-dark), var(--color-copper-darker));
-}
-
-/* Warning - Assigner */
-.quick-action-warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-}
+}/* Warning - Assigner */
+.quick-action-warning {background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: var(--text-on-colored-bg);}
 
 .quick-action-warning:hover {
   background: linear-gradient(135deg, #d97706, #b45309);
-}
-
-/* Urgent - Filtrer urgents */
-.quick-action-urgent {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  animation: pulse-urgent 2s ease-in-out infinite;
-}
+}/* Urgent - Filtrer urgents */
+.quick-action-urgent {background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: var(--text-on-colored-bg);
+  animation: pulse-urgent 2s ease-in-out infinite;}
 
 .quick-action-urgent:hover {
   background: linear-gradient(135deg, #dc2626, #b91c1c);

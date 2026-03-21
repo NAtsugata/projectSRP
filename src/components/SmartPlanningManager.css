@@ -106,30 +106,22 @@
   border-radius: 20px;
   font-size: 14px;
   color: #92400e;
-}
-
-.pending-changes .badge {
-  background: #f59e0b;
-  color: white;
+}.pending-changes .badge {background: #f59e0b;
+  color: var(--text-on-colored-bg);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
   font-size: 12px;
   min-width: 20px;
-  text-align: center;
-}
-
-.btn-sync-now {
-  padding: 4px 12px;
+  text-align: center;}.btn-sync-now {padding: 4px 12px;
   background: #f59e0b;
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
-}
+  transition: background 0.2s;}
 
 .btn-sync-now:hover {
   background: #d97706;

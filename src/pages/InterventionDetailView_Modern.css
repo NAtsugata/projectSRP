@@ -612,7 +612,7 @@
    OVERRIDE GLOBAL STYLES - FIX BLANC SUR BLANC
    ============================================ */
 
-/* Fix mobile-dashboard.css qui force color: white !important */
+/* Fix mobile-dashboard.css qui force color: var(--text-on-colored-bg) !important */
 .intervention-detail-modern .form-control,
 .intervention-detail-modern input[type="text"],
 .intervention-detail-modern input[type="number"],
@@ -664,7 +664,7 @@
 
 .intervention-detail-modern .btn-primary {
   background: var(--color-copper) !important;
-  color: #ffffff !important;
+  color: var(--text-on-colored-bg) !important;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: none !important;
 }
@@ -688,7 +688,7 @@
 
 .intervention-detail-modern .btn-success {
   background: var(--color-copper) !important;
-  color: #ffffff !important;
+  color: var(--text-on-colored-bg) !important;
   border: none !important;
 }
 
@@ -700,7 +700,7 @@
 
 .intervention-detail-modern .btn-danger {
   background: #ef4444 !important;
-  color: #ffffff !important;
+  color: var(--text-on-colored-bg) !important;
   border: none !important;
 }
 

@@ -342,7 +342,7 @@
   align-items: center;
   justify-content: center;
   background: var(--primary) !important;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
   border: none !important;
   border-radius: var(--radius);
   font-size: 1.25rem;
@@ -561,7 +561,7 @@
 .total-line.final {
   font-size: 1.125rem;
   font-weight: 700;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
   background: var(--primary);
   padding: 0.75rem 1rem;
   margin: 0.5rem -1rem -1rem;
@@ -617,7 +617,7 @@
 
 .quote-editor .btn-primary {
   background: var(--primary) !important;
-  color: white !important;
+  color: var(--text-on-colored-bg) !important;
 }
 
 .quote-editor .btn-primary:hover:not(:disabled) {

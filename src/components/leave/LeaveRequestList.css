@@ -141,13 +141,9 @@
   color: var(--text-primary);
   border-color: var(--text-muted);
   background: var(--bg-secondary);
-}
-
-.sort-btn.active {
-  color: #fff;
+}.sort-btn.active {color: var(--text-on-colored-bg);
   background: var(--color-copper);
-  border-color: var(--color-copper);
-}
+  border-color: var(--color-copper);}
 
 .sort-btn.active:hover {
   background: var(--color-copper-dark);
@@ -179,12 +175,8 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
-}
-
-.empty-action-btn:hover {
-  color: #fff;
-  background: var(--color-copper);
-}
+}.empty-action-btn:hover {color: var(--text-on-colored-bg);
+  background: var(--color-copper);}
 
 /* Mobile responsive */
 @media (max-width: 768px) {

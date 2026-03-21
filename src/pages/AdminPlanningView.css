@@ -171,13 +171,9 @@
 .view-mode-btn:hover {
   background: rgba(184, 115, 51, 0.1);
   color: var(--color-primary-600);
-}
-
-.view-mode-btn.active {
-  background: var(--color-primary-500);
-  color: white;
-  box-shadow: var(--shadow-sm);
-}
+}.view-mode-btn.active {background: var(--color-primary-500);
+  color: var(--text-on-colored-bg);
+  box-shadow: var(--shadow-sm);}
 
 .view-mode-label {
   display: inline;

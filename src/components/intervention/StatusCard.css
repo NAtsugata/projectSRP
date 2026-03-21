@@ -1,13 +1,11 @@
 /* src/components/intervention/StatusCard.css */
 
-.status-card {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+.status-card {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 16px;
   padding: 1.5rem;
-  color: white;
+  color: var(--text-on-colored-bg);
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-}
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);}
 
 .status-card-header {
   display: flex;

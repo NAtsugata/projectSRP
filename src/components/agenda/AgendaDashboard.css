@@ -1,14 +1,12 @@
 /* src/components/agenda/AgendaDashboard.css */
 /* Version Admin améliorée */
 
-.agenda-dashboard {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+.agenda-dashboard {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .agenda-dashboard-admin {
   background: linear-gradient(145deg, #1e3a5f 0%, #2d5a87 50%, #1a4971 100%);

@@ -111,18 +111,14 @@
 
 .quick-client-footer .btn-cancel:hover {
   background: var(--bg-tertiary);
-}
-
-.quick-client-footer .btn-primary {
-  padding: 0.5rem 1rem;
+}.quick-client-footer .btn-primary {padding: 0.5rem 1rem;
   background: var(--color-primary, var(--color-copper));
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
-  font-weight: 500;
-}
+  font-weight: 500;}
 
 .quick-client-footer .btn-primary:disabled {
   opacity: 0.5;

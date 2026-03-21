@@ -145,19 +145,15 @@
   border: 1px solid var(--color-copper-light);
   font-size: 0.875rem;
   color: #92400e;
-}
-
-.file-uploader-pending .btn-retry {
-  padding: 0.375rem 0.75rem;
+}.file-uploader-pending .btn-retry {padding: 0.375rem 0.75rem;
   background: var(--color-copper-light);
-  color: white;
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
-}
+  transition: background 0.2s;}
 
 .file-uploader-pending .btn-retry:hover {
   background: #d97706;

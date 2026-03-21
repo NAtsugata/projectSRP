@@ -45,13 +45,9 @@
 .btn-lg {
   padding: 0.75rem 1.5rem;
   font-size: 1.125rem;
-}
-
-/* Variantes */
-.btn-primary {
-  background-color: var(--color-copper);
-  color: white;
-}
+}/* Variantes */
+.btn-primary {background-color: var(--color-copper);
+  color: var(--text-on-colored-bg);}
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-copper-dark);
@@ -59,12 +55,8 @@
 
 .btn-primary:active:not(:disabled) {
   background-color: var(--color-copper-darker);
-}
-
-.btn-secondary {
-  background-color: var(--text-tertiary);
-  color: white;
-}
+}.btn-secondary {background-color: var(--text-tertiary);
+  color: var(--text-on-colored-bg);}
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--text-secondary);
@@ -72,12 +64,8 @@
 
 .btn-secondary:active:not(:disabled) {
   background-color: var(--text-secondary);
-}
-
-.btn-danger {
-  background-color: var(--color-danger);
-  color: white;
-}
+}.btn-danger {background-color: var(--color-danger);
+  color: var(--text-on-colored-bg);}
 
 .btn-danger:hover:not(:disabled) {
   background-color: #dc2626;

@@ -106,22 +106,18 @@
   margin-bottom: 1rem;
   animation: bounce 2s ease-in-out infinite;
   filter: drop-shadow(0 10px 25px rgba(205, 127, 50, 0.4));
-}
-
-/* Fallback for old logo-icon class if still used elsewhere */
-.logo-icon {
-  width: 88px;
+}/* Fallback for old logo-icon class if still used elsewhere */
+.logo-icon {width: 88px;
   height: 88px;
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-on-colored-bg);
   margin-bottom: 1rem;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-  animation: bounce 2s ease-in-out infinite;
-}
+  animation: bounce 2s ease-in-out infinite;}
 
 .logo-icon svg {
   width: 40px;
@@ -209,16 +205,13 @@
 
 .login-input.input-error:focus {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
-}
-
-/* ==================== SUBMIT BUTTON ==================== */
-.login-submit-btn {
-  position: relative;
+}/* ==================== SUBMIT BUTTON ==================== */
+.login-submit-btn {position: relative;
   width: 100%;
   padding: 1rem 1.5rem;
   font-size: 1rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-on-colored-bg);
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border: none;
   border-radius: var(--radius-xl);
@@ -226,8 +219,7 @@
   transition: all var(--transition-base);
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
-  min-height: 52px;
-}
+  min-height: 52px;}
 
 .login-submit-btn::before {
   content: '';

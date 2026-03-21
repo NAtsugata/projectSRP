@@ -177,20 +177,16 @@
 .pwa-update-actions {
     display: flex;
     gap: 10px;
-}
-
-.pwa-btn-update {
-    flex: 1;
+}.pwa-btn-update {flex: 1;
     padding: 14px 20px;
     border: none;
     background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-    color: white;
+    color: var(--text-on-colored-bg);
     font-size: 15px;
     font-weight: 700;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
-}
+    transition: all 0.2s;}
 
 .pwa-btn-update:hover {
     transform: translateY(-2px);
@@ -249,17 +245,13 @@
     font-size: 13px;
     color: #94a3b8;
     margin: 0;
-}
-
-.ios-share-icon {
-    display: inline-block;
+}.ios-share-icon {display: inline-block;
     background: var(--color-copper);
-    color: white;
+    color: var(--text-on-colored-bg);
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 12px;
-    margin: 0 4px;
-}
+    margin: 0 4px;}
 
 /* ==================== RESPONSIVE ==================== */
 @media (min-width: 768px) {

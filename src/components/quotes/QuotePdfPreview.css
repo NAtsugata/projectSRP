@@ -195,12 +195,8 @@
   border-collapse: collapse;
   margin-bottom: 5mm;
   font-size: 9px;
-}
-
-.pdf-table thead tr {
-  background: var(--color-copper);
-  color: white;
-}
+}.pdf-table thead tr {background: var(--color-copper);
+  color: var(--text-on-colored-bg);}
 
 .pdf-table th {
   padding: 2mm;

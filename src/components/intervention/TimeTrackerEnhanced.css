@@ -73,13 +73,9 @@
 .time-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.time-card-primary {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+}.time-card-primary {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-color: var(--color-copper-dark);
-  color: #fff;
-}
+  color: var(--text-on-colored-bg);}
 
 .time-card-primary .time-card-label,
 .time-card-primary .time-card-value,
@@ -150,46 +146,30 @@
 
 .btn-icon {
   font-size: 1.25rem;
-}
-
-/* Styles par type de bouton */
-.btn-tracker-start {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
-}
+}/* Styles par type de bouton */
+.btn-tracker-start {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .btn-tracker-start:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--color-copper-dark) 0%, var(--color-copper-darker) 100%);
   box-shadow: 0 6px 16px rgba(184, 115, 51, 0.4);
-}
-
-.btn-tracker-pause {
-  background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
-}
+}.btn-tracker-pause {background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);}
 
 .btn-tracker-pause:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   box-shadow: 0 6px 16px rgba(212, 165, 116, 0.4);
-}
-
-.btn-tracker-resume {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);
-}
+}.btn-tracker-resume {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .btn-tracker-resume:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--color-copper-dark) 0%, var(--color-copper-darker) 100%);
   box-shadow: 0 6px 16px rgba(184, 115, 51, 0.4);
-}
-
-.btn-tracker-finish {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #fff;
-}
+}.btn-tracker-finish {background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: var(--text-on-colored-bg);}
 
 .btn-tracker-finish:hover:not(:disabled) {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);

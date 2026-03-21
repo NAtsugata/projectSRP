@@ -35,10 +35,7 @@
 
 .absence-btn-text {
   font-size: 14px;
-}
-
-.absence-badge {
-  position: absolute;
+}.absence-badge {position: absolute;
   top: -6px;
   right: -6px;
   min-width: 20px;
@@ -48,12 +45,11 @@
   justify-content: center;
   padding: 0 6px;
   background: var(--color-danger);
-  color: white;
+  color: var(--text-on-colored-bg);
   font-size: 11px;
   font-weight: 700;
   border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
 
 /* ==================== BACKDROP ==================== */
 .absence-backdrop {

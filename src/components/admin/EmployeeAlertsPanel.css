@@ -32,17 +32,13 @@
 @keyframes slideIn {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
-}
-
-/* Header */
-.alerts-panel-header {
-  display: flex;
+}/* Header */
+.alerts-panel-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .header-title {
   display: flex;
@@ -115,13 +111,9 @@
 .filter-btn:hover {
   border-color: #cbd5e1;
   color: #334155;
-}
-
-.filter-btn.active {
-  background: var(--color-copper);
+}.filter-btn.active {background: var(--color-copper);
   border-color: var(--color-copper);
-  color: white;
-}
+  color: var(--text-on-colored-bg);}
 
 .mark-all-btn {
   margin-left: auto;

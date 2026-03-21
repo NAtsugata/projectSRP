@@ -57,7 +57,7 @@
   font-size: 2rem;
   font-weight: 800;
   line-height: 1.1;
-  color: #ffffff !important;
+  color: var(--text-on-colored-bg) !important;
   /* Pure white */
   margin: 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);

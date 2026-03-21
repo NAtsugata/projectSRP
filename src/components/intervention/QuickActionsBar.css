@@ -78,11 +78,8 @@
 
 .quick-action:hover span {
   color: var(--color-copper);
-}
-
-/* Toast Notification */
-.toast-notification {
-  position: fixed;
+}/* Toast Notification */
+.toast-notification {position: fixed;
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
@@ -91,14 +88,13 @@
   gap: 0.625rem;
   padding: 0.875rem 1.25rem;
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: #fff;
+  color: var(--text-on-colored-bg);
   border-radius: 999px;
   box-shadow: 0 10px 40px rgba(184, 115, 51, 0.4);
   font-size: 0.9375rem;
   font-weight: 600;
   z-index: 9999;
-  animation: toastSlide 0.3s ease-out;
-}
+  animation: toastSlide 0.3s ease-out;}
 
 @keyframes toastSlide {
   from {

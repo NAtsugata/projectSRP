@@ -1,13 +1,11 @@
 /* src/components/intervention/CallButtons.css */
 /* Boutons d'appel ultra-visibles */
 
-.call-buttons-container {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+.call-buttons-container {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-  color: #fff;
-}
+  color: var(--text-on-colored-bg);}
 
 .call-buttons-title {
   font-size: 1.25rem;
@@ -104,13 +102,9 @@
 
 .btn-call-text {
   font-size: 0.9375rem;
-}
-
-/* Bouton d'appel principal */
-.btn-call-primary {
-  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: #fff;
-}
+}/* Bouton d'appel principal */
+.btn-call-primary {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);}
 
 .btn-call-primary:hover {
   background: linear-gradient(135deg, var(--color-copper-dark) 0%, var(--color-copper-darker) 100%);
