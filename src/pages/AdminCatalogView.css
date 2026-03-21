@@ -551,7 +551,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--modal-backdrop);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -634,7 +634,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   margin-bottom: 0.375rem;
 }
 
@@ -643,9 +643,11 @@
 .form-group textarea {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.875rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
@@ -655,7 +657,7 @@
 .form-group textarea:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-copper));
-  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
 }
 
 .form-group input[type="color"] {
@@ -691,7 +693,7 @@
   align-items: center;
   gap: 0.375rem;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -701,15 +703,16 @@
 
 .btn-cancel {
   padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
 .btn-cancel:hover {
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 /* Shared styles */
@@ -726,8 +729,8 @@
 }
 
 .offline-badge {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning-dark);
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
@@ -767,4 +770,15 @@
   .templates-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-catalog-view,
+.dark-theme .admin-catalog-view {
+  /* Overrides spécifiques si nécessaires */
 }
