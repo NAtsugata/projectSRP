@@ -1,16 +1,5 @@
 /* ==================== ADMIN ARCHIVE VIEW ==================== */
-/* Palette: blanc, noir, cuivre */
-
-:root {
-  --archive-white: #ffffff;
-  --archive-black: #1a1a1a;
-  --archive-gray-light: #f5f5f5;
-  --archive-gray: #e0e0e0;
-  --archive-gray-dark: #666666;
-  --archive-copper: #b87333;
-  --archive-copper-light: #d4a574;
-  --archive-copper-dark: #8b5a2b;
-}
+/* Utilise les variables du design system pour le support dark mode */
 
 /* ==================== HEADER ==================== */
 .archive-header {
@@ -25,7 +14,7 @@
 .archive-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--archive-black);
+  color: var(--text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -41,8 +30,8 @@
 }
 
 .archive-stat-card {
-  background: var(--archive-white);
-  border: 1px solid var(--archive-gray);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   padding: 1rem;
   text-align: center;
@@ -51,13 +40,13 @@
 .archive-stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--archive-copper);
+  color: var(--color-copper);
   line-height: 1;
 }
 
 .archive-stat-label {
   font-size: 0.75rem;
-  color: var(--archive-gray-dark);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -76,35 +65,35 @@
   flex: 1;
   min-width: 200px;
   padding: 0.625rem 1rem;
-  border: 1px solid var(--archive-gray);
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  background: var(--archive-white);
-  color: var(--archive-black);
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .archive-search:focus {
   outline: none;
-  border-color: var(--archive-copper);
+  border-color: var(--color-copper);
 }
 
 .archive-search::placeholder {
-  color: var(--archive-gray-dark);
+  color: var(--text-secondary);
 }
 
 .archive-filter-select {
   padding: 0.625rem 1rem;
-  border: 1px solid var(--archive-gray);
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  background: var(--archive-white);
-  color: var(--archive-black);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-width: 150px;
 }
 
 .archive-filter-select:focus {
   outline: none;
-  border-color: var(--archive-copper);
+  border-color: var(--color-copper);
 }
 
 /* ==================== SELECTION BAR ==================== */
@@ -114,8 +103,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: var(--archive-copper);
-  color: var(--archive-white);
+  background: var(--color-copper);
+  color: var(--bg-primary);
   border-radius: 0.375rem;
   margin-bottom: 1rem;
 }
@@ -132,10 +121,10 @@
 
 .archive-selection-btn {
   padding: 0.375rem 0.75rem;
-  border: 1px solid var(--archive-white);
+  border: 1px solid var(--bg-primary);
   border-radius: 0.25rem;
   background: transparent;
-  color: var(--archive-white);
+  color: var(--bg-primary);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -147,8 +136,8 @@
 }
 
 .archive-selection-btn.danger {
-  border-color: #fee2e2;
-  color: #fee2e2;
+  border-color: var(--color-danger-light);
+  color: var(--color-danger-light);
 }
 
 .archive-selection-btn.danger:hover {
@@ -157,8 +146,8 @@
 
 /* ==================== ARCHIVE LIST ==================== */
 .archive-container {
-  background: var(--archive-white);
-  border: 1px solid var(--archive-gray);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   overflow: hidden;
 }
@@ -174,7 +163,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border-bottom: 1px solid var(--archive-gray-light);
+  border-bottom: 1px solid var(--bg-secondary);
   transition: background-color 0.15s;
 }
 
@@ -183,12 +172,12 @@
 }
 
 .archive-item:hover {
-  background: var(--archive-gray-light);
+  background: var(--bg-secondary);
 }
 
 .archive-item.selected {
   background: rgba(184, 115, 51, 0.08);
-  border-left: 3px solid var(--archive-copper);
+  border-left: 3px solid var(--color-copper);
 }
 
 /* Checkbox */
@@ -212,15 +201,15 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--archive-white);
-  border: 2px solid var(--archive-gray);
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
   border-radius: 0.25rem;
   transition: all 0.15s;
 }
 
 .archive-checkbox input:checked + .archive-checkbox-custom {
-  background: var(--archive-copper);
-  border-color: var(--archive-copper);
+  background: var(--color-copper);
+  border-color: var(--color-copper);
 }
 
 .archive-checkbox input:checked + .archive-checkbox-custom::after {
@@ -230,7 +219,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: var(--archive-white);
+  color: var(--bg-primary);
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -243,7 +232,7 @@
 
 .archive-client {
   font-weight: 600;
-  color: var(--archive-black);
+  color: var(--text-primary);
   margin: 0 0 0.25rem 0;
   font-size: 0.9375rem;
 }
@@ -253,7 +242,7 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.8125rem;
-  color: var(--archive-gray-dark);
+  color: var(--text-secondary);
 }
 
 .archive-meta-item {
@@ -265,8 +254,8 @@
 .archive-badge {
   display: inline-block;
   padding: 0.125rem 0.5rem;
-  background: var(--archive-gray-light);
-  color: var(--archive-gray-dark);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   border-radius: 1rem;
   font-size: 0.6875rem;
   font-weight: 500;
@@ -286,10 +275,10 @@
   justify-content: center;
   gap: 0.375rem;
   padding: 0.5rem 0.875rem;
-  border: 1px solid var(--archive-gray);
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
-  background: var(--archive-white);
-  color: var(--archive-black);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -298,8 +287,8 @@
 }
 
 .archive-btn:hover {
-  border-color: var(--archive-copper);
-  color: var(--archive-copper);
+  border-color: var(--color-copper);
+  color: var(--color-copper);
 }
 
 .archive-btn:disabled {
@@ -308,35 +297,35 @@
 }
 
 .archive-btn.primary {
-  background: var(--archive-copper);
-  border-color: var(--archive-copper);
-  color: var(--archive-white);
+  background: var(--color-copper);
+  border-color: var(--color-copper);
+  color: var(--bg-primary);
 }
 
 .archive-btn.primary:hover {
-  background: var(--archive-copper-dark);
-  border-color: var(--archive-copper-dark);
+  background: var(--color-copper-dark);
+  border-color: var(--color-copper-dark);
 }
 
 .archive-btn.restore {
-  background: var(--archive-gray-light);
-  border-color: var(--archive-gray);
-  color: var(--archive-black);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 .archive-btn.restore:hover {
-  border-color: var(--archive-copper);
+  border-color: var(--color-copper);
   background: rgba(184, 115, 51, 0.1);
 }
 
 .archive-btn.danger {
-  color: #dc2626;
-  border-color: #fee2e2;
+  color: var(--color-danger);
+  border-color: var(--color-danger-light);
 }
 
 .archive-btn.danger:hover {
-  background: #fee2e2;
-  border-color: #dc2626;
+  background: var(--color-danger-light);
+  border-color: var(--color-danger);
 }
 
 .archive-btn-icon {
@@ -346,23 +335,23 @@
   width: 2rem;
   height: 2rem;
   padding: 0;
-  border: 1px solid var(--archive-gray);
+  border: 1px solid var(--border-color);
   border-radius: 0.375rem;
-  background: var(--archive-white);
-  color: var(--archive-gray-dark);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .archive-btn-icon:hover {
-  border-color: var(--archive-copper);
-  color: var(--archive-copper);
+  border-color: var(--color-copper);
+  color: var(--color-copper);
 }
 
 .archive-btn-icon.danger:hover {
-  border-color: #dc2626;
-  color: #dc2626;
-  background: #fee2e2;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-light);
 }
 
 /* ==================== EMPTY STATE ==================== */
@@ -380,13 +369,13 @@
 .archive-empty-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--archive-black);
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .archive-empty-text {
   font-size: 0.875rem;
-  color: var(--archive-gray-dark);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -435,4 +424,15 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .archive-container,
+.dark-theme .archive-container {
+  /* Overrides spécifiques si nécessaires */
 }

@@ -50,3 +50,14 @@
     font-size: 0.875rem;
   }
 }
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-leave-view,
+.dark-theme .admin-leave-view {
+  /* Overrides spécifiques si nécessaires */
+}

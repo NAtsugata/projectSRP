@@ -1,16 +1,7 @@
 /* src/pages/AdminUserView.css */
 /* Design: Blanc, Noir, Cuivre - Style moderne et professionnel */
 
-/* Variables locales - DYNAMIQUES selon le thème ✅ */
-:root {
-  --user-copper: var(--color-copper);           /* Change avec le thème! */
-  --user-copper-light: var(--color-copper-light);
-  --user-copper-dark: var(--color-copper-dark);
-  /* --user-black et --user-white sont définis dans theme-variables.css */
-  --user-gray-light: #f8f9fa;
-  --user-gray: #e9ecef;
-  --user-gray-dark: #6c757d;
-}
+/* Utilise les variables globales du design system */
 
 .admin-user-view {
   padding: 1.5rem 0;
@@ -20,21 +11,21 @@
 .admin-user-header {
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
-  border-bottom: 2px solid var(--user-black);
+  border-bottom: 2px solid var(--text-primary);
 }
 
 .admin-user-header h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--user-black);
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .admin-user-subtitle {
   margin: 0;
   font-size: 0.9375rem;
-  color: var(--user-gray-dark);
+  color: var(--text-secondary);
 }
 
 /* User list */
@@ -49,7 +40,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--user-gray);
+  border-bottom: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
 
@@ -67,7 +58,7 @@
 }
 
 .user-item:hover {
-  background: var(--user-gray-light);
+  background: var(--bg-secondary);
 }
 
 .user-info {
@@ -84,8 +75,8 @@
   height: 52px;
   min-width: 52px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--user-copper) 0%, var(--user-copper-dark) 100%);
-  color: var(--user-white);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,7 +97,7 @@
   margin: 0 0 0.25rem 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--user-black);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -115,7 +106,7 @@
 .user-email {
   margin: 0 0 0.625rem 0;
   font-size: 0.8125rem;
-  color: var(--user-gray-dark);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -141,18 +132,18 @@
 }
 
 .badge-admin {
-  background: var(--user-black);
-  color: var(--user-white);
+  background: var(--text-primary);
+  color: var(--bg-primary);
 }
 
 .badge-standard {
-  background: var(--user-gray);
-  color: var(--user-black);
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
 .badge-permissions {
-  background: linear-gradient(135deg, var(--user-copper-light) 0%, var(--user-copper) 100%);
-  color: var(--user-white);
+  background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
+  color: var(--bg-primary);
 }
 
 .badge-permissions svg {
@@ -173,19 +164,19 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  border: 2px solid var(--user-copper);
-  background: var(--user-white);
+  border: 2px solid var(--color-copper);
+  background: var(--bg-primary);
   border-radius: 8px;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--user-copper);
+  color: var(--color-copper);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-permissions:hover {
-  background: var(--user-copper);
-  color: var(--user-white);
+  background: var(--color-copper);
+  color: var(--bg-primary);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(184, 115, 51, 0.25);
 }
@@ -206,18 +197,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--user-gray);
-  background: var(--user-white);
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
   border-radius: 8px;
   cursor: pointer;
-  color: var(--user-gray-dark);
+  color: var(--text-secondary);
   transition: all 0.2s ease;
 }
 
 .admin-user-view .btn-icon:hover {
-  border-color: var(--user-black);
-  color: var(--user-black);
-  background: var(--user-gray-light);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
 }
 
 .admin-user-view .btn-icon svg {
@@ -227,12 +218,12 @@
 
 /* Card container ameliore */
 .admin-user-view .card-white {
-  background: var(--user-white);
+  background: var(--bg-primary);
   border-radius: 16px;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.06),
     0 4px 12px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--user-gray);
+  border: 1px solid var(--border-color);
   overflow: hidden;
 }
 
@@ -265,7 +256,7 @@
     width: 100%;
     justify-content: flex-end;
     padding-top: 0.75rem;
-    border-top: 1px dashed var(--user-gray);
+    border-top: 1px dashed var(--border-color);
   }
 
   .btn-permissions {
@@ -302,4 +293,15 @@
     flex: 0;
     padding: 0.625rem;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-user-view,
+.dark-theme .admin-user-view {
+  /* Overrides spécifiques si nécessaires */
 }

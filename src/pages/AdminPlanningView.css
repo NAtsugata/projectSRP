@@ -123,18 +123,18 @@
 }
 
 .planning-header-actions .absence-toggle-btn {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border-color: #fb923c;
-  color: #c2410c;
+  background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-warning-lighter) 100%);
+  border-color: var(--color-warning);
+  color: var(--color-warning-dark);
   font-weight: 600;
 }
 
 .planning-header-actions .absence-toggle-btn:hover {
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-  border-color: #f97316;
-  color: #9a3412;
+  background: linear-gradient(135deg, var(--color-warning-lighter) 0%, var(--color-warning-light) 100%);
+  border-color: var(--color-warning-dark);
+  color: var(--color-warning-darker);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 /* ==================== VIEW MODE SELECTOR ==================== */

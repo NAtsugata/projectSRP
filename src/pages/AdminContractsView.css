@@ -22,7 +22,7 @@
 .contracts-header h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -42,7 +42,7 @@
 }
 
 .stat-card {
-    background: var(--card-bg, #ffffff);
+    background: var(--card-bg, var(--bg-primary));
     border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
     border-radius: 16px;
     padding: 1.25rem;
@@ -73,20 +73,20 @@
 }
 
 .stat-icon.expired {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
 }
 
 .stat-icon.pending {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: linear-gradient(135deg, var(--color-warning), var(--color-warning-dark));
 }
 
 .stat-icon.revenue {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-600));
 }
 
 .stat-content h3 {
     font-size: 0.75rem;
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 0.25rem 0;
@@ -95,7 +95,7 @@
 .stat-content .value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 /* ========== Toolbar ========== */
@@ -128,10 +128,10 @@
 .search-input {
     width: 100%;
     padding: 0.75rem 2.5rem 0.75rem 2.75rem;
-    background: var(--bg-primary, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
     border-radius: 12px;
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
     font-size: 0.9rem;
     transition: all 0.2s ease;
 }
@@ -143,7 +143,7 @@
 }
 
 .search-input::placeholder {
-    color: var(--text-tertiary, #9ca3af);
+    color: var(--text-tertiary, var(--text-tertiary));
 }
 
 .search-clear {
@@ -167,7 +167,7 @@
 
 .search-clear:hover {
     background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 /* ========== Filters ========== */
@@ -178,11 +178,11 @@
 }
 
 .filter-select {
-    background: var(--bg-primary, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
     border-radius: 8px;
     padding: 0.5rem 1rem;
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
     font-size: 0.875rem;
     cursor: pointer;
     transition: border-color 0.2s ease;
@@ -202,16 +202,16 @@
 }
 
 .results-info span {
-    color: #a78bfa;
+    color: var(--color-primary-300);
 }
 
 /* ========== Primary Button ========== */
 .btn-primary {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-600));
     border: none;
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -234,7 +234,7 @@
 }
 
 .contract-card {
-    background: linear-gradient(135deg, rgba(30, 30, 45, 0.9), rgba(20, 20, 35, 0.95));
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 1.25rem;
@@ -256,11 +256,11 @@
 
 /* ========== Expiry States ========== */
 .contract-card.expiring-soon {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-warning);
 }
 
 .contract-card.expired-card {
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid var(--color-danger);
     opacity: 0.85;
 }
 
@@ -275,13 +275,13 @@
 .expiry-alert-badge.warning {
     background: rgba(245, 158, 11, 0.15);
     border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .expiry-alert-badge.danger {
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* ========== Card Sections ========== */
@@ -301,7 +301,7 @@
 .contract-client-name {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 .contract-type {
@@ -326,17 +326,17 @@
 
 .contract-status.expired {
     background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .contract-status.pending_renewal {
     background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .contract-status.cancelled {
     background: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
+    color: var(--text-tertiary);
 }
 
 .contract-card-body {
@@ -359,7 +359,7 @@
 
 .contract-info-item .value {
     font-size: 0.875rem;
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 .price-value {
@@ -383,7 +383,7 @@
     background: rgba(139, 92, 246, 0.15);
     border-radius: 8px;
     font-size: 0.75rem;
-    color: #a78bfa;
+    color: var(--color-primary-300);
 }
 
 .contract-actions {
@@ -407,12 +407,12 @@
 
 .btn-icon:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 .btn-icon.delete:hover {
     background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* ========== Modal ========== */
@@ -451,7 +451,7 @@
 .modal-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-inverse);
     margin: 0;
 }
 
@@ -471,7 +471,7 @@
 
 .modal-close:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 .modal-body {
@@ -507,7 +507,7 @@
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    color: #fff;
+    color: var(--text-inverse);
     font-size: 0.875rem;
     transition: border-color 0.2s ease;
 }
@@ -535,7 +535,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 500;
     font-size: 0.875rem;
     cursor: pointer;
@@ -565,7 +565,7 @@
 .empty-state h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-inverse);
     margin: 0 0 0.5rem 0;
 }
 
@@ -587,7 +587,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #8b5cf6;
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -697,14 +697,14 @@
 
 .toggle-switch.on .toggle-knob {
     transform: translateX(22px);
-    background: #fff;
+    background: var(--text-inverse);
 }
 
 .toggle-text {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-size: 0.9rem;
 }
 
@@ -719,24 +719,24 @@
 
 .delete-confirm-modal .modal-body p {
     margin-bottom: 1rem;
-    color: #fff;
+    color: var(--text-inverse);
 }
 
 .delete-confirm-modal .warning-text {
-    color: #f59e0b;
+    color: var(--color-warning);
     font-size: 0.875rem;
     background: rgba(245, 158, 11, 0.1);
     padding: 0.75rem;
     border-radius: 8px;
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-warning);
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
     border: none;
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -753,64 +753,64 @@
 
 .light-theme .contracts-header h1,
 :root:not(.dark-theme) .contracts-header h1 {
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .stat-card,
 :root:not(.dark-theme) .stat-card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--card-bg, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
 }
 
 .light-theme .stat-content h3,
 :root:not(.dark-theme) .stat-content h3 {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
 }
 
 .light-theme .stat-content .value,
 :root:not(.dark-theme) .stat-content .value {
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .search-input,
 :root:not(.dark-theme) .search-input {
-    background: var(--bg-primary, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, #1f2937);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .search-input::placeholder,
 :root:not(.dark-theme) .search-input::placeholder {
-    color: var(--text-tertiary, #9ca3af);
+    color: var(--text-tertiary, var(--text-tertiary));
 }
 
 .light-theme .search-clear,
 :root:not(.dark-theme) .search-clear {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
     background: var(--bg-secondary, #f3f4f6);
 }
 
 .light-theme .search-icon,
 :root:not(.dark-theme) .search-icon {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
 }
 
 .light-theme .filter-select,
 :root:not(.dark-theme) .filter-select {
-    background: var(--bg-primary, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
-    color: var(--text-primary, #1f2937);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .results-info,
 :root:not(.dark-theme) .results-info {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
 }
 
 .light-theme .contract-card,
 :root:not(.dark-theme) .contract-card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--card-bg, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
 }
 
 .light-theme .contract-card:hover,
@@ -820,32 +820,32 @@
 
 .light-theme .client-name,
 :root:not(.dark-theme) .client-name {
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .contract-reference,
 :root:not(.dark-theme) .contract-reference {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
 }
 
 .light-theme .info-label,
 :root:not(.dark-theme) .info-label {
-    color: var(--text-tertiary, #9ca3af);
+    color: var(--text-tertiary, var(--text-tertiary));
 }
 
 .light-theme .info-value,
 :root:not(.dark-theme) .info-value {
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .empty-state h3,
 :root:not(.dark-theme) .empty-state h3 {
-    color: var(--text-primary, #1f2937);
+    color: var(--text-primary, var(--text-primary));
 }
 
 .light-theme .empty-state p,
 :root:not(.dark-theme) .empty-state p {
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary, var(--text-secondary));
 }
 
 /* Boutons primaires gardent leur gradient violet */
@@ -864,4 +864,15 @@
 .light-theme .status-badge,
 :root:not(.dark-theme) .status-badge {
     /* Gardent leurs backgrounds colorés */
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .contracts-view,
+.dark-theme .contracts-view {
+  /* Overrides spécifiques si nécessaires */
 }
