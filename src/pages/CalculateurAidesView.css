@@ -614,3 +614,14 @@
 .calc-results-section .calc-card:nth-child(4) {
   animation-delay: 0.4s;
 }
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .calculateur-aides-page,
+.dark-theme .calculateur-aides-page {
+  /* Overrides spécifiques si nécessaires */
+}

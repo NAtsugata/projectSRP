@@ -317,9 +317,9 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--spacing-4);
   padding: var(--spacing-5);
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: var(--radius-xl);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   animation: fadeInUp 0.5s ease-out 0.2s backwards;
 }
 
@@ -622,9 +622,9 @@
 .intervention-detail-modern input[type="tel"],
 .intervention-detail-modern textarea,
 .intervention-detail-modern select {
-  color: #111827 !important;
-  background: #ffffff !important;
-  border: 2px solid #e5e7eb !important;
+  color: var(--text-primary) !important;
+  background: var(--bg-primary) !important;
+  border: 2px solid var(--border-color) !important;
   border-radius: 0.75rem !important;
   padding: 0.75rem 1rem !important;
   font-size: 1rem !important;
@@ -643,7 +643,7 @@
 .intervention-detail-modern .form-control::placeholder,
 .intervention-detail-modern input::placeholder,
 .intervention-detail-modern textarea::placeholder {
-  color: #9ca3af !important;
+  color: var(--text-muted) !important;
   opacity: 0.7;
 }
 
@@ -675,13 +675,13 @@
 }
 
 .intervention-detail-modern .btn-secondary {
-  background: #f9fafb !important;
-  color: #111827 !important;
-  border: 2px solid #e5e7eb !important;
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
 }
 
 .intervention-detail-modern .btn-secondary:hover:not(:disabled) {
-  background: #f3f4f6 !important;
+  background: var(--bg-tertiary) !important;
   border-color: var(--color-copper-light) !important;
   transform: translateY(-1px);
 }
@@ -718,7 +718,7 @@
 
 /* Fix pour les labels */
 .intervention-detail-modern label {
-  color: #111827 !important;
+  color: var(--text-primary) !important;
   font-weight: 500;
 }
 
@@ -729,20 +729,31 @@
 .intervention-detail-modern h4,
 .intervention-detail-modern h5,
 .intervention-detail-modern h6 {
-  color: #111827 !important;
+  color: var(--text-primary) !important;
 }
 
 .intervention-detail-modern p,
 .intervention-detail-modern span,
 .intervention-detail-modern div {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 /* Fix spécifique pour les sections */
 .intervention-detail-modern .section-title {
-  color: #111827 !important;
+  color: var(--text-primary) !important;
 }
 
 .intervention-detail-modern .section-subtitle {
-  color: #4b5563 !important;
+  color: var(--text-secondary) !important;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .intervention-detail-modern,
+.dark-theme .intervention-detail-modern {
+  /* Overrides spécifiques si nécessaires */
 }

@@ -6,7 +6,7 @@
 /* ==================== CONTENEUR PRINCIPAL ==================== */
 .admin-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   padding: 2rem 1rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -21,14 +21,14 @@
 .dashboard-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   text-shadow: none;
 }
 
 .dashboard-description {
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 400;
 }
 
@@ -55,13 +55,13 @@
 
 /* ==================== SECTION COMMUNE ==================== */
 .dashboard-section {
-  background: #ffffff;
+  background: var(--bg-primary);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 1.5rem;
   padding: 1.75rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 /* ==================== ACTIVITÉ RÉCENTE ==================== */
@@ -71,13 +71,13 @@
   justify-content: space-between;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .recent-activity-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .activity-list {
@@ -91,15 +91,15 @@
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   border-radius: 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color-light);
   transition: all 0.2s ease;
 }
 
 .activity-item:hover {
-  background: #f3f4f6;
-  border-color: rgba(0, 0, 0, 0.1);
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
   transform: translateX(4px);
 }
 
@@ -140,19 +140,19 @@
 .activity-title {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .activity-description {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .activity-time {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 /* ==================== ACTIONS RAPIDES ==================== */
@@ -163,7 +163,7 @@
 .quick-actions-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 1rem;
 }
 
@@ -319,13 +319,13 @@
 .empty-state-icon {
   width: 80px;
   height: 80px;
-  background: rgba(100, 116, 139, 0.1);
+  background: var(--bg-secondary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1.5rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .empty-state-icon svg {
@@ -336,12 +336,35 @@
 .empty-state-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .empty-state-description {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   max-width: 400px;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  }
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-dashboard,
+.dark-theme .admin-dashboard {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+}
+
+[data-theme="dark"] .quick-action-button.btn-primary,
+.dark-theme .quick-action-button.btn-primary {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .quick-action-button.btn-secondary,
+.dark-theme .quick-action-button.btn-secondary {
+  color: var(--text-primary);
 }
