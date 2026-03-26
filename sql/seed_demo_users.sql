@@ -1,29 +1,32 @@
 -- ============================================================
 -- CRÉATION DES UTILISATEURS DE TEST
 -- ============================================================
--- IMPORTANT: Avant d'exécuter ce script, créez les utilisateurs
--- via Supabase Dashboard > Authentication > Add User
+-- IMPORTANT: Seul nico@test.com est un vrai compte (créé dans Auth)
+-- Les autres (Sophie, Marc, Julie) sont des utilisateurs FICTIFS
+-- pour peupler le dashboard et les données de démonstration
 --
--- Utilisateurs à créer :
--- 1. nico@test.com (Admin - accès à tout SAUF facturation)
--- 2. sophie@test.com (Manager)
--- 3. marc@test.com (Technicien)
--- 4. julie@test.com (Technicienne)
+-- Utilisateur réel à créer dans Supabase Auth :
+-- - Email: nico@test.com
+-- - Mot de passe: Test2024!
+-- - UUID: 156097ea-ffb8-4ecb-9688-1e58313cd1f8 (déjà créé)
 --
--- Mot de passe pour tous : Test2024!
---
--- Puis remplacez les UUIDs ci-dessous par ceux générés
+-- Utilisateurs fictifs (générés automatiquement):
+-- - Sophie Dubois (Manager)
+-- - Marc Lefebvre (Technicien)
+-- - Julie Roux (Technicienne)
 -- ============================================================
 
 DO $$
 DECLARE
   demo_org_id uuid;
 
-  -- ⚠️ REMPLACER CES UUIDs PAR CEUX GÉNÉRÉS PAR SUPABASE AUTH ⚠️
-  nico_id uuid := '156097ea-ffb8-4ecb-9688-1e58313cd1f8';  -- nico@test.com
-  sophie_id uuid := '00000000-0000-0000-0000-000000000002';  -- sophie@test.com
-  marc_id uuid := '00000000-0000-0000-0000-000000000003';  -- marc@test.com
-  julie_id uuid := '00000000-0000-0000-0000-000000000004';  -- julie@test.com
+  -- Seul Nico est un vrai utilisateur avec authentification
+  nico_id uuid := '156097ea-ffb8-4ecb-9688-1e58313cd1f8';
+
+  -- Utilisateurs fictifs (UUIDs générés automatiquement)
+  sophie_id uuid := gen_random_uuid();
+  marc_id uuid := gen_random_uuid();
+  julie_id uuid := gen_random_uuid();
 
 BEGIN
   -- Récupérer l'ID de l'organisation démo
@@ -116,27 +119,22 @@ BEGIN
   RAISE NOTICE 'UTILISATEURS DE TEST CRÉÉS';
   RAISE NOTICE '════════════════════════════════════════════════════════';
   RAISE NOTICE '';
-  RAISE NOTICE 'Admin (sans facturation):';
+  RAISE NOTICE '🔐 COMPTE RÉEL (peut se connecter):';
   RAISE NOTICE '  Email: nico@test.com';
   RAISE NOTICE '  Mot de passe: Test2024!';
   RAISE NOTICE '  Nom: Nico Martin';
+  RAISE NOTICE '  Rôle: Admin';
   RAISE NOTICE '  Accès: Dashboard, Planning, Interventions, Clients, Congés, etc.';
   RAISE NOTICE '  ⛔ PAS d''accès: Facturation';
   RAISE NOTICE '';
-  RAISE NOTICE 'Manager:';
-  RAISE NOTICE '  Email: sophie@test.com';
-  RAISE NOTICE '  Mot de passe: Test2024!';
-  RAISE NOTICE '  Nom: Sophie Dubois';
+  RAISE NOTICE '👥 UTILISATEURS FICTIFS (pour peupler les données):';
+  RAISE NOTICE '  - Sophie Dubois (Manager) - ID: %', sophie_id;
+  RAISE NOTICE '  - Marc Lefebvre (Technicien) - ID: %', marc_id;
+  RAISE NOTICE '  - Julie Roux (Technicienne) - ID: %', julie_id;
   RAISE NOTICE '';
-  RAISE NOTICE 'Technicien:';
-  RAISE NOTICE '  Email: marc@test.com';
-  RAISE NOTICE '  Mot de passe: Test2024!';
-  RAISE NOTICE '  Nom: Marc Lefebvre';
-  RAISE NOTICE '';
-  RAISE NOTICE 'Technicienne:';
-  RAISE NOTICE '  Email: julie@test.com';
-  RAISE NOTICE '  Mot de passe: Test2024!';
-  RAISE NOTICE '  Nom: Julie Roux';
+  RAISE NOTICE '💡 Ces utilisateurs fictifs apparaissent dans le dashboard,';
+  RAISE NOTICE '   les interventions, les dépenses, etc. mais ne peuvent';
+  RAISE NOTICE '   PAS se connecter à l''application.';
   RAISE NOTICE '';
   RAISE NOTICE '════════════════════════════════════════════════════════';
 
