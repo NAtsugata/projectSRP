@@ -298,7 +298,11 @@ export async function getMonthlyExportData(year, month) {
         const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
         workedDatesSet.forEach(dateStr => {
           const dayInterventions = interventionsByDate[dateStr];
-          if (!dayInterventions || dayInterventions.length === 0) return;
+          if (!dayInterventions || dayInterventions.length === 0) {
+            // Jour travaillé mais sans intervention dans interventionsByDate (ne devrait pas arriver)
+            zoneCount['Zone non calculée'] = (zoneCount['Zone non calculée'] || 0) + 1;
+            return;
+          }
 
           // Trouver l'intervention avec la distance maximale pour ce jour
           const furthestIntervention = dayInterventions.reduce((max, current) => {
@@ -306,9 +310,8 @@ export async function getMonthlyExportData(year, month) {
           }, dayInterventions[0]);
 
           // Compter la zone du chantier le plus éloigné (1 seule fois par jour)
-          if (furthestIntervention.zone) {
-            zoneCount[furthestIntervention.zone] = (zoneCount[furthestIntervention.zone] || 0) + 1;
-          }
+          const zoneToCount = furthestIntervention.zone || 'Zone non calculée';
+          zoneCount[zoneToCount] = (zoneCount[zoneToCount] || 0) + 1;
         });
 
         // Zones uniques triées par fréquence
@@ -929,7 +932,7 @@ export function generatePDF(employeeData, year, month) {
         pdf.text(z.zone, mx + 3, y + 5);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(...gray);
-        pdf.text(`${z.count} intervention${z.count > 1 ? 's' : ''}`, pageW - mx - 3, y + 5, { align: 'right' });
+        pdf.text(`${z.count} jour${z.count > 1 ? 's' : ''}`, pageW - mx - 3, y + 5, { align: 'right' });
         y += 8;
       });
     }
