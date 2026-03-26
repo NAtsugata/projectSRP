@@ -207,8 +207,8 @@ export async function getMonthlyExportData(year, month) {
         // Kilomètres totaux et calcul zones par intervention
         let totalKm = 0;
         const interventionDetails = [];
-        const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
         const interventionsByWorksite = {}; // { "Client - Address": { days, dates, zone, ... } }
+        const interventionsByDate = {}; // { "2026-03-15": [{ intervention, distance, zone }, ...] }
 
         userInterventions.forEach(iv => {
           const kmStart = iv.km_start || iv.report?.km_start;
@@ -235,10 +235,6 @@ export async function getMonthlyExportData(year, month) {
           const zone = distanceAller > 0 ? getZone(distanceAller) : null;
           const source = geocodedDistance > 0 ? 'géocodage' : (distanceAller > 0 ? 'compteur' : null);
 
-          if (zone) {
-            zoneCount[zone] = (zoneCount[zone] || 0) + 1;
-          }
-
           interventionDetails.push({
             id: iv.id,
             client: iv.client,
@@ -250,9 +246,6 @@ export async function getMonthlyExportData(year, month) {
             distanceSource: source,
             status: iv.status,
           });
-
-          // Grouper par chantier (Client + Adresse)
-          const worksiteKey = `${iv.client || 'Client inconnu'} - ${iv.address || 'Adresse inconnue'}`;
 
           // Récupérer les dates de cette intervention
           const ivDates = [];
@@ -266,6 +259,22 @@ export async function getMonthlyExportData(year, month) {
           } else if (iv.date) {
             ivDates.push(iv.date);
           }
+
+          // Grouper par date pour calcul zones (1 zone par jour = chantier le plus éloigné)
+          ivDates.forEach(dateStr => {
+            if (!interventionsByDate[dateStr]) {
+              interventionsByDate[dateStr] = [];
+            }
+            interventionsByDate[dateStr].push({
+              intervention: iv,
+              distanceAller,
+              zone,
+              city,
+            });
+          });
+
+          // Grouper par chantier (Client + Adresse)
+          const worksiteKey = `${iv.client || 'Client inconnu'} - ${iv.address || 'Adresse inconnue'}`;
 
           if (!interventionsByWorksite[worksiteKey]) {
             interventionsByWorksite[worksiteKey] = {
@@ -282,6 +291,21 @@ export async function getMonthlyExportData(year, month) {
           // Ajouter les dates
           ivDates.forEach(d => interventionsByWorksite[worksiteKey].dates.add(d));
           interventionsByWorksite[worksiteKey].interventionCount++;
+        });
+
+        // Calcul des zones : 1 zone par jour travaillé (chantier le plus éloigné du jour)
+        const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
+        Object.keys(interventionsByDate).forEach(dateStr => {
+          const dayInterventions = interventionsByDate[dateStr];
+          // Trouver l'intervention avec la distance maximale pour ce jour
+          const furthestIntervention = dayInterventions.reduce((max, current) => {
+            return (current.distanceAller > max.distanceAller) ? current : max;
+          }, dayInterventions[0]);
+
+          // Compter la zone du chantier le plus éloigné (1 seule fois par jour)
+          if (furthestIntervention.zone) {
+            zoneCount[furthestIntervention.zone] = (zoneCount[furthestIntervention.zone] || 0) + 1;
+          }
         });
 
         // Zones uniques triées par fréquence
