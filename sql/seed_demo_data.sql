@@ -8,10 +8,7 @@
 DO $$
 DECLARE
   demo_org_id uuid;
-  jean_id uuid;
-  sophie_id uuid;
-  marc_id uuid;
-  julie_id uuid;
+  nico_id uuid;
 
   -- IDs des clients (déclarés pour réutilisation)
   client_dupont uuid;
@@ -39,11 +36,8 @@ BEGIN
     RAISE EXCEPTION 'Organisation de démo non trouvée. Exécutez create_demo_organization.sql';
   END IF;
 
-  -- Récupérer les IDs des utilisateurs de démo
-  SELECT id INTO jean_id FROM profiles WHERE email = 'demo-admin@example.com';
-  SELECT id INTO sophie_id FROM profiles WHERE email = 'demo-manager@example.com';
-  SELECT id INTO marc_id FROM profiles WHERE email = 'demo-tech1@example.com';
-  SELECT id INTO julie_id FROM profiles WHERE email = 'demo-tech2@example.com';
+  -- Récupérer l'ID de l'utilisateur de test
+  SELECT id INTO nico_id FROM profiles WHERE email = 'nico@test.com';
 
   RAISE NOTICE '📊 Peuplement des données de démonstration...';
 
@@ -67,7 +61,7 @@ BEGIN
     '04000',
     'Digne-les-Bains',
     'Client régulier depuis 2020. Préfère les interventions le matin.',
-    jean_id
+    nico_id
   ) RETURNING id INTO client_dupont;
 
   -- Client 2: Copropriété VIP
@@ -86,7 +80,7 @@ BEGIN
     'Manosque',
     '85234567800012',
     'Copropriété 24 logements. Contrat de maintenance annuel.',
-    jean_id
+    nico_id
   ) RETURNING id INTO client_residence;
 
   -- Client 3: Administration publique
@@ -104,7 +98,7 @@ BEGIN
     '04200',
     'Sisteron',
     'Contrat cadre pour bâtiments municipaux.',
-    jean_id
+    nico_id
   ) RETURNING id INTO client_mairie;
 
   -- Client 4: Commerce
@@ -124,7 +118,7 @@ BEGIN
     'Digne-les-Bains',
     '82145678900023',
     'Restaurant 50 couverts. Dépannages urgents prioritaires.',
-    sophie_id
+    nico_id
   ) RETURNING id INTO client_restaurant;
 
   -- Client 5: Hôtellerie
@@ -143,7 +137,7 @@ BEGIN
     'Digne-les-Bains',
     '83956789000034',
     'Hôtel 3 étoiles, 35 chambres. Maintenance trimestrielle.',
-    jean_id
+    nico_id
   ) RETURNING id INTO client_hotel;
 
   -- Client 6: Particulier
@@ -160,7 +154,7 @@ BEGIN
     '04100',
     'Manosque',
     'Maison individuelle. Client ponctuel.',
-    marc_id
+    nico_id
   ) RETURNING id INTO client_bernard;
 
   -- Client 7: Pharmacie
@@ -178,7 +172,7 @@ BEGIN
     '04000',
     'Digne-les-Bains',
     '84567890000045',
-    sophie_id
+    nico_id
   ) RETURNING id INTO client_pharmacie;
 
   -- Client 8: Établissement scolaire
@@ -196,7 +190,7 @@ BEGIN
     '04000',
     'Digne-les-Bains',
     'École 8 classes. Interventions pendant vacances scolaires si possible.',
-    jean_id
+    nico_id
   ) RETURNING id INTO client_ecole;
 
   RAISE NOTICE '✓ %s clients créés', 8;
@@ -223,11 +217,11 @@ BEGIN
     'Remplacement joint siphon + vérification robinetterie. Client satisfait.',
     true,
     (CURRENT_DATE - INTERVAL '5 days')::timestamp,
-    sophie_id
+    nico_id
   ) RETURNING id INTO inter_1;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_1, marc_id);
+  VALUES (inter_1, nico_id);
 
   -- Intervention 2: Planifiée pour aujourd'hui
   INSERT INTO interventions (
@@ -244,11 +238,11 @@ BEGIN
     '09:00-12:00',
     '45 Boulevard Victor Hugo, 04100 Manosque',
     'Contrôle annuel chaudière collective',
-    jean_id
+    nico_id
   ) RETURNING id INTO inter_2;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_2, julie_id);
+  VALUES (inter_2, nico_id);
 
   -- Intervention 3: Urgence en cours
   INSERT INTO interventions (
@@ -264,11 +258,11 @@ BEGIN
     ARRAY[CURRENT_DATE],
     '28 Rue de Provence, 04000 Digne-les-Bains',
     'URGENT: Pas d''eau chaude - sanitaires cuisine',
-    sophie_id
+    nico_id
   ) RETURNING id INTO inter_3;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_3, marc_id);
+  VALUES (inter_3, nico_id);
 
   -- Intervention 4: Installation multi-jours
   INSERT INTO interventions (
@@ -288,11 +282,11 @@ BEGIN
     ],
     '15 Avenue des Thermes, 04000 Digne-les-Bains',
     'Installation pompe à chaleur - 3 jours de travaux',
-    jean_id
+    nico_id
   ) RETURNING id INTO inter_4;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_4, marc_id), (inter_4, julie_id);
+  VALUES (inter_4, nico_id), (inter_4, nico_id);
 
   -- Intervention 5: Devis en attente
   INSERT INTO interventions (
@@ -307,17 +301,17 @@ BEGIN
     ARRAY[(CURRENT_DATE + INTERVAL '7 days')::date],
     '1 Place de la République, 04200 Sisteron',
     'Rénovation sanitaires école maternelle',
-    jean_id
+    nico_id
   );
 
   -- Interventions supplémentaires pour historique varié
   INSERT INTO interventions (organization_id, client_id, service, status, priority, scheduled_dates, address, description, is_archived, created_by)
   VALUES
-    (demo_org_id, client_pharmacie, 'Débouchage canalisations', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '12 days')::date], '5 Place du Marché, 04000 Digne-les-Bains', 'Débouchage WC urgence', true, sophie_id),
-    (demo_org_id, client_bernard, 'Installation robinetterie', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '20 days')::date], '8 Chemin des Lavandes, 04100 Manosque', 'Pose mitigeur salle de bain', true, marc_id),
-    (demo_org_id, client_ecole, 'Réparation fuite', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '8 days')::date], '12 Rue de l''École, 04000 Digne-les-Bains', 'Fuite radiateur classe CM2', true, julie_id),
-    (demo_org_id, client_hotel, 'Dépannage', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '15 days')::date], '15 Avenue des Thermes, 04000 Digne-les-Bains', 'Remplacement flotteur WC chambre 205', true, marc_id),
-    (demo_org_id, client_dupont, 'Entretien chaudière', 'Planifiée', 'Normale', ARRAY[(CURRENT_DATE + INTERVAL '10 days')::date], '12 Avenue de la République, 04000 Digne-les-Bains', 'Entretien annuel chaudière gaz', false, julie_id);
+    (demo_org_id, client_pharmacie, 'Débouchage canalisations', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '12 days')::date], '5 Place du Marché, 04000 Digne-les-Bains', 'Débouchage WC urgence', true, nico_id),
+    (demo_org_id, client_bernard, 'Installation robinetterie', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '20 days')::date], '8 Chemin des Lavandes, 04100 Manosque', 'Pose mitigeur salle de bain', true, nico_id),
+    (demo_org_id, client_ecole, 'Réparation fuite', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '8 days')::date], '12 Rue de l''École, 04000 Digne-les-Bains', 'Fuite radiateur classe CM2', true, nico_id),
+    (demo_org_id, client_hotel, 'Dépannage', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '15 days')::date], '15 Avenue des Thermes, 04000 Digne-les-Bains', 'Remplacement flotteur WC chambre 205', true, nico_id),
+    (demo_org_id, client_dupont, 'Entretien chaudière', 'Planifiée', 'Normale', ARRAY[(CURRENT_DATE + INTERVAL '10 days')::date], '12 Avenue de la République, 04000 Digne-les-Bains', 'Entretien annuel chaudière gaz', false, nico_id);
 
   RAISE NOTICE '✓ Interventions créées';
 
@@ -343,7 +337,7 @@ BEGIN
       '2026-06-15',
       1200.00,
       'Maintenance trimestrielle chaudière collective + dépannages inclus',
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -357,7 +351,7 @@ BEGIN
       '2026-04-10',
       2400.00,
       'Maintenance équipements hôtel (chaudières, sanitaires, pompes)',
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -371,7 +365,7 @@ BEGIN
       '2026-04-01',
       15000.00,
       'Maintenance préventive et curative bâtiments municipaux',
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -385,7 +379,7 @@ BEGIN
       '2026-09-01',
       800.00,
       'Contrôle et entretien installations sanitaires école',
-      sophie_id
+      nico_id
     );
 
   RAISE NOTICE '✓ Contrats de maintenance créés';
@@ -399,16 +393,16 @@ BEGIN
     organization_id, user_id, date, category, amount,
     description, km, status, notes
   ) VALUES
-    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '2 days', 'Déplacement', 35.50, 'Trajet Digne - Manosque A/R', 71, 'approved', 'Intervention résidence Les Oliviers'),
-    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '1 day', 'Fournitures', 127.80, 'Joints et raccords urgence', NULL, 'pending', 'Achat magasin Brico pour dépannage restaurant'),
-    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '5 days', 'Repas', 18.50, 'Déjeuner intervention longue', NULL, 'approved', NULL),
-    (demo_org_id, sophie_id, CURRENT_DATE - INTERVAL '7 days', 'Formation', 450.00, 'Formation habilitation gaz', NULL, 'approved', 'Certificat joint'),
-    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '3 days', 'Déplacement', 28.00, 'Trajet Digne - Sisteron A/R', 56, 'approved', NULL),
-    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '10 days', 'Fournitures', 85.20, 'Cartouches silicone + vis', NULL, 'approved', NULL),
-    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '6 days', 'Péage', 12.40, 'Péage autoroute', NULL, 'approved', NULL),
-    (demo_org_id, marc_id, CURRENT_DATE, 'Fournitures', 43.90, 'Flexible haute pression', NULL, 'pending', 'À valider'),
-    (demo_org_id, sophie_id, CURRENT_DATE - INTERVAL '15 days', 'Outillage', 320.00, 'Clé dynamométrique', NULL, 'approved', 'Investissement matériel'),
-    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '8 days', 'Déplacement', 42.00, 'Digne - Manosque - Sisteron', 84, 'approved', 'Double intervention');
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '2 days', 'Déplacement', 35.50, 'Trajet Digne - Manosque A/R', 71, 'approved', 'Intervention résidence Les Oliviers'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '1 day', 'Fournitures', 127.80, 'Joints et raccords urgence', NULL, 'pending', 'Achat magasin Brico pour dépannage restaurant'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '5 days', 'Repas', 18.50, 'Déjeuner intervention longue', NULL, 'approved', NULL),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '7 days', 'Formation', 450.00, 'Formation habilitation gaz', NULL, 'approved', 'Certificat joint'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '3 days', 'Déplacement', 28.00, 'Trajet Digne - Sisteron A/R', 56, 'approved', NULL),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '10 days', 'Fournitures', 85.20, 'Cartouches silicone + vis', NULL, 'approved', NULL),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '6 days', 'Péage', 12.40, 'Péage autoroute', NULL, 'approved', NULL),
+    (demo_org_id, nico_id, CURRENT_DATE, 'Fournitures', 43.90, 'Flexible haute pression', NULL, 'pending', 'À valider'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '15 days', 'Outillage', 320.00, 'Clé dynamométrique', NULL, 'approved', 'Investissement matériel'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '8 days', 'Déplacement', 42.00, 'Digne - Manosque - Sisteron', 84, 'approved', 'Double intervention');
 
   RAISE NOTICE '✓ Dépenses créées';
 
@@ -421,13 +415,13 @@ BEGIN
     organization_id, user_id, start_date, end_date,
     type, status, days_count, reason
   ) VALUES
-    (demo_org_id, marc_id, '2026-04-15', '2026-04-19', 'Congés payés', 'Approuvée', 5, 'Vacances printemps'),
-    (demo_org_id, julie_id, '2026-05-01', '2026-05-01', 'Jour férié', 'Approuvée', 1, 'Fête du travail'),
-    (demo_org_id, sophie_id, '2026-07-20', '2026-08-03', 'Congés payés', 'En attente', 11, 'Vacances été'),
-    (demo_org_id, marc_id, '2026-06-05', '2026-06-06', 'Congés payés', 'En attente', 2, 'Pont Pentecôte'),
-    (demo_org_id, julie_id, '2026-08-10', '2026-08-24', 'Congés payés', 'En attente', 11, 'Vacances été'),
-    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '29 days', 'Maladie', 'Approuvée', 2, 'Arrêt maladie'),
-    (demo_org_id, sophie_id, '2026-12-24', '2026-12-31', 'Congés payés', 'En attente', 6, 'Fêtes de fin d''année');
+    (demo_org_id, nico_id, '2026-04-15', '2026-04-19', 'Congés payés', 'Approuvée', 5, 'Vacances printemps'),
+    (demo_org_id, nico_id, '2026-05-01', '2026-05-01', 'Jour férié', 'Approuvée', 1, 'Fête du travail'),
+    (demo_org_id, nico_id, '2026-07-20', '2026-08-03', 'Congés payés', 'En attente', 11, 'Vacances été'),
+    (demo_org_id, nico_id, '2026-06-05', '2026-06-06', 'Congés payés', 'En attente', 2, 'Pont Pentecôte'),
+    (demo_org_id, nico_id, '2026-08-10', '2026-08-24', 'Congés payés', 'En attente', 11, 'Vacances été'),
+    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '29 days', 'Maladie', 'Approuvée', 2, 'Arrêt maladie'),
+    (demo_org_id, nico_id, '2026-12-24', '2026-12-31', 'Congés payés', 'En attente', 6, 'Fêtes de fin d''année');
 
   RAISE NOTICE '✓ Demandes de congés créées';
 
@@ -451,7 +445,7 @@ BEGIN
         jsonb_build_object('text', 'Contrôler vase expansion', 'checked', false),
         jsonb_build_object('text', 'Vérifier circulateur', 'checked', false)
       ),
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -465,7 +459,7 @@ BEGIN
         jsonb_build_object('text', 'Tester robinetterie (débit, température)', 'checked', false),
         jsonb_build_object('text', 'Nettoyer et ranger chantier', 'checked', false)
       ),
-      sophie_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -479,7 +473,7 @@ BEGIN
         jsonb_build_object('text', 'Tester étanchéité (30 min)', 'checked', false),
         jsonb_build_object('text', 'Remettre en service', 'checked', false)
       ),
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -492,7 +486,7 @@ BEGIN
         jsonb_build_object('text', 'Contrôler groupe sécurité', 'checked', false),
         jsonb_build_object('text', 'Détartrage si nécessaire', 'checked', false)
       ),
-      sophie_id
+      nico_id
     );
 
   RAISE NOTICE '✓ Templates de checklist créés';
@@ -513,7 +507,7 @@ BEGIN
       '12 Avenue de la République, 04000 Digne-les-Bains',
       'Installation pompe à chaleur air/eau 12 kW',
       CURRENT_DATE - INTERVAL '30 days',
-      jean_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -522,7 +516,7 @@ BEGIN
       '15 Avenue des Thermes, 04000 Digne-les-Bains',
       'Remplacement chaudière gaz condensation 35 kW',
       CURRENT_DATE - INTERVAL '45 days',
-      sophie_id
+      nico_id
     ),
     (
       demo_org_id,
@@ -531,7 +525,7 @@ BEGIN
       '8 Chemin des Lavandes, 04100 Manosque',
       'Installation chauffe-eau thermodynamique',
       CURRENT_DATE - INTERVAL '60 days',
-      marc_id
+      nico_id
     );
 
   RAISE NOTICE '✓ Documents CERFA créés';
