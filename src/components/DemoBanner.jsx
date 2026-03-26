@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangleIcon } from './SharedUI';
 import { useAuthStore } from '../store/authStore';
 import './DemoBanner.css';
 
@@ -19,7 +19,7 @@ export function DemoBanner() {
   return (
     <div className="demo-banner" role="banner" aria-label="Bannière de démonstration">
       <div className="demo-banner-content">
-        <AlertTriangle size={20} className="demo-banner-icon" aria-hidden="true" />
+        <AlertTriangleIcon size={20} className="demo-banner-icon" aria-hidden="true" />
         <span className="demo-banner-title">
           {bannerText}
         </span>
