@@ -9,6 +9,9 @@ DO $$
 DECLARE
   demo_org_id uuid;
   nico_id uuid;
+  sophie_id uuid;
+  marc_id uuid;
+  julie_id uuid;
 
   -- IDs des clients (déclarés pour réutilisation)
   client_dupont uuid;
@@ -36,8 +39,11 @@ BEGIN
     RAISE EXCEPTION 'Organisation de démo non trouvée. Exécutez create_demo_organization.sql';
   END IF;
 
-  -- Récupérer l'ID de l'utilisateur de test
+  -- Récupérer les IDs des utilisateurs de test
   SELECT id INTO nico_id FROM profiles WHERE email = 'nico@test.com';
+  SELECT id INTO sophie_id FROM profiles WHERE email = 'sophie@test.com';
+  SELECT id INTO marc_id FROM profiles WHERE email = 'marc@test.com';
+  SELECT id INTO julie_id FROM profiles WHERE email = 'julie@test.com';
 
   RAISE NOTICE '📊 Peuplement des données de démonstration...';
 
@@ -118,7 +124,7 @@ BEGIN
     'Digne-les-Bains',
     '82145678900023',
     'Restaurant 50 couverts. Dépannages urgents prioritaires.',
-    nico_id
+    sophie_id
   ) RETURNING id INTO client_restaurant;
 
   -- Client 5: Hôtellerie
@@ -154,7 +160,7 @@ BEGIN
     '04100',
     'Manosque',
     'Maison individuelle. Client ponctuel.',
-    nico_id
+    marc_id
   ) RETURNING id INTO client_bernard;
 
   -- Client 7: Pharmacie
@@ -172,7 +178,7 @@ BEGIN
     '04000',
     'Digne-les-Bains',
     '84567890000045',
-    nico_id
+    sophie_id
   ) RETURNING id INTO client_pharmacie;
 
   -- Client 8: Établissement scolaire
@@ -217,11 +223,11 @@ BEGIN
     'Remplacement joint siphon + vérification robinetterie. Client satisfait.',
     true,
     (CURRENT_DATE - INTERVAL '5 days')::timestamp,
-    nico_id
+    sophie_id
   ) RETURNING id INTO inter_1;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_1, nico_id);
+  VALUES (inter_1, marc_id);
 
   -- Intervention 2: Planifiée pour aujourd'hui
   INSERT INTO interventions (
@@ -242,7 +248,7 @@ BEGIN
   ) RETURNING id INTO inter_2;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_2, nico_id);
+  VALUES (inter_2, julie_id);
 
   -- Intervention 3: Urgence en cours
   INSERT INTO interventions (
@@ -258,11 +264,11 @@ BEGIN
     ARRAY[CURRENT_DATE],
     '28 Rue de Provence, 04000 Digne-les-Bains',
     'URGENT: Pas d''eau chaude - sanitaires cuisine',
-    nico_id
+    sophie_id
   ) RETURNING id INTO inter_3;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_3, nico_id);
+  VALUES (inter_3, marc_id);
 
   -- Intervention 4: Installation multi-jours
   INSERT INTO interventions (
@@ -286,7 +292,7 @@ BEGIN
   ) RETURNING id INTO inter_4;
 
   INSERT INTO intervention_assignments (intervention_id, user_id)
-  VALUES (inter_4, nico_id), (inter_4, nico_id);
+  VALUES (inter_4, marc_id), (inter_4, julie_id);
 
   -- Intervention 5: Devis en attente
   INSERT INTO interventions (
@@ -307,11 +313,11 @@ BEGIN
   -- Interventions supplémentaires pour historique varié
   INSERT INTO interventions (organization_id, client_id, service, status, priority, scheduled_dates, address, description, is_archived, created_by)
   VALUES
-    (demo_org_id, client_pharmacie, 'Débouchage canalisations', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '12 days')::date], '5 Place du Marché, 04000 Digne-les-Bains', 'Débouchage WC urgence', true, nico_id),
-    (demo_org_id, client_bernard, 'Installation robinetterie', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '20 days')::date], '8 Chemin des Lavandes, 04100 Manosque', 'Pose mitigeur salle de bain', true, nico_id),
-    (demo_org_id, client_ecole, 'Réparation fuite', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '8 days')::date], '12 Rue de l''École, 04000 Digne-les-Bains', 'Fuite radiateur classe CM2', true, nico_id),
-    (demo_org_id, client_hotel, 'Dépannage', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '15 days')::date], '15 Avenue des Thermes, 04000 Digne-les-Bains', 'Remplacement flotteur WC chambre 205', true, nico_id),
-    (demo_org_id, client_dupont, 'Entretien chaudière', 'Planifiée', 'Normale', ARRAY[(CURRENT_DATE + INTERVAL '10 days')::date], '12 Avenue de la République, 04000 Digne-les-Bains', 'Entretien annuel chaudière gaz', false, nico_id);
+    (demo_org_id, client_pharmacie, 'Débouchage canalisations', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '12 days')::date], '5 Place du Marché, 04000 Digne-les-Bains', 'Débouchage WC urgence', true, sophie_id),
+    (demo_org_id, client_bernard, 'Installation robinetterie', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '20 days')::date], '8 Chemin des Lavandes, 04100 Manosque', 'Pose mitigeur salle de bain', true, marc_id),
+    (demo_org_id, client_ecole, 'Réparation fuite', 'Terminée', 'Urgente', ARRAY[(CURRENT_DATE - INTERVAL '8 days')::date], '12 Rue de l''École, 04000 Digne-les-Bains', 'Fuite radiateur classe CM2', true, julie_id),
+    (demo_org_id, client_hotel, 'Dépannage', 'Terminée', 'Normale', ARRAY[(CURRENT_DATE - INTERVAL '15 days')::date], '15 Avenue des Thermes, 04000 Digne-les-Bains', 'Remplacement flotteur WC chambre 205', true, marc_id),
+    (demo_org_id, client_dupont, 'Entretien chaudière', 'Planifiée', 'Normale', ARRAY[(CURRENT_DATE + INTERVAL '10 days')::date], '12 Avenue de la République, 04000 Digne-les-Bains', 'Entretien annuel chaudière gaz', false, julie_id);
 
   RAISE NOTICE '✓ Interventions créées';
 
@@ -393,16 +399,16 @@ BEGIN
     organization_id, user_id, date, category, amount,
     description, km, status, notes
   ) VALUES
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '2 days', 'Déplacement', 35.50, 'Trajet Digne - Manosque A/R', 71, 'approved', 'Intervention résidence Les Oliviers'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '1 day', 'Fournitures', 127.80, 'Joints et raccords urgence', NULL, 'pending', 'Achat magasin Brico pour dépannage restaurant'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '5 days', 'Repas', 18.50, 'Déjeuner intervention longue', NULL, 'approved', NULL),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '7 days', 'Formation', 450.00, 'Formation habilitation gaz', NULL, 'approved', 'Certificat joint'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '3 days', 'Déplacement', 28.00, 'Trajet Digne - Sisteron A/R', 56, 'approved', NULL),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '10 days', 'Fournitures', 85.20, 'Cartouches silicone + vis', NULL, 'approved', NULL),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '6 days', 'Péage', 12.40, 'Péage autoroute', NULL, 'approved', NULL),
-    (demo_org_id, nico_id, CURRENT_DATE, 'Fournitures', 43.90, 'Flexible haute pression', NULL, 'pending', 'À valider'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '15 days', 'Outillage', 320.00, 'Clé dynamométrique', NULL, 'approved', 'Investissement matériel'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '8 days', 'Déplacement', 42.00, 'Digne - Manosque - Sisteron', 84, 'approved', 'Double intervention');
+    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '2 days', 'Déplacement', 35.50, 'Trajet Digne - Manosque A/R', 71, 'approved', 'Intervention résidence Les Oliviers'),
+    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '1 day', 'Fournitures', 127.80, 'Joints et raccords urgence', NULL, 'pending', 'Achat magasin Brico pour dépannage restaurant'),
+    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '5 days', 'Repas', 18.50, 'Déjeuner intervention longue', NULL, 'approved', NULL),
+    (demo_org_id, sophie_id, CURRENT_DATE - INTERVAL '7 days', 'Formation', 450.00, 'Formation habilitation gaz', NULL, 'approved', 'Certificat joint'),
+    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '3 days', 'Déplacement', 28.00, 'Trajet Digne - Sisteron A/R', 56, 'approved', NULL),
+    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '10 days', 'Fournitures', 85.20, 'Cartouches silicone + vis', NULL, 'approved', NULL),
+    (demo_org_id, julie_id, CURRENT_DATE - INTERVAL '6 days', 'Péage', 12.40, 'Péage autoroute', NULL, 'approved', NULL),
+    (demo_org_id, marc_id, CURRENT_DATE, 'Fournitures', 43.90, 'Flexible haute pression', NULL, 'pending', 'À valider'),
+    (demo_org_id, sophie_id, CURRENT_DATE - INTERVAL '15 days', 'Outillage', 320.00, 'Clé dynamométrique', NULL, 'approved', 'Investissement matériel'),
+    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '8 days', 'Déplacement', 42.00, 'Digne - Manosque - Sisteron', 84, 'approved', 'Double intervention');
 
   RAISE NOTICE '✓ Dépenses créées';
 
@@ -415,13 +421,13 @@ BEGIN
     organization_id, user_id, start_date, end_date,
     type, status, days_count, reason
   ) VALUES
-    (demo_org_id, nico_id, '2026-04-15', '2026-04-19', 'Congés payés', 'Approuvée', 5, 'Vacances printemps'),
-    (demo_org_id, nico_id, '2026-05-01', '2026-05-01', 'Jour férié', 'Approuvée', 1, 'Fête du travail'),
-    (demo_org_id, nico_id, '2026-07-20', '2026-08-03', 'Congés payés', 'En attente', 11, 'Vacances été'),
-    (demo_org_id, nico_id, '2026-06-05', '2026-06-06', 'Congés payés', 'En attente', 2, 'Pont Pentecôte'),
-    (demo_org_id, nico_id, '2026-08-10', '2026-08-24', 'Congés payés', 'En attente', 11, 'Vacances été'),
-    (demo_org_id, nico_id, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '29 days', 'Maladie', 'Approuvée', 2, 'Arrêt maladie'),
-    (demo_org_id, nico_id, '2026-12-24', '2026-12-31', 'Congés payés', 'En attente', 6, 'Fêtes de fin d''année');
+    (demo_org_id, marc_id, '2026-04-15', '2026-04-19', 'Congés payés', 'Approuvée', 5, 'Vacances printemps'),
+    (demo_org_id, julie_id, '2026-05-01', '2026-05-01', 'Jour férié', 'Approuvée', 1, 'Fête du travail'),
+    (demo_org_id, sophie_id, '2026-07-20', '2026-08-03', 'Congés payés', 'En attente', 11, 'Vacances été'),
+    (demo_org_id, marc_id, '2026-06-05', '2026-06-06', 'Congés payés', 'En attente', 2, 'Pont Pentecôte'),
+    (demo_org_id, julie_id, '2026-08-10', '2026-08-24', 'Congés payés', 'En attente', 11, 'Vacances été'),
+    (demo_org_id, marc_id, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '29 days', 'Maladie', 'Approuvée', 2, 'Arrêt maladie'),
+    (demo_org_id, sophie_id, '2026-12-24', '2026-12-31', 'Congés payés', 'En attente', 6, 'Fêtes de fin d''année');
 
   RAISE NOTICE '✓ Demandes de congés créées';
 
