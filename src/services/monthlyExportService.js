@@ -294,9 +294,12 @@ export async function getMonthlyExportData(year, month) {
         });
 
         // Calcul des zones : 1 zone par jour travaillé (chantier le plus éloigné du jour)
+        // On parcourt uniquement les jours réellement travaillés (workedDatesSet exclut déjà les jours école)
         const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
-        Object.keys(interventionsByDate).forEach(dateStr => {
+        workedDatesSet.forEach(dateStr => {
           const dayInterventions = interventionsByDate[dateStr];
+          if (!dayInterventions || dayInterventions.length === 0) return;
+
           // Trouver l'intervention avec la distance maximale pour ce jour
           const furthestIntervention = dayInterventions.reduce((max, current) => {
             return (current.distanceAller > max.distanceAller) ? current : max;
