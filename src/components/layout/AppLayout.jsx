@@ -24,6 +24,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../ThemeToggle';
 import { MobileThemeToggleCompact } from '../MobileThemeSelector';
+import { DemoBanner } from '../DemoBanner';
 import './AppLayout.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
@@ -33,6 +34,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const [showNotifications, setShowNotifications] = useState(false);
     const { hasPermission, isAdmin } = usePermissions();
     const { isDark } = useTheme();
+    const { organization } = useAuthStore();
+
+    // Vérifier si le mode démo est actif
+    const isDemoMode = organization?.settings?.demo_mode === true;
 
     // Navigation de base pour les employes
     const baseNavigation = [
@@ -145,8 +150,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     };
 
     return (
-        <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`}>
-            {/* Desktop Sidebar */}
+        <>
+            <DemoBanner />
+            <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0' }}>
+                {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
                     <div className="sidebar-logo">
@@ -290,7 +297,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 onClose={() => setShowNotifications(false)}
                 lastNotification={lastNotification}
             />
-        </div>
+            </div>
+        </>
     );
 };
 
