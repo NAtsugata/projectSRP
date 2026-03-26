@@ -300,7 +300,8 @@ export async function getMonthlyExportData(year, month) {
           const dayInterventions = interventionsByDate[dateStr];
           if (!dayInterventions || dayInterventions.length === 0) {
             // Jour travaillé mais sans intervention dans interventionsByDate (ne devrait pas arriver)
-            zoneCount['Zone non calculée'] = (zoneCount['Zone non calculée'] || 0) + 1;
+            // Par défaut : Zone 1 (intervention locale sans distance calculée)
+            zoneCount['Zone 1 (0-10 km)'] = (zoneCount['Zone 1 (0-10 km)'] || 0) + 1;
             return;
           }
 
@@ -310,7 +311,8 @@ export async function getMonthlyExportData(year, month) {
           }, dayInterventions[0]);
 
           // Compter la zone du chantier le plus éloigné (1 seule fois par jour)
-          const zoneToCount = furthestIntervention.zone || 'Zone non calculée';
+          // Si pas de zone calculée → Zone 1 par défaut (intervention locale)
+          const zoneToCount = furthestIntervention.zone || 'Zone 1 (0-10 km)';
           zoneCount[zoneToCount] = (zoneCount[zoneToCount] || 0) + 1;
         });
 
