@@ -41,13 +41,22 @@ export default function EmployeeLeaveView({
         return false;
       }
 
-      // Submit with user info
+      // Calculer le nombre de jours entre les dates
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      const diffTime = Math.abs(end - start);
+      const daysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 pour inclure le dernier jour
+
+      // Submit with user info - UTILISER SNAKE_CASE pour les colonnes DB
       const result = await onSubmitRequest({
-        userName,
-        userId,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        reason: formData.reason
+        user_id: userId,                  // ✅ Converti en snake_case
+        start_date: formData.startDate,   // ✅ Converti en snake_case
+        end_date: formData.endDate,       // ✅ Converti en snake_case
+        reason: formData.reason,          // ✅ Déjà correct
+        status: 'En attente',             // ✅ Ajouté (statut initial)
+        type: 'Congés payés',             // ✅ Ajouté (type par défaut)
+        days_count: daysCount             // ✅ Ajouté (calculé automatiquement)
+        // Note: organization_id sera ajouté automatiquement par withOrgId()
       });
 
       if (result !== false) {
