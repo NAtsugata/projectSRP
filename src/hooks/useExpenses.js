@@ -38,9 +38,11 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
             let data;
             if (userId) {
                 const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
+                if (result.error) throw result.error;
                 data = result.data || [];
             } else {
                 const result = await expenseService.getAllExpenses(1, limit, filters);
+                if (result.error) throw result.error;
                 data = result.data || [];
             }
 
