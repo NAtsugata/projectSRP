@@ -35,28 +35,23 @@ export default defineConfig({
   // Configuration du build
   build: {
     outDir: 'build',
-    sourcemap: false, // Désactivé en production pour la sécurité
-    chunkSizeWarningLimit: 1000, // Augmenter la limite à 1MB (certaines libs PDF sont grosses)
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
-          // Frameworks
           'vendor-react': ['react', 'react-dom'],
           'vendor-router': ['react-router-dom'],
-
-          // Supabase
           'vendor-supabase': ['@supabase/supabase-js'],
-
-          // PDF & Documents (grosses librairies)
           'vendor-pdf': ['pdf-lib'],
           'vendor-jspdf': ['jspdf'],
           'vendor-html2canvas': ['html2canvas'],
-
-          // Utilitaires
           'vendor-utils': ['dompurify', 'zustand', '@tanstack/react-query'],
         },
       },
     },
+    // Copier explicitement le service worker et manifest
+    copyPublicDir: true,
   },
 
   // Optimisation des dépendances
