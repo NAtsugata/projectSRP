@@ -2,7 +2,7 @@
 // Service Worker pour gérer les notifications push natives et le mode hors ligne
 
 // Noms des caches (version unique)
-const CACHE_VERSION = 'v6'; // v6: Remove broken favicon.ico from precache
+const CACHE_VERSION = 'v7'; // v7: Remove 19MB YOLO model from install (load on-demand)
 const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
 const API_CACHE = `srp-api-${CACHE_VERSION}`;
@@ -22,11 +22,9 @@ const PRECACHE_ASSETS = [
 ];
 
 // Assets critiques pour fonctionnalités hors ligne (PDF CERFA, etc.)
-// Ces fichiers seront chargés en arrière-plan après l'installation
+// NOTE: Modèle YOLO (19MB) sera chargé à la demande, pas au démarrage
 const CRITICAL_ASSETS = [
-  '/models/best.onnx', // Modèle YOLO pour diagnostics
-  // Note: Les PDF CERFA sont importés comme assets Webpack/Vite
-  // et sont déjà inclus dans le bundle JS, donc disponibles hors ligne
+  // '/models/best.onnx' - DÉSACTIVÉ : trop lourd (19MB), charge à la demande
 ];
 
 // Routes de l'app à pré-charger (React Router SPA)
@@ -61,15 +59,17 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         console.log('[Service Worker] Installation terminée');
-        // Charger les assets critiques en arrière-plan (non bloquant)
-        caches.open(CACHE_NAME).then(cache => {
-          CRITICAL_ASSETS.forEach(asset => {
-            cache.add(asset).catch(err => {
-              console.warn('[Service Worker] Asset critique non chargé:', asset, err);
+        // Charger les assets critiques en arrière-plan (actuellement désactivé pour perfs)
+        if (CRITICAL_ASSETS.length > 0) {
+          caches.open(CACHE_NAME).then(cache => {
+            CRITICAL_ASSETS.forEach(asset => {
+              cache.add(asset).catch(err => {
+                console.warn('[Service Worker] Asset critique non chargé:', asset, err);
+              });
             });
           });
-        });
-        return self.skipWaiting(); // Activer immédiatement
+        }
+        return self.skipWaiting();
       })
   );
 });
