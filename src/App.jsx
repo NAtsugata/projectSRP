@@ -1,7 +1,7 @@
 // =============================
 // FILE: src/App.js — REFACTORISÉ (Containers + React Query)
 // =============================
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService, profileService, supabase } from './lib/supabase';
@@ -72,6 +72,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const profileRef = useRef(profile);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -90,17 +91,17 @@ function App() {
     logger.log('alert() remplacé par des toasts');
   }, [showToast]);
 
-  // ✅ Monitoring connexion Supabase — détection et récupération automatique
+  // Keep ref in sync so the connection callback always has the latest profile value
+  useEffect(() => { profileRef.current = profile; }, [profile]);
+
   useEffect(() => {
     startConnectionMonitoring();
 
     const unsubscribe = onConnectionChange((isOnline) => {
       if (isOnline) {
         logger.log('[App] Connexion Supabase rétablie — reload des données');
-        // Invalider tout le cache React Query pour forcer le rechargement
         queryClient.invalidateQueries();
-        // Si le profil n'est pas chargé, réessayer
-        if (session?.user && !profile) {
+        if (session?.user && !profileRef.current) {
           profileService.getProfile(session.user.id)
             .then(({ data: userProfile, error }) => {
               if (!error && userProfile) setProfile(userProfile);
@@ -110,7 +111,7 @@ function App() {
     });
 
     return unsubscribe;
-  }, [queryClient, session, profile, setProfile]);
+  }, [queryClient, session]);
 
   // ✅ Vérifier session hors ligne au démarrage
   useEffect(() => {
@@ -130,11 +131,17 @@ function App() {
   useEffect(() => {
     const {
       data: { subscription }
-    } = authService.onAuthStateChange((_event, sessionData) => {
+    } = authService.onAuthStateChange((event, sessionData) => {
+      // Token de refresh invalide (expiré pendant panne Supabase) — déconnecter proprement
+      if (!sessionData && event === 'SIGNED_OUT' && profileRef.current) {
+        logger.warn('[App] Session expirée (token invalide) — reconnexion requise');
+        showToast('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+        setProfile(null);
+      }
       setSession(sessionData);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [showToast]);
 
   // Sync with Zustand store
   const { setUser, setProfile: setStoreProfile, setLoading: setStoreLoading, logout } = useAuthStore();

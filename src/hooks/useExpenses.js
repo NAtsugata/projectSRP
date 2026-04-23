@@ -25,20 +25,14 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     } = useQuery({
         queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
-            // Si hors ligne (vérifier avec connectionMonitor, plus fiable que navigator.onLine sur mobile)
-            const isOffline = !navigator.onLine || !getConnectionState();
-            if (isOffline) {
+            // navigator.onLine est peu fiable sur mobile — connectionMonitor fait un vrai ping Supabase
+            if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Mode offline - utilisation du cache');
                 const cached = await getCachedExpenses();
                 if (cached && cached.length > 0) {
                     return userId ? cached.filter(e => e.user_id === userId) : cached;
                 }
-                // Pas de cache : tenter quand même Supabase si connectionMonitor dit online
-                if (getConnectionState()) {
-                    logger.log('[useExpenses] Pas de cache mais connectionMonitor online - tentative Supabase');
-                } else {
-                    return [];
-                }
+                return [];
             }
 
             // En ligne : récupérer depuis Supabase

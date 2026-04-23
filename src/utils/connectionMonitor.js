@@ -1,6 +1,3 @@
-// src/utils/connectionMonitor.js
-// Moniteur de connexion Supabase avec auto-détection du retour en ligne
-
 import { supabase } from '../lib/supabaseClient';
 import logger from './logger';
 
@@ -11,11 +8,10 @@ const state = {
   listeners: [],
   intervalId: null,
   started: false,
+  // Stored handlers so they can be removed
+  handlers: {},
 };
 
-/**
- * Ping Supabase pour vérifier la connexion réelle (pas seulement navigator.onLine)
- */
 export const checkSupabaseConnection = async () => {
   try {
     const { error } = await supabase
@@ -52,12 +48,11 @@ const handleFailure = () => {
   if (state.consecutiveFailures >= 3) {
     state.isOnline = false;
     if (wasOnline) {
-      logger.warn('🔴 [ConnectionMonitor] Supabase inaccessible (3 échecs)');
+      // Only log the state transition, not every individual failure
+      logger.warn('🔴 [ConnectionMonitor] Supabase inaccessible (3 échecs consécutifs)');
       notifyListeners(false);
     }
   }
-
-  logger.warn(`[ConnectionMonitor] Échec ping ${state.consecutiveFailures}/3`);
 };
 
 const notifyListeners = (isOnline) => {
@@ -66,45 +61,45 @@ const notifyListeners = (isOnline) => {
   });
 };
 
-/**
- * Démarre le monitoring automatique
- * Ping toutes les 10s + retour de visibilité + event online/offline
- */
 export const startConnectionMonitoring = () => {
   if (state.started) return;
   state.started = true;
 
-  // Ping immédiat au démarrage
   checkSupabaseConnection();
 
-  // Ping périodique toutes les 10 secondes
-  state.intervalId = setInterval(checkSupabaseConnection, 10000);
+  // 30s interval — events (online/visibilitychange) handle the fast path
+  state.intervalId = setInterval(checkSupabaseConnection, 30000);
 
-  // Ping quand l'onglet redevient visible (retour sur l'app)
-  document.addEventListener('visibilitychange', () => {
+  state.handlers.visibilitychange = () => {
     if (!document.hidden) checkSupabaseConnection();
-  });
-
-  // Ping quand le navigateur détecte un retour réseau
-  window.addEventListener('online', () => {
+  };
+  state.handlers.online = () => {
     logger.log('[ConnectionMonitor] Événement online navigateur');
     checkSupabaseConnection();
-  });
-
-  window.addEventListener('offline', () => {
+  };
+  state.handlers.offline = () => {
     logger.warn('[ConnectionMonitor] Événement offline navigateur');
     state.consecutiveFailures = 3;
     handleFailure();
-  });
+  };
 
-  logger.log('[ConnectionMonitor] Monitoring démarré (ping toutes les 10s)');
+  document.addEventListener('visibilitychange', state.handlers.visibilitychange);
+  window.addEventListener('online', state.handlers.online);
+  window.addEventListener('offline', state.handlers.offline);
+
+  logger.log('[ConnectionMonitor] Monitoring démarré (ping toutes les 30s)');
 };
 
-/**
- * S'abonner aux changements de connexion
- * @param {function} callback - Appelé avec (isOnline: boolean)
- * @returns {function} Fonction de désabonnement
- */
+export const stopConnectionMonitoring = () => {
+  if (!state.started) return;
+  clearInterval(state.intervalId);
+  document.removeEventListener('visibilitychange', state.handlers.visibilitychange);
+  window.removeEventListener('online', state.handlers.online);
+  window.removeEventListener('offline', state.handlers.offline);
+  state.started = false;
+  state.intervalId = null;
+};
+
 export const onConnectionChange = (callback) => {
   state.listeners.push(callback);
   return () => {
@@ -114,12 +109,8 @@ export const onConnectionChange = (callback) => {
 
 export const getConnectionState = () => state.isOnline;
 
-/**
- * Force un ping immédiat pour vérifier la connexion
- * Utilisé pour les reconnexions manuelles
- */
 export const forceReconnect = async () => {
-  logger.log('[ConnectionMonitor] Tentative de reconnexion forcée...');
-  state.consecutiveFailures = 0; // Reset des échecs
+  logger.log('[ConnectionMonitor] Reconnexion forcée...');
+  state.consecutiveFailures = 0;
   return await checkSupabaseConnection();
 };

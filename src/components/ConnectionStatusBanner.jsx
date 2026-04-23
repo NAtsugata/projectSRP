@@ -1,38 +1,29 @@
-// src/components/ConnectionStatusBanner.jsx
-// Bannière automatique de statut connexion Supabase
-
 import { useState, useEffect } from 'react';
 import { onConnectionChange, getConnectionState, forceReconnect } from '../utils/connectionMonitor';
 
+// status: null (hidden) | 'online' | 'offline'
 export default function ConnectionStatusBanner() {
-  const [isOnline, setIsOnline] = useState(getConnectionState());
-  const [visible, setVisible] = useState(!getConnectionState()); // Visible si offline au démarrage
+  const [status, setStatus] = useState(getConnectionState() ? null : 'offline');
   const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onConnectionChange((online) => {
-      setIsOnline(online);
-      setVisible(true);
+    return onConnectionChange((online) => {
+      setStatus(online ? 'online' : 'offline');
       setReconnecting(false);
-
       if (online) {
-        // Masquer la bannière verte après 3s
-        const timer = setTimeout(() => setVisible(false), 3000);
+        const timer = setTimeout(() => setStatus(null), 3000);
         return () => clearTimeout(timer);
       }
     });
-
-    return unsubscribe;
   }, []);
 
   const handleReconnect = async () => {
     setReconnecting(true);
     await forceReconnect();
-    // Si toujours offline après 2s, remettre le bouton actif
     setTimeout(() => setReconnecting(false), 2000);
   };
 
-  if (!visible) return null;
+  if (!status) return null;
 
   return (
     <div style={{
@@ -43,7 +34,7 @@ export default function ConnectionStatusBanner() {
       zIndex: 99999,
       padding: '10px 16px',
       textAlign: 'center',
-      background: isOnline ? '#10b981' : '#ef4444',
+      background: status === 'online' ? '#10b981' : '#ef4444',
       color: 'white',
       fontWeight: 600,
       fontSize: '14px',
@@ -54,7 +45,7 @@ export default function ConnectionStatusBanner() {
       justifyContent: 'center',
       gap: '12px',
     }}>
-      {isOnline ? (
+      {status === 'online' ? (
         '✅ Connexion rétablie — Synchronisation en cours...'
       ) : (
         <>
