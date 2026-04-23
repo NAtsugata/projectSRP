@@ -2,7 +2,7 @@
 // Service Worker pour gérer les notifications push natives et le mode hors ligne
 
 // Noms des caches (version unique)
-const CACHE_VERSION = 'v4'; // v4: Support authentification hors ligne + assets critiques
+const CACHE_VERSION = 'v5'; // v5: Fix auto-recovery + mobile optimizations
 const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
 const API_CACHE = `srp-api-${CACHE_VERSION}`;
