@@ -2,7 +2,7 @@
 // Service Worker pour gérer les notifications push natives et le mode hors ligne
 
 // Noms des caches (version unique)
-const CACHE_VERSION = 'v5'; // v5: Fix auto-recovery + mobile optimizations
+const CACHE_VERSION = 'v6'; // v6: Remove broken favicon.ico from precache
 const CACHE_NAME = `srp-app-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `srp-runtime-${CACHE_VERSION}`;
 const API_CACHE = `srp-api-${CACHE_VERSION}`;
@@ -18,7 +18,6 @@ const PRECACHE_ASSETS = [
   '/offline.html',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico',
   '/logo192.png'
 ];
 
