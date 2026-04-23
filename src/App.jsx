@@ -18,6 +18,8 @@ import logger from './utils/logger';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
+import ConnectionStatusBanner from './components/ConnectionStatusBanner';
+import { startConnectionMonitoring, onConnectionChange } from './utils/connectionMonitor';
 import ErrorBoundary from './components/ErrorBoundary';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
 import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/LegalPages';
@@ -87,6 +89,28 @@ function App() {
     overrideAlert();
     logger.log('alert() remplacé par des toasts');
   }, [showToast]);
+
+  // ✅ Monitoring connexion Supabase — détection et récupération automatique
+  useEffect(() => {
+    startConnectionMonitoring();
+
+    const unsubscribe = onConnectionChange((isOnline) => {
+      if (isOnline) {
+        logger.log('[App] Connexion Supabase rétablie — reload des données');
+        // Invalider tout le cache React Query pour forcer le rechargement
+        queryClient.invalidateQueries();
+        // Si le profil n'est pas chargé, réessayer
+        if (session?.user && !profile) {
+          profileService.getProfile(session.user.id)
+            .then(({ data: userProfile, error }) => {
+              if (!error && userProfile) setProfile(userProfile);
+            });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient, session, profile, setProfile]);
 
   // ✅ Vérifier session hors ligne au démarrage
   useEffect(() => {
@@ -165,8 +189,11 @@ function App() {
           .getProfile(session.user.id)
           .then(({ data: userProfile, error }) => {
             if (error) {
-              showToast('Impossible de récupérer le profil.', 'error');
-              authService.signOut();
+              // Ne pas déconnecter l'utilisateur sur erreur réseau/Supabase temporaire
+              // La connexion sera réessayée automatiquement par le ConnectionMonitor
+              logger.warn('[App] Erreur chargement profil (probablement temporaire):', error.message);
+              showToast('Connexion au serveur impossible. Nouvelle tentative automatique...', 'warning');
+              setProfile(null);
             } else {
               setProfile(userProfile);
             }
@@ -254,6 +281,7 @@ function App() {
   return (
     <DownloadProvider>
       <ToastProvider>
+        <ConnectionStatusBanner />
         <OfflineIndicator />
         <PWAInstallPrompt />
 

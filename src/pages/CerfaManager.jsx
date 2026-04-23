@@ -14,6 +14,7 @@ import {
 } from '../components/SharedUI';
 import './CerfaManager.css';
 import logger from '../utils/logger';
+import { onConnectionChange } from '../utils/connectionMonitor';
 
 // Templates CERFA disponibles
 const CERFA_TEMPLATES = [
@@ -75,6 +76,7 @@ function CerfaManager() {
     const toast = useToast();
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -92,6 +94,7 @@ function CerfaManager() {
 
     // Charger les documents
     const loadDocuments = useCallback(async () => {
+        setLoadError(null);
         try {
             const { data, error } = await supabase
                 .from('cerfa_documents')
@@ -102,11 +105,11 @@ function CerfaManager() {
             setDocuments(data || []);
         } catch (error) {
             logger.error('Erreur chargement documents:', error);
-            toast.error('Erreur lors du chargement des documents');
+            setLoadError(error.message || 'Impossible de charger les documents CERFA');
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, []);
 
     // Obtenir le prochain numéro via la fonction SQL
     const getNextNumero = useCallback(async () => {
@@ -125,6 +128,14 @@ function CerfaManager() {
     useEffect(() => {
         loadDocuments();
     }, [loadDocuments]);
+
+    useEffect(() => {
+        return onConnectionChange((isOnline) => {
+            if (isOnline && loadError) {
+                loadDocuments();
+            }
+        });
+    }, [loadError, loadDocuments]);
 
     useEffect(() => {
         const fetchNextNumero = async () => {
@@ -492,6 +503,19 @@ function CerfaManager() {
 
                 {loading ? (
                     <div className="loading">Chargement...</div>
+                ) : loadError ? (
+                    <div className="empty-state" style={{ color: '#ef4444' }}>
+                        <FileTextIcon size={48} />
+                        <p>Erreur de chargement</p>
+                        <p style={{ fontSize: '13px', color: '#6b7280', margin: '8px 0' }}>{loadError}</p>
+                        <button
+                            className="btn btn-primary"
+                            onClick={loadDocuments}
+                            style={{ marginTop: '12px' }}
+                        >
+                            🔄 Réessayer
+                        </button>
+                    </div>
                 ) : filteredDocuments.length === 0 ? (
                     <div className="empty-state">
                         <FileTextIcon size={48} />

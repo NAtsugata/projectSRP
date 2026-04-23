@@ -58,6 +58,12 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         placeholderData: (previousData) => previousData,
         // Permettre les requêtes offline
         networkMode: 'offlineFirst',
+        // Réessayer automatiquement avec backoff exponentiel
+        retry: 3,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+        // Recharger automatiquement au retour en ligne ou au focus
+        refetchOnReconnect: 'always',
+        refetchOnWindowFocus: true,
     });
 
     // Mutation pour créer une note de frais (avec support offline)
