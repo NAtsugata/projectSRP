@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { cacheExpenses, getCachedExpenses } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 import logger from '../utils/logger';
+import { getConnectionState } from '../utils/connectionMonitor';
 
 /**
  * Hook pour gérer les notes de frais avec React Query
@@ -24,14 +25,20 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     } = useQuery({
         queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
-            // Si hors ligne, utiliser le cache
-            if (!navigator.onLine) {
+            // Si hors ligne (vérifier avec connectionMonitor, plus fiable que navigator.onLine sur mobile)
+            const isOffline = !navigator.onLine || !getConnectionState();
+            if (isOffline) {
                 logger.log('[useExpenses] Mode offline - utilisation du cache');
                 const cached = await getCachedExpenses();
-                if (userId) {
-                    return cached.filter(e => e.user_id === userId);
+                if (cached && cached.length > 0) {
+                    return userId ? cached.filter(e => e.user_id === userId) : cached;
                 }
-                return cached;
+                // Pas de cache : tenter quand même Supabase si connectionMonitor dit online
+                if (getConnectionState()) {
+                    logger.log('[useExpenses] Pas de cache mais connectionMonitor online - tentative Supabase');
+                } else {
+                    return [];
+                }
             }
 
             // En ligne : récupérer depuis Supabase
@@ -56,8 +63,8 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         staleTime: 3 * 60 * 1000,  // 3 minutes - dépenses peuvent changer
         gcTime: 10 * 60 * 1000,    // 10 minutes en cache
         placeholderData: (previousData) => previousData,
-        // Permettre les requêtes offline
-        networkMode: 'offlineFirst',
+        // 'always' : React Query tente toujours la requête sur mobile (navigator.onLine peu fiable)
+        networkMode: 'always',
         // Réessayer automatiquement avec backoff exponentiel
         retry: 3,
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
@@ -69,7 +76,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     // Mutation pour créer une note de frais (avec support offline)
     const createMutation = useMutation({
         mutationFn: async (newExpense) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 // Mode offline : queue l'opération
                 logger.log('[useExpenses] Offline - creation en queue');
                 const tempId = `temp-${Date.now()}`;
@@ -87,7 +94,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     // Mutation pour mettre à jour une note de frais (avec support offline)
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Offline - mise a jour en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
                 return { data: { id, ...updates } };
@@ -102,7 +109,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     // Mutation pour supprimer une note de frais (avec support offline)
     const deleteMutation = useMutation({
         mutationFn: async (id) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Offline - suppression en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };

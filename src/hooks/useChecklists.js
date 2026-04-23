@@ -25,6 +25,10 @@ export function useChecklists(userId = null) {
         },
         staleTime: 5 * 60 * 1000,  // 5 minutes
         gcTime: 15 * 60 * 1000,
+        networkMode: 'always',
+        retry: 3,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+        refetchOnReconnect: 'always',
     });
 
     // Query pour récupérer les templates
@@ -42,6 +46,7 @@ export function useChecklists(userId = null) {
         },
         staleTime: 30 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
+        networkMode: 'always',
         retry: 3,
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
         refetchOnReconnect: 'always',
