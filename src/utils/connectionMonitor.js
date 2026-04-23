@@ -113,3 +113,13 @@ export const onConnectionChange = (callback) => {
 };
 
 export const getConnectionState = () => state.isOnline;
+
+/**
+ * Force un ping immédiat pour vérifier la connexion
+ * Utilisé pour les reconnexions manuelles
+ */
+export const forceReconnect = async () => {
+  logger.log('[ConnectionMonitor] Tentative de reconnexion forcée...');
+  state.consecutiveFailures = 0; // Reset des échecs
+  return await checkSupabaseConnection();
+};

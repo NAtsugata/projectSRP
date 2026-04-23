@@ -2,16 +2,18 @@
 // Bannière automatique de statut connexion Supabase
 
 import { useState, useEffect } from 'react';
-import { onConnectionChange, getConnectionState } from '../utils/connectionMonitor';
+import { onConnectionChange, getConnectionState, forceReconnect } from '../utils/connectionMonitor';
 
 export default function ConnectionStatusBanner() {
   const [isOnline, setIsOnline] = useState(getConnectionState());
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(!getConnectionState()); // Visible si offline au démarrage
+  const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onConnectionChange((online) => {
       setIsOnline(online);
       setVisible(true);
+      setReconnecting(false);
 
       if (online) {
         // Masquer la bannière verte après 3s
@@ -22,6 +24,13 @@ export default function ConnectionStatusBanner() {
 
     return unsubscribe;
   }, []);
+
+  const handleReconnect = async () => {
+    setReconnecting(true);
+    await forceReconnect();
+    // Si toujours offline après 2s, remettre le bouton actif
+    setTimeout(() => setReconnecting(false), 2000);
+  };
 
   if (!visible) return null;
 
@@ -40,10 +49,35 @@ export default function ConnectionStatusBanner() {
       fontSize: '14px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
       transition: 'background 0.3s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '12px',
     }}>
-      {isOnline
-        ? '✅ Connexion rétablie — Synchronisation en cours...'
-        : '⚠️ Connexion serveur perdue — Mode hors ligne activé'}
+      {isOnline ? (
+        '✅ Connexion rétablie — Synchronisation en cours...'
+      ) : (
+        <>
+          <span>⚠️ Connexion serveur perdue — Mode hors ligne activé</span>
+          <button
+            onClick={handleReconnect}
+            disabled={reconnecting}
+            style={{
+              background: 'white',
+              color: '#ef4444',
+              border: 'none',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: reconnecting ? 'not-allowed' : 'pointer',
+              opacity: reconnecting ? 0.7 : 1,
+            }}
+          >
+            {reconnecting ? 'Reconnexion...' : '🔄 Reconnexion'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
