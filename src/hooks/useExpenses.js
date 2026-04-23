@@ -25,9 +25,8 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     } = useQuery({
         queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
-            // navigator.onLine est peu fiable sur mobile — connectionMonitor fait un vrai ping Supabase
+            // Offline confirmé par les deux sources — aller directement au cache
             if (!navigator.onLine && !getConnectionState()) {
-                logger.log('[useExpenses] Mode offline - utilisation du cache');
                 const cached = await getCachedExpenses();
                 if (cached && cached.length > 0) {
                     return userId ? cached.filter(e => e.user_id === userId) : cached;
@@ -35,36 +34,41 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 return [];
             }
 
-            // En ligne : récupérer depuis Supabase
-            let data;
-            if (userId) {
-                const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
-                if (result.error) throw result.error;
-                data = result.data || [];
-            } else {
-                const result = await expenseService.getAllExpenses(1, limit, filters);
-                if (result.error) throw result.error;
-                data = result.data || [];
-            }
+            // Tenter Supabase, avec fallback cache si ça échoue
+            try {
+                let data;
+                if (userId) {
+                    const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
+                    if (result.error) throw result.error;
+                    data = result.data || [];
+                } else {
+                    const result = await expenseService.getAllExpenses(1, limit, filters);
+                    if (result.error) throw result.error;
+                    data = result.data || [];
+                }
 
-            // Mettre en cache pour le mode offline
-            if (data.length > 0) {
-                cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
+                if (data.length > 0) {
+                    cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
+                }
+                return data;
+            } catch (err) {
+                // Supabase inaccessible — fallback sur le cache plutôt que spinner infini
+                const cached = await getCachedExpenses();
+                if (cached && cached.length > 0) {
+                    logger.warn('[useExpenses] Supabase inaccessible, données en cache utilisées');
+                    return userId ? cached.filter(e => e.user_id === userId) : cached;
+                }
+                throw err;
             }
-
-            return data;
         },
-        staleTime: 3 * 60 * 1000,  // 3 minutes - dépenses peuvent changer
-        gcTime: 10 * 60 * 1000,    // 10 minutes en cache
+        staleTime: 3 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
         placeholderData: (previousData) => previousData,
-        // 'always' : React Query tente toujours la requête sur mobile (navigator.onLine peu fiable)
         networkMode: 'always',
-        // Réessayer automatiquement avec backoff exponentiel
-        retry: 3,
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
-        // Recharger automatiquement au retour en ligne ou au focus
+        retry: 1,
+        retryDelay: 2000,
         refetchOnReconnect: 'always',
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
     });
 
     // Mutation pour créer une note de frais (avec support offline)
