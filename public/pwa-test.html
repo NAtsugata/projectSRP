@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PWA Installation - SRP</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+        .status { padding: 12px; margin: 10px 0; border-radius: 8px; }
+        .ok { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        button {
+            background: #CD7F32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        pre { background: #1e293b; padding: 12px; border-radius: 6px; overflow-x: auto; }
+        h2 { color: #CD7F32; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test Installation PWA - SRP</h1>
+    
+    <div id="results"></div>
+    
+    <h2>Actions</h2>
+    <button onclick="clearStorage()">Effacer localStorage</button>
+    <button onclick="runTests()">Re-tester</button>
+    <button onclick="tryInstall()">Forcer installation</button>
+    
+    <script>
+        let deferredPrompt = null;
+        const log = [];
+        
+        function addResult(title, status, details) {
+            const div = document.createElement('div');
+            div.className = `status ${status}`;
+            div.innerHTML = `<strong>${title}</strong>${details ? `<br><small>${details}</small>` : ''}`;
+            document.getElementById('results').appendChild(div);
+            log.push({title, status, details});
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            log.length = 0;
+        }
+        
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            addResult('✅ Storage effacé', 'ok', 'Rechargez la page pour retester');
+        }
+        
+        async function runTests() {
+            clearResults();
+            
+            // 1. Service Worker
+            if ('serviceWorker' in navigator) {
+                addResult('✅ Service Worker supporté', 'ok');
+                
+                try {
+                    const registration = await navigator.serviceWorker.register('/service-worker.js');
+                    addResult('✅ Service Worker enregistré', 'ok', `Scope: ${registration.scope}`);
+                } catch (e) {
+                    addResult('❌ Service Worker échec', 'error', e.message);
+                }
+            } else {
+                addResult('❌ Service Worker non supporté', 'error');
+            }
+            
+            // 2. Manifest
+            try {
+                const res = await fetch('/manifest.json');
+                if (res.ok) {
+                    const manifest = await res.json();
+                    addResult('✅ Manifest chargé', 'ok', `Nom: ${manifest.name}`);
+                } else {
+                    addResult('❌ Manifest erreur', 'error', `HTTP ${res.status}`);
+                }
+            } catch (e) {
+                addResult('❌ Manifest inaccessible', 'error', e.message);
+            }
+            
+            // 3. Display mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            if (isStandalone) {
+                addResult('✅ Déjà installé (mode standalone)', 'ok');
+            } else {
+                addResult('ℹ️ Pas encore installé', 'warning');
+            }
+            
+            // 4. beforeinstallprompt
+            if (window.__pwaPrompt || deferredPrompt) {
+                addResult('✅ beforeinstallprompt détecté', 'ok');
+            } else {
+                addResult('⚠️ beforeinstallprompt pas encore reçu', 'warning', 'Attend le chargement complet');
+            }
+            
+            // 5. localStorage
+            const dismissed = localStorage.getItem('pwa-install-dismissed');
+            if (dismissed) {
+                const time = parseInt(dismissed);
+                const daysAgo = Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000));
+                addResult('⚠️ Installation dismissée', 'warning', `Il y a ${daysAgo} jours`);
+            } else {
+                addResult('✅ Pas de dismiss', 'ok');
+            }
+            
+            // 6. Logs
+            addResult('📋 Logs complets', 'ok', `<pre>${JSON.stringify(log, null, 2)}</pre>`);
+        }
+        
+        async function tryInstall() {
+            const prompt = window.__pwaPrompt || deferredPrompt;
+            if (!prompt) {
+                addResult('❌ Pas de prompt disponible', 'error', 'beforeinstallprompt pas détecté');
+                return;
+            }
+            
+            try {
+                prompt.prompt();
+                const result = await prompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    addResult('✅ Installation acceptée !', 'ok');
+                } else {
+                    addResult('ℹ️ Installation refusée', 'warning');
+                }
+            } catch (e) {
+                addResult('❌ Erreur installation', 'error', e.message);
+            }
+        }
+        
+        // Écouter beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            window.__pwaPrompt = e;
+            addResult('🎯 beforeinstallprompt reçu !', 'ok', 'Installation possible');
+        });
+        
+        window.addEventListener('appinstalled', () => {
+            addResult('🎉 App installée avec succès !', 'ok');
+        });
+        
+        // Lancer les tests au chargement
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>
