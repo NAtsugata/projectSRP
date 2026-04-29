@@ -49,6 +49,20 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
     try {
       setUploading(true);
 
+      // Validation des données requises
+      if (!uploadItem) {
+        throw new Error('Item d\'upload manquant');
+      }
+      if (!uploadItem.fileData) {
+        throw new Error('Données du fichier manquantes');
+      }
+      if (!uploadItem.metadata?.interventionId) {
+        throw new Error('ID d\'intervention manquant');
+      }
+      if (!uploadItem.metadata?.folder) {
+        throw new Error('Dossier de destination manquant');
+      }
+
       // Marquer comme uploading
       await updateUploadStatus(uploadItem.id, 'uploading');
 
@@ -83,8 +97,14 @@ export const PendingUploadsPanel = ({ onUploadComplete }) => {
 
       await loadPendingUploads();
     } catch (error) {
-      logger.error('Erreur upload:', error);
-      alert(`❌ Erreur: ${error.message}`);
+      logger.error('Erreur upload fichier:', uploadItem?.fileName, error);
+      console.error('Détails erreur upload:', {
+        fileName: uploadItem?.fileName,
+        interventionId: uploadItem?.metadata?.interventionId,
+        folder: uploadItem?.metadata?.folder,
+        error: error
+      });
+      alert(`❌ Erreur upload ${uploadItem?.fileName || 'fichier'}: ${error.message}`);
       await loadPendingUploads();
     } finally {
       setUploading(false);

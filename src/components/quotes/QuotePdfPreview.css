@@ -39,15 +39,24 @@
 .pdf-page {
   width: 210mm;
   min-height: 297mm;
-  background: white;
+  background: #ffffff; /* TOUJOURS BLANC (PDF) */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   padding: 15mm;
   font-family: 'Helvetica', 'Arial', sans-serif;
   font-size: 10px;
-  color: #1f2937;
+  color: #1f2937; /* TOUJOURS TEXTE FONCÉ (PDF) */
   transform-origin: top center;
   transform: scale(0.75);
   margin-bottom: -80mm; /* Compenser le scale */
+
+  /* Variables CSS locales pour couleurs garanties lisibles */
+  --text-primary: #1f2937;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --text-muted: #9ca3af;
+  --border-color: #e5e7eb;
+  --color-copper: #b45309;
+  --bg-gray: var(--bg-gray);
 }
 
 @media (max-width: 1400px) {
@@ -83,14 +92,14 @@
 .pdf-title {
   font-size: 24px;
   font-weight: bold;
-  color: #3b82f6;
+  color: var(--color-copper);
   margin: 0 0 2mm 0;
 }
 
 .pdf-number {
   font-size: 14px;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -109,26 +118,26 @@
   font-size: 12px;
   font-weight: bold;
   margin: 0 0 2mm 0;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .pdf-sender p {
   font-size: 9px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 1mm 0;
   line-height: 1.4;
 }
 
 .pdf-recipient {
   width: 70mm;
-  background: #f8fafc;
+  background: var(--bg-gray);
   border-radius: 2mm;
   padding: 3mm;
 }
 
 .pdf-recipient .label {
   font-size: 8px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   display: block;
   margin-bottom: 1mm;
 }
@@ -137,12 +146,12 @@
   font-size: 11px;
   font-weight: bold;
   margin: 0 0 1mm 0;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .pdf-recipient p {
   font-size: 9px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 1mm 0;
 }
 
@@ -150,7 +159,7 @@
 .pdf-meta {
   display: flex;
   gap: 15mm;
-  background: #f8fafc;
+  background: var(--bg-gray);
   border-radius: 2mm;
   padding: 3mm 5mm;
   margin-bottom: 8mm;
@@ -164,20 +173,20 @@
 
 .meta-label {
   font-size: 9px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .meta-value {
   font-size: 9px;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
-.meta-value.status-draft { color: #6b7280; }
+.meta-value.status-draft { color: var(--text-tertiary); }
 .meta-value.status-sent { color: #eab308; }
 .meta-value.status-accepted { color: #22c55e; }
 .meta-value.status-rejected { color: #ef4444; }
-.meta-value.status-expired { color: #6b7280; }
+.meta-value.status-expired { color: var(--text-tertiary); }
 .meta-value.status-converted { color: #22c55e; }
 
 /* Tableau */
@@ -186,12 +195,8 @@
   border-collapse: collapse;
   margin-bottom: 5mm;
   font-size: 9px;
-}
-
-.pdf-table thead tr {
-  background: #3b82f6;
-  color: white;
-}
+}.pdf-table thead tr {background: var(--color-copper);
+  color: var(--text-on-colored-bg);}
 
 .pdf-table th {
   padding: 2mm;
@@ -202,11 +207,11 @@
 
 .pdf-table td {
   padding: 2mm;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .pdf-table tbody tr.alt {
-  background: #f8fafc;
+  background: var(--bg-gray);
 }
 
 .pdf-table .col-desc {
@@ -239,7 +244,7 @@
 
 .pdf-table .empty-row td {
   text-align: center;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-style: italic;
   padding: 5mm;
 }
@@ -254,7 +259,7 @@
 
 .totals-breakdown {
   font-size: 8px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .tax-row {
@@ -273,14 +278,14 @@
   display: flex;
   justify-content: space-between;
   padding: 1mm 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .total-row.final {
   font-weight: bold;
   font-size: 11px;
-  color: #3b82f6;
-  border-bottom: 2px solid #3b82f6;
+  color: var(--color-copper);
+  border-bottom: 2px solid var(--color-copper);
   padding-top: 2mm;
 }
 
@@ -294,7 +299,7 @@
 .pdf-notes,
 .pdf-terms {
   flex: 1;
-  background: #f8fafc;
+  background: var(--bg-gray);
   border-radius: 2mm;
   padding: 3mm;
 }
@@ -303,14 +308,14 @@
 .pdf-terms h4 {
   font-size: 9px;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0 0 2mm 0;
 }
 
 .pdf-notes p,
 .pdf-terms p {
   font-size: 8px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.4;
@@ -319,8 +324,8 @@
 /* Mentions légales */
 .pdf-legal {
   font-size: 7px;
-  color: #9ca3af;
-  border-top: 1px solid #e5e7eb;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
   padding-top: 3mm;
   margin-top: 5mm;
 }
@@ -332,7 +337,7 @@
 
 /* Coordonnées bancaires */
 .pdf-bank {
-  background: #f8fafc;
+  background: var(--bg-gray);
   border-radius: 2mm;
   padding: 3mm;
   margin-top: 5mm;
@@ -341,17 +346,18 @@
 .pdf-bank h4 {
   font-size: 9px;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0 0 2mm 0;
 }
 
 .pdf-bank p {
   font-size: 8px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
 /* Dark mode */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .quote-pdf-preview {
     background: #1e293b;
@@ -369,9 +375,10 @@
 
   /* La page PDF reste blanche même en dark mode */
   .pdf-page {
-    background: white;
+    background: var(--bg-primary);
   }
 }
+*/
 
 /* Responsive - panneau plus étroit */
 @media (max-width: 1200px) {
@@ -462,19 +469,19 @@
 .pdf-signature-zone {
   margin-top: 8mm;
   padding-top: 5mm;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .pdf-signature-zone p {
   font-size: 9px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 3mm 0;
 }
 
 .pdf-signature-zone .signature-box {
   width: 80mm;
   height: 25mm;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 2mm;
   background: #fafafa;
 }
@@ -483,13 +490,13 @@
 .pdf-attachments-preview {
   margin-top: 5mm;
   padding-top: 5mm;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .pdf-attachments-preview h4 {
   font-size: 9px;
   font-weight: bold;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0 0 3mm 0;
 }
 
@@ -501,10 +508,10 @@
 .attachment-thumb {
   width: 20mm;
   height: 15mm;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 2mm;
   overflow: hidden;
-  background: #f8fafc;
+  background: var(--bg-gray);
 }
 
 .attachment-thumb img {
@@ -516,20 +523,20 @@
 .attachment-more {
   width: 20mm;
   height: 15mm;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 2mm;
   background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-weight: bold;
 }
 
 /* Total TTC avec couleur personnalisée */
 .total-row.final {
-  background: var(--primary-color, #3b82f6);
+  background: var(--primary-color, var(--color-copper));
   color: var(--header-text-color, white);
   border-radius: 2mm;
   padding: 2mm 3mm;

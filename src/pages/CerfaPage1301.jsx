@@ -264,7 +264,7 @@ function CerfaPage1301() {
 
         try {
             // Obtenir le prochain numéro de fiche
-            const ficheNumber = getNextFicheNumber();
+            const ficheNumber = getNextFicheNumber('1301');
 
             // Générer le PDF
             const pdfBlob = await fillCerfa1301({
@@ -275,7 +275,7 @@ function CerfaPage1301() {
             // Télécharger
             const clientName = `${formData.clientPrenom} ${formData.clientNom}`.trim() || 'Client';
             const filename = `CERFA_1301_TVA10_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             // Sauvegarder dans l'historique
             saveGenerationRecord({

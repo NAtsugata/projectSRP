@@ -6,8 +6,12 @@
 /* 1. Design System - Variables et fondations */
 @import './styles/design-system.css';
 
-/* 1b. Dark Theme - Global Overrides */
-@import './styles/dark-theme.css';
+/* 1b. Theme Variables - Variables globales qui changent selon le thème */
+@import './styles/theme-variables.css';
+
+/* 1c. Dark Theme - Global Overrides */
+/* DÉSACTIVÉ - Force thème clair uniquement */
+/* @import './styles/dark-theme.css'; */
 
 /* 2. Animations - Keyframes et transitions */
 @import './styles/animations.css';

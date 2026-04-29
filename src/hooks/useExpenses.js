@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { cacheExpenses, getCachedExpenses } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
 import logger from '../utils/logger';
+import { getConnectionState } from '../utils/connectionMonitor';
 
 /**
  * Hook pour gérer les notes de frais avec React Query
@@ -24,44 +25,56 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     } = useQuery({
         queryKey: ['expenses', userId, filters, limit],
         queryFn: async () => {
-            // Si hors ligne, utiliser le cache
-            if (!navigator.onLine) {
-                logger.log('[useExpenses] Mode offline - utilisation du cache');
+            // Offline confirmé par les deux sources — aller directement au cache
+            if (!navigator.onLine && !getConnectionState()) {
                 const cached = await getCachedExpenses();
-                if (userId) {
-                    return cached.filter(e => e.user_id === userId);
+                if (cached && cached.length > 0) {
+                    return userId ? cached.filter(e => e.user_id === userId) : cached;
                 }
-                return cached;
+                return [];
             }
 
-            // En ligne : récupérer depuis Supabase
-            let data;
-            if (userId) {
-                const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
-                data = result.data || [];
-            } else {
-                const result = await expenseService.getAllExpenses(1, limit, filters);
-                data = result.data || [];
-            }
+            // Tenter Supabase, avec fallback cache si ça échoue
+            try {
+                let data;
+                if (userId) {
+                    const result = await expenseService.getUserExpenses(userId, 1, limit, filters);
+                    if (result.error) throw result.error;
+                    data = result.data || [];
+                } else {
+                    const result = await expenseService.getAllExpenses(1, limit, filters);
+                    if (result.error) throw result.error;
+                    data = result.data || [];
+                }
 
-            // Mettre en cache pour le mode offline
-            if (data.length > 0) {
-                cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
+                if (data.length > 0) {
+                    cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
+                }
+                return data;
+            } catch (err) {
+                // Supabase inaccessible — fallback sur le cache plutôt que spinner infini
+                const cached = await getCachedExpenses();
+                if (cached && cached.length > 0) {
+                    logger.warn('[useExpenses] Supabase inaccessible, données en cache utilisées');
+                    return userId ? cached.filter(e => e.user_id === userId) : cached;
+                }
+                throw err;
             }
-
-            return data;
         },
-        staleTime: 3 * 60 * 1000,  // 3 minutes - dépenses peuvent changer
-        gcTime: 10 * 60 * 1000,    // 10 minutes en cache
+        staleTime: 3 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
         placeholderData: (previousData) => previousData,
-        // Permettre les requêtes offline
-        networkMode: 'offlineFirst',
+        networkMode: 'always',
+        retry: 1,
+        retryDelay: 2000,
+        refetchOnReconnect: 'always',
+        refetchOnWindowFocus: false,
     });
 
     // Mutation pour créer une note de frais (avec support offline)
     const createMutation = useMutation({
         mutationFn: async (newExpense) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 // Mode offline : queue l'opération
                 logger.log('[useExpenses] Offline - creation en queue');
                 const tempId = `temp-${Date.now()}`;
@@ -79,7 +92,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     // Mutation pour mettre à jour une note de frais (avec support offline)
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Offline - mise a jour en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
                 return { data: { id, ...updates } };
@@ -94,7 +107,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
     // Mutation pour supprimer une note de frais (avec support offline)
     const deleteMutation = useMutation({
         mutationFn: async (id) => {
-            if (!navigator.onLine) {
+            if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Offline - suppression en queue');
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };

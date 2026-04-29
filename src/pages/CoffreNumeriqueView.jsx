@@ -255,12 +255,19 @@ export default function CoffreNumeriqueView({ vaultDocuments = [] }) {
     setSelectedDocs(new Set());
   }, []);
 
-  // Rafraîchir une URL signée expirée
+  // Rafraîchir une URL signée expirée - Détecte automatiquement le bucket
   const getFreshUrl = useCallback(async (doc) => {
     try {
-      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+      // Déterminer le bucket: 'cerfa-documents' pour les Cerfa, 'vault-files' pour le reste
+      const isCerfaDoc = doc.file_url?.includes('cerfa-documents') ||
+                         doc.file_path?.startsWith('cerfa/') ||
+                         doc.file_name?.toLowerCase().includes('cerfa');
+
+      const bucket = isCerfaDoc ? 'cerfa-documents' : 'vault-files';
+
+      const filePath = storageService.extractFilePath(doc.file_url, bucket);
       if (filePath) {
-        return await storageService.refreshSignedUrl(filePath, 'vault-files');
+        return await storageService.refreshSignedUrl(filePath, bucket);
       }
       return doc.file_url; // Fallback
     } catch (error) {

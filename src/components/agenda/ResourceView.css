@@ -32,7 +32,7 @@
   flex-direction: column;
   align-items: center;
   padding: 12px 20px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
@@ -76,13 +76,13 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 13px;
-  background: white;
+  background: var(--bg-primary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .sort-select:hover {
-  border-color: #3b82f6;
+  border-color: var(--color-copper);
 }
 
 /* ==================== ETAT VIDE ==================== */
@@ -123,7 +123,7 @@
 }
 
 .resource-row {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
@@ -216,7 +216,7 @@
 
 .stat-sav {
   background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  color: #3730a3;
+  color: var(--color-copper-darker);
 }
 
 .badge-icon {
@@ -279,7 +279,7 @@
 
 .load-progress {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  background: linear-gradient(90deg, var(--color-copper), var(--color-copper-dark));
   transition: width 0.5s ease;
   border-radius: 4px;
 }
@@ -339,9 +339,9 @@
 }
 
 .intervention-card:hover {
-  background: white;
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  background: var(--bg-primary);
+  border-color: var(--color-copper);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.15);
   transform: translateY(-2px);
 }
 
@@ -350,7 +350,7 @@
 }
 
 .intervention-in_progress {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-copper);
 }
 
 .intervention-pending {
@@ -388,7 +388,7 @@
 .card-time {
   font-size: 12px;
   font-weight: 700;
-  color: #3b82f6;
+  color: var(--color-copper);
   background: #eff6ff;
   padding: 3px 8px;
   border-radius: 6px;
@@ -463,7 +463,7 @@
 
 .alert-sav {
   background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  color: #3730a3;
+  color: var(--color-copper-darker);
 }
 
 .alert-badge-icon {
@@ -522,7 +522,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.2s ease;
@@ -651,6 +651,7 @@
 }
 
 /* ==================== THEME SOMBRE ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .resource-view {
     background: #1e293b;
@@ -735,3 +736,4 @@
     color: #f1f5f9;
   }
 }
+*/

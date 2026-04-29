@@ -39,7 +39,7 @@
 }
 
 .spinner-path {
-  stroke: #3b82f6;
+  stroke: var(--color-copper);
   stroke-linecap: round;
   animation: dash 1.5s ease-in-out infinite;
 }
@@ -67,7 +67,7 @@
 
 .loading-text {
   margin-top: 1rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
 }
 

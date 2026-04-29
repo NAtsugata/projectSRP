@@ -1,21 +1,17 @@
 /* src/components/planning/PlanningCalendarView.css */
 
 .planning-calendar {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-}
-
-/* Header */
-.calendar-header {
-  display: flex;
+}/* Header */
+.calendar-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  color: white;
-}
+  background: linear-gradient(135deg, #1e3a5f 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);}
 
 .calendar-nav {
   display: flex;
@@ -99,7 +95,7 @@
 
 .calendar-day {
   min-height: 120px;
-  background: white;
+  background: var(--bg-primary);
   padding: 0.5rem;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -121,21 +117,17 @@
 
 .calendar-day.today {
   background: #eff6ff;
-}
-
-.calendar-day.today .day-number {
-  background: #2563eb;
-  color: white;
+}.calendar-day.today .day-number {background: var(--color-copper-dark);
+  color: var(--text-on-colored-bg);
   border-radius: 50%;
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
+  justify-content: center;}
 
 .calendar-day.has-interventions {
-  border-left: 3px solid #2563eb;
+  border-left: 3px solid var(--color-copper-dark);
 }
 
 .calendar-day.has-absences {
@@ -165,7 +157,7 @@
 .intervention-chip {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-copper);
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -215,19 +207,15 @@
   flex-direction: column;
   gap: 2px;
   margin-bottom: 4px;
-}
-
-.absence-chip {
-  display: flex;
+}.absence-chip {display: flex;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
   background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
   border-radius: 4px;
   font-size: 0.7rem;
-  color: white;
-  overflow: hidden;
-}
+  color: var(--text-on-colored-bg);
+  overflow: hidden;}
 
 .absence-chip.absence-conges {
   background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
@@ -296,12 +284,12 @@
 }
 
 .today-dot {
-  background: #2563eb;
+  background: var(--color-copper-dark);
 }
 
 .has-dot {
-  background: #3b82f6;
-  border-left: 3px solid #1d4ed8;
+  background: var(--color-copper);
+  border-left: 3px solid var(--color-copper-darker);
 }
 
 .completed-dot {

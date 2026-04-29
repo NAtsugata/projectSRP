@@ -35,7 +35,7 @@ const DEFAULT_COMPANY_INFO = {
 
 const STORAGE_KEY_COMPANY = 'cerfa_company_info';
 const STORAGE_KEY_HISTORY = 'cerfa_generation_history';
-const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
+const STORAGE_KEY_COUNTERS = 'cerfa_fiche_counters'; // Compteurs multiples par type
 
 // =============================
 // NUMÉROTATION DES FICHES
@@ -43,65 +43,116 @@ const STORAGE_KEY_COUNTER = 'cerfa_fiche_counter';
 
 /**
  * Récupère le prochain numéro de fiche CERFA
- * Format: CERFA-YYYY-NNNN (ex: CERFA-2026-0001)
+ * Format: CERFA-{type}-YYYY-NNNN (ex: CERFA-15497-2026-0001)
+ * Chaque type de CERFA a son propre compteur
+ * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
  * @returns {string} Numéro de fiche formaté
  */
-export const getNextFicheNumber = () => {
+export const getNextFicheNumber = (cerfaType = '15497') => {
     try {
         const currentYear = new Date().getFullYear();
-        const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
 
-        // Réinitialiser le compteur si on change d'année
-        if (stored.year !== currentYear) {
-            stored.year = currentYear;
-            stored.count = 0;
+        // Initialiser le compteur pour ce type s'il n'existe pas
+        if (!allCounters[cerfaType]) {
+            allCounters[cerfaType] = { year: currentYear, count: 0 };
         }
 
-        // Incrémenter le compteur
-        stored.count = (stored.count || 0) + 1;
-        safeStorage.setJSON(STORAGE_KEY_COUNTER, stored);
+        const typeCounter = allCounters[cerfaType];
 
-        // Formater le numéro (CERFA-2026-0001)
-        const paddedCount = String(stored.count).padStart(4, '0');
-        return `CERFA-${currentYear}-${paddedCount}`;
+        // Réinitialiser le compteur si on change d'année
+        if (typeCounter.year !== currentYear) {
+            typeCounter.year = currentYear;
+            typeCounter.count = 0;
+        }
+
+        // Incrémenter le compteur pour ce type spécifique
+        typeCounter.count = (typeCounter.count || 0) + 1;
+        allCounters[cerfaType] = typeCounter;
+        safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+
+        // Formater le numéro (CERFA-15497-2026-0001)
+        const paddedCount = String(typeCounter.count).padStart(4, '0');
+        return `CERFA-${cerfaType}-${currentYear}-${paddedCount}`;
     } catch (e) {
         logger.error('Erreur génération numéro fiche:', e);
-        return `CERFA-${Date.now()}`;
+        return `CERFA-${cerfaType || 'UNKN'}-${Date.now()}`;
     }
 };
 
 /**
  * Récupère le numéro actuel sans incrémenter
- * @returns {Object} { year, count, formatted }
+ * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
+ * @returns {Object} { year, count, formatted, nextNumber }
  */
-export const getCurrentFicheInfo = () => {
-    const stored = safeStorage.getJSON(STORAGE_KEY_COUNTER, {});
-    const year = stored.year || new Date().getFullYear();
-    const count = stored.count || 0;
+export const getCurrentFicheInfo = (cerfaType = '15497') => {
+    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+    const typeCounter = allCounters[cerfaType] || {};
+    const year = typeCounter.year || new Date().getFullYear();
+    const count = typeCounter.count || 0;
     const paddedCount = String(count).padStart(4, '0');
     return {
         year,
         count,
-        formatted: `CERFA-${year}-${paddedCount}`,
-        nextNumber: count + 1
+        formatted: `CERFA-${cerfaType}-${year}-${paddedCount}`,
+        nextNumber: count + 1,
+        cerfaType
     };
 };
 
 /**
- * Réinitialise le compteur de fiches (admin uniquement)
+ * Récupère les informations de tous les compteurs CERFA
+ * @returns {Object} Tous les compteurs par type
+ */
+export const getAllCountersInfo = () => {
+    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+    const result = {};
+
+    for (const [type, data] of Object.entries(allCounters)) {
+        const year = data.year || new Date().getFullYear();
+        const count = data.count || 0;
+        const paddedCount = String(count).padStart(4, '0');
+        result[type] = {
+            year,
+            count,
+            formatted: `CERFA-${type}-${year}-${paddedCount}`,
+            nextNumber: count + 1
+        };
+    }
+
+    return result;
+};
+
+/**
+ * Réinitialise le compteur d'un type de CERFA (admin uniquement)
+ * @param {string} cerfaType - Type de CERFA à réinitialiser (ou 'all' pour tous)
  * @param {number} startNumber - Numéro de départ (défaut: 0)
  * @returns {boolean} Succès
  */
-export const resetFicheCounter = (startNumber = 0) => {
-    const currentYear = new Date().getFullYear();
-    const success = safeStorage.setJSON(STORAGE_KEY_COUNTER, {
-        year: currentYear,
-        count: startNumber
-    });
-    if (!success) {
-        logger.error('Erreur réinitialisation compteur');
+export const resetFicheCounter = (cerfaType = '15497', startNumber = 0) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+
+        if (cerfaType === 'all') {
+            // Réinitialiser tous les compteurs
+            Object.keys(allCounters).forEach(type => {
+                allCounters[type] = { year: currentYear, count: startNumber };
+            });
+        } else {
+            // Réinitialiser un type spécifique
+            allCounters[cerfaType] = { year: currentYear, count: startNumber };
+        }
+
+        const success = safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+        if (!success) {
+            logger.error('Erreur réinitialisation compteur');
+        }
+        return success;
+    } catch (e) {
+        logger.error('Erreur réinitialisation compteur:', e);
+        return false;
     }
-    return success;
 };
 
 // =============================
@@ -253,6 +304,10 @@ export const fillCerfa15497 = async (data) => {
                     // Toujours écrire, même si vide (pour debug)
                     const textValue = value ? String(value) : '';
                     field.setText(textValue);
+                    // Forcer la couleur du texte en noir pour visibilité
+                    field.setFontColor(rgb(0, 0, 0));
+                    // Mettre à jour l'apparence du champ
+                    field.updateAppearances();
                     if (textValue) {
                         logger.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
                     }
@@ -505,6 +560,9 @@ export const fillCerfa15497 = async (data) => {
         fillTextField('Sign_Detenteur_Qualite', data.clientQualite || data.detenteurQualite || 'Propriétaire');
         fillTextField('Sign_Detenteur_Date', data.clientSignatureDate || data.date || dateIntervention);
 
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
+
         // Aplatir le formulaire pour figer les données
         form.flatten();
 
@@ -701,6 +759,9 @@ export const fillCerfa15498 = async (data) => {
         fillTextField('sig_inst', data.sig_inst || '');
         fillTextField('sig_dist', data.sig_dist || '');
 
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
+
         // Aplatir le formulaire pour figer les données
         form.flatten();
 
@@ -767,15 +828,84 @@ export const fillCerfa15498 = async (data) => {
  * @param {Blob} pdfBlob - Le PDF en Blob
  * @param {string} filename - Nom du fichier
  */
-export const downloadCerfa = (pdfBlob, filename = 'cerfa_15497_entretien.pdf') => {
-    const url = URL.createObjectURL(pdfBlob);
+export const downloadCerfa = async (pdfBlob, filename = 'cerfa_15497_entretien.pdf') => {
+    try {
+        // Créer un nouveau Blob avec le type MIME correct
+        const pdfFile = new File([pdfBlob], filename, {
+            type: 'application/pdf',
+            lastModified: Date.now()
+        });
+
+        // Détecter si on est sur mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Sur mobile, essayer d'utiliser l'API Web Share pour ouvrir dans l'app native
+        if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            logger.log('[CERFA] 📱 Mobile: Partage via Web Share API');
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: 'CERFA PDF',
+                    text: 'Télécharger le PDF CERFA'
+                });
+                logger.log('[CERFA] ✅ PDF partagé avec succès');
+                return;
+            } catch (shareError) {
+                // Si l'utilisateur annule le partage ou si ça échoue, continuer avec la méthode classique
+                logger.warn('[CERFA] Partage annulé ou erreur:', shareError);
+            }
+        }
+
+        // Méthode classique : téléchargement direct
+        // Sur mobile, window.open() ouvre le PDF dans le lecteur natif
+        // Sur desktop, download attribute force le téléchargement
+        const url = URL.createObjectURL(pdfFile);
+
+        if (isMobile) {
+            // Sur mobile : ouvrir dans un nouvel onglet (qui ouvrira l'app PDF native)
+            logger.log('[CERFA] 📱 Mobile: Ouverture dans lecteur PDF natif');
+            const newWindow = window.open(url, '_blank');
+
+            // Si le popup est bloqué, fallback sur le téléchargement
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                logger.warn('[CERFA] Popup bloqué, fallback sur téléchargement');
+                downloadFallback(url, filename);
+            } else {
+                // Libérer l'URL après 5 secondes (temps pour que le lecteur PDF se lance)
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
+        } else {
+            // Sur desktop : téléchargement direct
+            logger.log('[CERFA] 💻 Desktop: Téléchargement direct');
+            downloadFallback(url, filename);
+        }
+    } catch (error) {
+        logger.error('[CERFA] ❌ Erreur téléchargement:', error);
+        throw new Error('Erreur lors du téléchargement du PDF');
+    }
+};
+
+/**
+ * Fonction helper pour téléchargement classique
+ * @param {string} url - URL du blob
+ * @param {string} filename - Nom du fichier
+ */
+const downloadFallback = (url, filename) => {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+
+    // Certains navigateurs nécessitent que le lien soit dans le DOM
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    // Nettoyer
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
 };
 
 // =============================
@@ -1092,6 +1222,9 @@ export const fillCerfa1301 = async (data) => {
         // a12 (y=160, x=370): Date
         fillTextField('a11', data.lieu || '');
         fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
+
+        // Mettre à jour toutes les apparences des champs avant aplatissement
+        form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
         form.flatten();

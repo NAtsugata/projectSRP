@@ -432,6 +432,7 @@
 
 /* ==================== DARK MODE SUPPORT ==================== */
 /* ==================== DARK MODE SUPPORT ==================== */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .agenda-view .empty-state {
     background: linear-gradient(135deg,
@@ -452,6 +453,7 @@
     border-color: var(--color-danger-dark);
   }
 }
+*/
 
 /* ==================== ACTIONS BAR ==================== */
 .agenda-actions-bar {
@@ -460,9 +462,10 @@
   gap: 12px;
   margin: var(--spacing-4) 0;
   padding: var(--spacing-3);
-  background: white;
+  background: var(--bg-primary);
   border-radius: var(--rounded-xl);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {
@@ -470,4 +473,15 @@
     flex-wrap: wrap;
     gap: 8px;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .agenda-view,
+.dark-theme .agenda-view {
+  /* Overrides spécifiques si nécessaires */
 }

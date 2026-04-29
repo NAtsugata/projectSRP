@@ -36,7 +36,7 @@
   border-radius: inherit;
   background: linear-gradient(45deg,
       transparent,
-      rgba(99, 102, 241, 0.1),
+      rgba(184, 115, 51, 0.1),
       transparent);
   animation: shimmer 3s linear infinite;
   pointer-events: none;
@@ -75,18 +75,18 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 1px solid #fecaca;
+  background: linear-gradient(135deg, var(--color-danger-light) 0%, var(--color-danger-lighter) 100%);
+  border: 1px solid var(--color-danger);
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .alerts-btn:hover {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: linear-gradient(135deg, var(--color-danger-lighter) 0%, var(--color-danger-light) 100%);
   transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .alerts-icon {
@@ -99,8 +99,8 @@
   right: -4px;
   min-width: 20px;
   height: 20px;
-  background: #dc2626;
-  color: white;
+  background: var(--color-danger);
+  color: var(--text-inverse);
   font-size: 0.6875rem;
   font-weight: 700;
   border-radius: 10px;
@@ -108,7 +108,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  box-shadow: var(--shadow-sm);
   animation: pulse-badge 2s infinite;
 }
 
@@ -123,28 +123,29 @@
 }
 
 .planning-header-actions .absence-toggle-btn {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border-color: #fb923c;
-  color: #c2410c;
+  background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-warning-lighter) 100%);
+  border-color: var(--color-warning);
+  color: var(--color-warning-dark);
   font-weight: 600;
 }
 
 .planning-header-actions .absence-toggle-btn:hover {
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-  border-color: #f97316;
-  color: #9a3412;
+  background: linear-gradient(135deg, var(--color-warning-lighter) 0%, var(--color-warning-light) 100%);
+  border-color: var(--color-warning-dark);
+  color: var(--color-warning-darker);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 /* ==================== VIEW MODE SELECTOR ==================== */
 .view-mode-selector {
   display: flex;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   padding: 4px;
   gap: 4px;
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color-light);
 }
 
 .view-mode-btn {
@@ -168,15 +169,11 @@
 }
 
 .view-mode-btn:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(184, 115, 51, 0.1);
   color: var(--color-primary-600);
-}
-
-.view-mode-btn.active {
-  background: var(--color-primary-500);
-  color: white;
-  box-shadow: var(--shadow-sm);
-}
+}.view-mode-btn.active {background: var(--color-primary-500);
+  color: var(--text-on-colored-bg);
+  box-shadow: var(--shadow-sm);}
 
 .view-mode-label {
   display: inline;
@@ -579,7 +576,7 @@
   .planning-header {
     background: none;
     box-shadow: none;
-    border: 1px solid #000;
+    border: 1px solid var(--text-primary);
   }
 
   .planning-title::before {
@@ -589,4 +586,15 @@
   .planning-form-section {
     display: none;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-planning-view,
+.dark-theme .admin-planning-view {
+  /* Overrides spécifiques si nécessaires */
 }

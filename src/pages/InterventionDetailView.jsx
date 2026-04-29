@@ -25,7 +25,11 @@ import {
   SignatureModal,
   FileUploader,
   VoiceRecorder,
+  StatusCard,
+  ArrivalDeparture,
+  PVReception,
 } from '../components/intervention';
+import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import { EditTeamModal } from '../components/planning';
@@ -299,6 +303,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
 
+  // Sauvegarde du PV de réception
+  const handlePVSave = useCallback(async (pvData) => {
+    const updated = { ...report, pv_reception: pvData };
+    await persistReport(updated);
+    alert('✓ Procès-Verbal de Réception enregistré');
+  }, [report, persistReport]);
+
   // Reusable upload completion handler
   const handleUploadComplete = useCallback(async (uploaded) => {
     logger.log('✅ Upload terminé, ajout de', uploaded.length, 'fichiers');
@@ -494,6 +505,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   const [needsOpen, setNeedsOpen] = useState(true);
+  const [adminNoteExpanded, setAdminNoteExpanded] = useState(false);
   const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum, n) => sum + (Number(n.estimated_price) || 0), 0) : 0;
 
   const addNeed = async () => {
@@ -645,6 +657,28 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
+  // Calcul des statistiques pour StatusCard
+  const calculateDuration = () => {
+    if (!report.arrivalTime) return null;
+    const now = report.departureTime ? new Date(report.departureTime) : new Date();
+    const start = new Date(report.arrivalTime);
+    const diff = Math.floor((now - start) / 1000 / 60);
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    return `${hours}h ${minutes.toString().padStart(2, '0')}min`;
+  };
+
+  const stats = {
+    duration: calculateDuration(),
+    photoCount: report.files?.filter(f => f.type?.startsWith('image/')).length || 0,
+    checkpointProgress: report.quick_checkpoints?.length > 0
+      ? `${report.quick_checkpoints.filter(c => c.done).length}/${report.quick_checkpoints.length}`
+      : null,
+    team: intervention.intervention_assignments?.length > 0
+      ? intervention.intervention_assignments.map(a => a.profiles?.full_name || 'Employé').join(', ')
+      : 'Non assigné'
+  };
+
   return (
     <div className="intervention-detail-modern">
       {/* NOUVEAU HEADER MODERNE */}
@@ -654,6 +688,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       />
 
       <div className="intervention-content">
+        {/* CARTE DE RÉSUMÉ */}
+        <StatusCard
+          intervention={intervention}
+          report={report}
+          stats={stats}
+        />
+
         {/* ALERTES INTELLIGENTES */}
         <SmartAlerts
           report={report}
@@ -678,7 +719,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <TimeTrackerEnhanced
             report={report}
             onUpdateReport={persistReport}
-            disabled={!!isAdmin}
+            disabled={false}
           />
         </div>
 
@@ -748,476 +789,358 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </div>
         )}
 
-        {/* ANCIEN CONTENU (conservé) */}
-        <div className="card-white">
-          <h2>{intervention.client}</h2>
-          <p className="text-muted">{intervention.address}</p>
+        {/* CONTENU ORGANISÉ EN TABS */}
+        <Tabs defaultTab={0}>
+          {/* ONGLET INFOS */}
+          <Tab label="Infos" icon="📋">
+            <div>
+              <h2 style={{ marginTop: 0 }}>{intervention.client}</h2>
+              <p className="text-muted">{intervention.address}</p>
 
-          {/* Statut + badges */}
-          <div className="section">
-            <h3>⚑ Statut de l'intervention</h3>
-            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-              <span className="badge">Statut actuel : {currentStatus}</span>
-              {urgentCount > 0 && <span className="badge" style={{ background: '#f59e0b', color: '#111827' }}>URG {urgentCount}</span>}
-            </div>
-          </div>
-
-          {/* Arrivé / Départ */}
-          <div className="section">
-            <h3>⏱️ Temps sur site</h3>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="card-slim">
-                <div className="text-muted" style={{ marginBottom: 4 }}>Arrivé sur site</div>
-                <div className="flex items-center justify-between" style={{ gap: 8 }}>
-                  <div><b>{fmtTime(report.arrivalTime)}</b></div>
-                  <button className="btn btn-secondary" disabled={!!report.arrivalTime} onClick={() => markWithGeo('arrival')}>
-                    {report.arrivalTime ? 'Déjà enregistré' : 'Marquer l\'arrivée'}
-                  </button>
-                </div>
-                {report.arrivalGeo && (
-                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.arrivalGeo.lat?.toFixed?.(5)} · lng {report.arrivalGeo.lng?.toFixed?.(5)} (±{Math.round(report.arrivalGeo.acc || 0)} m)</div>
-                )}
-              </div>
-              <div className="card-slim">
-                <div className="text-muted" style={{ marginBottom: 4 }}>Départ du site</div>
-                <div className="flex items-center justify-between" style={{ gap: 8 }}>
-                  <div><b>{fmtTime(report.departureTime)}</b></div>
-                  <button className="btn btn-secondary" disabled={!!report.departureTime || !report.arrivalTime} onClick={() => markWithGeo('departure')}>
-                    {report.departureTime ? 'Déjà enregistré' : (!report.arrivalTime ? 'Attente arrivée' : 'Marquer le départ')}
-                  </button>
-                </div>
-                {report.departureGeo && (
-                  <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>lat {report.departureGeo.lat?.toFixed?.(5)} · lng {report.departureGeo.lng?.toFixed?.(5)} (±{Math.round(report.departureGeo.acc || 0)} m)</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Admin Note Section */}
-          <div className="section">
-            <h3>📝 Note Admin</h3>
-            {isAdmin ? (
-              <textarea
-                className="form-control"
-                value={intervention.admin_note || ''}
-                onChange={(e) => {
-                  setIntervention(prev => ({ ...prev, admin_note: e.target.value }));
-                }}
-                onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
-                placeholder="Note pour l'employé..."
-                rows={3}
-              />
-            ) : (
-              <div className="admin-note-display p-3 bg-gray-50 rounded border">
-                {intervention.admin_note ? (
-                  <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{intervention.admin_note}</p>
-                ) : (
-                  <span className="text-muted">Aucune note.</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Rapport */}
-          <div className="section">
-            <h3>📝 Rapport de chantier</h3>
-            <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin} />
-            <VoiceRecorder
-              interventionId={interventionId}
-              onUploaded={async (uploaded) => {
-                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-                await persistReport(updated);
-                saveScroll();
-                pendingRestoreRef.current = true;
-                if (!document.body.dataset.__scrollLocked) lock();
-                try {
-                  await refreshData?.();
-                } finally {
-                  unlock();
-                  restoreScroll();
-                }
-              }}
-              onBeginCritical={lock}
-              onEndCritical={unlock}
-            />
-          </div>
-
-          {/* Besoins */}
-          <div className="section">
-            <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o => !o)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-              <h3 className="flex items-center gap-2" style={{ margin: 0 }}>
-                <span style={{ display: 'inline-block', width: 18, textAlign: 'center' }}>{needsOpen ? '▼' : '▶'}</span>
-                🧰 Besoins chantier {Array.isArray(report.needs) ? `(${report.needs.length})` : ''}
-              </h3>
-              <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
-            </div>
-
-            {needsOpen && (
-              <div>
-                {(!report.needs || report.needs.length === 0) && <p className="text-muted" style={{ marginTop: '0.5rem' }}>Aucun besoin pour le moment.</p>}
-
-                {Array.isArray(report.needs) && report.needs.length > 0 && (
-                  <ul className="document-list" style={{ marginTop: '0.5rem' }}>
-                    {report.needs.map(n => (
-                      <li key={n.id}>
-                        <div style={{ flexGrow: 1 }}>
-                          <p className="font-semibold">[{n.category || '—'}] {n.label}{n.qty ? ` × ${n.qty}` : ''} {n.urgent ? <span className="badge" style={{ marginLeft: 8 }}>Urgent</span> : null}</p>
-                          <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                            {n.note || '—'} {typeof n.estimated_price === 'number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
-                          </p>
-                        </div>
-                        <button className="btn-icon-danger" onClick={() => removeNeed(n.id)} title="Supprimer">✖</button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <div className="grid" style={{ gridTemplateColumns: '160px 80px 120px 1fr 140px auto', gap: '0.5rem', alignItems: 'end', marginTop: '0.75rem' }}>
-                  <div><label>Catégorie</label>
-                    <select className="form-control" value={needDraft.category} onChange={e => setNeedDraft(v => ({ ...v, category: e.target.value }))}>
-                      <option value="materiel">Matériel</option>
-                      <option value="consommables">Consommables</option>
-                      <option value="location">Location</option>
-                      <option value="commande">Commande</option>
-                    </select>
-                  </div>
-                  <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e => setNeedDraft(v => ({ ...v, qty: Math.max(1, Number(e.target.value) || 1) }))} /></div>
-                  <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent ? '1' : '0'} onChange={e => setNeedDraft(v => ({ ...v, urgent: e.target.value === '1' }))}><option value="0">Non</option><option value="1">Oui</option></select></div>
-                  <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e => setNeedDraft(v => ({ ...v, label: e.target.value }))} placeholder="Ex: Tuyau 16mm" /></div>
-                  <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e => setNeedDraft(v => ({ ...v, estimated_price: e.target.value }))} placeholder="ex: 25.90" /></div>
-                  <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e => setNeedDraft(v => ({ ...v, note: e.target.value }))} placeholder="Détail, lien, réf…" /></div>
-                  <div style={{ gridColumn: '1 / -1' }}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
+              {/* Statut + badges */}
+              <div className="section">
+                <h3>⚑ Statut de l'intervention</h3>
+                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                  <span className="badge">Statut actuel : {currentStatus}</span>
+                  {urgentCount > 0 && <span className="badge" style={{ background: '#f59e0b', color: '#111827' }}>URG {urgentCount}</span>}
                 </div>
               </div>
-            )}
-          </div>
 
-        </div>
-
-        {/* Photos & docs */}
-        <div className="modern-section" id="photos-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">📷</span>
-              Photos et Documents <span style={{ fontSize: '0.7em', color: '#16a34a' }}>(v4.0 IndexedDB Cache)</span>
-              {report.files && report.files.length > 0 && (
-                <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
-                  ({report.files.length})
-                </span>
-              )}
-            </h3>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {report.files && report.files.length > 1 && (
-                <button
-                  onClick={handleDownloadAllAsZip}
-                  disabled={isDownloadingZip}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                  title="Télécharger tous les fichiers en ZIP"
-                >
-                  <DownloadIcon />
-                  {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
-                </button>
-              )}
-              <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
-            </div>
-          </div>
-
-          {/* Galerie d'images optimisée avec pagination et lazy loading */}
-          <ImageGalleryOptimized
-            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-              url: f.url,
-              name: f.name,
-              type: f.type
-            }))}
-            uploadQueue={uploadQueue.filter(item => {
-              // Filtrer UNIQUEMENT les images (pas les PDFs ou audios)
-              const isImage = item.type?.startsWith('image/');
-              return isImage;
-            })}
-            emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
-            onDeleteImage={isAdmin ? handleDeleteImage : null}
-          />
-
-          {/* Documents en cours d'upload - même style que les images */}
-          {uploadQueue.some(item => !item.type?.startsWith('image/')) && (
-            <div style={{ marginTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-                📤 Documents en cours d'envoi ({uploadQueue.filter(item => !item.type?.startsWith('image/')).length})
-              </h4>
-              {/* Grille identique aux images */}
-              <div className="image-gallery">
-                {uploadQueue.filter(item => !item.type?.startsWith('image/')).map((item) => {
-                  const progress = Math.round(item.progress || 0);
-                  const isAudio = item.type?.startsWith('audio/');
-                  return (
-                    <div
-                      key={item.id}
-                      className="image-thumbnail"
-                      style={{ position: 'relative', overflow: 'hidden', background: '#1f2937' }}
-                    >
-                      {/* Fond avec icône du document */}
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: isAudio ? '#7c3aed' : '#dc2626',
-                        color: 'white',
-                        fontSize: 40,
-                        opacity: 0.6
-                      }}>
-                        {isAudio ? '🎵' : '📄'}
-                      </div>
-
-                      {/* Overlay avec progression - identique aux images */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'rgba(0, 0, 0, 0.5)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4
-                        }}
-                      >
-                        {/* Cercle de progression */}
-                        <div
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: '50%',
-                            background: `conic-gradient(#0ea5a5 ${progress * 3.6}deg, rgba(255,255,255,0.3) 0deg)`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: '50%',
-                              background: 'rgba(0,0,0,0.7)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: 11,
-                              fontWeight: 600
-                            }}
-                          >
-                            {progress}%
-                          </div>
-                        </div>
-
-                        {/* Texte */}
-                        <div style={{ color: 'white', fontSize: 10, fontWeight: 500 }}>
-                          Envoi...
-                        </div>
-
-                        {/* Nom du fichier (tronqué) */}
-                        <div style={{
-                          color: 'rgba(255,255,255,0.8)',
-                          fontSize: 9,
-                          maxWidth: '90%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          textAlign: 'center',
-                          padding: '0 4px'
-                        }}>
-                          {item.name}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Documents non-image (PDF, audio, etc.) */}
-          {report.files?.some(f => !f.type?.startsWith('image/')) && (
-            <div style={{ marginTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>📎 Autres fichiers</h4>
-              <ul className="document-list-optimized">
-                {report.files.filter(f => !f.type?.startsWith('image/')).map((file, idx) => (
-                  <li key={`${file.url || idx}-${idx}`} className="document-item-optimized">
-                    {file.type?.startsWith('audio/') ? <div style={{ width: 40 }}><audio controls src={file.url} style={{ height: 32 }} /></div>
-                      : <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e9ecef', borderRadius: '0.25rem' }}><FileTextIcon /></div>}
-                    <span className="file-name">{file.name}</span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" download={file.name}><DownloadIcon /></a>
-                      {isAdmin && (
-                        <button
-                          className="btn btn-sm"
-                          style={{ background: '#dc2626', color: 'white', border: 'none' }}
-                          onClick={() => {
-                            if (window.confirm(`Supprimer "${file.name}" ?`)) {
-                              handleDeleteImage(file);
-                            }
-                          }}
-                          title="Supprimer"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <FileUploader
-            interventionId={interventionId}
-            folder="report"
-            onLocalPreview={handleLocalPreview}
-            onUploadProgress={handleUploadProgress}
-            onUploadComplete={handleUploadComplete}
-          />
-        </div>
-
-        {/* Checkpoints rapides */}
-        <div className="modern-section" id="checklist-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">✅</span>
-              Checklist rapide
-            </h3>
-          </div>
-          <div className="checklist-items">
-            {(report.quick_checkpoints || []).map((checkpoint, index) => (
-              <label
-                key={index}
-                className={`checklist-item ${checkpoint.done ? 'checked' : ''}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  background: checkpoint.done ? '#ecfdf5' : '#f9fafb',
-                  border: `2px solid ${checkpoint.done ? '#10b981' : '#e5e7eb'}`,
-                  borderRadius: '0.5rem',
-                  marginBottom: '0.5rem',
-                  cursor: isAdmin ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={checkpoint.done || false}
-                  onChange={(e) => {
-                    if (isAdmin) return;
-                    const updated = [...report.quick_checkpoints];
-                    updated[index] = {
-                      ...updated[index],
-                      done: e.target.checked,
-                      at: e.target.checked ? new Date().toISOString() : null
-                    };
-                    persistReport({ ...report, quick_checkpoints: updated });
-                  }}
-                  disabled={isAdmin}
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    accentColor: '#10b981'
-                  }}
+              {/* Arrivé / Départ - Nouveau composant */}
+              <div className="section">
+                <ArrivalDeparture
+                  report={report}
+                  onMarkArrival={() => markWithGeo('arrival')}
+                  onMarkDeparture={() => markWithGeo('departure')}
+                  disabled={false}
                 />
-                <span style={{
-                  fontWeight: 500,
-                  color: checkpoint.done ? '#059669' : '#374151',
-                  textDecoration: checkpoint.done ? 'none' : 'none'
-                }}>
-                  {checkpoint.label}
-                </span>
-                {checkpoint.done && checkpoint.at && (
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280' }}>
-                    ✓ {new Date(checkpoint.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+              </div>
+
+              {/* Admin Note Section */}
+              <div className="section">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <h3 style={{ margin: 0 }}>📝 Note Admin</h3>
+                  {!isAdmin && intervention.admin_note && (
+                    <button
+                      onClick={() => setAdminNoteExpanded(!adminNoteExpanded)}
+                      className="btn btn-sm btn-outline-secondary"
+                      style={{ padding: '0.25rem 0.75rem' }}
+                    >
+                      {adminNoteExpanded ? '🔽 Réduire' : '🔼 Agrandir'}
+                    </button>
+                  )}
+                </div>
+                {isAdmin ? (
+                  <textarea
+                    className="form-control"
+                    value={intervention.admin_note || ''}
+                    onChange={(e) => {
+                      setIntervention(prev => ({ ...prev, admin_note: e.target.value }));
+                    }}
+                    onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
+                    placeholder="Note pour l'employé..."
+                    rows={3}
+                  />
+                ) : (
+                  <div
+                    className="admin-note-display p-3 bg-gray-50 rounded border"
+                    style={{
+                      maxHeight: adminNoteExpanded ? 'none' : '150px',
+                      overflow: adminNoteExpanded ? 'visible' : 'auto',
+                      transition: 'max-height 0.3s ease'
+                    }}
+                  >
+                    {intervention.admin_note ? (
+                      <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{intervention.admin_note}</p>
+                    ) : (
+                      <span className="text-muted">Aucune note.</span>
+                    )}
+                  </div>
                 )}
-              </label>
-            ))}
-          </div>
-        </div>
+              </div>
+            </div>
+          </Tab>
 
-        {/* Signature */}
-        <div className="modern-section" id="signature-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">✍️</span>
-              Signature du client
-            </h3>
-          </div>
-          {report.signature ? (
+          {/* ONGLET PHOTOS */}
+          <Tab label="Photos" icon="📷" badge={stats.photoCount > 0 ? stats.photoCount : null}>
             <div>
-              <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
-              <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
+              <div className="section-header" style={{ marginBottom: '1rem' }}>
+                <h3 className="section-title" style={{ margin: 0 }}>
+                  <span className="section-title-icon">📷</span>
+                  Photos et Documents <span style={{ fontSize: '0.7em', color: '#16a34a' }}>(v4.0 IndexedDB Cache)</span>
+                  {report.files && report.files.length > 0 && (
+                    <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
+                      ({report.files.length})
+                    </span>
+                  )}
+                </h3>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {report.files && report.files.length > 1 && (
+                    <button
+                      onClick={handleDownloadAllAsZip}
+                      disabled={isDownloadingZip}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                      title="Télécharger tous les fichiers en ZIP"
+                    >
+                      <DownloadIcon />
+                      {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
+                    </button>
+                  )}
+                  <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
+                </div>
+              </div>
+
+              {/* Galerie d'images optimisée avec pagination et lazy loading */}
+              <ImageGalleryOptimized
+                images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
+                  url: f.url,
+                  name: f.name,
+                  type: f.type
+                }))}
+                uploadQueue={uploadQueue.filter(item => {
+                  // Filtrer UNIQUEMENT les images (pas les PDFs ou audios)
+                  const isImage = item.type?.startsWith('image/');
+                  return isImage;
+                })}
+                emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
+                onDeleteImage={isAdmin ? handleDeleteImage : null}
+              />
+
+              {/* Upload de nouveaux fichiers */}
+              <div style={{ marginTop: '1rem' }}>
+                <FileUploader
+                  interventionId={interventionId}
+                  folder="report"
+                  onLocalPreview={handleLocalPreview}
+                  onUploadProgress={handleUploadProgress}
+                  onUploadComplete={handleUploadComplete}
+                  onBeginCritical={lock}
+                  onEndCritical={unlock}
+                />
+              </div>
             </div>
-          ) : (
+          </Tab>
+
+          {/* ONGLET CHECKPOINTS */}
+          <Tab label="Checks" icon="✅" badge={stats.checkpointProgress}>
             <div>
-              <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
-              <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
+              <h3 style={{ marginTop: 0 }}>Points de contrôle rapides</h3>
+              {(!report.quick_checkpoints || report.quick_checkpoints.length === 0) && (
+                <p className="text-muted">Aucun checkpoint défini pour cette intervention.</p>
+              )}
+              {Array.isArray(report.quick_checkpoints) && report.quick_checkpoints.map((checkpoint, index) => (
+                <label
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    background: checkpoint.done ? '#ecfdf5' : '#f9fafb',
+                    border: `2px solid ${checkpoint.done ? '#10b981' : '#e5e7eb'}`,
+                    borderRadius: '0.5rem',
+                    marginBottom: '0.5rem',
+                    cursor: isAdmin ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checkpoint.done || false}
+                    onChange={(e) => {
+                      if (isAdmin) return;
+                      const updated = [...report.quick_checkpoints];
+                      updated[index] = {
+                        ...updated[index],
+                        done: e.target.checked,
+                        at: e.target.checked ? new Date().toISOString() : null
+                      };
+                      persistReport({ ...report, quick_checkpoints: updated });
+                    }}
+                    disabled={false}
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
+                      accentColor: '#10b981'
+                    }}
+                  />
+                  <span style={{
+                    fontWeight: 500,
+                    color: checkpoint.done ? '#059669' : '#374151',
+                    textDecoration: checkpoint.done ? 'none' : 'none'
+                  }}>
+                    {checkpoint.label}
+                  </span>
+                  {checkpoint.done && checkpoint.at && (
+                    <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280' }}>
+                      ✓ {new Date(checkpoint.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </label>
+              ))}
             </div>
-          )}
-        </div>
+          </Tab>
 
-        {/* Kilométrage de fin */}
-        <div className="modern-section">
-          <h3 className="section-title">
-            <span className="section-title-icon">🚗</span>
-            Kilométrage de fin
-          </h3>
-          <div className="form-group">
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={report.km_end || ''}
-              onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="Ex: 45430"
-              className="form-control"
-              style={{ maxWidth: '200px' }}
-              readOnly={!!isAdmin}
-            />
-            {intervention.km_start && report.km_end && (
-              <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
-                Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
-              </small>
-            )}
-          </div>
-        </div>
+          {/* ONGLET RAPPORT */}
+          <Tab label="Rapport" icon="📝">
+            <div>
+              {/* Rapport */}
+              <div className="section" style={{ marginTop: 0 }}>
+                <h3>📝 Rapport de chantier</h3>
+                <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={false} />
+                <VoiceRecorder
+                  interventionId={interventionId}
+                  onUploaded={async (uploaded) => {
+                    const updated = { ...report, files: [...(report.files || []), ...uploaded] };
+                    await persistReport(updated);
+                    saveScroll();
+                    pendingRestoreRef.current = true;
+                    if (!document.body.dataset.__scrollLocked) lock();
+                    try {
+                      await refreshData?.();
+                    } finally {
+                      unlock();
+                      restoreScroll();
+                    }
+                  }}
+                  onBeginCritical={lock}
+                  onEndCritical={unlock}
+                />
+              </div>
 
-        {/* Génération CERFA - visible pour interventions entretien chaudière */}
-        {(intervention.type?.toLowerCase()?.includes('entretien') ||
-          intervention.type?.toLowerCase()?.includes('chaudière') ||
-          intervention.type?.toLowerCase()?.includes('chaudiere') ||
-          intervention.service?.toLowerCase()?.includes('entretien')) && (
-            <div className="modern-section">
-              <h3 className="section-title">
-                <span className="section-title-icon">📄</span>
-                Attestation CERFA
-              </h3>
-              <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
-                Générez l'attestation d'entretien annuel (CERFA 15497-04) pour cette intervention.
-              </p>
-              <button
-                onClick={() => {
-                  const data = prepareCerfaDataFromIntervention(intervention, { display_name: localStorage.getItem('user_name') || '' });
-                  setCerfaData(data);
-                  setShowCerfaModal(true);
-                }}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                📄 Générer CERFA 15497
-              </button>
+              {/* Besoins */}
+              <div className="section">
+                <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o => !o)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                  <h3 className="flex items-center gap-2" style={{ margin: 0 }}>
+                    <span style={{ display: 'inline-block', width: 18, textAlign: 'center' }}>{needsOpen ? '▼' : '▶'}</span>
+                    🧰 Besoins chantier {Array.isArray(report.needs) ? `(${report.needs.length})` : ''}
+                  </h3>
+                  <div className="text-muted">Budget estimé: <b>{needsTotal.toFixed(2)} €</b></div>
+                </div>
+
+                {needsOpen && (
+                  <div>
+                    {(!report.needs || report.needs.length === 0) && <p className="text-muted" style={{ marginTop: '0.5rem' }}>Aucun besoin pour le moment.</p>}
+
+                    {Array.isArray(report.needs) && report.needs.length > 0 && (
+                      <ul className="document-list" style={{ marginTop: '0.5rem' }}>
+                        {report.needs.map(n => (
+                          <li key={n.id}>
+                            <div style={{ flexGrow: 1 }}>
+                              <p className="font-semibold">[{n.category || '—'}] {n.label}{n.qty ? ` × ${n.qty}` : ''} {n.urgent ? <span className="badge" style={{ marginLeft: 8 }}>Urgent</span> : null}</p>
+                              <p className="text-muted" style={{ fontSize: '0.875rem' }}>
+                                {n.note || '—'} {typeof n.estimated_price === 'number' ? ` • Estimé: ${n.estimated_price.toFixed(2)} €` : ''}
+                              </p>
+                            </div>
+                            <button className="btn-icon-danger" onClick={() => removeNeed(n.id)} title="Supprimer">✖</button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="grid" style={{ gridTemplateColumns: '160px 80px 120px 1fr 140px auto', gap: '0.5rem', alignItems: 'end', marginTop: '0.75rem' }}>
+                      <div><label>Catégorie</label>
+                        <select className="form-control" value={needDraft.category} onChange={e => setNeedDraft(v => ({ ...v, category: e.target.value }))}>
+                          <option value="materiel">Matériel</option>
+                          <option value="consommables">Consommables</option>
+                          <option value="location">Location</option>
+                          <option value="commande">Commande</option>
+                        </select>
+                      </div>
+                      <div><label>Qté</label><input type="number" min={1} className="form-control" value={needDraft.qty} onChange={e => setNeedDraft(v => ({ ...v, qty: Math.max(1, Number(e.target.value) || 1) }))} /></div>
+                      <div><label>Urgent ?</label><select className="form-control" value={needDraft.urgent ? '1' : '0'} onChange={e => setNeedDraft(v => ({ ...v, urgent: e.target.value === '1' }))}><option value="0">Non</option><option value="1">Oui</option></select></div>
+                      <div><label>Intitulé</label><input className="form-control" value={needDraft.label} onChange={e => setNeedDraft(v => ({ ...v, label: e.target.value }))} placeholder="Ex: Tuyau 16mm" /></div>
+                      <div><label>Prix estimé (€)</label><input className="form-control" value={needDraft.estimated_price} onChange={e => setNeedDraft(v => ({ ...v, estimated_price: e.target.value }))} placeholder="ex: 25.90" /></div>
+                      <div><label>Note</label><input className="form-control" value={needDraft.note} onChange={e => setNeedDraft(v => ({ ...v, note: e.target.value }))} placeholder="Détail, lien, réf…" /></div>
+                      <div style={{ gridColumn: '1 / -1' }}><button className="btn btn-primary" onClick={addNeed} disabled={!needDraft.label.trim()}>Ajouter</button></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Signature */}
+              <div className="section" id="signature-section">
+                <h3>✍️ Signature du client</h3>
+                {report.signature ? (
+                  <div>
+                    <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
+                    <button onClick={async () => {
+                      handleReportChange('signature', null);
+                      const updated = { ...report, signature: null };
+                      await persistReport(updated);
+                    }} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
+                  </div>
+                ) : (
+                  <div>
+                    <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
+                    <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Kilométrage de fin */}
+              <div className="section">
+                <h3>🚗 Kilométrage de fin</h3>
+                <div className="form-group">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={report.km_end || ''}
+                    onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Ex: 45430"
+                    className="form-control"
+                    style={{ maxWidth: '200px' }}
+                    readOnly={false}
+                  />
+                  {intervention.km_start && report.km_end && (
+                    <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
+                      Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
+                    </small>
+                  )}
+                </div>
+              </div>
+
+              {/* Génération CERFA - visible pour interventions entretien chaudière */}
+              {(intervention.type?.toLowerCase()?.includes('entretien') ||
+                intervention.type?.toLowerCase()?.includes('chaudière') ||
+                intervention.type?.toLowerCase()?.includes('chaudiere') ||
+                intervention.service?.toLowerCase()?.includes('entretien')) && (
+                  <div className="section">
+                    <h3>📄 Attestation CERFA</h3>
+                    <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+                      Générez l'attestation d'entretien annuel (CERFA 15497-04) pour cette intervention.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const data = prepareCerfaDataFromIntervention(intervention, { display_name: localStorage.getItem('user_name') || '' });
+                        setCerfaData(data);
+                        setShowCerfaModal(true);
+                      }}
+                      className="btn btn-secondary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      📄 Générer CERFA 15497
+                    </button>
+                  </div>
+                )}
+
+              {/* Procès-Verbal de Réception */}
+              <div className="section">
+                <PVReception
+                  intervention={intervention}
+                  client={null}
+                  report={report}
+                  onSave={handlePVSave}
+                  readOnly={false}
+                />
+              </div>
             </div>
-          )}
+          </Tab>
+        </Tabs>
 
+        {/* Save button section */}
         {isAdmin ? (
           currentStatus !== 'Terminée' ? (
             <>
@@ -1273,7 +1196,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       </div>
 
       {/* Modale signature */}
-      {showSignatureModal && <SignatureModal onSave={(sig) => { handleReportChange('signature', sig); setShowSignatureModal(false); }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
+      {showSignatureModal && <SignatureModal onSave={async (sig) => {
+        handleReportChange('signature', sig);
+        const updated = { ...report, signature: sig };
+        await persistReport(updated);
+        setShowSignatureModal(false);
+      }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
 
       {/* Modal CERFA */}
       <CerfaGeneratorModal

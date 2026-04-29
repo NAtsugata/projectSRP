@@ -1,0 +1,258 @@
+/* ============================================
+   Company Settings - Configuration entreprise
+   ============================================ */
+
+.company-settings-container {
+  min-height: 100vh;
+  background: var(--bg-app);
+  padding: var(--spacing-6);
+}
+
+.company-settings-header {
+  text-align: center;
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 2px solid var(--color-copper);
+}
+
+.company-settings-header h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-extrabold);
+  color: var(--color-copper);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.company-settings-header p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.company-settings-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ==================== SECTIONS ==================== */
+.settings-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--spacing-6);
+  margin-bottom: var(--spacing-6);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-base);
+}
+
+.settings-section:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.settings-section h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-5) 0;
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ==================== FORM GRID ==================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.form-group .form-control {
+  padding: var(--spacing-3);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--text-primary) !important;
+  background: var(--bg-primary) !important;
+  transition: all var(--transition-fast);
+}
+
+.form-group .form-control:focus {
+  outline: none;
+  border-color: var(--color-copper);
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
+}
+
+.form-group .form-control::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.form-group textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ==================== ACTIONS ==================== */
+.settings-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.settings-actions .btn {
+  min-width: 200px;
+  padding: var(--spacing-3) var(--spacing-6);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+
+.settings-actions .btn-primary {
+  background: var(--color-copper) !important;
+  color: var(--bg-primary) !important;
+  border: none !important;
+  box-shadow: 0 4px 6px rgba(184, 115, 51, 0.3);
+}
+
+.settings-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(184, 115, 51, 0.4);
+}
+
+.settings-actions .btn-secondary {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.settings-actions .btn-secondary:hover {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--color-copper-light) !important;
+  transform: translateY(-1px);
+}
+
+/* ==================== SUCCESS MESSAGE ==================== */
+.save-success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 2px solid rgb(34, 197, 94);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  margin-top: var(--spacing-4);
+  text-align: center;
+  color: rgb(21, 128, 61);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== INFO SECTION ==================== */
+.settings-info {
+  background: rgba(184, 115, 51, 0.05);
+  border: 1px solid rgba(184, 115, 51, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-top: var(--spacing-6);
+}
+
+.settings-info h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-copper-dark);
+  margin: 0 0 var(--spacing-3) 0;
+}
+
+.settings-info p {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.settings-info ul {
+  margin: 0;
+  padding-left: var(--spacing-6);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.settings-info li {
+  margin-bottom: var(--spacing-2);
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  .company-settings-container {
+    padding: var(--spacing-4);
+  }
+
+  .company-settings-header h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .settings-section {
+    padding: var(--spacing-4);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-settings-header h1 {
+    font-size: var(--text-xl);
+  }
+
+  .settings-section h2 {
+    font-size: var(--text-lg);
+  }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .company-settings-container,
+.dark-theme .company-settings-container {
+  /* Overrides spécifiques si nécessaires */
+}

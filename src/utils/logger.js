@@ -8,7 +8,7 @@
 //   import * as Sentry from '@sentry/react';
 //   logger.setErrorTransport((entry) => Sentry.captureException(entry.error || entry.message));
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevelopment = import.meta.env.MODE === 'development';
 
 // Storage pour analytics
 const errorStore = [];

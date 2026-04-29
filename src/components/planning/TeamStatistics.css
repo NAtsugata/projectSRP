@@ -1,22 +1,18 @@
 /* src/components/planning/TeamStatistics.css */
 
 .team-statistics {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
   overflow: hidden;
-}
-
-/* Header */
-.stats-header {
-  display: flex;
+}/* Header */
+.stats-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-  color: white;
-}
+  background: linear-gradient(135deg, #8b5cf6 0%, var(--color-copper) 50%, var(--color-copper) 100%);
+  color: var(--text-on-colored-bg);}
 
 .stats-header h3 {
   margin: 0;
@@ -40,7 +36,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-primary);
   padding: 1rem;
   text-align: center;
 }
@@ -52,7 +48,7 @@
 }
 
 .stat-card.completed .stat-value {
-  color: #10b981;
+  color: var(--color-copper);
 }
 
 .stat-card.in-progress .stat-value {
@@ -60,7 +56,7 @@
 }
 
 .stat-card.upcoming .stat-value {
-  color: #3b82f6;
+  color: var(--color-copper);
 }
 
 .stat-label {
@@ -89,7 +85,7 @@
 
 .progress-value {
   font-weight: 700;
-  color: #10b981;
+  color: var(--color-copper);
 }
 
 .progress-bar {
@@ -101,7 +97,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  background: linear-gradient(90deg, var(--color-copper) 0%, #34d399 100%);
   border-radius: 4px;
   transition: width 0.5s ease;
 }
@@ -129,7 +125,7 @@
 .stats-section h4 svg {
   width: 16px;
   height: 16px;
-  color: #6366f1;
+  color: var(--color-copper);
 }
 
 /* Stats par employé */
@@ -179,7 +175,7 @@
 
 .emp-bar-completed {
   height: 100%;
-  background: #10b981;
+  background: var(--color-copper);
   transition: width 0.3s ease;
 }
 
@@ -197,7 +193,7 @@
 }
 
 .emp-completed {
-  color: #10b981;
+  color: var(--color-copper);
   display: flex;
   align-items: center;
   gap: 0.125rem;
@@ -250,7 +246,7 @@
 
 .svc-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(90deg, var(--color-copper) 0%, #8b5cf6 100%);
   border-radius: 3px;
   transition: width 0.3s ease;
 }

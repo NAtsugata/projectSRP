@@ -8,8 +8,8 @@ import './PWAInstallPrompt.css';
  * Hook pour gérer l'installation PWA
  */
 export const usePWAInstall = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [isInstallable, setIsInstallable] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState(() => window.__pwaPrompt || null);
+    const [isInstallable, setIsInstallable] = useState(() => !!window.__pwaPrompt);
     const [isInstalled, setIsInstalled] = useState(false);
 
     useEffect(() => {
@@ -19,9 +19,17 @@ export const usePWAInstall = () => {
             return;
         }
 
+        // Restaurer le prompt existant si disponible
+        if (window.__pwaPrompt) {
+            setDeferredPrompt(window.__pwaPrompt);
+            setIsInstallable(true);
+        }
+
         // Écouter l'événement beforeinstallprompt
         const handleBeforeInstall = (e) => {
             e.preventDefault();
+            // Stocker globalement pour survie à la navigation
+            window.__pwaPrompt = e;
             setDeferredPrompt(e);
             setIsInstallable(true);
             logger.log('📱 Installation PWA disponible');
@@ -32,6 +40,7 @@ export const usePWAInstall = () => {
             setIsInstalled(true);
             setIsInstallable(false);
             setDeferredPrompt(null);
+            window.__pwaPrompt = null;
             logger.log('✅ PWA installée avec succès');
         };
 
@@ -45,13 +54,15 @@ export const usePWAInstall = () => {
     }, []);
 
     const promptInstall = useCallback(async () => {
-        if (!deferredPrompt) return false;
+        const prompt = window.__pwaPrompt || deferredPrompt;
+        if (!prompt) return false;
 
         try {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
+            prompt.prompt();
+            const { outcome } = await prompt.userChoice;
             logger.log(`📱 Installation ${outcome === 'accepted' ? 'acceptée' : 'refusée'}`);
             setDeferredPrompt(null);
+            window.__pwaPrompt = null;
             return outcome === 'accepted';
         } catch (error) {
             logger.error('Erreur installation:', error);

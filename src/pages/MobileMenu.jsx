@@ -24,75 +24,75 @@ const MobileMenu = () => {
     const { profile } = useAuthStore();
     const { hasPermission, isAdmin } = usePermissions();
 
-    // Navigation de base pour tous les employes
+    // Navigation de base pour tous les employes - Thème cuivre unifié
     const baseNavigation = [
-        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
-        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
-        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
-        { name: 'Coffre-fort', href: '/vault', icon: LockIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
-        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
-        { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Coffre-fort', href: '/vault', icon: LockIcon, color: 'text-[#6d4620]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' },
     ];
 
-    // Navigation complete admin
+    // Navigation complete admin - Thème cuivre unifié
     const adminNavigation = [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
-        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
-        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
-        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
-        { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
-        { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
-        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
-        { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-        { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-        { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
-        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-[#6d4620]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#f5e8d9]' },
+        { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' },
+        { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' },
     ];
 
-    // Pages additionnelles basees sur les permissions
+    // Pages additionnelles basees sur les permissions - Thème cuivre unifié
     const permissionBasedPages = [
         {
             permission: 'view_reports',
-            page: { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' }
+            page: { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' }
         },
         {
             permission: 'manage_clients',
-            page: { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' }
+            page: { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#e5c8a8]' }
         },
         {
             permission: 'view_contracts',
-            page: { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' }
+            page: { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-[#d4a574]', bg: 'bg-[#f5e8d9]' }
         },
         {
             permission: 'view_invoices',
-            page: { name: 'Factures', href: '/invoices', icon: FileTextIcon, color: 'text-amber-500', bg: 'bg-amber-50' }
+            page: { name: 'Factures', href: '/invoices', icon: FileTextIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' }
         },
         {
             permission: 'access_catalog',
-            page: { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-rose-500', bg: 'bg-rose-50' }
+            page: { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#f5e8d9]' }
         },
         {
             permission: 'access_admin_vault',
-            page: { name: 'Coffre Admin', href: '/admin-vault', icon: LockIcon, color: 'text-red-500', bg: 'bg-red-50' }
+            page: { name: 'Coffre Admin', href: '/admin-vault', icon: LockIcon, color: 'text-[#6d4620]', bg: 'bg-[#e5c8a8]' }
         },
         {
             permission: 'view_all_interventions',
-            page: { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' }
+            page: { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' }
         },
         {
             permission: 'manage_checklist_templates',
-            page: { name: 'Modeles Checklist', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-600', bg: 'bg-emerald-100' }
+            page: { name: 'Modeles Checklist', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-[#d4a574]', bg: 'bg-[#e5c8a8]' }
         },
         {
             permission: 'approve_expenses',
-            page: { name: 'Valider Depenses', href: '/admin-expenses', icon: DollarSignIcon, color: 'text-green-600', bg: 'bg-green-100' }
+            page: { name: 'Valider Depenses', href: '/admin-expenses', icon: DollarSignIcon, color: 'text-[#8b5a2b]', bg: 'bg-[#f5e8d9]' }
         },
         {
             permission: 'approve_leave_requests',
-            page: { name: 'Valider Conges', href: '/admin-leaves', icon: SunIcon, color: 'text-orange-600', bg: 'bg-orange-100' }
+            page: { name: 'Valider Conges', href: '/admin-leaves', icon: SunIcon, color: 'text-[#b87333]', bg: 'bg-[#e5c8a8]' }
         },
     ];
 

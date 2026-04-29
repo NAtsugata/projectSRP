@@ -5,6 +5,7 @@
 // =============================
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 function SignaturePad({ onSave, onClear, initialValue = null, width = 300, height = 150 }) {
     const canvasRef = useRef(null);
@@ -304,8 +305,8 @@ function SignaturePad({ onSave, onClear, initialValue = null, width = 300, heigh
                 )}
             </div>
 
-            {/* Mode plein écran */}
-            {isFullscreen && (
+            {/* Mode plein écran - Rendu via portail pour éviter les problèmes de re-render */}
+            {isFullscreen && createPortal(
                 <div style={{
                     position: 'fixed',
                     top: 0,
@@ -423,7 +424,8 @@ function SignaturePad({ onSave, onClear, initialValue = null, width = 300, heigh
                     }}>
                         Dessinez votre signature dans la zone blanche
                     </p>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

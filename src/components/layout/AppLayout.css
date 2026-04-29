@@ -12,7 +12,7 @@
 /* ========== DESKTOP NAVIGATION ========== */
 .desktop-nav {
     width: 250px;
-    background: white;
+    background: var(--bg-primary);
     border-right: 1px solid #e5e7eb;
     display: flex;
     flex-direction: column;
@@ -25,7 +25,7 @@
 
 .sidebar-header {
     padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header h1 {
@@ -65,8 +65,8 @@
 
 .nav-link.active {
     background: #eff6ff;
-    color: #3b82f6;
-    border-right: 3px solid #3b82f6;
+    color: var(--color-copper);
+    border-right: 3px solid var(--color-copper);
 }
 
 .nav-icon {
@@ -76,7 +76,7 @@
 
 .sidebar-footer {
     padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
 }
 
 .logout-button {
@@ -86,7 +86,7 @@
     width: 100%;
     padding: 0.75rem;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     color: #64748b;
     font-weight: 500;
@@ -132,8 +132,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 1rem;
-        background: white;
-        border-bottom: 1px solid #e5e7eb;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border-color);
         position: fixed;
         top: 0;
         left: 0;
@@ -144,7 +144,7 @@
     .mobile-header h1 {
         font-size: 1.25rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary, #1e293b);
         margin: 0;
     }
 
@@ -153,7 +153,7 @@
         border: none;
         padding: 0.5rem;
         cursor: pointer;
-        color: #64748b;
+        color: var(--text-secondary, #64748b);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -163,8 +163,8 @@
 
     .btn-icon-logout:hover,
     .btn-icon-logout:active {
-        background: #f1f5f9;
-        color: #1e293b;
+        background: var(--bg-secondary, #f1f5f9);
+        color: var(--text-primary, #1e293b);
     }
 
     /* Adjust main content */
@@ -184,8 +184,8 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: white;
-        border-top: 1px solid #e5e7eb;
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
         z-index: 100;
         box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
     }
@@ -207,7 +207,7 @@
         min-width: 60px;
         min-height: 60px;
         /* Touch target 60x60px */
-        color: #64748b;
+        color: var(--text-secondary, #64748b);
         text-decoration: none;
         border-radius: 0.5rem;
         transition: all 0.2s;
@@ -226,13 +226,13 @@
     }
 
     .mobile-nav-button:active {
-        background: #f1f5f9;
+        background: var(--bg-secondary, #f1f5f9);
         transform: scale(0.95);
     }
 
     .mobile-nav-button.active {
-        color: #3b82f6;
-        background: #eff6ff;
+        color: var(--color-copper);
+        background: var(--bg-secondary, #eff6ff);
     }
 
     .mobile-nav-button.active svg {
@@ -277,53 +277,18 @@
 .mobile-nav-button:focus-visible,
 .logout-button:focus-visible,
 .btn-icon-logout:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid var(--color-copper);
     outline-offset: 2px;
 }
 
-/* ==================== DARK MODE LAYOUT OVERRIDES ==================== */
+/* ==================== DARK MODE LAYOUT ==================== */
+/* Les styles s'adaptent automatiquement via les variables CSS */
 .dark-mode-layout {
-    background: #0a1929 !important;
-    /* Match dashboard dark bg */
+    background: var(--bg-app);
 }
 
-.dark-mode-layout .mobile-header {
-    background: rgba(15, 23, 42, 0.9) !important;
-    backdrop-filter: blur(10px) !important;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
-    color: white !important;
-}
-
-.dark-mode-layout .mobile-header h1 {
-    color: white !important;
-}
-
-.dark-mode-layout .mobile-nav {
-    background: rgba(15, 23, 42, 0.9) !important;
-    backdrop-filter: blur(10px) !important;
-    border-top: 1px solid rgba(148, 163, 184, 0.1) !important;
-}
-
-.dark-mode-layout .mobile-nav-button {
-    color: #94a3b8 !important;
-}
-
-.dark-mode-layout .mobile-nav-button.active {
-    background: rgba(59, 130, 246, 0.15) !important;
-    color: #3b82f6 !important;
-}
-
-.dark-mode-layout .btn-icon-logout {
-    color: #ef4444 !important;
-}
-
-.dark-mode-layout .btn-icon-logout:hover {
-    background: rgba(239, 68, 68, 0.1) !important;
-}
-
-/* Adjust main content padding/margin for dark mode if needed */
 .dark-mode-layout .main-content {
-    background: transparent !important;
+    background: transparent;
 }
 
 /* ==================== MOBILE MENU OVERLAY (BOTTOM SHEET) ==================== */
@@ -351,7 +316,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--bg-primary);
     border-top-left-radius: 1.5rem;
     border-top-right-radius: 1.5rem;
     padding: 1.5rem;
@@ -377,7 +342,7 @@
 .mobile-menu-header h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--text-primary, #1e293b);
     margin: 0;
 }
 
@@ -438,7 +403,7 @@
 .menu-item-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #475569;
+    color: var(--text-secondary, #475569);
     text-align: center;
     line-height: 1.2;
 }
@@ -449,7 +414,7 @@
 }
 
 .text-blue-500 {
-    color: #3b82f6;
+    color: var(--color-copper);
 }
 
 .bg-indigo-50 {
@@ -457,7 +422,7 @@
 }
 
 .text-indigo-500 {
-    color: #6366f1;
+    color: var(--color-copper);
 }
 
 .bg-purple-50 {
@@ -493,11 +458,11 @@
 }
 
 .bg-gray-100 {
-    background-color: #f3f4f6;
+    background-color: var(--bg-tertiary);
 }
 
 .text-gray-600 {
-    color: #4b5563;
+    color: var(--text-secondary);
 }
 
 .bg-teal-50 {
@@ -521,7 +486,7 @@
 }
 
 .text-emerald-500 {
-    color: #10b981;
+    color: var(--color-copper);
 }
 
 .bg-cyan-50 {
@@ -533,34 +498,13 @@
 }
 
 
-/* Dark Mode Overrides for Menu */
-.dark-mode-layout .mobile-menu-sheet {
-    background: #1e293b;
-    /* Slate 800 */
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode-layout .mobile-menu-header h3 {
-    color: white;
-}
-
-.dark-mode-layout .close-menu-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-
-.dark-mode-layout .menu-item-label {
-    color: #cbd5e1;
-    /* Slate 300 */
-}
-
 /* Dark mode icon backgrounds - slightly transparent */
 .dark-mode-layout .bg-blue-50 {
-    background-color: rgba(59, 130, 246, 0.2);
+    background-color: rgba(184, 115, 51, 0.2);
 }
 
 .dark-mode-layout .bg-indigo-50 {
-    background-color: rgba(99, 102, 241, 0.2);
+    background-color: rgba(184, 115, 51, 0.2);
 }
 
 .dark-mode-layout .bg-purple-50 {
@@ -592,7 +536,7 @@
 }
 
 .dark-mode-layout .bg-emerald-50 {
-    background-color: rgba(16, 185, 129, 0.2);
+    background-color: rgba(184, 115, 51, 0.2);
 }
 
 .dark-mode-layout .bg-cyan-50 {
@@ -610,7 +554,7 @@
 .mobile-header-actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
 }
 
 /* ==================== LOGO IMAGES ==================== */

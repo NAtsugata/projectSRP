@@ -18,6 +18,7 @@ const EditTeamModal = ({
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [dailyMode, setDailyMode] = useState(false);
   const [dailyAssignments, setDailyAssignments] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Dates planifiées de l'intervention
   const scheduledDates = useMemo(() => {
@@ -28,6 +29,48 @@ const EditTeamModal = ({
   }, [intervention]);
 
   const isMultiDay = scheduledDates.length > 1;
+
+  // Filtrer et trier les employés
+  const filteredEmployees = useMemo(() => {
+    let filtered = users;
+
+    // Filtrer par recherche
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(u =>
+        u.full_name?.toLowerCase().includes(search) ||
+        u.email?.toLowerCase().includes(search)
+      );
+    }
+
+    // Trier par nom
+    return [...filtered].sort((a, b) =>
+      (a.full_name || '').localeCompare(b.full_name || '')
+    );
+  }, [users, searchTerm]);
+
+  // Fonction pour obtenir les initiales d'un nom
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Sélectionner tous les employés filtrés
+  const handleSelectAll = () => {
+    const allIds = filteredEmployees.map(u => u.id);
+    setSelectedUsers(prev => {
+      const newSet = new Set([...prev, ...allIds]);
+      return [...newSet];
+    });
+  };
+
+  // Désélectionner tous les employés filtrés
+  const handleDeselectAll = () => {
+    const filteredIds = new Set(filteredEmployees.map(u => u.id));
+    setSelectedUsers(prev => prev.filter(id => !filteredIds.has(id)));
+  };
 
   // Initialiser avec les utilisateurs déjà assignés
   useEffect(() => {
@@ -169,24 +212,68 @@ const EditTeamModal = ({
 
         {/* Mode global : liste de checkboxes classique */}
         {!dailyMode && (
-          <div className="edit-team-users">
-            {employees.length > 0 ? (
-              employees.map(user => (
-                <label key={user.id} className="edit-team-user-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.includes(user.id)}
-                    onChange={() => handleUserToggle(user.id)}
-                    disabled={loading}
-                  />
-                  <span className="checkmark"></span>
-                  <span className="user-name">{user.full_name}</span>
-                </label>
-              ))
-            ) : (
-              <p className="no-employees">Aucun employé disponible</p>
-            )}
-          </div>
+          <>
+            {/* Barre de recherche et boutons de sélection */}
+            <div className="edit-team-controls">
+              <input
+                type="text"
+                className="edit-team-search"
+                placeholder="🔍 Rechercher un employé..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={loading}
+              />
+              <div className="edit-team-quick-actions">
+                <button
+                  type="button"
+                  className="quick-action-btn"
+                  onClick={handleSelectAll}
+                  disabled={loading || filteredEmployees.length === 0}
+                  title="Sélectionner tous les employés affichés"
+                >
+                  ✓ Tous
+                </button>
+                <button
+                  type="button"
+                  className="quick-action-btn"
+                  onClick={handleDeselectAll}
+                  disabled={loading || selectedUsers.length === 0}
+                  title="Désélectionner tous les employés affichés"
+                >
+                  ✗ Aucun
+                </button>
+              </div>
+            </div>
+
+            {/* Liste des employés */}
+            <div className="edit-team-users">
+              {filteredEmployees.length > 0 ? (
+                filteredEmployees.map(user => (
+                  <label key={user.id} className="edit-team-user-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => handleUserToggle(user.id)}
+                      disabled={loading}
+                    />
+                    <div className="user-avatar">
+                      {getInitials(user.full_name)}
+                    </div>
+                    <div className="user-info">
+                      <span className="user-name">{user.full_name}</span>
+                      {user.email && (
+                        <span className="user-email">{user.email}</span>
+                      )}
+                    </div>
+                  </label>
+                ))
+              ) : searchTerm ? (
+                <p className="no-employees">Aucun employé trouvé pour "{searchTerm}"</p>
+              ) : (
+                <p className="no-employees">Aucun employé disponible</p>
+              )}
+            </div>
+          </>
         )}
 
         {/* Mode journalier : grille par jour */}

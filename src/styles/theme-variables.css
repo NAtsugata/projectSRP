@@ -1,0 +1,348 @@
+/**
+ * ====================================================================
+ * 2 THÈMES UNIQUES - CUIVRE EXCLUSIF
+ * ====================================================================
+ * Theme 1: ☀️ WARM COPPER (Clair) - Cuivre chaud élégant
+ * Theme 2: 🌙 DARK COPPER (Sombre) - Cuivre doré mystérieux
+ *
+ * RÈGLE UNIQUE: TOUT EST CUIVRE 🔥
+ * ====================================================================
+ */
+
+/* ==================== THÈME 1: WARM COPPER (CLAIR) ==================== */
+:root,
+.light-theme,
+.warm-copper-theme {
+  /* === Couleurs de fond === */
+  --bg-app: #fff5eb;              /* ORANGE PÂLE - TRÈS VISIBLE! */
+  --bg-primary: #ffffff;          /* Blanc pur */
+  --bg-secondary: #ffe8d1;        /* Pêche pâle - VISIBLE */
+  --bg-tertiary: #ffd9b3;         /* Orange crème - VISIBLE */
+
+  /* === Couleurs de texte === */
+  --text-primary: #1f1410;        /* Brun très foncé - Presque noir */
+  --text-secondary: #57473d;      /* Brun moyen */
+  --text-tertiary: #8b7968;       /* Brun clair */
+  --text-muted: #bfb3a8;          /* Beige grisé */
+  --text-inverse: #ffffff;        /* Blanc pour boutons/fonds colorés */
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #1f1410;    /* Texte sombre sur fond blanc */
+
+  /* === Bordures === */
+  --border-color: #f4e5d9;        /* Beige pâle */
+  --border-color-dark: #e8d4c2;   /* Beige moyen */
+
+  /* === Cartes et surfaces === */
+  --card-bg: #ffffff;
+  --card-shadow: 0 2px 8px rgba(184, 115, 51, 0.12), 0 1px 3px rgba(184, 115, 51, 0.08);
+  --card-shadow-hover: 0 12px 32px rgba(184, 115, 51, 0.2), 0 4px 12px rgba(184, 115, 51, 0.15);
+
+  /* === COULEURS CUIVRE - PRINCIPALE === */
+  --color-primary: #d97706;       /* CUIVRE VIF - ORANGE INTENSE! */
+  --color-primary-light: #f59e0b; /* CUIVRE ÉCLATANT */
+  --color-primary-dark: #b45309;  /* Cuivre foncé */
+  --color-primary-glow: rgba(217, 119, 6, 0.35);
+
+  --color-secondary: #c9844d;     /* Cuivre rosé */
+  --color-secondary-light: #dda76b; /* Cuivre sable */
+  --color-secondary-dark: #a76a3a;  /* Cuivre terre */
+
+  /* === Couleurs accent (variations cuivre) === */
+  --color-accent: #cd7f32;        /* Bronze - Cuivre antique */
+  --color-accent-light: #e09856;  /* Bronze clair */
+  --color-accent-dark: #a65e24;   /* Bronze foncé */
+
+  /* === Couleurs de statut (avec teintes cuivre) === */
+  --color-success: #7c8647;       /* Vert olive - Harmonie avec cuivre */
+  --color-warning: #d4a036;       /* Or ancien - Proche du cuivre */
+  --color-danger: #b84c3a;        /* Rouge terre cuite - Famille cuivre */
+  --color-info: #8b7355;          /* Brun chaud - Ton sur ton */
+
+  /* === Couleurs métier === */
+  --color-copper: #b87333;        /* Cuivre BASE */
+  --color-copper-dark: #9a5f28;   /* Cuivre foncé */
+  --color-copper-light: #d4a574;  /* Cuivre clair */
+
+  /* === Composants spécifiques === */
+  --scanner-bg: #ffffff;
+  --scanner-text: #1f1410;
+  --scanner-border: #f4e5d9;
+  --scanner-black: #1f1410;
+  --scanner-white: #ffffff;
+
+  --user-bg: #ffffff;
+  --user-text: #1f1410;
+  --user-border: #f4e5d9;
+  --user-black: #1f1410;
+  --user-white: #ffffff;
+
+  --vault-bg: #ffffff;
+  --vault-text: #1f1410;
+  --vault-border: #f4e5d9;
+  --vault-black: #1f1410;
+  --vault-white: #ffffff;
+
+  --perm-bg: #ffffff;
+  --perm-text: #1f1410;
+  --perm-border: #f4e5d9;
+  --perm-black: #1f1410;
+  --perm-white: #ffffff;
+
+  --share-bg: #ffffff;
+  --share-text: #1f1410;
+  --share-border: #f4e5d9;
+  --share-black: #1f1410;
+  --share-white: #ffffff;
+
+  --color-black: #1f1410;
+  --color-white: #ffffff;
+
+  /* === Shadows (teinte cuivre) === */
+  --shadow-sm: 0 1px 2px rgba(184, 115, 51, 0.1);
+  --shadow-md: 0 4px 6px rgba(184, 115, 51, 0.15);
+  --shadow-lg: 0 10px 15px rgba(184, 115, 51, 0.2);
+  --shadow-xl: 0 20px 25px rgba(184, 115, 51, 0.25);
+  --shadow-glow: 0 0 25px rgba(184, 115, 51, 0.4), 0 0 50px rgba(212, 165, 116, 0.2);
+}
+
+
+/* ==================== THÈME 2: DARK COPPER (SOMBRE) ==================== */
+.dark-theme,
+.dark-copper-theme {
+  /* === Couleurs de fond === */
+  --bg-app: #1a0f0a;              /* BRUN CHOCOLAT FONCÉ - TRÈS VISIBLE! */
+  --bg-primary: #2d1810;          /* BRUN CUIVRÉ SOMBRE */
+  --bg-secondary: #3d2517;        /* BRUN CHAUD */
+  --bg-tertiary: #4d301f;         /* BRUN MOYEN */
+
+  /* === Couleurs de texte === */
+  --text-primary: #fef8f4;        /* Crème très clair - Presque blanc */
+  --text-secondary: #e8d4c2;      /* Beige rosé */
+  --text-tertiary: #d4a574;       /* Cuivre clair - Même que l'accent ! */
+  --text-muted: #b87333;          /* Cuivre moyen */
+  --text-inverse: #1a0f0a;        /* Texte sombre pour éléments clairs */
+  --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
+  --text-on-white-bg: #fef8f4;    /* Texte clair sur fond sombre */
+
+  /* === Bordures === */
+  --border-color: rgba(184, 115, 51, 0.2);   /* Cuivre avec transparence */
+  --border-color-dark: rgba(184, 115, 51, 0.35);
+
+  /* === Cartes et surfaces === */
+  --card-bg: #1a1310;             /* Brun très sombre */
+  --card-shadow: 0 4px 16px rgba(184, 115, 51, 0.3), 0 2px 8px rgba(184, 115, 51, 0.2);
+  --card-shadow-hover: 0 20px 48px rgba(184, 115, 51, 0.5), 0 8px 24px rgba(212, 165, 116, 0.3);
+
+  /* === COULEURS CUIVRE - LUMINEUX === */
+  --color-primary: #fbbf24;       /* OR CUIVRÉ BRILLANT - SUPER VISIBLE! */
+  --color-primary-light: #fcd34d; /* OR ÉCLATANT */
+  --color-primary-dark: #f59e0b;  /* ORANGE CUIVRÉ */
+  --color-primary-glow: rgba(251, 191, 36, 0.6);
+
+  --color-secondary: #cd7f32;     /* Bronze lumineux */
+  --color-secondary-light: #e09856; /* Bronze clair */
+  --color-secondary-dark: #b87333;  /* Cuivre classique */
+
+  /* === Couleurs accent (cuivre chaud) === */
+  --color-accent: #f0a85d;        /* Cuivre or - Très lumineux */
+  --color-accent-light: #ffbf7a;  /* Cuivre champagne */
+  --color-accent-dark: #d4a574;   /* Cuivre doré */
+
+  /* === Couleurs de statut (versions claires) === */
+  --color-success: #9fb56b;       /* Vert olive clair */
+  --color-warning: #e6b84d;       /* Or vif */
+  --color-danger: #d96956;        /* Terre cuite clair */
+  --color-info: #a68968;          /* Brun sable clair */
+
+  /* === Couleurs métier (lumineux) === */
+  --color-copper: #d4a574;        /* Cuivre doré - LUMINEUX */
+  --color-copper-dark: #b87333;   /* Cuivre classique */
+  --color-copper-light: #e6c299;  /* Cuivre champagne */
+
+  /* === Composants spécifiques === */
+  --scanner-bg: #1a1310;
+  --scanner-text: #fef8f4;
+  --scanner-border: rgba(184, 115, 51, 0.2);
+  --scanner-black: #0d0a08;
+  --scanner-white: #1a1310;
+
+  --user-bg: #1a1310;
+  --user-text: #fef8f4;
+  --user-border: rgba(184, 115, 51, 0.2);
+  --user-black: #0d0a08;
+  --user-white: #1a1310;
+
+  --vault-bg: #1a1310;
+  --vault-text: #fef8f4;
+  --vault-border: rgba(184, 115, 51, 0.2);
+  --vault-black: #0d0a08;
+  --vault-white: #1a1310;
+
+  --perm-bg: #1a1310;
+  --perm-text: #fef8f4;
+  --perm-border: rgba(184, 115, 51, 0.2);
+  --perm-black: #0d0a08;
+  --perm-white: #1a1310;
+
+  --share-bg: #1a1310;
+  --share-text: #fef8f4;
+  --share-border: rgba(184, 115, 51, 0.2);
+  --share-black: #0d0a08;
+  --share-white: #1a1310;
+
+  --color-black: #0d0a08;
+  --color-white: #fef8f4;
+
+  /* === Shadows (lueur cuivre intense) === */
+  --shadow-sm: 0 2px 4px rgba(184, 115, 51, 0.4);
+  --shadow-md: 0 4px 10px rgba(184, 115, 51, 0.5);
+  --shadow-lg: 0 10px 25px rgba(184, 115, 51, 0.6);
+  --shadow-xl: 0 20px 50px rgba(184, 115, 51, 0.7);
+  --shadow-glow: 0 0 40px rgba(212, 165, 116, 0.8),
+                 0 0 80px rgba(184, 115, 51, 0.5),
+                 0 0 120px rgba(205, 127, 50, 0.3);
+}
+
+
+/* ==================== STYLES GLOBAUX APPLIQUÉS ==================== */
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color 0.4s ease, color 0.4s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+}
+
+/* MARQUEUR VISUEL - Caché sur mobile 📱 */
+.light-theme body::before {
+  content: "🌞 MODE CLAIR";
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: var(--text-on-colored-bg);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 999999;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+  pointer-events: none;
+  display: none; /* ❌ Caché sur mobile par défaut */
+}
+
+.dark-theme body::before {
+  content: "🌙 MODE SOMBRE";
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #fbbf24, #fcd34d);
+  color: #1a0f0a;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 999999;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6);
+  pointer-events: none;
+  display: none; /* ❌ Caché sur mobile par défaut */
+}
+
+/* ✅ Visible uniquement sur desktop (écrans > 768px) */
+@media (min-width: 769px) {
+  .light-theme body::before,
+  .dark-theme body::before {
+    display: block;
+  }
+}
+
+/* Smooth transitions pour tous les éléments */
+* {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* Scrollbar cuivrée */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  border-radius: 6px;
+  border: 2px solid var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-primary-light));
+}
+
+/* Selection cuivrée */
+::selection {
+  background: var(--color-primary-glow);
+  color: var(--color-black);
+}
+
+/* Focus cuivré */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--color-primary-glow);
+}
+
+/* Boutons primaires - Cuivre pur */
+.btn-primary,
+button.primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: var(--text-on-colored-bg);
+  border: none;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover,
+button.primary:hover {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-primary-light));
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* Headings cuivrés */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* Links cuivrés */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-accent);
+}
+
+/* Cards avec effet cuivre */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+  border-color: var(--color-primary);
+}

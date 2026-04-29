@@ -4,17 +4,7 @@
    Design simple et fonctionnel
    ============================================ */
 
-/* Variables couleurs */
-:root {
-  --vault-white: #ffffff;
-  --vault-black: #1a1a1a;
-  --vault-gray-light: #f5f5f5;
-  --vault-gray: #e0e0e0;
-  --vault-gray-dark: #666666;
-  --vault-copper: #b87333;
-  --vault-copper-light: #d4a574;
-  --vault-copper-dark: #8b5a2b;
-}
+/* Utilise les variables globales du design system */
 
 .admin-vault {
   max-width: 1200px;
@@ -31,7 +21,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid var(--vault-black);
+  border-bottom: 2px solid var(--text-primary);
 }
 
 .admin-vault-title {
@@ -40,14 +30,14 @@
   gap: 0.75rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .admin-vault-title svg {
   width: 1.5rem;
   height: 1.5rem;
-  color: var(--vault-copper);
+  color: var(--color-copper);
 }
 
 /* ==================== TOOLBAR ==================== */
@@ -76,23 +66,23 @@
 }
 
 .toolbar-btn-primary {
-  background: var(--vault-copper);
-  color: var(--vault-white);
+  background: var(--color-copper);
+  color: var(--bg-primary);
   border: none;
 }
 
 .toolbar-btn-primary:hover {
-  background: var(--vault-copper-dark);
+  background: var(--color-copper-dark);
 }
 
 .toolbar-btn-secondary {
-  background: var(--vault-white);
-  color: var(--vault-black);
-  border: 1px solid var(--vault-black);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
 }
 
 .toolbar-btn-secondary:hover {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .toolbar-btn:disabled {
@@ -109,8 +99,8 @@
 }
 
 .vault-stat-card {
-  background: var(--vault-white);
-  border: 1px solid var(--vault-gray);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   padding: 1rem;
   display: flex;
   align-items: center;
@@ -124,7 +114,7 @@
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
   border-radius: 4px;
 }
 
@@ -135,13 +125,13 @@
 .vault-stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--vault-black);
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .vault-stat-label {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -149,7 +139,7 @@
 
 /* ==================== FORM SECTION ==================== */
 .vault-form-section {
-  background: var(--vault-copper);
+  background: var(--color-copper);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -158,7 +148,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--vault-white);
+  color: var(--bg-primary);
   margin-bottom: 1rem;
 }
 
@@ -169,7 +159,7 @@
 }
 
 .vault-form-card {
-  background: var(--vault-white);
+  background: var(--bg-primary);
   padding: 1.5rem;
 }
 
@@ -191,7 +181,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
@@ -199,19 +189,19 @@
   width: 100%;
   padding: 0.625rem 0.75rem;
   font-size: 0.875rem;
-  border: 1px solid var(--vault-gray);
-  background: var(--vault-white);
-  color: var(--vault-black);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: inherit;
 }
 
 .vault-form-card .form-control:focus {
   outline: none;
-  border-color: var(--vault-copper);
+  border-color: var(--color-copper);
 }
 
 .vault-form-card .form-control::placeholder {
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .vault-form-card textarea.form-control {
@@ -221,14 +211,14 @@
 
 .form-hint {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 
 /* File selected */
 .file-selected-info {
-  background: var(--vault-gray-light);
-  border-left: 3px solid var(--vault-copper);
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--color-copper);
   padding: 0.75rem 1rem;
   margin-top: 0.75rem;
   display: flex;
@@ -237,7 +227,7 @@
 }
 
 .file-selected-info svg {
-  color: var(--vault-copper);
+  color: var(--color-copper);
   width: 1.25rem;
   height: 1.25rem;
 }
@@ -248,24 +238,24 @@
 
 .file-selected-name {
   font-weight: 600;
-  color: var(--vault-black);
+  color: var(--text-primary);
 }
 
 .file-selected-size {
   font-size: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 /* Upload progress */
 .upload-progress-container {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .upload-progress-text {
   font-size: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   display: flex;
   justify-content: space-between;
@@ -274,12 +264,12 @@
 .upload-progress-bar {
   width: 100%;
   height: 6px;
-  background: var(--vault-gray);
+  background: var(--border-color);
 }
 
 .upload-progress-fill {
   height: 100%;
-  background: var(--vault-copper);
+  background: var(--color-copper);
   transition: width 0.2s ease;
 }
 
@@ -301,15 +291,15 @@
 }
 
 .vault-message.success {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-left: 3px solid #2e7d32;
+  background: var(--color-success-lighter);
+  color: var(--color-success-dark);
+  border-left: 3px solid var(--color-success-dark);
 }
 
 .vault-message.error {
-  background: #ffebee;
-  color: #c62828;
-  border-left: 3px solid #c62828;
+  background: var(--color-danger-lighter);
+  color: var(--color-danger);
+  border-left: 3px solid var(--color-danger);
 }
 
 /* Submit button */
@@ -319,8 +309,8 @@
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  background: var(--vault-black);
-  color: var(--vault-white);
+  background: var(--text-primary);
+  color: var(--bg-primary);
   border: none;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -332,7 +322,7 @@
 }
 
 .vault-submit-btn:hover:not(:disabled) {
-  background: var(--vault-copper-dark);
+  background: var(--color-copper-dark);
 }
 
 .vault-submit-btn:disabled {
@@ -342,8 +332,8 @@
 
 /* ==================== DOCUMENTS LIST ==================== */
 .vault-documents-section {
-  background: var(--vault-white);
-  border: 1px solid var(--vault-gray);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
 }
 
 .vault-documents-header {
@@ -351,8 +341,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--vault-gray);
-  background: var(--vault-gray-light);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .vault-documents-title {
@@ -361,17 +351,17 @@
   gap: 0.75rem;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .vault-documents-title svg {
-  color: var(--vault-copper);
+  color: var(--color-copper);
 }
 
 .vault-documents-count {
-  background: var(--vault-copper);
-  color: var(--vault-white);
+  background: var(--color-copper);
+  color: var(--bg-primary);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.75rem;
@@ -383,8 +373,8 @@
 
 /* User Accordion */
 .user-accordion {
-  background: var(--vault-white);
-  border: 1px solid var(--vault-gray);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   margin-bottom: 0.75rem;
 }
 
@@ -399,14 +389,14 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
   border: none;
   text-align: left;
   transition: background 0.15s ease;
 }
 
 .accordion-header:hover {
-  background: var(--vault-gray);
+  background: var(--border-color);
 }
 
 .accordion-title {
@@ -415,28 +405,28 @@
   gap: 0.75rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: var(--vault-black);
+  color: var(--text-primary);
 }
 
 .accordion-title svg {
   width: 1rem;
   height: 1rem;
-  color: var(--vault-copper);
+  color: var(--color-copper);
 }
 
 .document-count {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   font-weight: 400;
-  background: var(--vault-white);
+  background: var(--bg-primary);
   padding: 0.125rem 0.5rem;
-  border: 1px solid var(--vault-gray);
+  border: 1px solid var(--border-color);
 }
 
 .accordion-chevron {
   width: 1rem;
   height: 1rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   transition: transform 0.2s ease;
 }
 
@@ -455,7 +445,7 @@
   display: flex;
   align-items: center;
   padding: 0.75rem;
-  border-bottom: 1px solid var(--vault-gray-light);
+  border-bottom: 1px solid var(--bg-secondary);
   transition: background 0.1s ease;
 }
 
@@ -464,11 +454,11 @@
 }
 
 .document-item-compact:hover {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .document-icon {
-  color: var(--vault-copper);
+  color: var(--color-copper);
   margin-right: 0.75rem;
   flex-shrink: 0;
   width: 1.125rem;
@@ -482,14 +472,14 @@
 
 .document-name {
   font-weight: 500;
-  color: var(--vault-black);
+  color: var(--text-primary);
   word-break: break-word;
   font-size: 0.875rem;
 }
 
 .document-date {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   display: block;
   margin-top: 0.125rem;
 }
@@ -503,9 +493,9 @@
 .btn-icon {
   width: 2rem;
   height: 2rem;
-  border: 1px solid var(--vault-gray);
-  background: var(--vault-white);
-  color: var(--vault-black);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -515,9 +505,9 @@
 }
 
 .btn-icon:hover {
-  background: var(--vault-copper);
-  color: var(--vault-white);
-  border-color: var(--vault-copper);
+  background: var(--color-copper);
+  color: var(--bg-primary);
+  border-color: var(--color-copper);
 }
 
 .btn-icon svg {
@@ -528,9 +518,9 @@
 .btn-icon-share {
   width: 2rem;
   height: 2rem;
-  border: 1px solid var(--vault-copper);
-  background: var(--vault-white);
-  color: var(--vault-copper);
+  border: 1px solid var(--color-copper);
+  background: var(--bg-primary);
+  color: var(--color-copper);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -540,8 +530,8 @@
 }
 
 .btn-icon-share:hover {
-  background: var(--vault-copper);
-  color: var(--vault-white);
+  background: var(--color-copper);
+  color: var(--bg-primary);
 }
 
 .btn-icon-share svg {
@@ -552,9 +542,9 @@
 .btn-icon-danger {
   width: 2rem;
   height: 2rem;
-  border: 1px solid var(--vault-gray);
-  background: var(--vault-white);
-  color: var(--vault-black);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -563,9 +553,9 @@
 }
 
 .btn-icon-danger:hover {
-  background: #c62828;
-  color: var(--vault-white);
-  border-color: #c62828;
+  background: var(--color-danger);
+  color: var(--bg-primary);
+  border-color: var(--color-danger);
 }
 
 .btn-icon-danger svg {
@@ -577,7 +567,7 @@
 .vault-empty-state {
   text-align: center;
   padding: 3rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .vault-empty-icon {
@@ -588,7 +578,7 @@
 
 .vault-empty-state h4 {
   font-size: 1rem;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
@@ -610,7 +600,7 @@
 }
 
 .import-modal {
-  background: var(--vault-white);
+  background: var(--bg-primary);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
@@ -622,11 +612,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  background: var(--vault-copper);
+  background: var(--color-copper);
 }
 
 .import-modal-header h3 {
-  color: var(--vault-white);
+  color: var(--bg-primary);
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
@@ -643,7 +633,7 @@
 .import-modal-close {
   background: transparent;
   border: none;
-  color: var(--vault-white);
+  color: var(--bg-primary);
   width: 2rem;
   height: 2rem;
   cursor: pointer;
@@ -664,7 +654,7 @@
 }
 
 .import-dropzone {
-  border: 2px dashed var(--vault-gray);
+  border: 2px dashed var(--border-color);
   padding: 2rem;
   text-align: center;
   cursor: pointer;
@@ -673,8 +663,8 @@
 
 .import-dropzone:hover,
 .import-dropzone.dragover {
-  border-color: var(--vault-copper);
-  background: var(--vault-gray-light);
+  border-color: var(--color-copper);
+  background: var(--bg-secondary);
 }
 
 .import-dropzone-icon {
@@ -684,14 +674,14 @@
 
 .import-dropzone h4 {
   font-size: 1rem;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
   font-weight: 600;
 }
 
 .import-dropzone p {
   font-size: 0.875rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -708,20 +698,20 @@
 
 .import-preview-header h4 {
   font-size: 0.875rem;
-  color: var(--vault-black);
+  color: var(--text-primary);
   margin: 0;
   font-weight: 600;
 }
 
 .import-preview-count {
   font-size: 0.75rem;
-  color: var(--vault-gray-dark);
+  color: var(--text-secondary);
 }
 
 .import-preview-list {
   max-height: 180px;
   overflow-y: auto;
-  border: 1px solid var(--vault-gray);
+  border: 1px solid var(--border-color);
 }
 
 .import-preview-item {
@@ -729,7 +719,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.75rem;
-  border-bottom: 1px solid var(--vault-gray-light);
+  border-bottom: 1px solid var(--bg-secondary);
   font-size: 0.875rem;
 }
 
@@ -744,19 +734,19 @@
 }
 
 .import-preview-item.valid {
-  background: #f1f8e9;
+  background: var(--color-success-lighter);
 }
 
 .import-preview-item.valid svg {
-  color: #558b2f;
+  color: var(--color-success-dark);
 }
 
 .import-preview-item.invalid {
-  background: #fce4ec;
+  background: var(--color-danger-lighter);
 }
 
 .import-preview-item.invalid svg {
-  color: #c62828;
+  color: var(--color-danger);
 }
 
 .import-modal-footer {
@@ -764,38 +754,38 @@
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 1rem 1.25rem;
-  border-top: 1px solid var(--vault-gray);
-  background: var(--vault-gray-light);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .import-btn-cancel {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  background: var(--vault-white);
-  border: 1px solid var(--vault-black);
-  color: var(--vault-black);
+  background: var(--bg-primary);
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
   cursor: pointer;
   font-family: inherit;
 }
 
 .import-btn-cancel:hover {
-  background: var(--vault-gray-light);
+  background: var(--bg-secondary);
 }
 
 .import-btn-confirm {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  background: var(--vault-copper);
+  background: var(--color-copper);
   border: none;
-  color: var(--vault-white);
+  color: var(--bg-primary);
   cursor: pointer;
   font-family: inherit;
 }
 
 .import-btn-confirm:hover:not(:disabled) {
-  background: var(--vault-copper-dark);
+  background: var(--color-copper-dark);
 }
 
 .import-btn-confirm:disabled {
@@ -844,4 +834,15 @@
   .toolbar-btn {
     width: 100%;
   }
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .admin-vault,
+.dark-theme .admin-vault {
+  /* Overrides spécifiques si nécessaires */
 }

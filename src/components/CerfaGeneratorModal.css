@@ -206,12 +206,8 @@
 
 .cerfa-form-group select {
     cursor: pointer;
-}
-
-.cerfa-form-group select option {
-    background: #1e1e2e;
-    color: #fff;
-}
+}.cerfa-form-group select option {background: #1e1e2e;
+    color: var(--text-on-colored-bg);}
 
 /* Checkboxes */
 .cerfa-checkboxes {
@@ -338,24 +334,20 @@
 
 .cerfa-company-summary p:last-of-type {
     margin-bottom: 0.75rem;
-}
-
-.cerfa-save-company-btn,
-.cerfa-reload-btn {
-    display: inline-flex;
+}.cerfa-save-company-btn,
+.cerfa-reload-btn {display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     background: linear-gradient(135deg, #0ea5a5, #0d8f8f);
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 6px;
-    color: #fff;
+    color: var(--text-on-colored-bg);
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     margin-top: 0.75rem;
-    transition: all 0.2s ease;
-}
+    transition: all 0.2s ease;}
 
 .cerfa-save-company-btn:hover,
 .cerfa-reload-btn:hover {
@@ -426,19 +418,11 @@
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.8);
-}
-
-.cerfa-btn-secondary:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
-}
-
-.cerfa-btn-primary {
-    background: linear-gradient(135deg, #0ea5a5, #0d8f8f);
+}.cerfa-btn-secondary:hover:not(:disabled) {background: rgba(255, 255, 255, 0.12);
+    color: var(--text-on-colored-bg);}.cerfa-btn-primary {background: linear-gradient(135deg, #0ea5a5, #0d8f8f);
     border: none;
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(14, 165, 165, 0.3);
-}
+    color: var(--text-on-colored-bg);
+    box-shadow: 0 4px 15px rgba(14, 165, 165, 0.3);}
 
 .cerfa-btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -585,19 +569,11 @@
     font-weight: 500;
     z-index: 10000;
     animation: toast-slide-in 0.3s ease;
-}
-
-.cerfa-toast-success {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-}
-
-.cerfa-toast-error {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-}
+}.cerfa-toast-success {background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
+    color: var(--text-on-colored-bg);
+    box-shadow: 0 4px 15px rgba(184, 115, 51, 0.4);}.cerfa-toast-error {background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: var(--text-on-colored-bg);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);}
 
 @keyframes toast-slide-in {
     from {

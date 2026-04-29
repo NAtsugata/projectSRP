@@ -38,20 +38,20 @@
 }
 
 .draggable-intervention:hover::before {
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: rgba(184, 115, 51, 0.3);
 }
 
 .draggable-intervention.dragging::before {
-  border-color: rgba(59, 130, 246, 0.6);
+  border-color: rgba(184, 115, 51, 0.6);
 }
 
 /* Animation de feedback */
 @keyframes drag-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 0 0 rgba(184, 115, 51, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 6px rgba(184, 115, 51, 0);
   }
 }
 

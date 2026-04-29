@@ -2,41 +2,65 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#CD7F32" />
     <meta name="description" content="Application de gestion d'interventions, notes de frais et planification pour SRP. Fonctionne hors ligne." />
 
-    <!-- PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SRP">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="SRP">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+    <link rel="shortcut icon" href="/icons/favicon.ico" />
 
-    <!-- iOS Safari -->
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="%PUBLIC_URL%/logo192.png" />
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
 
-    <!-- Android Chrome -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!-- iOS Safari - OBLIGATOIRE pour installation iPhone -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SRP" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
 
-    <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileColor" content="#CD7F32">
-    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/logo192.png">
+    <!-- Splash screens iOS -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/apple-splash-750-1334.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/apple-splash-1170-2532.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/apple-splash-1179-2556.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/apple-splash-828-1792.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/apple-splash-1284-2778.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/apple-splash-1290-2796.png" />
 
-    <!-- Offline page -->
-    <link rel="offline" href="%PUBLIC_URL%/offline.html">
+    <!-- Android / Windows -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="SRP" />
+    <meta name="msapplication-TileColor" content="#CD7F32" />
+    <meta name="msapplication-TileImage" content="/logo192.png" />
+
     <title>Portail SRP</title>
-    
-    <!-- Librairies pour l'export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <!-- OpenCV.js pour la détection de documents -->
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="console.log('OpenCV.js loaded successfully')" onerror="console.error('Failed to load OpenCV.js')"></script>
+    <!-- Librairies export (defer = non bloquant) -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- OpenCV uniquement sur /diagnostics -->
+    <script>
+      if (window.location.pathname.startsWith('/diagnostics')) {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://docs.opencv.org/4.8.0/opencv.js';
+        document.head.appendChild(s);
+      }
+    </script>
+
+    <!-- Build Vite - NE PAS MODIFIER CES LIGNES -->
+    <script type="module" crossorigin src="/assets/index-DLxLosEx.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-zq6P3Ky3.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-router-tPF1ogSa.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils-DRU2hytL.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-6iQkpsTR.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-c4IFNMgC.css">
   </head>
   <body>
     <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>

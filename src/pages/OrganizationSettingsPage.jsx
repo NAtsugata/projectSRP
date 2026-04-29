@@ -35,6 +35,11 @@ function OrganizationSettingsPage() {
   const [logoPreview, setLogoPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Sync offline state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, label: '' });
+  const [syncStats, setSyncStats] = useState(null);
+
   const organizationId = profile?.organization_id;
 
   // Fetch organization data
@@ -224,6 +229,43 @@ function OrganizationSettingsPage() {
     }
   };
 
+  // Synchroniser les données pour le mode hors ligne
+  const handleSyncOfflineData = async () => {
+    if (!profile?.id) {
+      toast.error('Impossible de synchroniser : profil non chargé');
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncProgress({ current: 0, total: 5, label: 'Démarrage...' });
+    setSyncStats(null);
+
+    try {
+      const { syncOfflineData } = await import('../services/offlineAuthService');
+
+      const result = await syncOfflineData(
+        supabase,
+        profile.id,
+        (current, total, label) => {
+          setSyncProgress({ current, total, label });
+        }
+      );
+
+      if (result.success) {
+        setSyncStats(result.stats);
+        toast.success('✅ Synchronisation terminée ! Vous pouvez maintenant utiliser l\'app hors ligne.');
+      } else {
+        toast.error(`Erreur de synchronisation : ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error(`Erreur : ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress({ current: 0, total: 0, label: '' });
+    }
+  };
+
   // Remove logo
   const removeLogo = useCallback(() => {
     setLogoFile(null);
@@ -271,6 +313,12 @@ function OrganizationSettingsPage() {
           onClick={() => setActiveTab('bank')}
         >
           Coordonnées bancaires
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'offline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('offline')}
+        >
+          📴 Mode hors ligne
         </button>
       </div>
 
@@ -650,6 +698,96 @@ function OrganizationSettingsPage() {
               >
                 {saveMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Offline Mode */}
+        {activeTab === 'offline' && (
+          <div className="settings-section">
+            <h2>📴 Mode hors ligne</h2>
+            <p className="section-desc">
+              Synchronisez vos données pour pouvoir utiliser l'application sans connexion Internet.
+            </p>
+
+            <div className="offline-sync-info">
+              <h3>Fonctionnalités hors ligne :</h3>
+              <ul>
+                <li>✅ Consultation du planning et des interventions</li>
+                <li>✅ Remplissage et génération des formulaires CERFA (PDF)</li>
+                <li>✅ Accès aux informations clients et contrats</li>
+                <li>✅ Consultation des profils d'équipe</li>
+                <li>⚠️ Les modifications seront synchronisées une fois en ligne</li>
+              </ul>
+
+              <div className="sync-warning">
+                <strong>⚠️ Important :</strong>
+                <p>
+                  Vous devez vous connecter <strong>EN LIGNE au moins une fois</strong> et cliquer
+                  sur "Synchroniser" ci-dessous pour mettre vos données en cache.
+                  Sans cela, le mode hors ligne ne fonctionnera pas.
+                </p>
+              </div>
+            </div>
+
+            {syncStats && (
+              <div className="sync-stats">
+                <h3>✅ Dernière synchronisation réussie</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">Profils :</span>
+                    <span className="stat-value">{syncStats.profiles || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Interventions :</span>
+                    <span className="stat-value">{syncStats.interventions || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Contrats :</span>
+                    <span className="stat-value">{syncStats.contracts || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Clients :</span>
+                    <span className="stat-value">{syncStats.clients || 0}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isSyncing && (
+              <div className="sync-progress">
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="progress-label">
+                  {syncProgress.label} ({syncProgress.current}/{syncProgress.total})
+                </p>
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                className="btn-sync"
+                onClick={handleSyncOfflineData}
+                disabled={isSyncing}
+              >
+                {isSyncing ? '🔄 Synchronisation...' : '📥 Synchroniser pour mode hors ligne'}
+              </button>
+            </div>
+
+            <div className="offline-instructions">
+              <h3>Comment utiliser le mode hors ligne :</h3>
+              <ol>
+                <li>Cliquez sur <strong>"Synchroniser pour mode hors ligne"</strong> ci-dessus (connexion Internet requise)</li>
+                <li>Attendez que la synchronisation se termine (quelques secondes)</li>
+                <li>Déconnectez-vous de l'application</li>
+                <li>Activez le <strong>mode avion</strong> ou coupez votre connexion</li>
+                <li>Reconnectez-vous avec vos identifiants (connexion hors ligne)</li>
+                <li>Utilisez l'application normalement !</li>
+              </ol>
             </div>
           </div>
         )}

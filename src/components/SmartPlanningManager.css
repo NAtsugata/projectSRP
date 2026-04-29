@@ -1,0 +1,252 @@
+/* src/components/SmartPlanningManager.css */
+
+.smart-planning-manager {
+  min-height: 100vh;
+  background: var(--bg-secondary);
+  padding: 24px;
+}
+
+/* Header */
+.planning-header {
+  background: var(--bg-primary);
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.planning-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Statut connexion */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.connection-status.online {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.connection-status.offline {
+  background: var(--color-danger-light);
+  color: #991b1b;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Indicateur syncing */
+.syncing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Changements en attente */
+.pending-changes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #92400e;
+}.pending-changes .badge {background: #f59e0b;
+  color: var(--text-on-colored-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 20px;
+  text-align: center;}.btn-sync-now {padding: 4px 12px;
+  background: #f59e0b;
+  color: var(--text-on-colored-bg);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;}
+
+.btn-sync-now:hover {
+  background: #d97706;
+}
+
+/* Bannière hors ligne */
+.offline-banner {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.banner-icon {
+  font-size: 32px;
+}
+
+.banner-content {
+  flex: 1;
+}
+
+.banner-content strong {
+  display: block;
+  font-size: 16px;
+  color: #92400e;
+  margin-bottom: 4px;
+}
+
+.banner-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+/* Contenu principal */
+.planning-content {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+}
+
+/* Debug panel */
+.debug-panel {
+  margin-top: 24px;
+  padding: 16px;
+  background: #1f2937;
+  color: #f3f4f6;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.debug-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.debug-panel pre {
+  margin: 0;
+  overflow-x: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .smart-planning-manager {
+    padding: 16px;
+  }
+
+  .planning-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-status {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .connection-status,
+  .syncing-indicator,
+  .pending-changes {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .offline-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .banner-icon {
+    font-size: 48px;
+  }
+}
+
+/* Animations de transition */
+.planning-content {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

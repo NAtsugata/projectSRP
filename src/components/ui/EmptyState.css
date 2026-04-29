@@ -19,12 +19,12 @@
 .empty-state-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .empty-state-message {
-  color: #6b7280;
+  color: var(--text-tertiary);
   max-width: 400px;
   margin: 0 0 1.5rem 0;
   line-height: 1.5;

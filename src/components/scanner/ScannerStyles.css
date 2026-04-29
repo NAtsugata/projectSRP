@@ -2,14 +2,14 @@
  * Styles pour DocumentScannerView - Design moderne blanc/noir/cuivre
  */
 
+/* Variables locales - DYNAMIQUES selon le thème ✅ */
 :root {
-  --scanner-copper: #b87333;
-  --scanner-copper-light: #d4956a;
-  --scanner-copper-dark: #8b5a2b;
-  --scanner-black: #1a1a1a;
-  --scanner-white: #ffffff;
+  --scanner-copper: var(--color-copper);        /* Change avec le thème! */
+  --scanner-copper-light: var(--color-copper-light);
+  --scanner-copper-dark: var(--color-copper-dark);
+  /* --scanner-black et --scanner-white sont définis dans theme-variables.css */
   --scanner-gray: #6b7280;
-  --scanner-success: #10b981;
+  --scanner-success: var(--color-copper);
   --scanner-danger: #ef4444;
 }
 
@@ -215,7 +215,7 @@
 
 .scanner-btn {
   background: var(--scanner-white);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   color: var(--scanner-black);
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -255,8 +255,8 @@
 }
 
 .scanner-btn.success:hover {
-  background: #059669;
-  border-color: #059669;
+  background: var(--color-copper-dark);
+  border-color: var(--color-copper-dark);
 }
 
 .scanner-btn.danger {
@@ -291,7 +291,7 @@
 }
 
 .docs-gallery::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
   border-radius: 3px;
 }
 
@@ -513,8 +513,8 @@
 }
 
 .detector-badge.yolo-seg {
-  background: linear-gradient(135deg, #10b981, #059669);
-  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
+  box-shadow: 0 2px 12px rgba(184, 115, 51, 0.4);
 }
 
 .detector-badge.opencv {
@@ -527,15 +527,15 @@
   gap: 0.5rem;
   padding: 0.75rem;
   overflow-x: auto;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .filter-btn {
   flex: 1;
   min-width: 80px;
   padding: 0.75rem 1rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 0.75rem;
   background: var(--scanner-white);
   color: var(--scanner-black);
@@ -635,9 +635,9 @@
   flex-wrap: wrap;
   justify-content: center;
   padding: 1.25rem;
-  background: #f9fafb;
+  background: var(--bg-secondary);
   border-radius: 1rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   max-width: 100%;
 }
 
@@ -685,7 +685,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   border-radius: 0.75rem;
   background: var(--scanner-white);
   cursor: pointer;
@@ -726,7 +726,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -837,6 +837,7 @@
 }
 
 /* Dark mode support */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .scanner-header {
     background: #111;
@@ -858,6 +859,7 @@
     border-color: var(--scanner-copper);
   }
 }
+*/
 
 /* Input file caché */
 .scanner-file-input {

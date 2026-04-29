@@ -267,10 +267,10 @@
 }
 
 .checkpoint-checkbox {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: var(--radius-lg);
-  border: 2px solid var(--color-gray-300);
+  border: 2px solid var(--color-gray-400);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -286,8 +286,8 @@
 }
 
 .checkpoint-checkbox svg {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--text-inverse);
   opacity: 0;
   transform: scale(0);
@@ -302,7 +302,7 @@
 .checkpoint-label {
   flex: 1;
   font-size: var(--text-base);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
 }
 
@@ -317,12 +317,9 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--spacing-4);
   padding: var(--spacing-5);
-  background: linear-gradient(135deg,
-    var(--color-primary-50),
-    var(--color-secondary-50)
-  );
+  background: var(--bg-primary);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--border-color);
   animation: fadeInUp 0.5s ease-out 0.2s backwards;
 }
 
@@ -583,6 +580,8 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
+/* DÉSACTIVÉ pour forcer le thème clair uniquement
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .intervention-detail-modern {
     background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
@@ -600,9 +599,161 @@
 
   .stats-bar {
     background: linear-gradient(135deg,
-      rgba(99, 102, 241, 0.15),
+      rgba(184, 115, 51, 0.15),
       rgba(236, 72, 153, 0.15)
     );
     border-color: #444;
   }
+}
+*/
+*/
+
+/* ============================================
+   OVERRIDE GLOBAL STYLES - FIX BLANC SUR BLANC
+   ============================================ */
+
+/* Fix mobile-dashboard.css qui force color: var(--text-on-colored-bg) !important */
+.intervention-detail-modern .form-control,
+.intervention-detail-modern input[type="text"],
+.intervention-detail-modern input[type="number"],
+.intervention-detail-modern input[type="date"],
+.intervention-detail-modern input[type="time"],
+.intervention-detail-modern input[type="email"],
+.intervention-detail-modern input[type="tel"],
+.intervention-detail-modern textarea,
+.intervention-detail-modern select {
+  color: var(--text-primary) !important;
+  background: var(--bg-primary) !important;
+  border: 2px solid var(--border-color) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  transition: all 0.2s;
+}
+
+.intervention-detail-modern .form-control:focus,
+.intervention-detail-modern input:focus,
+.intervention-detail-modern textarea:focus,
+.intervention-detail-modern select:focus {
+  border-color: var(--color-copper) !important;
+  box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1) !important;
+  outline: none !important;
+}
+
+.intervention-detail-modern .form-control::placeholder,
+.intervention-detail-modern input::placeholder,
+.intervention-detail-modern textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+/* Fix pour les boutons */
+.intervention-detail-modern .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.intervention-detail-modern .btn-primary {
+  background: var(--color-copper) !important;
+  color: var(--text-on-colored-bg) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.intervention-detail-modern .btn-secondary {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.intervention-detail-modern .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--color-copper-light) !important;
+  transform: translateY(-1px);
+}
+
+.intervention-detail-modern .btn-success {
+  background: var(--color-copper) !important;
+  color: var(--text-on-colored-bg) !important;
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-success:hover:not(:disabled) {
+  background: var(--color-copper-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(184, 115, 51, 0.3);
+}
+
+.intervention-detail-modern .btn-danger {
+  background: #ef4444 !important;
+  color: var(--text-on-colored-bg) !important;
+  border: none !important;
+}
+
+.intervention-detail-modern .btn-danger:hover:not(:disabled) {
+  background: #dc2626 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(239, 68, 68, 0.3);
+}
+
+.intervention-detail-modern .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Fix pour les labels */
+.intervention-detail-modern label {
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+/* Fix pour les sections de texte */
+.intervention-detail-modern h1,
+.intervention-detail-modern h2,
+.intervention-detail-modern h3,
+.intervention-detail-modern h4,
+.intervention-detail-modern h5,
+.intervention-detail-modern h6 {
+  color: var(--text-primary) !important;
+}
+
+.intervention-detail-modern p,
+.intervention-detail-modern span,
+.intervention-detail-modern div {
+  color: var(--text-primary);
+}
+
+/* Fix spécifique pour les sections */
+.intervention-detail-modern .section-title {
+  color: var(--text-primary) !important;
+}
+
+.intervention-detail-modern .section-subtitle {
+  color: var(--text-secondary) !important;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .intervention-detail-modern,
+.dark-theme .intervention-detail-modern {
+  /* Overrides spécifiques si nécessaires */
 }

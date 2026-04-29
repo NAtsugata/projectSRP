@@ -29,6 +29,7 @@ const UserExpensesAccordion = ({
   const [isOpen, setIsOpen] = useState(true);
   const [showReceipts, setShowReceipts] = useState(null);
   const [commentInput, setCommentInput] = useState({});
+  const [selectedExpenses, setSelectedExpenses] = useState(new Set());
 
   const getCategoryInfo = (value) => categories.find(c => c.value === value) || categories[categories.length - 1];
 
@@ -59,6 +60,204 @@ const UserExpensesAccordion = ({
     }
     await onReject(expenseId, comment);
     setCommentInput(prev => ({ ...prev, [expenseId]: '' }));
+  };
+
+  // Gestion de la sélection multiple
+  const toggleSelectExpense = (expenseId) => {
+    setSelectedExpenses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(expenseId)) {
+        newSet.delete(expenseId);
+      } else {
+        newSet.add(expenseId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedExpenses.size === expenses.length) {
+      setSelectedExpenses(new Set());
+    } else {
+      setSelectedExpenses(new Set(expenses.map(e => e.id)));
+    }
+  };
+
+  // Télécharger plusieurs dépenses en un seul PDF
+  const handleBulkDownload = async () => {
+    if (selectedExpenses.size === 0) {
+      alert('Veuillez sélectionner au moins une note de frais.');
+      return;
+    }
+
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+
+      // Filtrer et trier les dépenses sélectionnées
+      const expensesToDownload = expenses
+        .filter(e => selectedExpenses.has(e.id))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      let isFirstExpense = true;
+
+      for (const expense of expensesToDownload) {
+        if (!isFirstExpense) {
+          pdf.addPage();
+        }
+        isFirstExpense = false;
+
+        let yPos = margin;
+        const categoryInfo = getCategoryInfo(expense.category);
+
+        // En-tête
+        pdf.setFontSize(20);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('NOTE DE FRAIS', margin, yPos);
+        yPos += 15;
+
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 10;
+
+        // Informations
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Employé:', margin, yPos);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(userName, margin + 40, yPos);
+        yPos += 8;
+
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Date:', margin, yPos);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(formatDate(expense.date), margin + 40, yPos);
+        yPos += 8;
+
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Catégorie:', margin, yPos);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(categoryInfo.label, margin + 40, yPos);
+        yPos += 8;
+
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Montant:', margin, yPos);
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(14);
+        pdf.text(formatAmount(expense.amount), margin + 40, yPos);
+        yPos += 8;
+
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Statut:', margin, yPos);
+        pdf.setFont(undefined, 'normal');
+        const statusText = expense.status === 'pending' ? 'En attente' : expense.status === 'approved' ? 'Approuvé' : 'Rejeté';
+        pdf.text(statusText, margin + 40, yPos);
+        yPos += 12;
+
+        // Description
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Description:', margin, yPos);
+        yPos += 8;
+        pdf.setFont(undefined, 'normal');
+        const descLines = pdf.splitTextToSize(expense.description, pageWidth - 2 * margin);
+        pdf.text(descLines, margin, yPos);
+        yPos += (descLines.length * 6) + 8;
+
+        // Commentaire admin
+        if (expense.admin_comment) {
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Commentaire administrateur:', margin, yPos);
+          yPos += 8;
+          pdf.setFont(undefined, 'normal');
+          const commentLines = pdf.splitTextToSize(expense.admin_comment, pageWidth - 2 * margin);
+          pdf.text(commentLines, margin, yPos);
+          yPos += (commentLines.length * 6) + 8;
+        }
+
+        // Justificatifs
+        if (expense.receipts && expense.receipts.length > 0) {
+          yPos += 5;
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
+          yPos += 10;
+
+          for (let i = 0; i < expense.receipts.length; i++) {
+            const receipt = expense.receipts[i];
+
+            try {
+              if (yPos + 100 > pageHeight - margin) {
+                pdf.addPage();
+                yPos = margin;
+              }
+
+              pdf.setFont(undefined, 'normal');
+              pdf.setFontSize(10);
+              pdf.text(`${i + 1}. ${receipt.name}`, margin, yPos);
+              yPos += 8;
+
+              const response = await fetch(receipt.url, { cache: 'no-cache' });
+              if (!response.ok) throw new Error('Network response was not ok');
+              const blob = await response.blob();
+
+              const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+
+              const img = new Image();
+              await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = base64;
+              });
+
+              const imgWidth = pageWidth - 2 * margin;
+              const imgHeight = (img.height * imgWidth) / img.width;
+              const maxImgHeight = 120;
+              const finalHeight = Math.min(imgHeight, maxImgHeight);
+              const finalWidth = (img.width * finalHeight) / img.height;
+
+              if (yPos + finalHeight > pageHeight - margin) {
+                pdf.addPage();
+                yPos = margin;
+              }
+
+              pdf.addImage(base64, 'JPEG', margin, yPos, finalWidth, finalHeight);
+              yPos += finalHeight + 10;
+
+            } catch (error) {
+              logger.error(`Erreur lors du chargement de l'image ${receipt.name}:`, error);
+              pdf.setFontSize(9);
+              pdf.setTextColor(0, 0, 255);
+              pdf.textWithLink(`[Lien vers l'image: ${receipt.name}]`, margin, yPos, { url: receipt.url });
+              pdf.setTextColor(0, 0, 0);
+              yPos += 8;
+
+              pdf.setFontSize(8);
+              pdf.setTextColor(100, 100, 100);
+              pdf.text(`(Image non intégrée: ${error.message})`, margin, yPos);
+              pdf.setTextColor(0, 0, 0);
+              yPos += 10;
+            }
+          }
+        }
+      }
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      pdf.save(`notes-frais-${userName.replace(/\s+/g, '-')}-${dateStr}-x${selectedExpenses.size}.pdf`);
+
+      // Réinitialiser la sélection après téléchargement
+      setSelectedExpenses(new Set());
+
+    } catch (error) {
+      logger.error('Erreur lors de la génération du PDF groupé:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    }
   };
 
   const handleDownload = async (expense) => {
@@ -259,6 +458,31 @@ const UserExpensesAccordion = ({
 
       {isOpen && (
         <div className="accordion-content">
+          {/* Boutons de sélection et téléchargement */}
+          {expenses.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+              >
+                {selectedExpenses.size === expenses.length ? '❌ Désélectionner tout' : '✅ Tout sélectionner'}
+              </button>
+              {selectedExpenses.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkDownload}
+                  className="btn btn-sm btn-primary"
+                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                >
+                  <DownloadIcon style={{ width: '16px', height: '16px', display: 'inline', marginRight: '4px' }} />
+                  Télécharger {selectedExpenses.size} note{selectedExpenses.size > 1 ? 's' : ''}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Stats par utilisateur */}
           <div className="user-stats-grid">
             <div className="user-stat-item">
@@ -287,9 +511,19 @@ const UserExpensesAccordion = ({
               const isPending = expense.status === 'pending';
 
               return (
-                <div key={expense.id} className="admin-expense-card">
+                <div key={expense.id} className="admin-expense-card" style={{ position: 'relative' }}>
+                  {/* Checkbox de sélection */}
+                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedExpenses.has(expense.id)}
+                      onChange={() => toggleSelectExpense(expense.id)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                  </div>
+
                   {/* Header */}
-                  <div className="admin-expense-header">
+                  <div className="admin-expense-header" style={{ paddingLeft: '2.5rem' }}>
                     <h3 className="admin-expense-title">
                       {categoryInfo.label.replace(/^[^\s]+\s/, '')}
                     </h3>

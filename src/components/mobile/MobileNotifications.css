@@ -163,7 +163,7 @@
 /* TYPES DE NOTIFICATIONS */
 /* ============================================= */
 .mobile-notification.success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 .mobile-notification.error {
@@ -175,7 +175,7 @@
 }
 
 .mobile-notification.info {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 /* ============================================= */
@@ -211,7 +211,7 @@
 /* MODALE */
 /* ============================================= */
 .mobile-modal {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   padding: 2rem 1.5rem;
   max-width: 400px;
@@ -264,7 +264,7 @@
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
@@ -274,7 +274,7 @@
 .mobile-modal-message {
   margin: 0 0 2rem 0;
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   line-height: 1.5;
 }
 
@@ -305,23 +305,19 @@
 }
 
 .mobile-modal-button-cancel {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
 }
 
 .mobile-modal-button-cancel:active {
   background: #e5e7eb;
-}
-
-.mobile-modal-button-confirm {
-  background: #3b82f6;
-  color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
+}.mobile-modal-button-confirm {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
+  box-shadow: 0 4px 12px rgba(184, 115, 51, 0.3);}
 
 .mobile-modal-button-confirm:active {
-  background: #2563eb;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  background: var(--color-copper-dark);
+  box-shadow: 0 2px 8px rgba(184, 115, 51, 0.4);
 }
 
 /* ============================================= */
@@ -362,6 +358,7 @@
 /* ============================================= */
 /* DARK MODE (optionnel) */
 /* ============================================= */
+/* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .mobile-modal {
     background: #1f2937;
@@ -385,6 +382,7 @@
     background: #4b5563;
   }
 }
+*/
 
 /* ============================================= */
 /* SAFE AREA (iOS) */

@@ -1,50 +1,72 @@
 {
   "short_name": "SRP",
   "name": "Portail SRP - Gestion d'Interventions",
-  "description": "Application de gestion d'interventions, notes de frais et planification pour SRP. Fonctionne hors ligne.",
+  "description": "Application de gestion d'interventions, notes de frais et planification pour SRP.",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "any",
+  "theme_color": "#CD7F32",
+  "background_color": "#CD7F32",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
     {
       "src": "/logo192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/logo512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "start_url": "/",
-  "display": "standalone",
-  "theme_color": "#CD7F32",
-  "background_color": "#ffffff",
-  "orientation": "portrait-primary",
-  "scope": "/",
-  "categories": ["business", "productivity"],
-  "prefer_related_applications": false,
-  "lang": "fr-FR",
-  "dir": "ltr",
   "shortcuts": [
     {
       "name": "Agenda",
       "short_name": "Agenda",
       "description": "Accéder à l'agenda des interventions",
       "url": "/agenda",
-      "icons": [{ "src": "favicon.ico", "sizes": "64x64" }]
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
     },
     {
       "name": "Notes de frais",
-      "short_name": "Notes",
+      "short_name": "Dépenses",
       "description": "Soumettre une note de frais",
       "url": "/expenses",
-      "icons": [{ "src": "favicon.ico", "sizes": "64x64" }]
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Planning",
+      "short_name": "Planning",
+      "description": "Voir le planning des interventions",
+      "url": "/planning",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "CERFA",
+      "short_name": "CERFA",
+      "description": "Générer des formulaires CERFA",
+      "url": "/cerfa",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -6,10 +6,10 @@ import logger from './logger';
 
 // Constantes de mise en page
 const MARGIN = 15;
-const LINE_HEIGHT = 6;
+const LINE_HEIGHT = 7; // ✨ Augmenté de 6 à 7 pour plus d'espacement
 const COLORS = {
   primary: [59, 130, 246], // Bleu
-  text: [31, 41, 55],
+  text: [31, 41, 55], // ✅ Gris foncé pour texte lisible
   gray: [107, 114, 128],
   lightGray: [229, 231, 235],
   success: [34, 197, 94],
@@ -23,10 +23,11 @@ const COLORS = {
  * @returns {string} - Montant formate
  */
 const formatAmount = (amount) => {
+  const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(amount || 0);
+  }).format(safeAmount);
 };
 
 /**
@@ -84,7 +85,7 @@ const loadImageAsDataUrl = async (url) => {
 };
 
 /**
- * Ajoute le logo au document PDF
+ * Ajoute le logo au document PDF en préservant son ratio d'aspect
  * @param {jsPDF} doc - Document PDF
  * @param {string} logoDataUrl - Data URL du logo
  * @param {number} x - Position X
@@ -103,10 +104,31 @@ const addLogoToPdf = (doc, logoDataUrl, x, y, maxWidth = 50, maxHeight = 20) => 
       format = 'JPEG';
     }
 
-    // Ajouter l'image avec les dimensions maximales
-    doc.addImage(logoDataUrl, format, x, y, maxWidth, maxHeight, undefined, 'FAST');
+    // Créer une image pour obtenir ses dimensions naturelles
+    const img = new Image();
+    img.src = logoDataUrl;
 
-    return y + maxHeight + 5;
+    // Calculer les dimensions en préservant le ratio d'aspect
+    let width = maxWidth;
+    let height = maxHeight;
+
+    if (img.width && img.height) {
+      const aspectRatio = img.width / img.height;
+
+      // Ajuster pour respecter les limites max tout en préservant le ratio
+      if (width / height > aspectRatio) {
+        // L'image est plus haute que large
+        width = height * aspectRatio;
+      } else {
+        // L'image est plus large que haute
+        height = width / aspectRatio;
+      }
+    }
+
+    // Ajouter l'image avec les dimensions calculées (ratio préservé)
+    doc.addImage(logoDataUrl, format, x, y, width, height, undefined, 'FAST');
+
+    return y + height + 5;
   } catch (error) {
     logger.log('[PDF] Erreur ajout logo au PDF:', error);
     return y;
@@ -122,13 +144,19 @@ const addLogoToPdf = (doc, logoDataUrl, x, y, maxWidth = 50, maxHeight = 20) => 
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateInvoicePDF(invoice, organization = {}, client = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation de la facture:', invoice?.invoice_number);
+  try {
+    logger.log('[PDF] Generation de la facture:', invoice?.invoice_number);
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+    // Validation des données essentielles
+    if (!invoice) {
+      throw new Error('Données de facture manquantes');
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -298,7 +326,7 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
   y += 25;
 
   // === TABLEAU DES LIGNES ===
-  const items = invoice?.invoice_items || [];
+  const items = Array.isArray(invoice?.invoice_items) ? invoice.invoice_items : [];
 
   // En-tete du tableau
   const tableY = y;
@@ -331,15 +359,16 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
   items.forEach((item, index) => {
     const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
 
-    // Fond alternatif
+    // Fond alternatif avec plus d'espace
     if (index % 2 === 1) {
       doc.setFillColor(248, 250, 252);
-      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 2, 'F');
+      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 3, 'F');
     }
 
+    // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.text);
+    doc.setTextColor(...COLORS.text); // Texte gris foncé
 
     // Description (tronquee si trop longue)
     const description = item.description || '-';
@@ -355,7 +384,7 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
     doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
     doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-    y += LINE_HEIGHT + 1;
+    y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
   });
 
   // Ligne de separation
@@ -443,6 +472,10 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
 
   logger.log('[PDF] Facture generee avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation facture:', error);
+    throw new Error(`Échec génération PDF facture: ${error.message}`);
+  }
 }
 
 /**
@@ -454,13 +487,19 @@ export async function generateInvoicePDF(invoice, organization = {}, client = {}
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateQuotePDF(quote, organization = {}, client = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation du devis:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation du devis:', quote?.quote_number);
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+    // Validation des données essentielles
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -632,7 +671,7 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
   y += 25;
 
   // === TABLEAU DES LIGNES ===
-  const items = quote?.quote_items || [];
+  const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
 
   // En-tete du tableau
   const tableY = y;
@@ -665,15 +704,16 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
   items.forEach((item, index) => {
     const lineSubtotal = (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
 
-    // Fond alternatif
+    // Fond alternatif avec plus d'espace
     if (index % 2 === 1) {
       doc.setFillColor(248, 250, 252);
-      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 2, 'F');
+      doc.rect(MARGIN, y - 3, pageWidth - MARGIN * 2, LINE_HEIGHT + 3, 'F');
     }
 
+    // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.text);
+    doc.setTextColor(...COLORS.text); // Texte gris foncé
 
     const description = item.description || '-';
     const maxDescLength = 45;
@@ -688,7 +728,7 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
     doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
     doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-    y += LINE_HEIGHT + 1;
+    y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
   });
 
   // Ligne de separation
@@ -797,6 +837,10 @@ export async function generateQuotePDF(quote, organization = {}, client = {}, lo
 
   logger.log('[PDF] Devis genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis:', error);
+    throw new Error(`Échec génération PDF devis: ${error.message}`);
+  }
 }
 
 /**
@@ -864,10 +908,16 @@ function calculateTaxBreakdown(items) {
  * @returns {Blob} - PDF sous forme de Blob
  */
 export async function generateQuotePDFWithTemplate(quote, organization = {}, client = {}, template = {}, logoDataUrl = null) {
-  logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation devis avec template:', quote?.quote_number);
 
-  // Couleur du template
-  const primaryColor = template.primary_color || '#3B82F6';
+    // Validation
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    // Couleur du template
+    const primaryColor = template.primary_color || '#3B82F6';
   const r = parseInt(primaryColor.slice(1, 3), 16);
   const g = parseInt(primaryColor.slice(3, 5), 16);
   const b = parseInt(primaryColor.slice(5, 7), 16);
@@ -987,7 +1037,7 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
   y += 20;
 
   // === TABLEAU ===
-  const items = quote?.quote_items || [];
+  const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
   const tableY = y;
   doc.setFillColor(...tplColor);
   doc.rect(MARGIN, tableY, pageWidth - MARGIN * 2, 8, 'F');
@@ -1175,6 +1225,10 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
 
   logger.log('[PDF] Devis avec template genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis avec template:', error);
+    throw new Error(`Échec génération PDF devis (template): ${error.message}`);
+  }
 }
 
 /**
@@ -1187,10 +1241,16 @@ export async function generateQuotePDFWithTemplate(quote, organization = {}, cli
  * @returns {Promise<Blob>} - PDF sous forme de Blob
  */
 export async function generateQuotePDFWithLayout(quote, organization = {}, client = {}, layout = {}, attachments = []) {
-  logger.log('[PDF] Generation devis avec layout:', quote?.quote_number);
+  try {
+    logger.log('[PDF] Generation devis avec layout:', quote?.quote_number);
 
-  // Theme colors
-  const THEME_COLORS = {
+    // Validation
+    if (!quote) {
+      throw new Error('Données de devis manquantes');
+    }
+
+    // Theme colors
+    const THEME_COLORS = {
     default: [59, 130, 246],
     modern: [139, 92, 246],
     classic: [5, 150, 105],
@@ -1342,7 +1402,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
   };
 
   const renderItems = () => {
-    const items = quote?.quote_items || [];
+    const items = Array.isArray(quote?.quote_items) ? quote.quote_items : [];
     const tableY = y;
     doc.setFillColor(...primaryColorRgb);
     doc.rect(margin, tableY, pageWidth - margin * 2, 8, 'F');
@@ -1375,12 +1435,13 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
 
       if (useAlternateRows && index % 2 === 1) {
         doc.setFillColor(...tableBgColorRgb);
-        doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 2, 'F');
+        doc.rect(margin, y - 3, pageWidth - margin * 2, LINE_HEIGHT + 3, 'F');
       }
 
+      // ✅ IMPORTANT: Réinitialiser la couleur du texte à chaque ligne
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...COLORS.text);
+      doc.setTextColor(...COLORS.text); // Texte gris foncé toujours visible
 
       const desc = item.description || '-';
       const maxLen = 45;
@@ -1391,7 +1452,7 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
       doc.text(`${item.tax_rate || 20}%`, cols.tva.x, y);
       doc.text(formatAmount(lineSubtotal).replace('\u00a0', ' '), cols.total.x, y);
 
-      y += LINE_HEIGHT + 1;
+      y += LINE_HEIGHT + 2; // ✨ Espacement augmenté de +1 à +2
     });
 
     y = drawLine(y + 2);
@@ -1600,6 +1661,10 @@ export async function generateQuotePDFWithLayout(quote, organization = {}, clien
 
   logger.log('[PDF] Devis avec layout genere avec succes');
   return doc.output('blob');
+  } catch (error) {
+    logger.error('[PDF] Erreur generation devis avec layout:', error);
+    throw new Error(`Échec génération PDF devis (layout): ${error.message}`);
+  }
 }
 
 /**

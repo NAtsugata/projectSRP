@@ -207,7 +207,8 @@ export async function getMonthlyExportData(year, month) {
         // Kilomètres totaux et calcul zones par intervention
         let totalKm = 0;
         const interventionDetails = [];
-        const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
+        const interventionsByWorksite = {}; // { "Client - Address": { days, dates, zone, ... } }
+        const interventionsByDate = {}; // { "2026-03-15": [{ intervention, distance, zone }, ...] }
 
         userInterventions.forEach(iv => {
           const kmStart = iv.km_start || iv.report?.km_start;
@@ -234,10 +235,6 @@ export async function getMonthlyExportData(year, month) {
           const zone = distanceAller > 0 ? getZone(distanceAller) : null;
           const source = geocodedDistance > 0 ? 'géocodage' : (distanceAller > 0 ? 'compteur' : null);
 
-          if (zone) {
-            zoneCount[zone] = (zoneCount[zone] || 0) + 1;
-          }
-
           interventionDetails.push({
             id: iv.id,
             client: iv.client,
@@ -249,12 +246,100 @@ export async function getMonthlyExportData(year, month) {
             distanceSource: source,
             status: iv.status,
           });
+
+          // Récupérer les dates de cette intervention
+          const ivDates = [];
+          if (iv.scheduled_dates && Array.isArray(iv.scheduled_dates)) {
+            iv.scheduled_dates.forEach(d => {
+              const date = new Date(d);
+              if (date.getFullYear() === year && (date.getMonth() + 1) === month) {
+                ivDates.push(d);
+              }
+            });
+          } else if (iv.date) {
+            ivDates.push(iv.date);
+          }
+
+          // Grouper par date pour calcul zones (1 zone par jour = chantier le plus éloigné)
+          ivDates.forEach(dateStr => {
+            if (!interventionsByDate[dateStr]) {
+              interventionsByDate[dateStr] = [];
+            }
+            interventionsByDate[dateStr].push({
+              intervention: iv,
+              distanceAller,
+              zone,
+              city,
+            });
+          });
+
+          // Grouper par chantier (Client + Adresse)
+          const worksiteKey = `${iv.client || 'Client inconnu'} - ${iv.address || 'Adresse inconnue'}`;
+
+          if (!interventionsByWorksite[worksiteKey]) {
+            interventionsByWorksite[worksiteKey] = {
+              client: iv.client || 'Client inconnu',
+              address: iv.address || '',
+              city: city || '',
+              zone: zone || 'Non calculée',
+              distanceAller,
+              dates: new Set(),
+              interventionCount: 0,
+            };
+          }
+
+          // Ajouter les dates
+          ivDates.forEach(d => interventionsByWorksite[worksiteKey].dates.add(d));
+          interventionsByWorksite[worksiteKey].interventionCount++;
+        });
+
+        // Calcul des zones : 1 zone par jour travaillé (chantier le plus éloigné du jour)
+        // On parcourt uniquement les jours réellement travaillés (workedDatesSet exclut déjà les jours école)
+        const zoneCount = {}; // { "Zone 1 (0-10 km)": 3, ... }
+        workedDatesSet.forEach(dateStr => {
+          const dayInterventions = interventionsByDate[dateStr];
+          if (!dayInterventions || dayInterventions.length === 0) {
+            // Jour travaillé mais sans intervention dans interventionsByDate (ne devrait pas arriver)
+            // Par défaut : Zone 1 (intervention locale sans distance calculée)
+            zoneCount['Zone 1 (0-10 km)'] = (zoneCount['Zone 1 (0-10 km)'] || 0) + 1;
+            return;
+          }
+
+          // Trouver l'intervention avec la distance maximale pour ce jour
+          const furthestIntervention = dayInterventions.reduce((max, current) => {
+            return (current.distanceAller > max.distanceAller) ? current : max;
+          }, dayInterventions[0]);
+
+          // Compter la zone du chantier le plus éloigné (1 seule fois par jour)
+          // Si pas de zone calculée → Zone 1 par défaut (intervention locale)
+          const zoneToCount = furthestIntervention.zone || 'Zone 1 (0-10 km)';
+          zoneCount[zoneToCount] = (zoneCount[zoneToCount] || 0) + 1;
         });
 
         // Zones uniques triées par fréquence
         const zones = Object.entries(zoneCount)
           .sort(([, a], [, b]) => b - a)
           .map(([zone, count]) => ({ zone, count }));
+
+        // Résumé des zones du mois (ex: "6× Zone 4, 3× Zone 2")
+        const zoneSummary = zones
+          .map(z => `${z.count}× ${z.zone.split(' ')[0]} ${z.zone.match(/\d+/)?.[0] || ''}`)
+          .join(', ');
+
+        // Convertir interventionsByWorksite en array trié par nombre de jours décroissant
+        const worksitesList = Object.entries(interventionsByWorksite)
+          .map(([key, data]) => ({
+            worksite: key,
+            client: data.client,
+            address: data.address,
+            city: data.city,
+            zone: data.zone,
+            distanceAller: data.distanceAller,
+            days: data.dates.size,
+            dates: Array.from(data.dates).sort(),
+            interventionCount: data.interventionCount,
+          }))
+          .sort((a, b) => b.days - a.days);
 
         // Paniers repas = nombre de jours travaillés avec intervention
         // (convention : 1 panier repas par jour d'intervention sur site)
@@ -343,7 +428,9 @@ export async function getMonthlyExportData(year, month) {
           totalKm,
           zones,           // [{ zone: "Zone 2 (10-20 km)", count: 5 }, ...]
           zoneCount,        // { "Zone 2 (10-20 km)": 5, ... }
+          zoneSummary,      // "6× Zone 4, 3× Zone 2"
           interventionDetails,
+          worksitesList,    // [{ worksite, client, address, zone, days, dates: [...] }, ...]
           paniersRepas,
           companyHQ: COMPANY_HQ,
 
@@ -428,8 +515,10 @@ export function generateCSV(employeeData, year, month) {
     'Interventions',
     'Terminées',
     'Km parcourus',
+    'Résumé zones du mois',
     'Zones de déplacement',
     'Détail zones (depuis Champtercier)',
+    'Chantiers (jours + dates)',
     'Paniers repas',
     'Jours de congé',
     'Jours d\'absence',
@@ -455,6 +544,11 @@ export function generateCSV(employeeData, year, month) {
       .map(d => `${d.city || d.address}: ${d.distanceAller}km → ${d.zone} [${d.distanceSource || '?'}]`)
       .join(' | ');
 
+    // Détail chantiers avec nombre de jours et dates
+    const worksitesStr = (emp.worksitesList || [])
+      .map(w => `${w.client} (${w.city || w.address}): ${w.days}j [${w.dates.map(d => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })).join(', ')}] - ${w.zone}`)
+      .join(' | ');
+
     return [
       emp.fullName,
       emp.email,
@@ -465,8 +559,10 @@ export function generateCSV(employeeData, year, month) {
       emp.interventionCount,
       emp.completedCount,
       emp.totalKm,
+      emp.zoneSummary || '',
       zonesStr,
       zoneDetailStr,
+      worksitesStr,
       emp.paniersRepas,
       emp.leaveDays,
       emp.absenceDays || 0,
@@ -804,6 +900,21 @@ export function generatePDF(employeeData, year, month) {
     ];
     y = drawKeyValueTable(pdf, deplRows, mx, y, contentW);
 
+    // Résumé zones du mois
+    if (emp.zoneSummary) {
+      y += 3;
+      pdf.setFillColor(...amberBg);
+      pdf.roundedRect(mx, y, contentW, 8, 1.5, 1.5, 'F');
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...darkText);
+      pdf.text('Résumé zones du mois : ', mx + 3, y + 5.5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...gray);
+      pdf.text(emp.zoneSummary, mx + 45, y + 5.5);
+      y += 11;
+    }
+
     // Détail zones
     if (emp.zones && emp.zones.length > 0) {
       y += 3;
@@ -823,7 +934,7 @@ export function generatePDF(employeeData, year, month) {
         pdf.text(z.zone, mx + 3, y + 5);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(...gray);
-        pdf.text(`${z.count} intervention${z.count > 1 ? 's' : ''}`, pageW - mx - 3, y + 5, { align: 'right' });
+        pdf.text(`${z.count} jour${z.count > 1 ? 's' : ''}`, pageW - mx - 3, y + 5, { align: 'right' });
         y += 8;
       });
     }
@@ -885,6 +996,77 @@ export function generatePDF(employeeData, year, month) {
     }
 
     y += 6;
+
+    // --- Section Chantiers avec jours et dates ---
+    if (emp.worksitesList && emp.worksitesList.length > 0) {
+      if (y > pageH - 40) { pdf.addPage(); y = 20; }
+      y = drawSectionTitle(pdf, `Chantiers du mois (${emp.worksitesList.length})`, mx, y, contentW);
+
+      // En-tête tableau
+      pdf.setFillColor(...blue);
+      pdf.rect(mx, y, contentW, 6, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(6.5);
+      pdf.text('Client', mx + 2, y + 4);
+      pdf.text('Ville', mx + 45, y + 4);
+      pdf.text('Jours', mx + 75, y + 4);
+      pdf.text('Dates travaillées', mx + 95, y + 4);
+      pdf.text('Zone', mx + 158, y + 4);
+      y += 6;
+
+      emp.worksitesList.forEach((w, wi) => {
+        if (y > pageH - 12) { pdf.addPage(); y = 20; }
+
+        pdf.setFillColor(...(wi % 2 === 0 ? lightBg : white));
+        pdf.rect(mx, y, contentW, 8, 'F');
+
+        pdf.setTextColor(...darkText);
+        pdf.setFontSize(6.5);
+        pdf.setFont('helvetica', 'bold');
+
+        const clientText = (w.client || '').substring(0, 20);
+        pdf.text(clientText, mx + 2, y + 3);
+
+        pdf.setFont('helvetica', 'normal');
+        const cityText = (w.city || '').substring(0, 18);
+        pdf.text(cityText, mx + 45, y + 3);
+
+        // Nombre de jours
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...orangeText);
+        pdf.text(`${w.days}j`, mx + 75, y + 3);
+
+        // Dates
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...darkText);
+        pdf.setFontSize(6);
+        const datesStr = w.dates.slice(0, 5).map(d =>
+          new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        ).join(', ') + (w.dates.length > 5 ? '...' : '');
+        pdf.text(datesStr, mx + 95, y + 3);
+
+        // Zone
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(...gray);
+        const zoneText = w.zone.split(' ')[0] + ' ' + (w.zone.match(/\d+/)?.[0] || '');
+        pdf.text(zoneText, mx + 158, y + 3);
+
+        // Détail dates sur deuxième ligne si plus de 5 dates
+        if (w.dates.length > 5) {
+          pdf.setFontSize(5.5);
+          pdf.setTextColor(...gray);
+          const fullDatesStr = w.dates.map(d =>
+            new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+          ).join(', ');
+          const datesLines = pdf.splitTextToSize(fullDatesStr, contentW - 100);
+          pdf.text(datesLines[0], mx + 95, y + 6);
+        }
+
+        y += 8;
+      });
+
+      y += 4;
+    }
 
     // --- Section Prime exceptionnelle ---
     if (emp.primeExceptionnelle > 0) {

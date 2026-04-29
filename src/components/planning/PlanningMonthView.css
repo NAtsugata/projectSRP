@@ -1,22 +1,18 @@
 /* src/components/planning/PlanningMonthView.css */
 
 .planning-month {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   border: 1px solid #e2e8f0;
-}
-
-/* Header */
-.month-header {
-  display: flex;
+}/* Header */
+.month-header {display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-  color: white;
-}
+  background: linear-gradient(135deg, #8b5cf6 0%, var(--color-copper) 50%, var(--color-copper) 100%);
+  color: var(--text-on-colored-bg);}
 
 .month-nav {
   display: flex;
@@ -144,7 +140,7 @@
 
 .day-cell.today {
   background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-  border: 2px solid #3b82f6;
+  border: 2px solid var(--color-copper);
 }
 
 .day-cell.has-items {
@@ -160,18 +156,14 @@
   font-weight: 600;
   color: #334155;
   margin-bottom: 0.375rem;
-}
-
-.day-cell.today .day-number {
-  background: #3b82f6;
-  color: white;
+}.day-cell.today .day-number {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
   width: 26px;
   height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
+  justify-content: center;}
 
 .day-cell.other-month .day-number {
   color: #94a3b8;
@@ -184,21 +176,17 @@
   flex-direction: column;
   gap: 2px;
   overflow: hidden;
-}
-
-.intervention-dot {
-  display: flex;
+}.intervention-dot {display: flex;
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.375rem;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-light) 100%);
   border-radius: 0.25rem;
   font-size: 0.625rem;
-  color: white;
+  color: var(--text-on-colored-bg);
   cursor: pointer;
   transition: all 0.15s ease;
-  overflow: hidden;
-}
+  overflow: hidden;}
 
 .intervention-dot:hover {
   transform: scale(1.02);
@@ -255,7 +243,7 @@
 .legend-dot {
   width: 12px;
   height: 12px;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-light) 100%);
   border-radius: 0.25rem;
 }
 
@@ -286,19 +274,15 @@
   flex-direction: column;
   gap: 2px;
   margin-bottom: 2px;
-}
-
-.absence-dot {
-  display: flex;
+}.absence-dot {display: flex;
   align-items: center;
   gap: 0.25rem;
   padding: 0.2rem 0.375rem;
   background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
   border-radius: 0.25rem;
   font-size: 0.625rem;
-  color: white;
-  overflow: hidden;
-}
+  color: var(--text-on-colored-bg);
+  overflow: hidden;}
 
 .absence-dot.absence-conges {
   background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);

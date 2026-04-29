@@ -22,7 +22,7 @@
 .contracts-header h1 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary, var(--text-primary));
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -42,19 +42,20 @@
 }
 
 .stat-card {
-    background: linear-gradient(135deg, rgba(30, 30, 45, 0.9), rgba(20, 20, 35, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card-bg, var(--bg-primary));
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
     border-radius: 16px;
     padding: 1.25rem;
     display: flex;
     align-items: center;
     gap: 1rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--card-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
 .stat-icon {
@@ -68,24 +69,24 @@
 }
 
 .stat-icon.active {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .stat-icon.expired {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
 }
 
 .stat-icon.pending {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: linear-gradient(135deg, var(--color-warning), var(--color-warning-dark));
 }
 
 .stat-icon.revenue {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-600));
 }
 
 .stat-content h3 {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary, var(--text-secondary));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 0.25rem 0;
@@ -94,7 +95,7 @@
 .stat-content .value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary, var(--text-primary));
 }
 
 /* ========== Toolbar ========== */
@@ -121,16 +122,17 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 1rem;
+    color: var(--text-secondary);
     pointer-events: none;
 }
 
 .search-input {
     width: 100%;
     padding: 0.75rem 2.5rem 0.75rem 2.75rem;
-    background: rgba(30, 30, 45, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
     border-radius: 12px;
-    color: #fff;
+    color: var(--text-primary, var(--text-primary));
     font-size: 0.9rem;
     transition: all 0.2s ease;
 }
@@ -142,7 +144,7 @@
 }
 
 .search-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-tertiary, var(--text-tertiary));
 }
 
 .search-clear {
@@ -150,12 +152,12 @@
     right: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-tertiary);
     border: none;
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -165,8 +167,8 @@
 }
 
 .search-clear:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 /* ========== Filters ========== */
@@ -177,11 +179,11 @@
 }
 
 .filter-select {
-    background: rgba(30, 30, 45, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary, var(--bg-primary));
+    border: 1px solid var(--border-color, var(--border-color));
     border-radius: 8px;
     padding: 0.5rem 1rem;
-    color: #fff;
+    color: var(--text-primary, var(--text-primary));
     font-size: 0.875rem;
     cursor: pointer;
     transition: border-color 0.2s ease;
@@ -196,21 +198,22 @@
 /* ========== Results Info ========== */
 .results-info {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     margin-bottom: 1rem;
 }
 
 .results-info span {
-    color: #a78bfa;
+    color: var(--color-primary);
+    font-weight: 600;
 }
 
 /* ========== Primary Button ========== */
 .btn-primary {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-600));
     border: none;
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -233,8 +236,8 @@
 }
 
 .contract-card {
-    background: linear-gradient(135deg, rgba(30, 30, 45, 0.9), rgba(20, 20, 35, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 1.25rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -255,11 +258,11 @@
 
 /* ========== Expiry States ========== */
 .contract-card.expiring-soon {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-warning);
 }
 
 .contract-card.expired-card {
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid var(--color-danger);
     opacity: 0.85;
 }
 
@@ -274,13 +277,13 @@
 .expiry-alert-badge.warning {
     background: rgba(245, 158, 11, 0.15);
     border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .expiry-alert-badge.danger {
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* ========== Card Sections ========== */
@@ -300,12 +303,12 @@
 .contract-client-name {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .contract-type {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -319,23 +322,23 @@
 }
 
 .contract-status.active {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
+    background: rgba(184, 115, 51, 0.2);
+    color: var(--color-copper);
 }
 
 .contract-status.expired {
     background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .contract-status.pending_renewal {
     background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .contract-status.cancelled {
     background: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
+    color: var(--text-tertiary);
 }
 
 .contract-card-body {
@@ -353,17 +356,17 @@
 
 .contract-info-item .label {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-tertiary);
 }
 
 .contract-info-item .value {
     font-size: 0.875rem;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .price-value {
     font-weight: 600;
-    color: #10b981 !important;
+    color: var(--color-copper) !important;
 }
 
 .contract-card-footer {
@@ -371,7 +374,7 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--border-color);
 }
 
 .contract-visits-badge {
@@ -379,10 +382,11 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.35rem 0.75rem;
-    background: rgba(139, 92, 246, 0.15);
+    background: rgba(184, 115, 51, 0.15);
     border-radius: 8px;
     font-size: 0.75rem;
-    color: #a78bfa;
+    color: var(--color-copper);
+    font-weight: 500;
 }
 
 .contract-actions {
@@ -395,8 +399,8 @@
     height: 36px;
     border: none;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.7);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -405,13 +409,13 @@
 }
 
 .btn-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .btn-icon.delete:hover {
     background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* ========== Modal ========== */
@@ -430,8 +434,8 @@
 }
 
 .modal-content {
-    background: linear-gradient(135deg, rgba(30, 30, 45, 0.98), rgba(20, 20, 35, 0.99));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 20px;
     width: 100%;
     max-width: 600px;
@@ -444,13 +448,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-primary);
     margin: 0;
 }
 
@@ -459,8 +463,8 @@
     height: 32px;
     border: none;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.7);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 1.25rem;
     display: flex;
@@ -469,8 +473,8 @@
 }
 
 .modal-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .modal-body {
@@ -482,7 +486,7 @@
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 1rem 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--border-color);
 }
 
 /* ========== Form ========== */
@@ -494,7 +498,7 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
@@ -503,10 +507,10 @@
 .form-group textarea {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.875rem;
     transition: border-color 0.2s ease;
 }
@@ -530,11 +534,11 @@
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 500;
     font-size: 0.875rem;
     cursor: pointer;
@@ -542,7 +546,7 @@
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-tertiary);
 }
 
 /* ========== Empty State ========== */
@@ -564,12 +568,12 @@
 .empty-state h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-primary);
     margin: 0 0 0.5rem 0;
 }
 
 .empty-state p {
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     margin: 0;
 }
 
@@ -586,7 +590,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #8b5cf6;
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -659,8 +663,8 @@
 }
 
 .toggle-group.active {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: rgba(184, 115, 51, 0.1);
+    border: 1px solid rgba(184, 115, 51, 0.3);
 }
 
 .toggle-container {
@@ -691,24 +695,24 @@
 }
 
 .toggle-switch.on {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
 }
 
 .toggle-switch.on .toggle-knob {
     transform: translateX(22px);
-    background: #fff;
+    background: var(--text-inverse);
 }
 
 .toggle-text {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.9rem;
 }
 
 .toggle-text small {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-tertiary);
     font-size: 0.75rem;
 }
 /* ========== Delete Confirmation Modal ========== */
@@ -718,24 +722,24 @@
 
 .delete-confirm-modal .modal-body p {
     margin-bottom: 1rem;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .delete-confirm-modal .warning-text {
-    color: #f59e0b;
+    color: var(--color-warning);
     font-size: 0.875rem;
     background: rgba(245, 158, 11, 0.1);
     padding: 0.75rem;
     border-radius: 8px;
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-warning);
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
     border: none;
     border-radius: 10px;
     padding: 0.75rem 1.5rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -745,4 +749,18 @@
 .btn-danger:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* ==================== THEME SUPPORT ==================== */
+/* Les couleurs sont maintenant gérées par les variables CSS */
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs seront automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .contracts-view,
+.dark-theme .contracts-view {
+  /* Overrides spécifiques si nécessaires */
 }

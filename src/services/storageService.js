@@ -18,7 +18,11 @@ async function getSignedUrl(bucket, filePath) {
     .createSignedUrl(filePath, SIGNED_URL_EXPIRY);
 
   if (error) {
-    logger.error('Error creating signed URL:', error);
+    // Si le fichier n'existe pas, c'est normal (supprimé du storage mais encore en BDD)
+    // On ne log que les autres erreurs
+    if (error.message && !error.message.includes('Object not found')) {
+      logger.error('Error creating signed URL:', error);
+    }
     // Fallback: tenter l'URL publique (rétrocompatibilité pendant migration)
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)

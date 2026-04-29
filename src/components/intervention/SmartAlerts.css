@@ -40,9 +40,9 @@
 
 /* Focus visible for keyboard navigation */
 .smart-alert:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-copper);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 4px rgba(184, 115, 51, 0.3);
 }
 
 /* Alert Types */
@@ -72,7 +72,7 @@
 
 /* Icon */
 .alert-icon {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
@@ -84,16 +84,16 @@
 }
 
 .alert-title {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 700;
   margin-bottom: 0.125rem;
   line-height: 1.3;
 }
 
 .alert-message {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  opacity: 0.85;
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 1;
   line-height: 1.4;
 }
 

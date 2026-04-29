@@ -1,0 +1,190 @@
+/* ============================================================
+ * DEMO BANNER - Bannière de démonstration
+ * ============================================================
+ * Bannière orange affichée en haut de l'écran en mode démo
+ * pour indiquer clairement qu'il s'agit d'un environnement de test
+ * ============================================================ */
+
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  padding: 10px 16px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  animation: demo-banner-slide-down 0.3s ease-out;
+}
+
+@keyframes demo-banner-slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.demo-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.demo-banner-icon {
+  flex-shrink: 0;
+  animation: demo-icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes demo-icon-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.demo-banner-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.demo-banner-subtext {
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.95;
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+  padding-left: 12px;
+  margin-left: 4px;
+}
+
+/* ============================================================
+ * RESPONSIVE - Mobile et tablette
+ * ============================================================ */
+
+/* Tablettes */
+@media (max-width: 1024px) {
+  .demo-banner {
+    padding: 8px 12px;
+  }
+
+  .demo-banner-content {
+    gap: 10px;
+  }
+
+  .demo-banner-title {
+    font-size: 0.9rem;
+  }
+
+  .demo-banner-subtext {
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .demo-banner {
+    padding: 8px 10px;
+  }
+
+  .demo-banner-content {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .demo-banner-icon {
+    display: none; /* Masquer l'icône sur mobile pour gagner de l'espace */
+  }
+
+  .demo-banner-title {
+    font-size: 0.85rem;
+  }
+
+  .demo-banner-subtext {
+    font-size: 0.75rem;
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
+  }
+}
+
+/* Très petit mobile */
+@media (max-width: 480px) {
+  .demo-banner {
+    padding: 6px 8px;
+  }
+
+  .demo-banner-title {
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+  }
+
+  .demo-banner-subtext {
+    font-size: 0.7rem;
+  }
+}
+
+/* ============================================================
+ * ACCESSIBILITÉ
+ * ============================================================ */
+
+/* Mode contraste élevé */
+@media (prefers-contrast: high) {
+  .demo-banner {
+    background: #d97706;
+    border-bottom: 3px solid #000;
+  }
+
+  .demo-banner-subtext {
+    border-left-color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Mode sombre (si l'application le supporte) */
+@media (prefers-color-scheme: dark) {
+  .demo-banner {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Réduction des animations pour accessibilité */
+@media (prefers-reduced-motion: reduce) {
+  .demo-banner {
+    animation: none;
+  }
+
+  .demo-banner-icon {
+    animation: none;
+  }
+}
+
+/* ============================================================
+ * IMPRESSION
+ * ============================================================ */
+
+@media print {
+  .demo-banner {
+    position: relative;
+    background: #f59e0b;
+    color: #000;
+    border: 2px solid #000;
+    page-break-after: avoid;
+  }
+
+  .demo-banner-icon {
+    display: none;
+  }
+}

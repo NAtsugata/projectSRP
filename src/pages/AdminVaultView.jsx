@@ -306,15 +306,22 @@ export default function AdminVaultView({
     });
   };
 
-  // Télécharger un document (avec URL signée fraîche)
+  // Télécharger un document (avec URL signée fraîche) - Détecte automatiquement le bucket
   const handleDownload = useCallback(async (doc) => {
     try {
+      // Déterminer le bucket: 'cerfa-documents' pour les Cerfa, 'vault-files' pour le reste
+      const isCerfaDoc = doc.file_url?.includes('cerfa-documents') ||
+                         doc.file_path?.startsWith('cerfa/') ||
+                         doc.file_name?.toLowerCase().includes('cerfa');
+
+      const bucket = isCerfaDoc ? 'cerfa-documents' : 'vault-files';
+
       // Les signed URLs expirent après 1h, on doit en générer une nouvelle
-      const filePath = storageService.extractFilePath(doc.file_url, 'vault-files');
+      const filePath = storageService.extractFilePath(doc.file_url, bucket);
 
       if (filePath) {
-        const freshUrl = await storageService.refreshSignedUrl(filePath, 'vault-files');
-        logger.log('Fresh signed URL generated for download:', filePath);
+        const freshUrl = await storageService.refreshSignedUrl(filePath, bucket);
+        logger.log('Fresh signed URL generated for download:', filePath, 'from bucket:', bucket);
         // Ouvrir dans un nouvel onglet pour télécharger
         window.open(freshUrl, '_blank');
       } else {

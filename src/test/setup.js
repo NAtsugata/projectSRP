@@ -29,7 +29,7 @@ globalThis.matchMedia = globalThis.matchMedia || function () {
 };
 
 // Suppress console.warn/error in tests unless debugging
-if (!process.env.DEBUG_TESTS) {
+if (!import.meta.env.VITE_DEBUG_TESTS) {
   const noop = () => {};
   globalThis.console.warn = noop;
 }

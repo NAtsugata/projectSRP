@@ -1,0 +1,615 @@
+/**
+ * ============================================================
+ * CALCULATEUR D'AIDES - STYLES
+ * ============================================================
+ * Design moderne avec couleurs cuivre/blanc/noir
+ * Responsive mobile-first
+ * ============================================================
+ */
+
+.calculateur-aides-page {
+  min-height: 100vh;
+  background: var(--bg-app);
+  padding-bottom: 60px;
+}/* ============================================================
+   HEADER
+   ============================================================ */
+
+.calc-header {background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--text-on-colored-bg);
+  padding: 24px 20px;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;}
+
+.calc-header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.calc-header-content svg {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.calc-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.calc-header p {
+  margin: 4px 0 0 0;
+  opacity: 0.95;
+  font-size: 14px;
+}
+
+/* ============================================================
+   CONTAINER & LAYOUT
+   ============================================================ */
+
+.calc-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Mobile: layout vertical */
+@media (max-width: 968px) {
+  .calc-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.calc-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.3s ease;
+}
+
+.calc-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.calc-card h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calc-card h3 {
+  margin: 16px 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.section-title {
+  margin-top: 32px !important;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ============================================================
+   FORMULAIRE
+   ============================================================ */
+
+.calc-form-section {
+  position: sticky;
+  top: 100px;
+}
+
+@media (max-width: 968px) {
+  .calc-form-section {
+    position: static;
+  }
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Checkbox personnalisée */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.checkbox-label span {
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   RÉSULTATS
+   ============================================================ */
+
+.calc-results-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============================================================
+   ÉLIGIBILITÉ
+   ============================================================ */
+
+.eligibility-card {
+  border-left: 4px solid var(--border-color);
+}
+
+.eligibility-card.eligible {
+  border-left-color: #22c55e;
+  background: linear-gradient(to right, rgba(34, 197, 94, 0.05), transparent);
+}
+
+.eligibility-card.not-eligible {
+  border-left-color: #ef4444;
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.05), transparent);
+}
+
+.eligibility-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.check-item.valid {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.check-item.invalid {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.check-item svg {
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   CATÉGORIE
+   ============================================================ */
+
+.category-card {
+  text-align: center;
+  background: var(--bg-secondary);
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+/* Couleurs selon catégorie */
+.category-card.category-bleu .category-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.category-card.category-jaune .category-badge {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+}
+
+.category-card.category-violet .category-badge {
+  background: linear-gradient(135deg, #a855f7, #9333ea);
+}
+
+.category-card.category-rose .category-badge {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+}
+
+.category-card.category-copropriete .category-badge {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+}
+
+/* ============================================================
+   AIDES DÉTAILLÉES
+   ============================================================ */
+
+.aides-detail-card {
+  background: linear-gradient(to bottom, var(--card-bg), var(--bg-secondary));
+}
+
+.aide-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.aide-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aide-label strong {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.aide-desc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.aide-montant {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.aide-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0 0 0;
+  margin-top: 12px;
+  border-top: 3px solid var(--color-primary);
+}
+
+.aide-total .aide-label strong {
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.aide-total .aide-montant.total {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-primary);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}/* ============================================================
+   RESTE À CHARGE
+   ============================================================ */
+
+.reste-charge-card {background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  color: var(--text-on-colored-bg);}
+
+.reste-charge-card h2 {
+  color: white;
+  margin-bottom: 16px;
+}
+
+.finance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 16px;
+}
+
+.finance-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.finance-row strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.total-row {
+  margin-top: 12px;
+  padding-top: 16px !important;
+  border-top: 2px solid white !important;
+  font-size: 18px;
+}
+
+.total-row strong {
+  font-size: 28px;
+}
+
+.taux-aide {
+  text-align: center;
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.taux-aide strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* ============================================================
+   PLACEHOLDER
+   ============================================================ */
+
+.placeholder-card {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.placeholder-card p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* ============================================================
+   INFO / CONDITIONS
+   ============================================================ */
+
+.info-card {
+  background: var(--bg-tertiary);
+}.info-toggle {width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--color-primary);
+  color: var(--text-on-colored-bg);
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;}
+
+.info-toggle:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.info-toggle .arrow {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+}
+
+.info-toggle .arrow.open {
+  transform: rotate(180deg);
+}
+
+.info-content {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border-color);
+}
+
+.info-content h3 {
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 20px 0 12px 0;
+}
+
+.info-content h3:first-child {
+  margin-top: 0;
+}
+
+.info-content ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.info-content li {
+  position: relative;
+  padding-left: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.info-content li:before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+/* ============================================================
+   UTILITAIRES
+   ============================================================ */
+
+.text-success {
+  color: #22c55e !important;
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .calc-header {
+    padding: 16px;
+  }
+
+  .calc-header h1 {
+    font-size: 20px;
+  }
+
+  .calc-header p {
+    font-size: 13px;
+  }
+
+  .calc-container {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .calc-card {
+    padding: 20px;
+  }
+
+  .aide-montant {
+    font-size: 18px;
+  }
+
+  .aide-total .aide-montant.total {
+    font-size: 24px;
+  }
+
+  .finance-row {
+    font-size: 14px;
+  }
+
+  .total-row strong {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .calc-header-content svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .calc-header h1 {
+    font-size: 18px;
+  }
+
+  .aide-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .aide-montant {
+    align-self: flex-end;
+  }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.calc-card {
+  animation: slideIn 0.4s ease;
+}
+
+.calc-results-section .calc-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.calc-results-section .calc-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.calc-results-section .calc-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.calc-results-section .calc-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  /* Les couleurs sont automatiquement gérées par les variables CSS */
+}
+
+/* Support explicite via classe .dark-theme */
+[data-theme="dark"] .calculateur-aides-page,
+.dark-theme .calculateur-aides-page {
+  /* Overrides spécifiques si nécessaires */
+}

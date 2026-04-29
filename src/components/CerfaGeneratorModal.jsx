@@ -102,7 +102,7 @@ function CerfaGeneratorModal({
             const date = new Date().toISOString().split('T')[0];
             const filename = `CERFA_15497_${clientName}_${date}.pdf`;
 
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             saveGenerationRecord({
                 type: 'cerfa_15497',

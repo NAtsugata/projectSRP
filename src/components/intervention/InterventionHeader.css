@@ -1,16 +1,14 @@
 /* src/components/intervention/InterventionHeader.css */
 
-.intervention-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+.intervention-header {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   position: relative;
-  overflow: hidden;
-}
+  overflow: hidden;}
 
 /* Effet glassmorphism subtle */
 .intervention-header::before {
@@ -98,12 +96,8 @@
 .badge svg {
   width: 0.875rem;
   height: 0.875rem;
-}
-
-.badge-urgent {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-  color: #fff;
-}
+}.badge-urgent {background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: var(--text-on-colored-bg);}
 
 .badge-sav {
   background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
@@ -134,9 +128,9 @@
 
 .service-type {
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0.375rem 0 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   line-height: 1.4;
 }
 
@@ -172,12 +166,12 @@
 }
 
 .action-call:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-color: transparent;
 }
 
 .action-navigate:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
   border-color: transparent;
 }
 
@@ -205,7 +199,8 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: rgba(255, 255, 255, 0.95);
+  color: #ffffff;
+  font-weight: 500;
 }
 
 /* Date & Time */
@@ -220,8 +215,8 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .datetime-item svg {

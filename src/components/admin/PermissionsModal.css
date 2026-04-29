@@ -1,12 +1,12 @@
 /* src/components/admin/PermissionsModal.css */
 /* Design: Blanc, Noir, Cuivre - Style moderne et professionnel */
 
+/* Variables locales - DYNAMIQUES selon le thème ✅ */
 :root {
-  --perm-copper: #b87333;
-  --perm-copper-light: #d4a574;
-  --perm-copper-dark: #8b5a2b;
-  --perm-black: #1a1a1a;
-  --perm-white: #ffffff;
+  --perm-copper: var(--color-copper);           /* Change avec le thème! */
+  --perm-copper-light: var(--color-copper-light);
+  --perm-copper-dark: var(--color-copper-dark);
+  /* --perm-black et --perm-white sont définis dans theme-variables.css */
   --perm-gray-light: #f8f9fa;
   --perm-gray: #e9ecef;
   --perm-gray-dark: #6c757d;

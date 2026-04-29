@@ -326,7 +326,7 @@ function CerfaPage() {
         setIsGenerating(true);
         try {
             // Générer le numéro de fiche
-            const ficheNumber = getNextFicheNumber();
+            const ficheNumber = getNextFicheNumber('15497');
             const clientName = (formData.detenteurNom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
             const date = new Date().toISOString().split('T')[0];
 
@@ -349,7 +349,7 @@ function CerfaPage() {
             const filename = `${ficheNumber}_${clientName}_${date}.pdf`;
 
             // Télécharger le PDF
-            downloadCerfa(pdfBlob, filename);
+            await downloadCerfa(pdfBlob, filename);
 
             // Enregistrer dans Supabase Storage
             try {

@@ -10,7 +10,7 @@
   gap: 0.5rem;
   padding: 0.75rem;
   margin-bottom: 0.75rem;
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
   border-radius: 6px;
   color: #991b1b;
   font-size: 0.875rem;
@@ -36,7 +36,7 @@
   font-weight: 500;
   color: #dc2626;
   padding: 0.5rem 0.75rem;
-  background-color: #fee2e2;
+  background-color: var(--color-danger-light);
   border-radius: 6px;
 }
 
@@ -59,7 +59,7 @@
 
 .voice-recorder-uploading {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-style: italic;
 }
 

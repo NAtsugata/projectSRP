@@ -25,6 +25,10 @@ export function useChecklists(userId = null) {
         },
         staleTime: 5 * 60 * 1000,  // 5 minutes
         gcTime: 15 * 60 * 1000,
+        networkMode: 'always',
+        retry: 3,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+        refetchOnReconnect: 'always',
     });
 
     // Query pour récupérer les templates
@@ -37,10 +41,15 @@ export function useChecklists(userId = null) {
         queryKey: ['checklistTemplates'],
         queryFn: async () => {
             const result = await checklistService.getAllTemplates();
+            if (result.error) throw result.error;
             return result.data || [];
         },
-        staleTime: 30 * 60 * 1000, // 30 minutes - templates changent rarement
-        gcTime: 60 * 60 * 1000,    // 1 heure en cache
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        networkMode: 'always',
+        retry: 3,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+        refetchOnReconnect: 'always',
     });
 
     // Mutation pour mettre à jour une checklist

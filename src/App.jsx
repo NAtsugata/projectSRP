@@ -1,7 +1,7 @@
 // =============================
 // FILE: src/App.js — REFACTORISÉ (Containers + React Query)
 // =============================
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService, profileService, supabase } from './lib/supabase';
@@ -18,6 +18,8 @@ import logger from './utils/logger';
 import OfflineIndicator from './components/OfflineIndicator';
 import MobileIndicators from './components/mobile/MobileIndicators';
 import PWAInstallPrompt from './components/pwa/PWAInstallPrompt';
+import ConnectionStatusBanner from './components/ConnectionStatusBanner';
+import { startConnectionMonitoring, onConnectionChange } from './utils/connectionMonitor';
 import ErrorBoundary from './components/ErrorBoundary';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
 import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/LegalPages';
@@ -43,6 +45,8 @@ const AdminInvoicesViewContainer = lazy(() => import('./pages/AdminInvoicesViewC
 const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewContainer'));
 const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
 const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage'));
+const CompanySettings = lazy(() => import('./pages/CompanySettings'));
+const SmartPlanningManager = lazy(() => import('./components/SmartPlanningManager'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
 const EmployeeLeaveViewContainer = lazy(() => import('./pages/EmployeeLeaveViewContainer'));
@@ -59,6 +63,7 @@ const CerfaManager = lazy(() => import('./pages/CerfaManager'));
 const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 const CerfaPage15498 = lazy(() => import('./pages/CerfaPage15498'));
 const CerfaPage1301 = lazy(() => import('./pages/CerfaPage1301'));
+const CalculateurAidesView = lazy(() => import('./pages/CalculateurAidesView'));
 
 
 
@@ -67,6 +72,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const profileRef = useRef(profile);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const navigate = useNavigate();
@@ -85,14 +91,57 @@ function App() {
     logger.log('alert() remplacé par des toasts');
   }, [showToast]);
 
+  // Keep ref in sync so the connection callback always has the latest profile value
+  useEffect(() => { profileRef.current = profile; }, [profile]);
+
+  useEffect(() => {
+    startConnectionMonitoring();
+
+    const unsubscribe = onConnectionChange((isOnline) => {
+      if (isOnline) {
+        logger.log('[App] Connexion Supabase rétablie — reload des données');
+        queryClient.invalidateQueries();
+        if (session?.user && !profileRef.current) {
+          profileService.getProfile(session.user.id)
+            .then(({ data: userProfile, error }) => {
+              if (!error && userProfile) setProfile(userProfile);
+            });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient, session]);
+
+  // ✅ Vérifier session hors ligne au démarrage
+  useEffect(() => {
+    const checkOfflineSession = async () => {
+      if (!navigator.onLine) {
+        logger.log('📴 Mode hors ligne détecté - Vérification session cache');
+        const result = await authService.getSession();
+        if (result.data?.session && result.isOfflineMode) {
+          logger.log('✅ Session hors ligne trouvée');
+          setSession(result.data.session);
+        }
+      }
+    };
+    checkOfflineSession();
+  }, []);
+
   useEffect(() => {
     const {
       data: { subscription }
-    } = authService.onAuthStateChange((_event, sessionData) => {
+    } = authService.onAuthStateChange((event, sessionData) => {
+      // Token de refresh invalide (expiré pendant panne Supabase) — déconnecter proprement
+      if (!sessionData && event === 'SIGNED_OUT' && profileRef.current) {
+        logger.warn('[App] Session expirée (token invalide) — reconnexion requise');
+        showToast('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+        setProfile(null);
+      }
       setSession(sessionData);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [showToast]);
 
   // Sync with Zustand store
   const { setUser, setProfile: setStoreProfile, setLoading: setStoreLoading, logout } = useAuthStore();
@@ -114,19 +163,52 @@ function App() {
   useEffect(() => {
     if (session?.user) {
       setLoading(true);
-      profileService
-        .getProfile(session.user.id)
-        .then(({ data: userProfile, error }) => {
-          if (error) {
-            showToast('Impossible de récupérer le profil.', 'error');
-            authService.signOut();
-          } else {
-            setProfile(userProfile);
-          }
-        })
-        .finally(() => {
-          setLoading(false);
+
+      // Si hors ligne, charger depuis le cache
+      if (!navigator.onLine) {
+        logger.log('📴 [App] Mode hors ligne détecté - Chargement profil depuis cache');
+        import('./services/offlineAuthService').then(({ getOfflineUserData }) => {
+          getOfflineUserData()
+            .then(cachedProfile => {
+              if (cachedProfile) {
+                logger.log('📴 [App] ✅ Profil chargé depuis le cache:', {
+                  id: cachedProfile.id,
+                  email: cachedProfile.email,
+                  is_admin: cachedProfile.is_admin,
+                  full_name: cachedProfile.full_name
+                });
+                setProfile(cachedProfile);
+              } else {
+                logger.warn('📴 [App] ❌ Profil non disponible en cache');
+                showToast('Profil non disponible hors ligne. Reconnectez-vous en ligne une fois.', 'warning');
+                setProfile(null);
+              }
+            })
+            .catch(err => {
+              logger.error('📴 [App] ❌ Erreur chargement profil hors ligne:', err);
+              setProfile(null);
+            })
+            .finally(() => setLoading(false));
         });
+      } else {
+        // Mode en ligne : charger depuis Supabase
+        profileService
+          .getProfile(session.user.id)
+          .then(({ data: userProfile, error }) => {
+            if (error) {
+              // Ne pas déconnecter l'utilisateur sur erreur réseau/Supabase temporaire
+              // La connexion sera réessayée automatiquement par le ConnectionMonitor
+              logger.warn('[App] Erreur chargement profil (probablement temporaire):', error.message);
+              showToast('Connexion au serveur impossible. Nouvelle tentative automatique...', 'warning');
+              setProfile(null);
+            } else {
+              setProfile(userProfile);
+            }
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     } else {
       setProfile(null);
       setLoading(false);
@@ -206,6 +288,7 @@ function App() {
   return (
     <DownloadProvider>
       <ToastProvider>
+        <ConnectionStatusBanner />
         <OfflineIndicator />
         <PWAInstallPrompt />
 
@@ -229,7 +312,15 @@ function App() {
           <Route path="/terms" element={<TermsOfServicePage />} />
 
           {!session || !profile ? (
-            <Route path="*" element={<LoginScreen />} />
+            <>
+              {/* Log pour débogage */}
+              {logger.log('[App] 🚫 Accès bloqué - Redirection vers LoginScreen', {
+                hasSession: !!session,
+                hasProfile: !!profile,
+                isOffline: !navigator.onLine
+              })}
+              <Route path="*" element={<LoginScreen />} />
+            </>
           ) : (
             <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} lastNotification={pushNotifications.lastNotification} />}>
               {profile.is_admin ? (
@@ -346,9 +437,19 @@ function App() {
                       <AdminCatalogViewContainer />
                     </Suspense>
                   } />
+                  <Route path="multi-day-planning" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <SmartPlanningManager />
+                    </Suspense>
+                  } />
                   <Route path="settings" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <OrganizationSettingsPage />
+                    </Suspense>
+                  } />
+                  <Route path="company-settings" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CompanySettings />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
@@ -393,6 +494,13 @@ function App() {
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage1301 />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
+                  <Route path="calculateur-aides" element={
+                    <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -488,6 +596,13 @@ function App() {
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <CerfaPage1301 />
+                    </Suspense>
+                    </SectionErrorBoundary>
+                  } />
+                  <Route path="calculateur-aides" element={
+                    <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />

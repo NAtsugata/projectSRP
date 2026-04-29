@@ -8,18 +8,14 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
-}
-
-.stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+}.stat-card {background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
+  color: var(--text-on-colored-bg);
   padding: 1rem;
   border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
 
 .stat-card.success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
 }
 
 .stat-card.warning {
@@ -70,7 +66,7 @@
   aspect-ratio: 3/4;
   border-radius: 0.5rem;
   overflow: hidden;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
   background: #f8f9fa;
 }
 
@@ -78,14 +74,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.receipt-remove {
-  position: absolute;
+}.receipt-remove {position: absolute;
   top: 4px;
   right: 4px;
-  background: #ef4444;
-  color: white;
+  background: var(--color-danger);
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -96,13 +89,12 @@
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
-  padding: 0;
-}
+  padding: 0;}
 
 /* Expense Items */
 .expense-item {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   padding: 1rem;
   margin-bottom: 0.75rem;
@@ -137,7 +129,7 @@
 }
 
 .expense-description {
-  color: #4b5563;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
 }
@@ -147,7 +139,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Status Badge */
@@ -174,7 +166,7 @@
 /* Paid Info */
 .paid-info {
   background: #eff6ff;
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid var(--color-copper);
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   border-radius: 0.25rem;
@@ -188,8 +180,8 @@
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
-  color: #374151;
-  background: white;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
   border: 1px solid #d1d5db;
 }
 
@@ -217,7 +209,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: white;
+  background: var(--bg-primary);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -252,7 +244,7 @@
 }
 
 .receipts-modal-link {
-  color: #6366f1;
+  color: var(--color-copper);
   text-decoration: underline;
   font-size: 0.9rem;
 }
@@ -322,12 +314,12 @@
 .user-stat-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937; /* Couleur par défaut sombre pour fond clair */
+  color: var(--text-primary); /* Couleur par défaut sombre pour fond clair */
 }
 
 .user-stat-value.pending { color: #d97706; }
-.user-stat-value.approved { color: #059669; }
-.user-stat-value.paid { color: #4f46e5; }
+.user-stat-value.approved { color: var(--color-copper-dark); }
+.user-stat-value.paid { color: var(--color-copper); }
 .user-stat-value.rejected { color: #dc2626; }
 
 /* Admin Expense Card */
@@ -390,7 +382,7 @@
 .admin-expense-receipts-btn {
   background: none;
   border: none;
-  color: #60a5fa;
+  color: var(--color-copper-light);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -413,8 +405,8 @@
 .admin-expense-paid-date {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: rgba(99, 102, 241, 0.15);
-  border-left: 3px solid #6366f1;
+  background: rgba(184, 115, 51, 0.15);
+  border-left: 3px solid var(--color-copper);
   border-radius: 0 4px 4px 0;
   color: #a5b4fc;
   font-size: 0.85rem;
@@ -431,24 +423,17 @@
 .admin-expense-comment-input {
   flex: 1;
   margin-right: auto;
-}
-
-.admin-expense-comment-input textarea {
-  width: 100%;
+}.admin-expense-comment-input textarea {width: 100%;
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 0.375rem;
-  color: white;
+  color: var(--text-on-colored-bg);
   padding: 0.5rem;
   font-size: 0.85rem;
   min-height: 38px;
-  resize: none;
-}
-
-/* Admin Action Buttons */
-.btn-approve {
-  background: #10b981;
-  color: white;
+  resize: none;}/* Admin Action Buttons */
+.btn-approve {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -456,8 +441,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-}
+  cursor: pointer;}
 
 .btn-reject {
   background: rgba(239, 68, 68, 0.2);
@@ -467,19 +451,15 @@
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
-}
-
-.btn-pay {
-  background: #6366f1;
-  color: white;
+}.btn-pay {background: var(--color-copper);
+  color: var(--text-on-colored-bg);
   border: none;
   padding: 0.6rem 1.25rem;
   border-radius: 0.5rem;
   font-weight: 600;
-  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 6px -1px rgba(184, 115, 51, 0.4);
   cursor: pointer;
-  transition: transform 0.2s;
-}
+  transition: transform 0.2s;}
 
 .btn-pay:hover {
   transform: translateY(-1px);
@@ -504,7 +484,7 @@
 }
 
 .btn-icon.btn-delete {
-  background: #ef4444;
+  background: var(--color-danger);
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 

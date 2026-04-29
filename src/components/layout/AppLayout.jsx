@@ -21,6 +21,10 @@ import {
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import useTheme from '../../hooks/useTheme';
+import ThemeToggle from '../ThemeToggle';
+import { MobileThemeToggleCompact } from '../MobileThemeSelector';
+import { DemoBanner } from '../DemoBanner';
 import './AppLayout.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
@@ -29,6 +33,11 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const { hasPermission, isAdmin } = usePermissions();
+    const { isDark } = useTheme();
+    const { organization } = useAuthStore();
+
+    // Vérifier si le mode démo est actif
+    const isDemoMode = organization?.settings?.demo_mode === true;
 
     // Navigation de base pour les employes
     const baseNavigation = [
@@ -41,6 +50,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Checklists', href: '/checklists', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
         { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+        { name: 'Aides État', href: '/calculateur-aides', icon: DollarSignIcon, color: 'text-[#d97706]', bg: 'bg-[#fff5eb]' },
     ];
 
     // Navigation complete admin
@@ -62,8 +72,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
         { name: 'IR Douche', href: '/ir-docs', icon: FolderIcon, color: 'text-cyan-500', bg: 'bg-cyan-50' },
         { name: 'PDF / CERFA', href: '/cerfa', icon: FileTextIcon, color: 'text-red-500', bg: 'bg-red-50' },
+        { name: 'Aides État', href: '/calculateur-aides', icon: DollarSignIcon, color: 'text-[#d97706]', bg: 'bg-[#fff5eb]' },
         { name: 'Organisations', href: '/organizations', icon: BuildingIcon, color: 'text-sky-500', bg: 'bg-sky-50' },
         { name: 'Parametres', href: '/settings', icon: SettingsIcon, color: 'text-slate-500', bg: 'bg-slate-50' },
+        { name: 'Config Entreprise', href: '/company-settings', icon: BuildingIcon, color: 'text-[#b87333]', bg: 'bg-[#f5e8d9]' },
     ];
 
     // Pages additionnelles basees sur les permissions
@@ -132,16 +144,16 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         return nav;
     }, [isAdmin, hasPermission]);
 
-    const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
-
     const handleMenuNavigation = (href) => {
         navigate(href);
         setShowMobileMenu(false);
     };
 
     return (
-        <div className={`app-layout ${isDashboard ? 'dark-mode-layout' : ''}`}>
-            {/* Desktop Sidebar */}
+        <>
+            <DemoBanner />
+            <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0' }}>
+                {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
                     <div className="sidebar-logo">
@@ -178,6 +190,9 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     ))}
                 </nav>
                 <div className="sidebar-footer">
+                    <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                        <ThemeToggle showLabel={true} />
+                    </div>
                     <button onClick={handleLogout} className="logout-button">
                         <LogOutIcon className="nav-icon" />
                         Deconnexion
@@ -192,6 +207,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     <h1>SRP</h1>
                 </div>
                 <div className="mobile-header-actions">
+                    <MobileThemeToggleCompact />
                     <NotificationBadge
                         count={0}
                         onClick={() => setShowNotifications(true)}
@@ -281,7 +297,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 onClose={() => setShowNotifications(false)}
                 lastNotification={lastNotification}
             />
-        </div>
+            </div>
+        </>
     );
 };
 
