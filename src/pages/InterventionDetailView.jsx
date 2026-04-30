@@ -28,7 +28,7 @@ import {
 } from '../components/intervention';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
-import ReceptionForm from './ReceptionForm';
+import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import logger from '../utils/logger';
