@@ -1145,9 +1145,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               </div>
             </div>
           )
-          // Hide the big button since ReceptionForm handles it
-          null
-        )}
+        ) : null}
       </div>
 
       {/* Modale signature */}
