@@ -32,6 +32,7 @@ import {
 import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
+import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import logger from '../utils/logger';
@@ -73,7 +74,7 @@ const fmtTime = (iso) => {
 
 // InlineUploader et VoiceNoteRecorder remplacés par FileUploader et VoiceRecorder importés
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [] }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -1127,13 +1128,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 )}
 
               {/* Procès-Verbal de Réception */}
-              <div className="section">
-                <PVReception
+              <div className="section" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+                <ReceptionForm
                   intervention={intervention}
-                  client={null}
-                  report={report}
-                  onSave={handlePVSave}
-                  readOnly={false}
+                  organization={organization}
+                  technician={profile}
+                  onSaved={() => refreshData?.()}
+                  onClose={null}
                 />
               </div>
             </div>

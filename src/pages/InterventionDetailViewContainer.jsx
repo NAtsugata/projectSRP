@@ -20,6 +20,21 @@ const InterventionDetailViewContainer = () => {
     const { users } = useUsers();
     const [isUpdatingTeam, setIsUpdatingTeam] = React.useState(false);
 
+    const { data: organization } = useQuery({
+        queryKey: ['organization', profile?.organization_id],
+        queryFn: async () => {
+            if (!profile?.organization_id) return null;
+            const { data, error } = await supabase
+                .from('organizations')
+                .select('*')
+                .eq('id', profile.organization_id)
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!profile?.organization_id,
+    });
+
     const { data: intervention, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['intervention', interventionId],
         queryFn: async () => {
@@ -176,9 +191,10 @@ const InterventionDetailViewContainer = () => {
 
     return (
         <InterventionDetailView
-            intervention={intervention} // Pass single intervention if view supports it
-            interventions={intervention ? [intervention] : []} // Pass array for compatibility
+            intervention={intervention}
+            interventions={intervention ? [intervention] : []}
             profile={profile}
+            organization={organization}
             onSave={handleUpdateInterventionReport}
             onSaveSilent={handleUpdateInterventionReportSilent}
             onAddBriefingDocuments={handleAddBriefingDocuments}
@@ -189,7 +205,7 @@ const InterventionDetailViewContainer = () => {
             users={users}
             isAdmin={profile?.is_admin}
             refreshData={refetch}
-            dataVersion={Date.now()} // Force update if needed
+            dataVersion={Date.now()}
         />
     );
 };
