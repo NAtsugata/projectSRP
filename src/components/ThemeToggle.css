@@ -1,0 +1,185 @@
+﻿/**
+ * ====================================================================
+ * STYLES: ThemeToggle
+ * ====================================================================
+ */
+
+/* Toggle simple */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-toggle:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle.compact {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--text-xs);
+}
+
+.theme-toggle-icon {
+  font-size: var(--text-xl);
+  line-height: 1;
+  transition: transform var(--transition-base);
+}
+
+.theme-toggle:hover .theme-toggle-icon {
+  transform: rotate(20deg) scale(1.1);
+}
+
+.theme-toggle-label {
+  font-size: var(--text-sm);
+  user-select: none;
+}
+
+/* Menu d├®roulant */
+.theme-toggle-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.theme-toggle-menu-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle-menu-button:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.dropdown-arrow {
+  font-size: var(--text-xs);
+  margin-left: var(--spacing-xs);
+  transition: transform var(--transition-base);
+}
+
+.theme-toggle-menu-button:hover .dropdown-arrow {
+  transform: translateY(2px);
+}
+
+.theme-toggle-menu-dropdown {
+  position: absolute;
+  top: calc(100% + var(--spacing-xs));
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  min-width: 200px;
+  z-index: var(--z-dropdown);
+  overflow: hidden;
+  animation: slideDown var(--transition-base);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-toggle-menu-dropdown .menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle-menu-dropdown .menu-item:last-child {
+  border-bottom: none;
+}
+
+.theme-toggle-menu-dropdown .menu-item:hover {
+  background: var(--bg-secondary);
+  color: var(--color-primary);
+}
+
+.theme-toggle-menu-dropdown .menu-item.active {
+  background: var(--bg-secondary);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+}
+
+.checkmark {
+  font-size: var(--text-lg);
+  color: var(--color-primary);
+  font-weight: var(--font-bold);
+}
+
+.theme-toggle-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: calc(var(--z-dropdown) - 1);
+  background: transparent;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .theme-toggle {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
+
+  .theme-toggle-icon {
+    font-size: var(--text-lg);
+  }
+
+  .theme-toggle-menu-dropdown {
+    right: auto;
+    left: 0;
+  }
+}
