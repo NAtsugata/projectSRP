@@ -28,6 +28,7 @@ import {
 } from '../components/intervention';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
+import ReceptionForm from './ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import logger from '../utils/logger';
@@ -69,7 +70,7 @@ const fmtTime = (iso) => {
 
 // InlineUploader et VoiceNoteRecorder remplacés par FileUploader et VoiceRecorder importés
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [] }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -818,27 +819,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             )}
           </div>
 
-          {/* Rapport */}
-          <div className="section">
-            <h3>📝 Rapport de chantier</h3>
-            <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)} placeholder="Détails, matériel, observations..." rows="5" className="form-control" readOnly={!!isAdmin} />
-            <VoiceRecorder
-              interventionId={interventionId}
-              onUploaded={async (uploaded) => {
-                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-                await persistReport(updated);
-                saveScroll();
-                pendingRestoreRef.current = true;
-                if (!document.body.dataset.__scrollLocked) lock();
-                try {
-                  await refreshData?.();
-                } finally {
-                  unlock();
-                  restoreScroll();
-                }
-              }}
-              onBeginCritical={lock}
-              onEndCritical={unlock}
+          {/* Rapport & PV de réception */}
+          <div className="section" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+            <ReceptionForm 
+              intervention={intervention} 
+              organization={organization} 
+              technician={profile} 
+              onSaved={() => refreshData?.()}
+              onClose={() => navigate('/planning')}
             />
           </div>
 
@@ -1081,115 +1069,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         </div>
 
-        {/* Checkpoints rapides */}
-        <div className="modern-section" id="checklist-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">✅</span>
-              Checklist rapide
-            </h3>
-          </div>
-          <div className="checklist-items">
-            {(report.quick_checkpoints || []).map((checkpoint, index) => (
-              <label
-                key={index}
-                className={`checklist-item ${checkpoint.done ? 'checked' : ''}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  background: checkpoint.done ? '#ecfdf5' : '#f9fafb',
-                  border: `2px solid ${checkpoint.done ? '#10b981' : '#e5e7eb'}`,
-                  borderRadius: '0.5rem',
-                  marginBottom: '0.5rem',
-                  cursor: isAdmin ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={checkpoint.done || false}
-                  onChange={(e) => {
-                    if (isAdmin) return;
-                    const updated = [...report.quick_checkpoints];
-                    updated[index] = {
-                      ...updated[index],
-                      done: e.target.checked,
-                      at: e.target.checked ? new Date().toISOString() : null
-                    };
-                    persistReport({ ...report, quick_checkpoints: updated });
-                  }}
-                  disabled={isAdmin}
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    accentColor: '#10b981'
-                  }}
-                />
-                <span style={{
-                  fontWeight: 500,
-                  color: checkpoint.done ? '#059669' : '#374151',
-                  textDecoration: checkpoint.done ? 'none' : 'none'
-                }}>
-                  {checkpoint.label}
-                </span>
-                {checkpoint.done && checkpoint.at && (
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#6b7280' }}>
-                    ✓ {new Date(checkpoint.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Signature */}
-        <div className="modern-section" id="signature-section">
-          <div className="section-header">
-            <h3 className="section-title">
-              <span className="section-title-icon">✍️</span>
-              Signature du client
-            </h3>
-          </div>
-          {report.signature ? (
-            <div>
-              <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #e5e7eb', borderRadius: '0.5rem', background: '#f8f9fa' }} />
-              <button onClick={() => handleReportChange('signature', null)} className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
-            </div>
-          ) : (
-            <div>
-              <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
-              <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
-            </div>
-          )}
-        </div>
-
-        {/* Kilométrage de fin */}
-        <div className="modern-section">
-          <h3 className="section-title">
-            <span className="section-title-icon">🚗</span>
-            Kilométrage de fin
-          </h3>
-          <div className="form-group">
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={report.km_end || ''}
-              onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="Ex: 45430"
-              className="form-control"
-              style={{ maxWidth: '200px' }}
-              readOnly={!!isAdmin}
-            />
-            {intervention.km_start && report.km_end && (
-              <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
-                Distance parcourue : <strong>{report.km_end - intervention.km_start} km</strong>
-              </small>
-            )}
-          </div>
-        </div>
+        {/* Sections enlevées car intégrées dans ReceptionForm */}
 
         {/* Génération CERFA - visible pour interventions entretien chaudière */}
         {(intervention.type?.toLowerCase()?.includes('entretien') ||
@@ -1265,10 +1145,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               </div>
             </div>
           )
-        ) : (
-          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-            {isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : 'Sauvegarder et Clôturer'}
-          </button>
+          // Hide the big button since ReceptionForm handles it
+          null
         )}
       </div>
 

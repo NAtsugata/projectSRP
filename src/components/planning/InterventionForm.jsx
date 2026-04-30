@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
-import { useForm } from '../../hooks';
+import { useFormDraft, DraftBanner } from '../../hooks/useFormDraft';
 import { validateIntervention } from '../../utils/validators';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
 import { clientService } from '../../services/clientService';
@@ -59,27 +59,52 @@ const InterventionForm = ({
         client_id: prefillClient.client_id || null
       }
     : initialValues;
-  const { values, errors, handleChange, handleSubmit, reset } = useForm(
-    mergedInitialValues,
-    validateIntervention,
-    async (formData) => {
-      logger.log('InterventionForm: Submitting...', formData);
+  const { formData: values, setFormData: setValues, clearDraft, hasDraft, lastSavedAt } = useFormDraft('intervention-create', mergedInitialValues);
+  const [errors, setErrors] = useState({});
 
-      // Ajouter les dates planifiées aux données du formulaire
-      // Conserver le client_id si fourni via prefillClient
-      const formDataWithScheduledDates = {
-        ...formData,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null,
-        client_id: selectedClient?.id || prefillClient?.client_id || null
-      };
+  const handleChange = useCallback((event) => {
+    const { name, value, type, checked } = event.target;
+    const fieldValue = type === 'checkbox' ? checked : value;
 
-      await onSubmit({
-        formData: formDataWithScheduledDates,
-        assignedUsers,
-        files: briefingFiles.map(f => f.fileObject)
-      });
+    setValues(prev => ({
+      ...prev,
+      [name]: fieldValue
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
-  );
+  }, [errors, setValues]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    // Valide tous les champs
+    const validationErrors = validateIntervention(values);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    logger.log('InterventionForm: Submitting...', values);
+    const formDataWithScheduledDates = {
+      ...values,
+      scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null,
+      client_id: selectedClient?.id || prefillClient?.client_id || null
+    };
+
+    await onSubmit({
+      formData: formDataWithScheduledDates,
+      assignedUsers,
+      files: briefingFiles.map(f => f.fileObject)
+    });
+    
+    clearDraft();
+  };
+
+  const reset = useCallback(() => {
+    clearDraft();
+  }, [clearDraft]);
 
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [briefingFiles, setBriefingFiles] = useState([]);
@@ -271,6 +296,8 @@ const InterventionForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>
+      {hasDraft && <DraftBanner lastSavedAt={lastSavedAt} onIgnore={clearDraft} />}
+      
       {/* Client avec autocomplete */}
       <div className="form-group client-autocomplete-wrapper" ref={suggestionsRef}>
         <label htmlFor="client" className="form-label">
