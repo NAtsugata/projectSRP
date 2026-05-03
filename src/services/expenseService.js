@@ -3,6 +3,19 @@ import { supabase } from '../lib/supabase';
 import logger from '../utils/logger';
 import { withOrgId } from '../utils/orgHelper';
 
+// Columns safe for list queries — receipts is excluded because it stores base64
+// images directly in JSONB, making a full-table fetch ~47 MB.
+const LIST_COLUMNS = 'id,user_id,date,category,amount,description,status,admin_comment,reviewed_by,reviewed_at,created_at,updated_at,is_paid,paid_date,paid_by,organization_id,receipts_count';
+
+function parseReceipts(expense) {
+  const r = expense.receipts;
+  if (r === undefined || r === null) return [];
+  if (typeof r === 'string') {
+    try { return JSON.parse(r || '[]'); } catch { return []; }
+  }
+  return Array.isArray(r) ? r : [];
+}
+
 /**
  * Service pour gérer les notes de frais des employés
  *
@@ -33,7 +46,7 @@ const expenseService = {
 
       let query = supabase
         .from('expenses')
-        .select('*', { count: 'exact' })
+        .select(LIST_COLUMNS, { count: 'exact' })
         .eq('user_id', userId)
         .range(from, to)
         .order('date', { ascending: false });
@@ -58,12 +71,7 @@ const expenseService = {
 
       if (error) throw error;
 
-      // Parser les receipts JSONB en tableaux
-      const parsedData = data?.map(expense => ({
-        ...expense,
-        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
-      })) || [];
-
+      const parsedData = data?.map(e => ({ ...e, receipts: parseReceipts(e) })) || [];
       return { data: parsedData, error: null, count };
     } catch (error) {
       logger.error('❌ Erreur getUserExpenses:', error);
@@ -81,7 +89,7 @@ const expenseService = {
 
       let query = supabase
         .from('expenses')
-        .select('*', { count: 'exact' })
+        .select(LIST_COLUMNS, { count: 'exact' })
         .range(from, to)
         .order('date', { ascending: false });
 
@@ -106,16 +114,30 @@ const expenseService = {
 
       if (error) throw error;
 
-      // Parser les receipts JSONB en tableaux
-      const parsedData = data?.map(expense => ({
-        ...expense,
-        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
-      })) || [];
-
+      const parsedData = data?.map(e => ({ ...e, receipts: parseReceipts(e) })) || [];
       return { data: parsedData, error: null, count };
     } catch (error) {
       logger.error('❌ Erreur getAllExpenses:', error);
       return { data: null, error, count: 0 };
+    }
+  },
+
+  /**
+   * Récupérer les justificatifs d'une note de frais spécifique (chargement à la demande)
+   */
+  async getExpenseReceipts(expenseId) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id,receipts')
+        .eq('id', expenseId)
+        .single();
+
+      if (error) throw error;
+      return { data: parseReceipts(data), error: null };
+    } catch (error) {
+      logger.error('❌ Erreur getExpenseReceipts:', error);
+      return { data: [], error };
     }
   },
 

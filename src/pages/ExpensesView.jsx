@@ -17,6 +17,7 @@ import { ReceiptsModal } from '../components/expenses';
 import { detectDocument } from '../utils/jscanifyDetector';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
+import expenseService from '../services/expenseService';
 import '../components/expenses/ExpensesStyles.css';
 
 export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile, filters, onUpdateFilters }) {
@@ -603,14 +604,17 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
                     <div className="expense-description">{expense.description}</div>
 
-                    {expense.receipts && expense.receipts.length > 0 && (
+                    {(expense.receipts_count > 0) && (
                       <button
                         type="button"
-                        onClick={() => setShowReceipts(expense.receipts)}
+                        onClick={async () => {
+                          const { data } = await expenseService.getExpenseReceipts(expense.id);
+                          setShowReceipts(data);
+                        }}
                         className="btn btn-sm btn-secondary"
                         style={{ width: '100%', marginBottom: '0.75rem' }}
                       >
-                        <FileTextIcon /> Voir les {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                        <FileTextIcon /> Voir les {expense.receipts_count} justificatif{expense.receipts_count > 1 ? 's' : ''}
                       </button>
                     )}
 

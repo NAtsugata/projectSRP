@@ -4,6 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import logger from '../../utils/logger';
+import expenseService from '../../services/expenseService';
 import {
   CheckCircleIcon,
   UserIcon,
@@ -542,14 +543,17 @@ const UserExpensesAccordion = ({
                       <span>{formatDate(expense.date)}</span>
                     </div>
                     <div className="admin-expense-amount">{formatAmount(expense.amount)}</div>
-                    {expense.receipts && expense.receipts.length > 0 && (
+                    {(expense.receipts_count > 0) && (
                       <button
                         type="button"
-                        onClick={() => setShowReceipts(expense.receipts)}
+                        onClick={async () => {
+                          const { data } = await expenseService.getExpenseReceipts(expense.id);
+                          setShowReceipts(data);
+                        }}
                         className="admin-expense-receipts-btn"
                       >
                         <FileTextIcon style={{ width: '14px', height: '14px' }} />
-                        {expense.receipts.length} PJ
+                        {expense.receipts_count} PJ
                       </button>
                     )}
                   </div>
