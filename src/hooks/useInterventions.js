@@ -172,9 +172,9 @@ export function useInterventions(userId = null, isArchived = false) {
 
         // Fonctions
         refetch,
-        createIntervention: createMutation.mutate,
-        updateIntervention: updateMutation.mutate,
-        deleteIntervention: deleteMutation.mutate,
+        createIntervention: createMutation.mutateAsync,
+        updateIntervention: updateMutation.mutateAsync,
+        deleteIntervention: deleteMutation.mutateAsync,
 
         // États des mutations
         isCreating: createMutation.isPending,
