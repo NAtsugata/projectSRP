@@ -7,6 +7,12 @@ import logger from '../utils/logger';
 
 const STORAGE_KEY = 'employee_absences'; // Fallback localStorage
 
+// Récupère l'organization_id de l'utilisateur courant via la DB function
+const getUserOrgId = async () => {
+  const { data } = await supabase.rpc('current_user_org_id');
+  return data || null;
+};
+
 /**
  * Créer une nouvelle absence
  * @param {Object} absence - Données de l'absence
@@ -16,6 +22,8 @@ export const createAbsence = async (absence) => {
   try {
     logger.log('➕ Création absence:', absence);
 
+    const organization_id = await getUserOrgId();
+
     const { data, error } = await supabase
       .from('employee_absences')
       .insert([{
@@ -23,7 +31,8 @@ export const createAbsence = async (absence) => {
         start_date: absence.startDate,
         end_date: absence.endDate,
         reason: absence.reason || 'Congés',
-        notes: absence.notes || null
+        notes: absence.notes || null,
+        organization_id
       }])
       .select();
 
@@ -134,6 +143,8 @@ export const updateAbsence = async (absenceId, updates) => {
   try {
     logger.log('✏️ Modification absence:', absenceId, updates);
 
+    const organization_id = await getUserOrgId();
+
     const { data, error } = await supabase
       .from('employee_absences')
       .update({
@@ -142,6 +153,7 @@ export const updateAbsence = async (absenceId, updates) => {
         end_date: updates.endDate,
         reason: updates.reason || 'Congés',
         notes: updates.notes || null,
+        organization_id,
         updated_at: new Date().toISOString()
       })
       .eq('id', absenceId)
