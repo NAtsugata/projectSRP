@@ -125,47 +125,47 @@ export const syncPendingOperations = async () => {
   isSyncing = true;
   notifySyncListeners({ type: 'SYNC_START' });
 
-  const operations = await getPendingSyncOperations();
   let synced = 0;
   let failed = 0;
 
-  logger.log(`[SyncService] ${operations.length} opérations à synchroniser`);
+  try {
+    const operations = await getPendingSyncOperations();
+    logger.log(`[SyncService] ${operations.length} opérations à synchroniser`);
 
-  for (const operation of operations) {
-    try {
-      const { error } = await executeOperation(operation);
+    for (const operation of operations) {
+      try {
+        const { error } = await executeOperation(operation);
 
-      if (error) {
-        throw error;
-      }
+        if (error) {
+          throw error;
+        }
 
-      await removeSyncOperation(operation.id);
-      synced++;
-      notifySyncListeners({ type: 'OPERATION_SYNCED', operation });
-      logger.log('[SyncService] Opération synchronisée:', operation.type);
-
-    } catch (error) {
-      failed++;
-      logger.error('[SyncService] Erreur sync:', operation.type, error);
-
-      // Mettre à jour le compteur de tentatives
-      operation.retries = (operation.retries || 0) + 1;
-      operation.lastError = error.message;
-
-      // Supprimer après 3 tentatives
-      if (operation.retries >= 3) {
         await removeSyncOperation(operation.id);
-        notifySyncListeners({ type: 'OPERATION_FAILED', operation, error });
-        logger.warn('[SyncService] Opération abandonnée après 3 échecs:', operation.type);
-      } else {
-        await saveToStore(STORES_ENUM.SYNC_QUEUE, operation);
+        synced++;
+        notifySyncListeners({ type: 'OPERATION_SYNCED', operation });
+        logger.log('[SyncService] Opération synchronisée:', operation.type);
+
+      } catch (error) {
+        failed++;
+        logger.error('[SyncService] Erreur sync:', operation.type, error);
+
+        operation.retries = (operation.retries || 0) + 1;
+        operation.lastError = error.message;
+
+        if (operation.retries >= 3) {
+          await removeSyncOperation(operation.id);
+          notifySyncListeners({ type: 'OPERATION_FAILED', operation, error });
+          logger.warn('[SyncService] Opération abandonnée après 3 échecs:', operation.type);
+        } else {
+          await saveToStore(STORES_ENUM.SYNC_QUEUE, operation);
+        }
       }
     }
+  } finally {
+    isSyncing = false;
+    notifySyncListeners({ type: 'SYNC_COMPLETE', synced, failed });
+    logger.log(`[SyncService] Sync terminée: ${synced} réussies, ${failed} échouées`);
   }
-
-  isSyncing = false;
-  notifySyncListeners({ type: 'SYNC_COMPLETE', synced, failed });
-  logger.log(`[SyncService] Sync terminée: ${synced} réussies, ${failed} échouées`);
 
   return { synced, failed };
 };

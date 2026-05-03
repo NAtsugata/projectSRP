@@ -186,7 +186,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       setTimeout(() => restoreScroll(), 50);
       pendingRestoreRef.current = false;
     }
-  });
+  }, [restoreScroll]);
 
   // Harmonise le schéma du report
   const ensureReportSchema = useCallback((base) => {
@@ -291,6 +291,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
   const persistReport = useCallback(async (updated) => {
+    if (!intervention?.id) return;
     setReport(updated);
     try {
       const res = await onSaveSilent(intervention.id, updated);
@@ -1169,7 +1170,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </>
           ) : (
             <div>
-              {report.admin_oublis?.length > 0 && (
+              {Array.isArray(report.admin_oublis) && report.admin_oublis.length > 0 && (
                 <div className="mt-4" style={{ padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
                   <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '0.5rem' }}>
                     Oublis de l'employé ({report.admin_oublis.length})

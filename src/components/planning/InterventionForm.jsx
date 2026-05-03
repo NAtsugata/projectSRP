@@ -87,7 +87,7 @@ const InterventionForm = ({
     await onSubmit({
       formData: formDataWithScheduledDates,
       assignedUsers,
-      files: briefingFiles.map(f => f.fileObject)
+      files: briefingFiles.map(f => f.fileObject).filter(Boolean)
     });
     clearDraft();
   };

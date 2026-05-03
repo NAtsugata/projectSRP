@@ -20,7 +20,9 @@ export const SYNC_TAGS = {
  * @returns {boolean}
  */
 export const isBackgroundSyncSupported = () => {
-  return 'serviceWorker' in navigator && 'sync' in registration;
+  return 'serviceWorker' in navigator &&
+    typeof registration !== 'undefined' &&
+    'sync' in registration;
 };
 
 /**
@@ -177,7 +179,7 @@ const showNotification = (title, options) => {
  * @param {number} intervalMinutes - Intervalle en minutes
  */
 export const schedulePeriodicSync = async (intervalMinutes = 60) => {
-  if (!('periodicSync' in registration)) {
+  if (typeof registration === 'undefined' || !('periodicSync' in registration)) {
     logger.warn('[BackgroundSync] Periodic Sync non supporté');
     // Fallback vers setInterval
     return scheduleSyncWithInterval(intervalMinutes);

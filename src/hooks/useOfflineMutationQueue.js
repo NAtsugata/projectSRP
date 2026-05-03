@@ -43,9 +43,9 @@ async function enqueueMutation(mutation) {
             status: 'pending',
         };
         const request = store.add(entry);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-        tx.oncomplete = () => db.close();
+        tx.oncomplete = () => { resolve(request.result); db.close(); };
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
     });
 }
 

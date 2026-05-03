@@ -32,6 +32,9 @@ export const DraftBanner = ({ lastSavedAt, onIgnore }) => {
 };
 
 export const useFormDraft = (formKey, defaultValues) => {
+  // Capturer defaultValues une seule fois pour éviter l'instabilité des références objet
+  const defaultValuesRef = React.useRef(defaultValues);
+
   const [formData, setFormData] = useState(() => {
     // Initialize from draft on first render
     try {
@@ -85,14 +88,14 @@ export const useFormDraft = (formKey, defaultValues) => {
     setLastSavedAt(ts);
   }, [formKey]);
 
-  // Debounced save on formData change
+  // Debounced save on formData change (saveDraft exclu des dépendances car stable via formKey)
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       saveDraft(formData);
     }, 800);
     return () => clearTimeout(timeoutRef.current);
-  }, [formData, saveDraft]);
+  }, [formData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Force save on visibility change and pagehide (iOS)
   useEffect(() => {
@@ -112,8 +115,8 @@ export const useFormDraft = (formKey, defaultValues) => {
     localStorage.removeItem(`draft_${formKey}`);
     setHasDraft(false);
     setLastSavedAt(null);
-    setFormData(defaultValues);
-  }, [formKey, defaultValues]);
+    setFormData(defaultValuesRef.current);
+  }, [formKey]);
 
   return { formData, setFormData, clearDraft, hasDraft, lastSavedAt };
 };
