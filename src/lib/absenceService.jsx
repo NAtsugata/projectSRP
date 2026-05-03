@@ -4,12 +4,17 @@
 import { supabase } from './supabase';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
+import { useAuthStore } from '../store/authStore';
 
 const STORAGE_KEY = 'employee_absences'; // Fallback localStorage
 
-// Récupère l'organization_id de l'utilisateur courant via la DB function
+// Récupère l'organization_id depuis le store Zustand (synchrone, pas de réseau).
+// Fallback sur RPC si le store n'est pas encore initialisé.
 const getUserOrgId = async () => {
-  const { data } = await supabase.rpc('current_user_org_id');
+  const storeOrgId = useAuthStore.getState?.()?.profile?.organization_id;
+  if (storeOrgId) return storeOrgId;
+  const { data, error } = await supabase.rpc('current_user_org_id');
+  if (error) logger.error('[AbsenceService] getUserOrgId RPC error:', error);
   return data || null;
 };
 
