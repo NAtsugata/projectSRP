@@ -13,9 +13,11 @@ import {
     saveGenerationRecord,
     getCurrentFicheInfo,
     resetFicheCounter,
-    getNextFicheNumber
+    getNextFicheNumber,
+    mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
@@ -24,6 +26,7 @@ const DRAFT_KEY_15498 = 'cerfa_15498_draft';
 
 function CerfaPage15498() {
     const [searchParams] = useSearchParams();
+    const { profile } = useAuthStore();
     const [formData, setFormData] = useState({
         // ACQUÉREUR (Client)
         acq_nom: '',
@@ -138,21 +141,48 @@ function CerfaPage15498() {
             }
         }
 
-        // Charger les infos entreprise sauvegardées
-        const companyInfo = getCompanyInfo();
-        if (companyInfo) {
-            setFormData(prev => ({
-                ...prev,
-                inst_raison: companyInfo.name || prev.inst_raison,
-                inst_num: companyInfo.address?.split(',')[0] || prev.inst_num,
-                inst_voie: companyInfo.address?.split(',')[0] || prev.inst_voie,
-                inst_commune: companyInfo.address?.split(',')[1]?.trim() || prev.inst_commune,
-                inst_siret: companyInfo.siret || prev.inst_siret,
-                inst_tel: companyInfo.phone || prev.inst_tel,
-                inst_attestation: companyInfo.attestationNumber || prev.inst_attestation,
-            }));
-        }
-    }, [searchParams]);
+        // Charger les infos entreprise (Supabase en priorité)
+        const loadCompanyInfo = async () => {
+            try {
+                const orgId = profile?.organization_id;
+                if (orgId) {
+                    const { data: org, error } = await supabase
+                        .from('organizations')
+                        .select('name, address, postal_code, city, phone, siret, settings')
+                        .eq('id', orgId)
+                        .single();
+                    if (!error && org) {
+                        const ci = mapOrganizationToCompanyInfo(org);
+                        setFormData(prev => ({
+                            ...prev,
+                            inst_raison: ci.companyName || prev.inst_raison,
+                            inst_voie: org.address || prev.inst_voie,
+                            inst_postal: org.postal_code || prev.inst_postal,
+                            inst_commune: org.city || prev.inst_commune,
+                            inst_siret: ci.siret || prev.inst_siret,
+                            inst_tel: ci.phone || prev.inst_tel,
+                            inst_attestation: ci.attestationNumber || prev.inst_attestation,
+                            inst_pays: 'France',
+                        }));
+                        return;
+                    }
+                }
+            } catch (e) {
+                logger.warn('[CerfaPage15498] Fallback localStorage:', e);
+            }
+            const companyInfo = getCompanyInfo();
+            if (companyInfo) {
+                setFormData(prev => ({
+                    ...prev,
+                    inst_raison: companyInfo.companyName || prev.inst_raison,
+                    inst_voie: companyInfo.address?.split(',')[0] || prev.inst_voie,
+                    inst_siret: companyInfo.siret || prev.inst_siret,
+                    inst_tel: companyInfo.phone || prev.inst_tel,
+                }));
+            }
+        };
+        loadCompanyInfo();
+    }, [searchParams, profile]);
 
     // Toast notification
     const showToast = useCallback((message, type = 'success') => {

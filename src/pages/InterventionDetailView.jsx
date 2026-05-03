@@ -1115,7 +1115,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     </p>
                     <button
                       onClick={() => {
-                        const data = prepareCerfaDataFromIntervention(intervention, { display_name: localStorage.getItem('user_name') || '' });
+                        const data = prepareCerfaDataFromIntervention(intervention, profile || { display_name: localStorage.getItem('user_name') || '' }, organization);
                         setCerfaData(data);
                         setShowCerfaModal(true);
                       }}
@@ -1211,6 +1211,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         initialData={cerfaData}
         sourceType="intervention"
         sourceId={intervention?.id}
+        organization={organization}
         showToast={(msg, type) => alert(msg)}
       />
 

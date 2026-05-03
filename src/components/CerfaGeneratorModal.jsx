@@ -12,7 +12,8 @@ import {
     getCompanyInfo,
     saveCompanyInfo,
     saveEquipmentInfo,
-    saveGenerationRecord
+    saveGenerationRecord,
+    mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import './CerfaGeneratorModal.css';
 
@@ -26,7 +27,8 @@ function CerfaGeneratorModal({
     initialData = {},
     sourceType = 'intervention',
     sourceId = null,
-    showToast
+    showToast,
+    organization = null
 }) {
     const [formData, setFormData] = useState({});
     const [isGenerating, setIsGenerating] = useState(false);
@@ -122,9 +124,11 @@ function CerfaGeneratorModal({
         }
     }, [formData, sourceType, sourceId, saveEquipment, showToast, onClose]);
 
-    // Charger les settings entreprise
+    // Charger les settings entreprise (Supabase en priorité, localStorage en fallback)
     const handleLoadCompanySettings = useCallback(() => {
-        const companyInfo = getCompanyInfo();
+        const companyInfo = organization
+            ? mapOrganizationToCompanyInfo(organization)
+            : getCompanyInfo();
         setFormData(prev => ({
             ...prev,
             companyName: companyInfo.companyName,
@@ -133,7 +137,14 @@ function CerfaGeneratorModal({
             qualification: companyInfo.qualification,
             attestationNumber: companyInfo.attestationNumber
         }));
-    }, []);
+    }, [organization]);
+
+    // Charger automatiquement les données entreprise à l'ouverture
+    useEffect(() => {
+        if (isOpen && organization) {
+            handleLoadCompanySettings();
+        }
+    }, [isOpen, organization, handleLoadCompanySettings]);
 
     if (!isOpen) return null;
 

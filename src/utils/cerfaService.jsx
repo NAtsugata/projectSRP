@@ -160,7 +160,30 @@ export const resetFicheCounter = (cerfaType = '15497', startNumber = 0) => {
 // =============================
 
 /**
- * Récupère les informations entreprise sauvegardées
+ * Convertit un objet organization Supabase en format company info CERFA
+ * @param {Object} org - Objet organization depuis Supabase
+ * @returns {Object} Informations entreprise au format CERFA
+ */
+export const mapOrganizationToCompanyInfo = (org) => {
+    if (!org) return null;
+    const addressParts = [org.address, org.postal_code, org.city].filter(Boolean);
+    return {
+        companyName: org.name || '',
+        siret: org.siret || '',
+        address: addressParts.join(', ') || '',
+        phone: org.phone || '',
+        email: org.email || '',
+        vatNumber: org.vat_number || '',
+        legalForm: org.legal_form || '',
+        rcs: org.rcs || '',
+        qualification: org.settings?.qualification || '',
+        attestationNumber: org.settings?.attestation_number || '',
+        logoUrl: org.logo_url || '',
+    };
+};
+
+/**
+ * Récupère les informations entreprise sauvegardées (localStorage fallback)
  * @returns {Object} Informations entreprise
  */
 export const getCompanyInfo = () => {
@@ -945,10 +968,13 @@ export const getGenerationHistory = () => {
  * Prépare les données CERFA depuis une intervention
  * @param {Object} intervention - Données de l'intervention
  * @param {Object} profile - Profil du technicien
+ * @param {Object} organization - Organisation Supabase (prioritaire sur localStorage)
  * @returns {Object} Données formatées pour CERFA
  */
-export const prepareCerfaDataFromIntervention = (intervention, profile = {}) => {
-    const companyInfo = getCompanyInfo();
+export const prepareCerfaDataFromIntervention = (intervention, profile = {}, organization = null) => {
+    const companyInfo = organization
+        ? mapOrganizationToCompanyInfo(organization)
+        : getCompanyInfo();
     const equipmentInfo = getEquipmentInfo(intervention.id) || {};
 
     // Parser le nom client (essayer de séparer prénom/nom)
@@ -1007,10 +1033,13 @@ export const prepareCerfaDataFromIntervention = (intervention, profile = {}) => 
  * Prépare les données CERFA depuis un contrat de maintenance
  * @param {Object} contract - Données du contrat
  * @param {Object} profile - Profil du technicien
+ * @param {Object} organization - Organisation Supabase (prioritaire sur localStorage)
  * @returns {Object} Données formatées pour CERFA
  */
-export const prepareCerfaDataFromContract = (contract, profile = {}) => {
-    const companyInfo = getCompanyInfo();
+export const prepareCerfaDataFromContract = (contract, profile = {}, organization = null) => {
+    const companyInfo = organization
+        ? mapOrganizationToCompanyInfo(organization)
+        : getCompanyInfo();
     const equipmentInfo = getEquipmentInfo(contract.id) || {};
 
     // Parser le nom client
@@ -1276,10 +1305,13 @@ export const fillCerfa1301 = async (data) => {
 /**
  * Prépare les données CERFA 1301 depuis une intervention
  * @param {Object} intervention - Données de l'intervention
+ * @param {Object} organization - Organisation Supabase (prioritaire sur localStorage)
  * @returns {Object} Données formatées pour CERFA 1301
  */
-export const prepareCerfa1301DataFromIntervention = (intervention) => {
-    const companyInfo = getCompanyInfo();
+export const prepareCerfa1301DataFromIntervention = (intervention, organization = null) => {
+    const companyInfo = organization
+        ? mapOrganizationToCompanyInfo(organization)
+        : getCompanyInfo();
 
     // Parser le nom client
     const clientParts = (intervention.client || '').split(' ');
@@ -1321,13 +1353,14 @@ export const prepareCerfa1301DataFromIntervention = (intervention) => {
         entrepriseNom: companyInfo.companyName,
         entrepriseAdresse: companyInfo.address,
         entrepriseSiret: companyInfo.siret,
+        entreprisePhone: companyInfo.phone || '',
+        lieu: companyInfo.address?.split(',')[0] || '',
 
         // Description
         descriptionTravaux: intervention.description || intervention.notes || '',
 
         // Date
         dateAttestation: new Date().toLocaleDateString('fr-FR'),
-        lieu: 'Champtercier',
 
         // Métadonnées
         interventionId: intervention.id

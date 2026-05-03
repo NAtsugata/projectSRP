@@ -12,9 +12,11 @@ import {
     getCompanyInfo,
     saveGenerationRecord,
     getCurrentFicheInfo,
-    getNextFicheNumber
+    getNextFicheNumber,
+    mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
@@ -23,6 +25,7 @@ const DRAFT_KEY = 'cerfa_1301_draft';
 
 function CerfaPage1301() {
     const [searchParams] = useSearchParams();
+    const { profile } = useAuthStore();
     const [formData, setFormData] = useState({
         // CLIENT / DONNEUR D'ORDRE
         clientNom: '',
@@ -99,17 +102,43 @@ function CerfaPage1301() {
         setFicheInfo(getCurrentFicheInfo());
     }, []);
 
-    // Charger les informations entreprise par défaut
+    // Charger les informations entreprise (Supabase en priorité)
     useEffect(() => {
-        const companyInfo = getCompanyInfo();
-        setFormData(prev => ({
-            ...prev,
-            entrepriseNom: companyInfo.companyName || 'SRP - Services Réparation Plomberie',
-            entrepriseAdresse: companyInfo.address || 'Champtercier, 04660',
-            entrepriseSiret: companyInfo.siret || '',
-            lieu: 'Champtercier'
-        }));
-    }, []);
+        const loadCompanyInfo = async () => {
+            try {
+                const orgId = profile?.organization_id;
+                if (orgId) {
+                    const { data: org, error } = await supabase
+                        .from('organizations')
+                        .select('name, address, postal_code, city, phone, siret, settings')
+                        .eq('id', orgId)
+                        .single();
+                    if (!error && org) {
+                        const companyInfo = mapOrganizationToCompanyInfo(org);
+                        setFormData(prev => ({
+                            ...prev,
+                            entrepriseNom: companyInfo.companyName || prev.entrepriseNom,
+                            entrepriseAdresse: companyInfo.address || prev.entrepriseAdresse,
+                            entrepriseSiret: companyInfo.siret || prev.entrepriseSiret,
+                            entreprisePhone: companyInfo.phone || prev.entreprisePhone,
+                            lieu: org.city || org.address?.split(',')[0] || prev.lieu,
+                        }));
+                        return;
+                    }
+                }
+            } catch (e) {
+                logger.warn('[CerfaPage1301] Fallback localStorage:', e);
+            }
+            const companyInfo = getCompanyInfo();
+            setFormData(prev => ({
+                ...prev,
+                entrepriseNom: companyInfo.companyName || prev.entrepriseNom,
+                entrepriseAdresse: companyInfo.address || prev.entrepriseAdresse,
+                entrepriseSiret: companyInfo.siret || prev.entrepriseSiret,
+            }));
+        };
+        loadCompanyInfo();
+    }, [profile]);
 
     // Charger depuis intervention si paramètre URL
     useEffect(() => {

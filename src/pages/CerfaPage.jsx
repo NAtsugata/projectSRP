@@ -14,9 +14,11 @@ import {
     saveGenerationRecord,
     getCurrentFicheInfo,
     resetFicheCounter,
-    getNextFicheNumber
+    getNextFicheNumber,
+    mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
@@ -102,6 +104,7 @@ const calculateControlFrequency = (fluidType, chargeKg, teqCO2) => {
 
 function CerfaPage() {
     const [searchParams] = useSearchParams();
+    const { profile } = useAuthStore();
     const [formData, setFormData] = useState({
         // INTERVENANT
         intervenantNom: '',
@@ -281,17 +284,45 @@ function CerfaPage() {
             }
         }
 
-        // Charger les infos entreprise sauvegardées
-        const companyInfo = getCompanyInfo();
-        if (companyInfo) {
-            setFormData(prev => ({
-                ...prev,
-                intervenantNom: companyInfo.companyName || prev.intervenantNom,
-                intervenantAdresse: companyInfo.address || prev.intervenantAdresse,
-                intervenantSiret: companyInfo.siret || prev.intervenantSiret,
-            }));
-        }
-    }, [searchParams]);
+        // Charger les infos entreprise : Supabase en priorité, localStorage en fallback
+        const loadCompanyInfo = async () => {
+            try {
+                const orgId = profile?.organization_id;
+                if (orgId) {
+                    const { data: org, error } = await supabase
+                        .from('organizations')
+                        .select('name, address, postal_code, city, phone, email, siret, vat_number, logo_url, settings')
+                        .eq('id', orgId)
+                        .single();
+                    if (!error && org) {
+                        const companyInfo = mapOrganizationToCompanyInfo(org);
+                        setFormData(prev => ({
+                            ...prev,
+                            intervenantNom: companyInfo.companyName || prev.intervenantNom,
+                            intervenantAdresse: companyInfo.address || prev.intervenantAdresse,
+                            intervenantSiret: companyInfo.siret || prev.intervenantSiret,
+                            intervenantTel: companyInfo.phone || prev.intervenantTel,
+                            intervenantAttestation: companyInfo.attestationNumber || prev.intervenantAttestation,
+                        }));
+                        return;
+                    }
+                }
+            } catch (e) {
+                logger.warn('[CerfaPage] Fallback localStorage pour infos entreprise:', e);
+            }
+            // Fallback localStorage
+            const companyInfo = getCompanyInfo();
+            if (companyInfo) {
+                setFormData(prev => ({
+                    ...prev,
+                    intervenantNom: companyInfo.companyName || prev.intervenantNom,
+                    intervenantAdresse: companyInfo.address || prev.intervenantAdresse,
+                    intervenantSiret: companyInfo.siret || prev.intervenantSiret,
+                }));
+            }
+        };
+        loadCompanyInfo();
+    }, [searchParams, profile]);
 
     // Gérer les changements de formulaire
     const handleChange = useCallback((field, value) => {
