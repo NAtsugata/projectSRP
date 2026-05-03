@@ -123,30 +123,29 @@ describe('validators', () => {
         };
 
         it('accepte une intervention valide', () => {
-            const result = validateIntervention(validIntervention);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
+            const errors = validateIntervention(validIntervention);
+            expect(Object.keys(errors)).toHaveLength(0);
         });
 
         it('rejette si le client est manquant', () => {
-            const result = validateIntervention({ ...validIntervention, client: '' });
-            expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Le nom du client est requis');
+            const errors = validateIntervention({ ...validIntervention, client: '' });
+            expect(errors.client).toBe('Le nom du client est requis');
         });
 
         it('rejette un téléphone invalide', () => {
-            const result = validateIntervention({ ...validIntervention, client_phone: '123' });
-            expect(result.isValid).toBe(false);
+            const errors = validateIntervention({ ...validIntervention, client_phone: '123' });
+            expect(errors.client_phone).toBeDefined();
         });
 
         it('valide optionnellement email et téléphone secondaire', () => {
-            const result = validateIntervention({
+            const errors = validateIntervention({
                 ...validIntervention,
                 client_email: 'invalid',
                 secondary_phone: '123',
             });
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThanOrEqual(2);
+            expect(Object.keys(errors).length).toBeGreaterThanOrEqual(2);
+            expect(errors.client_email).toBeDefined();
+            expect(errors.secondary_phone).toBeDefined();
         });
     });
 

@@ -103,57 +103,53 @@ export const validateDateRange = (startDate, endDate) => {
 };
 
 /**
- * Valide les données d'une intervention
+ * Valide les données d'une intervention.
+ * Retourne un objet field → message. Vide = valide.
  * @param {Object} intervention - Données d'intervention
- * @returns {{ isValid: boolean, errors: string[] }}
+ * @returns {Record<string, string>}
  */
 export const validateIntervention = (intervention) => {
-  const errors = [];
+  const errors = {};
 
   if (!intervention.client || intervention.client.trim().length === 0) {
-    errors.push('Le nom du client est requis');
+    errors.client = 'Le nom du client est requis';
   }
 
   if (!intervention.client_phone || intervention.client_phone.trim().length === 0) {
-    errors.push('Le téléphone du client est requis');
+    errors.client_phone = 'Le téléphone du client est requis';
   } else if (!isValidPhone(intervention.client_phone)) {
-    errors.push('Le numéro de téléphone est invalide (format: 06 12 34 56 78)');
+    errors.client_phone = 'Le numéro de téléphone est invalide (format: 06 12 34 56 78)';
   }
 
-  // Validation optionnelle du téléphone secondaire
   if (intervention.secondary_phone && intervention.secondary_phone.trim().length > 0) {
     if (!isValidPhone(intervention.secondary_phone)) {
-      errors.push('Le numéro secondaire est invalide');
+      errors.secondary_phone = 'Le numéro secondaire est invalide';
     }
   }
 
-  // Validation optionnelle de l'email
   if (intervention.client_email && intervention.client_email.trim().length > 0) {
     if (!isValidEmail(intervention.client_email)) {
-      errors.push('L\'email est invalide');
+      errors.client_email = 'L\'email est invalide';
     }
   }
 
   if (!intervention.address || intervention.address.trim().length === 0) {
-    errors.push('L\'adresse est requise');
+    errors.address = 'L\'adresse est requise';
   }
 
   if (!intervention.service || intervention.service.trim().length === 0) {
-    errors.push('Le type de service est requis');
+    errors.service = 'Le type de service est requis';
   }
 
   if (!isValidDate(intervention.date)) {
-    errors.push('La date est invalide');
+    errors.date = 'La date est invalide';
   }
 
   if (!intervention.time) {
-    errors.push('L\'heure est requise');
+    errors.time = 'L\'heure est requise';
   }
 
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
+  return errors;
 };
 
 /**
