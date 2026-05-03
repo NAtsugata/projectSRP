@@ -43,65 +43,31 @@ class PPFConnector {
   // =====================================================
 
   /**
-   * Obtient un access token OAuth2 pour le PPF
+   * Obtient un access token OAuth2 pour le PPF via Edge Function.
+   * Les credentials ne transitent jamais côté client.
    * @param {string} organizationId - ID organisation
    * @returns {Promise<string>} - Access token
    */
   async authenticate(organizationId) {
     try {
-      // Vérifier si token valide existe
       if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
         return this.accessToken;
       }
 
-      // Récupérer credentials depuis settings organisation
-      const { data: org, error } = await supabase
-        .from('organizations')
-        .select('einvoicing_settings')
-        .eq('id', organizationId)
-        .single();
+      logger.log('[PPF] Authentification OAuth2 via Edge Function...');
 
-      if (error) throw error;
-
-      const settings = org?.einvoicing_settings || {};
-
-      if (!settings.api_key_encrypted || !settings.api_endpoint) {
-        throw new Error('Credentials PPF non configurés. Configurer dans Paramètres > E-invoicing');
-      }
-
-      // Décrypter API key (en production, utiliser vraie encryption)
-      const clientId = settings.api_key_encrypted;
-      const clientSecret = settings.api_secret_encrypted;
-
-      logger.log('[PPF] Authentification OAuth2...');
-
-      // Requête OAuth2 Client Credentials
-      const response = await fetch(this.config.authURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: clientId,
-          client_secret: clientSecret,
-          scope: 'facture:write facture:read'
-        })
+      const { data, error } = await supabase.functions.invoke('ppf-authenticate', {
+        body: { organizationId, env: this.env }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Authentification PPF échouée: ${error.error_description || error.error}`);
+      if (error || !data?.access_token) {
+        throw new Error(error?.message || 'Authentification PPF échouée');
       }
-
-      const data = await response.json();
 
       this.accessToken = data.access_token;
-      this.tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000; // -1min sécurité
+      this.tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
 
-      logger.log('[PPF] ✅ Authentification réussie', {
-        expiresIn: data.expires_in
-      });
+      logger.log('[PPF] ✅ Authentification réussie', { expiresIn: data.expires_in });
 
       return this.accessToken;
 

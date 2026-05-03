@@ -5,7 +5,7 @@ import {
   cacheAuthSession,
   getCachedAuthSession,
   cacheAuthCredentials,
-  verifyOfflineCredentials,
+  getStoredCredentials,
   clearAuthSession,
   clearAuthCache,
   cacheUserData,
@@ -17,18 +17,53 @@ import {
 } from '../utils/offlineStorage';
 import logger from '../utils/logger';
 
+function toHex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function fromHex(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  return bytes;
+}
+
 /**
- * Hash simple pour le mot de passe (pour vérification hors ligne)
- * Utilise Web Crypto API pour un hash sécurisé
- * @param {string} password
- * @returns {Promise<string>} Hash en hex
+ * Hashes a password with PBKDF2 + random salt.
+ * Returns "pbkdf2:<saltHex>:<hashHex>" so the salt travels with the hash.
  */
 async function hashPassword(password) {
   const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const hashBuffer = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    256
+  );
+  return `pbkdf2:${toHex(salt)}:${toHex(hashBuffer)}`;
+}
+
+/**
+ * Verifies a plaintext password against a stored hash.
+ * Handles both new "pbkdf2:<salt>:<hash>" format and legacy bare SHA-256 hashes.
+ */
+async function verifyPassword(password, storedHash) {
+  const encoder = new TextEncoder();
+  if (storedHash.startsWith('pbkdf2:')) {
+    const [, saltHex, expectedHex] = storedHash.split(':');
+    if (!saltHex || !expectedHex) return false;
+    const salt = fromHex(saltHex);
+    const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
+    const hashBuffer = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      keyMaterial,
+      256
+    );
+    return toHex(hashBuffer) === expectedHex;
+  }
+  // Legacy SHA-256 path — accepts old cached credentials without forcing re-login
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+  return toHex(hashBuffer) === storedHash;
 }
 
 /**
@@ -69,18 +104,21 @@ export async function signInOffline(email, password) {
   try {
     logger.log('[OfflineAuth] 🔍 Tentative de connexion hors ligne pour:', email);
 
-    // Hasher le mot de passe fourni
-    logger.log('[OfflineAuth] 1/3 Hash du mot de passe...');
-    const passwordHash = await hashPassword(password);
-    logger.log('[OfflineAuth] Hash généré:', passwordHash.substring(0, 20) + '...');
+    // Retrieve stored credentials (contains the hash with embedded salt)
+    logger.log('[OfflineAuth] 1/3 Récupération credentials stockés...');
+    const stored = await getStoredCredentials();
+    if (!stored || stored.email !== email) {
+      logger.warn('[OfflineAuth] ❌ Aucun credential offline pour cet email');
+      return { success: false, error: 'Email ou mot de passe incorrect.' };
+    }
 
-    // Vérifier les credentials
-    logger.log('[OfflineAuth] 2/3 Vérification credentials...');
-    const credentialsValid = await verifyOfflineCredentials(email, passwordHash);
+    // Verify password against stored hash (supports PBKDF2 and legacy SHA-256)
+    logger.log('[OfflineAuth] 2/3 Vérification mot de passe...');
+    const credentialsValid = await verifyPassword(password, stored.passwordHash);
     logger.log('[OfflineAuth] Credentials valides:', credentialsValid);
 
     if (!credentialsValid) {
-      logger.warn('[OfflineAuth] ❌ Credentials invalides (email ou mot de passe incorrect)');
+      logger.warn('[OfflineAuth] ❌ Mot de passe incorrect');
       return {
         success: false,
         error: 'Email ou mot de passe incorrect.'

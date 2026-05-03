@@ -349,6 +349,13 @@ export const verifyOfflineCredentials = async (email, passwordHash) => {
 };
 
 /**
+ * Récupère les credentials stockés (email + hash) pour vérification PBKDF2
+ */
+export const getStoredCredentials = async () => {
+  return getFromStore(STORES.AUTH, 'credentials');
+};
+
+/**
  * Supprime seulement la session (garde credentials et user data pour reconnexion offline)
  */
 export const clearAuthSession = async () => {
@@ -456,6 +463,7 @@ export default {
   getCachedAuthSession,
   cacheAuthCredentials,
   verifyOfflineCredentials,
+  getStoredCredentials,
   clearAuthSession,
   clearAuthCache,
   cacheUserData,

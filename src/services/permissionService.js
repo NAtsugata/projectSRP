@@ -70,32 +70,48 @@ export const permissionService = {
 
   // Mettre a jour les permissions en masse pour un utilisateur
   async updateUserPermissions(userId, permissionCodes, organizationId = null) {
-    // D'abord supprimer toutes les permissions existantes
-    await supabase
-      .from('employee_permissions')
-      .delete()
-      .eq('user_id', userId);
-
-    // Puis ajouter les nouvelles permissions
-    if (permissionCodes.length === 0) {
-      return { data: [], error: null };
-    }
-
     const { data: currentUser } = await supabase.auth.getUser();
 
-    const permissionsToInsert = permissionCodes.map(code => ({
-      user_id: userId,
-      permission_code: code,
-      granted_by: currentUser?.user?.id,
-      organization_id: organizationId
-    }));
+    // Upsert new permissions first so the user never has zero permissions
+    if (permissionCodes.length > 0) {
+      const permissionsToUpsert = permissionCodes.map(code => ({
+        user_id: userId,
+        permission_code: code,
+        granted_by: currentUser?.user?.id,
+        organization_id: organizationId
+      }));
 
-    const { data, error } = await supabase
+      const { error: upsertError } = await supabase
+        .from('employee_permissions')
+        .upsert(permissionsToUpsert, { onConflict: 'user_id,permission_code,organization_id' });
+
+      if (upsertError) return { data: null, error: upsertError };
+    }
+
+    // Remove permissions not in the new set
+    const { data: existing } = await supabase
       .from('employee_permissions')
-      .insert(permissionsToInsert)
-      .select();
+      .select('permission_code')
+      .eq('user_id', userId);
 
-    return { data, error };
+    const toRemove = (existing || [])
+      .filter(p => !permissionCodes.includes(p.permission_code))
+      .map(p => p.permission_code);
+
+    if (toRemove.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('employee_permissions')
+        .delete()
+        .eq('user_id', userId)
+        .in('permission_code', toRemove);
+
+      if (deleteError) return { data: null, error: deleteError };
+    }
+
+    return supabase
+      .from('employee_permissions')
+      .select('*')
+      .eq('user_id', userId);
   },
 
   // Verifier si l'utilisateur courant a une permission
@@ -166,33 +182,50 @@ export const permissionService = {
 
   // Mettre a jour les partages d'un document en masse
   async updateDocumentShares(documentId, userIds, organizationId = null) {
-    // Supprimer les partages existants
-    await supabase
-      .from('shared_vault_access')
-      .delete()
-      .eq('document_id', documentId);
-
-    if (userIds.length === 0) {
-      return { data: [], error: null };
-    }
-
     const { data: currentUser } = await supabase.auth.getUser();
 
-    const sharesToInsert = userIds.map(userId => ({
-      document_id: documentId,
-      shared_with_user_id: userId,
-      shared_by_user_id: currentUser?.user?.id,
-      can_download: true,
-      can_view: true,
-      organization_id: organizationId
-    }));
+    // Upsert new shares first so existing access is never revoked before new grants
+    if (userIds.length > 0) {
+      const sharesToUpsert = userIds.map(userId => ({
+        document_id: documentId,
+        shared_with_user_id: userId,
+        shared_by_user_id: currentUser?.user?.id,
+        can_download: true,
+        can_view: true,
+        organization_id: organizationId
+      }));
 
-    const { data, error } = await supabase
+      const { error: upsertError } = await supabase
+        .from('shared_vault_access')
+        .upsert(sharesToUpsert, { onConflict: 'document_id,shared_with_user_id' });
+
+      if (upsertError) return { data: null, error: upsertError };
+    }
+
+    // Remove shares not in the new set
+    const { data: existing } = await supabase
       .from('shared_vault_access')
-      .insert(sharesToInsert)
-      .select();
+      .select('shared_with_user_id')
+      .eq('document_id', documentId);
 
-    return { data, error };
+    const toRemove = (existing || [])
+      .filter(s => !userIds.includes(s.shared_with_user_id))
+      .map(s => s.shared_with_user_id);
+
+    if (toRemove.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('shared_vault_access')
+        .delete()
+        .eq('document_id', documentId)
+        .in('shared_with_user_id', toRemove);
+
+      if (deleteError) return { data: null, error: deleteError };
+    }
+
+    return supabase
+      .from('shared_vault_access')
+      .select('*')
+      .eq('document_id', documentId);
   }
 };
 
