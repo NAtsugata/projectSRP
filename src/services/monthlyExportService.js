@@ -46,7 +46,7 @@ export async function getMonthlyExportData(year, month) {
 
     // Requêtes parallèles
     const [profilesRes, interventionsRes, leavesRes, expensesRes, absencesRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, is_admin'),
+      supabase.from('profiles').select('id, full_name, email, is_admin'),
 
       supabase
         .from('interventions')
@@ -67,7 +67,7 @@ export async function getMonthlyExportData(year, month) {
 
       supabase
         .from('expenses')
-        .select('user_id, date, category, amount, description, status')
+        .select('user_id, date, category, amount, description, status, is_paid')
         .gte('date', startDate)
         .lte('date', endDate),
 
@@ -397,11 +397,9 @@ export async function getMonthlyExportData(year, month) {
           }
         });
 
-        // --- Dépenses (exclure les dépenses payées) ---
+        // --- Dépenses (exclure les dépenses déjà marquées payées) ---
         const userExpenses = expenses.filter(e =>
-          e.user_id === userId &&
-          e.status?.toLowerCase() !== 'payée' &&
-          e.status?.toLowerCase() !== 'payé'
+          e.user_id === userId && !e.is_paid
         );
         const expensesByCategory = {};
         let totalExpenses = 0;

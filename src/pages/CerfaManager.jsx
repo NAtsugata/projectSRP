@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
+import { withOrgId } from '../utils/orgHelper';
 import {
     FileTextIcon, DownloadIcon, UploadIcon,
     TrashIcon, ExternalLinkIcon, SearchIcon,
@@ -246,7 +247,7 @@ function CerfaManager() {
             // Enregistrer dans la base de données
             const { error: dbError } = await supabase
                 .from('cerfa_documents')
-                .insert({
+                .insert(withOrgId({
                     numero: uploadData.numero,
                     template_name: uploadData.templateName || 'Non spécifié',
                     file_path: filePath,
@@ -254,7 +255,7 @@ function CerfaManager() {
                     client_name: uploadData.clientName,
                     intervention_date: uploadData.interventionDate || null,
                     notes: uploadData.notes
-                });
+                }));
 
             if (dbError) throw dbError;
 

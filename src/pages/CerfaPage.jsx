@@ -19,6 +19,7 @@ import {
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
@@ -395,7 +396,7 @@ function CerfaPage() {
                     // Enregistrer dans la base de données
                     await supabase
                         .from('cerfa_documents')
-                        .insert({
+                        .insert(withOrgId({
                             numero: ficheNumber,
                             template_name: 'CERFA 15497-04',
                             file_path: filePath,
@@ -403,7 +404,7 @@ function CerfaPage() {
                             client_name: formData.detenteurNom || '',
                             intervention_date: formData.dateIntervention || null,
                             notes: formData.observations || ''
-                        });
+                        }));
                     logger.log('[CERFA] Document enregistré dans Supabase');
                 }
             } catch (storageError) {
@@ -432,15 +433,25 @@ function CerfaPage() {
         }
     }, [formData, calculatedTeqCO2, totaux, controlFrequency, fluidCategory, showToast, refreshFicheInfo]);
 
-    // Réinitialiser le compteur (admin)
+    // Réinitialiser ou ajuster le compteur (admin)
     const handleResetCounter = useCallback(() => {
-        if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA à 0 ?')) {
-            resetFicheCounter(0);
-            refreshFicheInfo();
-            showToast('Compteur réinitialisé', 'success');
-            setShowAdminReset(false);
+        const input = window.prompt(
+            `Définir le compteur de fiches CERFA 15497.\nNuméro actuel: ${ficheInfo.count} (prochain: ${ficheInfo.nextNumber}).\nEntrez le numéro du dernier CERFA généré (le prochain sera +1) :`,
+            String(ficheInfo.count)
+        );
+        if (input === null) return;
+        const trimmed = input.trim();
+        if (trimmed === '') return;
+        const parsed = parseInt(trimmed, 10);
+        if (isNaN(parsed) || parsed < 0) {
+            showToast('Numéro invalide', 'error');
+            return;
         }
-    }, [refreshFicheInfo, showToast]);
+        resetFicheCounter('15497', parsed);
+        refreshFicheInfo();
+        showToast(`Compteur ajusté à ${parsed}. Prochain CERFA: ${parsed + 1}`, 'success');
+        setShowAdminReset(false);
+    }, [ficheInfo, refreshFicheInfo, showToast]);
 
     return (
         <div className="cerfa-page">
