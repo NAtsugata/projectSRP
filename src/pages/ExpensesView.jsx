@@ -645,7 +645,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                       <button
                         type="button"
                         className="btn btn-sm btn-secondary"
-                        onClick={() => onDeleteExpense(expense)}
+                        onClick={() => onDeleteExpense(expense.id)}
                         style={{ marginTop: '0.5rem', width: '100%' }}
                       >
                         <TrashIcon /> Supprimer

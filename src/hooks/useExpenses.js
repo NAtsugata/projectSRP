@@ -82,7 +82,9 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.CREATE_EXPENSE, newExpense);
                 return { data: tempExpense };
             }
-            return expenseService.createExpense(newExpense);
+            const result = await expenseService.createExpense(newExpense);
+            if (result.error) throw result.error;
+            return result;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -112,7 +114,12 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };
             }
-            return expenseService.deleteExpense(id);
+            // Admin (userId=null) → deleteExpenseAdmin ; employé → deleteExpense(id, userId)
+            const result = userId
+                ? await expenseService.deleteExpense(id, userId)
+                : await expenseService.deleteExpenseAdmin(id);
+            if (result.error) throw result.error;
+            return result;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
