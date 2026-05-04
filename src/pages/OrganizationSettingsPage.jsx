@@ -74,6 +74,7 @@ function OrganizationSettingsPage() {
         share_capital: organization.share_capital || '',
         legal_form: organization.legal_form || '',
         rcs: organization.rcs || '',
+        attestation_number: organization.settings?.attestation_number || '',
         // Logo
         logo_url: organization.logo_url || '',
         // Invoice settings
@@ -191,6 +192,10 @@ function OrganizationSettingsPage() {
         rcs: formData.rcs || null,
         logo_url: logoUrl || null,
         invoice_settings: updatedInvoiceSettings,
+        settings: {
+          ...(organization?.settings || {}),
+          attestation_number: formData.attestation_number || ''
+        },
         updated_at: new Date().toISOString()
       };
 
@@ -457,6 +462,18 @@ function OrganizationSettingsPage() {
                   value={formData.rcs || ''}
                   onChange={handleChange}
                   placeholder="RCS Paris B 123 456 789"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="attestation_number">N° d'attestation de capacité</label>
+                <input
+                  type="text"
+                  id="attestation_number"
+                  name="attestation_number"
+                  value={formData.attestation_number || ''}
+                  onChange={handleChange}
+                  placeholder="ex: AT-2024-XXXXX"
                 />
               </div>
             </div>

@@ -345,7 +345,9 @@ function CerfaPage() {
         const companyData = {
             companyName: formData.intervenantNom,
             address: formData.intervenantAdresse,
+            phone: formData.intervenantTel,
             siret: formData.intervenantSiret,
+            attestationNumber: formData.intervenantAttestation,
         };
         if (saveCompanyInfo(companyData)) {
             showToast('Informations intervenant sauvegardées', 'success');
