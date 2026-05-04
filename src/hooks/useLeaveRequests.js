@@ -70,9 +70,9 @@ export function useLeaveRequests(userId = null) {
 
         // Fonctions
         refetch,
-        createLeaveRequest: createMutation.mutate,
-        updateLeaveRequest: updateMutation.mutate,
-        deleteLeaveRequest: deleteMutation.mutate,
+        createLeaveRequest: createMutation.mutateAsync,
+        updateLeaveRequest: updateMutation.mutateAsync,
+        deleteLeaveRequest: deleteMutation.mutateAsync,
 
         // États des mutations
         isCreating: createMutation.isPending,

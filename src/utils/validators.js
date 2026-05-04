@@ -175,30 +175,35 @@ export const validateUser = (user) => {
 };
 
 /**
- * Valide une demande de congé
+ * Valide une demande de congé.
+ * Retourne un objet field → message. Vide = valide.
  * @param {Object} leaveRequest - Demande de congé
- * @returns {{ isValid: boolean, errors: string[] }}
+ * @returns {Record<string, string>}
  */
 export const validateLeaveRequest = (leaveRequest) => {
-  const errors = [];
+  const errors = {};
 
-  const dateValidation = validateDateRange(leaveRequest.startDate, leaveRequest.endDate);
-  if (!dateValidation.isValid) {
-    errors.push(dateValidation.message);
+  if (!isValidDate(leaveRequest.startDate)) {
+    errors.startDate = 'Date de début invalide';
+  }
+
+  if (!isValidDate(leaveRequest.endDate)) {
+    errors.endDate = 'Date de fin invalide';
+  }
+
+  if (!errors.startDate && !errors.endDate) {
+    if (new Date(leaveRequest.startDate) > new Date(leaveRequest.endDate)) {
+      errors.startDate = 'La date de début doit être avant la date de fin';
+    }
   }
 
   if (!leaveRequest.reason || leaveRequest.reason.trim().length === 0) {
-    errors.push('Le motif est requis');
+    errors.reason = 'Le motif est requis';
+  } else if (leaveRequest.reason.length > 500) {
+    errors.reason = 'Le motif ne peut pas dépasser 500 caractères';
   }
 
-  if (leaveRequest.reason && leaveRequest.reason.length > 500) {
-    errors.push('Le motif ne peut pas dépasser 500 caractères');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
+  return errors;
 };
 
 /**

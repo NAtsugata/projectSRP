@@ -51,7 +51,7 @@ export function useUsers() {
 
         // Fonctions
         refetch,
-        updateUser: updateMutation.mutate,
+        updateUser: updateMutation.mutateAsync,
 
         // États des mutations
         isUpdating: updateMutation.isPending,

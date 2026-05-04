@@ -27,8 +27,8 @@ const LeaveRequestForm = ({
 }) => {
   const { values, errors, handleChange, handleSubmit } = useForm(
     initialValues,
-    validateLeaveRequest,
-    onSubmit
+    onSubmit,
+    validateLeaveRequest
   );
 
   return (
