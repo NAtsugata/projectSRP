@@ -346,3 +346,89 @@ a:hover {
   transform: translateY(-4px);
   border-color: var(--color-primary);
 }
+
+/* ==================== OVERRIDES SOMBRE POUR ÉLÉMENTS HARDCODÉS ==================== */
+/* Corrige les badges, surlignages et fonds clairs hardcodés dans des CSS partout
+   pour qu'ils restent lisibles en mode sombre. */
+
+.dark-theme .badge-orange,
+.dark-theme .badge-rose,
+.dark-theme .badge-blue,
+.dark-theme .badge-purple,
+.dark-theme .badge-teal,
+.dark-theme .badge-green {
+  filter: brightness(0.85) saturate(1.2);
+}
+
+/* Surlignage absences dans planning (PlanningGanttView, PlanningMonthView) */
+.dark-theme .day-cell.has-absences,
+.dark-theme .gantt-day-cell.has-absences {
+  background: rgba(249, 115, 22, 0.18) !important;
+}
+
+/* Inputs/textareas/selects globaux : éviter fond blanc en mode sombre */
+.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]),
+.dark-theme textarea,
+.dark-theme select {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color-dark);
+}
+
+.dark-theme input::placeholder,
+.dark-theme textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Subsidy / HowItWorks: composants avec couleurs hardcodées non-cuivre.
+   On force une lisibilité minimale en mode sombre. */
+.dark-theme .subsidy-calculator,
+.dark-theme .how-it-works,
+.dark-theme .legal-notices,
+.dark-theme .project-type-selector {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .subsidy-calculator *,
+.dark-theme .how-it-works *,
+.dark-theme .legal-notices *,
+.dark-theme .project-type-selector * {
+  color: inherit;
+}
+
+.dark-theme .subsidy-calculator h1,
+.dark-theme .subsidy-calculator h2,
+.dark-theme .subsidy-calculator h3,
+.dark-theme .subsidy-calculator h4,
+.dark-theme .subsidy-calculator label,
+.dark-theme .how-it-works h1,
+.dark-theme .how-it-works h2,
+.dark-theme .how-it-works h3,
+.dark-theme .how-it-works p,
+.dark-theme .legal-notices h1,
+.dark-theme .legal-notices h2,
+.dark-theme .legal-notices h3,
+.dark-theme .legal-notices p,
+.dark-theme .project-type-selector label {
+  color: var(--text-primary) !important;
+}
+
+/* NotificationCenter: couleurs hardcodées non-cuivre.
+   Le fond sombre du composant fonctionne déjà bien en sombre, mais
+   en mode clair le fond très sombre détonne du thème cuivre. */
+.light-theme .notification-center,
+.light-theme .notification-panel {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Print: forcer texte sombre sur fond clair pour les impressions */
+@media print {
+  body,
+  .modern-section,
+  .print-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}

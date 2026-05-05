@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem;
@@ -35,8 +35,8 @@
   padding: 0.625rem 0.875rem;
   font-size: 0.9375rem;
   color: var(--text-primary);
-  background-color: #fff;
-  border: 1px solid #d1d5db;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -244,9 +244,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.625rem 0.75rem;
-  background-color: #fff;
+  background-color: var(--bg-primary);
   border-radius: 6px;
-  border: 1px solid #bae6fd;
+  border: 1px solid var(--border-color-dark);
 }
 
 .scheduled-date-text {

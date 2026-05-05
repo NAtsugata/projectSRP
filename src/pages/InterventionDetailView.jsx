@@ -756,7 +756,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <span
                       key={assignment.user_id || idx}
                       className="badge"
-                      style={{ background: '#3b82f6', color: 'white', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
+                      style={{ background: 'var(--color-primary)', color: 'var(--text-on-colored-bg)', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
                     >
                       {assignment.profiles?.full_name || 'Employé'}
                     </span>

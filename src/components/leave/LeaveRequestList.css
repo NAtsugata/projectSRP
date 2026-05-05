@@ -25,8 +25,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   transition: border-color 0.15s ease;
 }
@@ -61,8 +61,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
 }
 
@@ -88,8 +88,8 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-tertiary);
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -129,8 +129,8 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-tertiary);
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -170,7 +170,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-copper);
-  background: #fff;
+  background: var(--bg-primary);
   border: 1px solid var(--color-copper);
   border-radius: 6px;
   cursor: pointer;

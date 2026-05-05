@@ -40,7 +40,7 @@
   height: 100%;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   z-index: 1;
 }
 
@@ -62,8 +62,8 @@
 /* Détails étendus */
 .sync-details {
   padding: 16px;
-  border-top: 1px solid #e0e0e0;
-  background: #fafafa;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   animation: slideDown 0.3s ease;
 }
 
@@ -87,12 +87,12 @@
 }
 
 .sync-detail-label {
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .sync-detail-value {
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -175,9 +175,9 @@
   transform: translate(-50%, -50%);
   font-size: 11px;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
   z-index: 1;
-  text-shadow: 0 0 2px white;
+  text-shadow: 0 0 2px var(--bg-primary);
 }
 
 /* Responsive */

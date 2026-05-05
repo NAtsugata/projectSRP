@@ -6,15 +6,15 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   transition: all 0.15s ease;
 }
 
 .leave-request-card:hover {
-  border-color: #d1d5db;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-color-dark);
+  box-shadow: var(--shadow-sm);
 }
 
 .leave-request-content {
@@ -67,18 +67,18 @@
 }
 
 .status-approved {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: rgba(124, 134, 71, 0.15);
+  color: var(--color-success);
 }
 
 .status-pending {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: rgba(212, 160, 54, 0.18);
+  color: var(--color-warning);
 }
 
 .status-rejected {
-  background-color: var(--color-danger-light);
-  color: #991b1b;
+  background-color: rgba(184, 76, 58, 0.18);
+  color: var(--color-danger);
 }
 
 .status-default {
