@@ -130,7 +130,8 @@ export function useInvoices(options = {}) {
 
       // Si des items sont fournis, les mettre a jour aussi
       if (items) {
-        await invoicingService.updateInvoiceItems(invoiceId, items);
+        const { error: itemsError } = await invoicingService.updateInvoiceItems(invoiceId, items);
+        if (itemsError) throw itemsError;
       }
 
       return data;

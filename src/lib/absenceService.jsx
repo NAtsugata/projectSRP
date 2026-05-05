@@ -27,6 +27,23 @@ export const createAbsence = async (absence) => {
   try {
     logger.log('➕ Création absence:', absence);
 
+    // Vérifier les chevauchements avant insertion
+    const { hasOverlap, overlapping } = await checkAbsenceOverlap(
+      absence.employeeId,
+      absence.startDate,
+      absence.endDate
+    );
+    if (hasOverlap) {
+      const existing = overlapping[0];
+      return {
+        data: null,
+        error: {
+          message: `Chevauchement avec une absence existante (${existing?.start_date} → ${existing?.end_date})`,
+          code: 'OVERLAP'
+        }
+      };
+    }
+
     const organization_id = await getUserOrgId();
 
     const { data, error } = await supabase

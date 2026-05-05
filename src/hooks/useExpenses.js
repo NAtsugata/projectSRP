@@ -99,7 +99,9 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
                 return { data: { id, ...updates } };
             }
-            return expenseService.updateExpense(id, updates);
+            const result = await expenseService.updateExpense(id, updates);
+            if (result.error) throw result.error;
+            return result;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
