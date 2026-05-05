@@ -58,7 +58,8 @@ const DateNavigation = ({
   onNext,
   onToday,
   viewMode = 'week',
-  onViewModeChange
+  onViewModeChange,
+  todayInRange = false
 }) => {
   const dateRangeText = formatDateRange(startDate, endDate, viewMode);
 
@@ -70,11 +71,19 @@ const DateNavigation = ({
           size="sm"
           onClick={onPrevious}
           icon={<ChevronLeftIcon />}
-          aria-label="Période précédente"
+          aria-label="Période précédente (← )"
+          title="Période précédente (←)"
         />
 
         <div className="date-navigation-display">
-          <h2 className="date-navigation-title">{dateRangeText}</h2>
+          <h2 className="date-navigation-title">
+            {dateRangeText}
+            {todayInRange && (
+              <span className="date-navigation-today-badge" title="Aujourd'hui est dans la période affichée">
+                • aujourd'hui
+              </span>
+            )}
+          </h2>
         </div>
 
         <Button
@@ -82,14 +91,17 @@ const DateNavigation = ({
           size="sm"
           onClick={onNext}
           icon={<ChevronRightIcon />}
-          aria-label="Période suivante"
+          aria-label="Période suivante (→)"
+          title="Période suivante (→)"
         />
 
         <Button
-          variant="secondary"
+          variant={todayInRange ? 'ghost' : 'secondary'}
           size="sm"
           onClick={onToday}
           className="date-navigation-today"
+          title="Aller à aujourd'hui (T)"
+          disabled={todayInRange}
         >
           Aujourd'hui
         </Button>

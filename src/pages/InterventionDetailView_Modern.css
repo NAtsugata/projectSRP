@@ -757,3 +757,66 @@
 .dark-theme .intervention-detail-modern {
   /* Overrides spécifiques si nécessaires */
 }
+
+/* ==================== BACK TO TOP BUTTON ==================== */
+.back-to-top-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: var(--text-on-colored-bg);
+  border: none;
+  box-shadow: var(--shadow-lg);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: backToTopFadeIn 0.25s ease-out;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.back-to-top-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.back-to-top-btn:active {
+  transform: translateY(0);
+}
+
+@keyframes backToTopFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .back-to-top-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top-btn {
+    animation: none;
+  }
+  .back-to-top-btn:hover {
+    transform: none;
+  }
+}

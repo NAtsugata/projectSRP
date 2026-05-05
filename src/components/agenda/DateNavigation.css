@@ -29,6 +29,12 @@
 
 .date-navigation-today {
   margin-left: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.date-navigation-today:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .date-navigation-view-modes {

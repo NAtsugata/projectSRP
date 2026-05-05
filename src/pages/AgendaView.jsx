@@ -1,7 +1,7 @@
 // src/pages/AgendaView.js
 // Version améliorée de l'agenda avec dashboard, vue ressource, filtres sauvegardés
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   AgendaDay,
   DateNavigation,
@@ -252,6 +252,43 @@ const AgendaView = ({
     }
   }, [onRefreshInterventions, toast]);
 
+  // Indicateur "aujourd'hui dans la période" pour mettre en avant le bouton
+  const todayInRange = useMemo(() => {
+    const today = toLocalDateStr(new Date());
+    const start = toLocalDateStr(dateRange.start);
+    const end = toLocalDateStr(dateRange.end);
+    return today >= start && today <= end;
+  }, [dateRange]);
+
+  // Raccourcis clavier : ← / → navigation, T = aujourd'hui, Esc = clear filtres
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorer si focus dans un champ de saisie
+      const tag = e.target.tagName;
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+      if (isEditable) return;
+
+      if (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handlePrevious();
+      } else if (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleNext();
+      } else if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleToday();
+      } else if (e.key === 'Escape') {
+        const hasActiveFilter = filters.searchText || filters.showUrgentOnly || filters.showSAVOnly || (filters.employees && filters.employees.length > 0);
+        if (hasActiveFilter) {
+          e.preventDefault();
+          handleClearFilters();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrevious, handleNext, handleToday, handleClearFilters, filters]);
+
   // Error state
   if (error) {
     return (
@@ -305,16 +342,19 @@ const AgendaView = ({
         currentUserId={currentUserId}
       />
 
-      {/* Date Navigation */}
-      <DateNavigation
-        startDate={dateRange.start}
-        endDate={dateRange.end}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-        onToday={handleToday}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-      />
+      {/* Date Navigation (sticky en scroll) */}
+      <div className="date-navigation-sticky">
+        <DateNavigation
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onToday={handleToday}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          todayInRange={todayInRange}
+        />
+      </div>
 
       {/* Actions Bar - Export & Absences */}
       <div className="agenda-actions-bar">

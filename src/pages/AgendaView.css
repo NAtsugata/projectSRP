@@ -455,6 +455,80 @@
 }
 */
 
+/* ==================== STICKY DATE NAVIGATION ==================== */
+.date-navigation-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg-app);
+  padding: var(--spacing-2) 0;
+  margin: 0 calc(-1 * var(--spacing-2));
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Ombre légère au scroll pour effet de "poussée" sous la nav */
+.date-navigation-sticky:not(:first-of-type)::after,
+.agenda-view:has(.date-navigation-sticky:not(:first-of-type)) .date-navigation-sticky {
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+}
+
+.date-navigation-today-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  animation: pulse-today 2s ease-in-out infinite;
+}
+
+@keyframes pulse-today {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Scroll smooth pour navigation interne */
+.agenda-view {
+  scroll-behavior: smooth;
+}
+
+/* Permet au sticky de ne pas masquer une carte au scroll-into-view */
+.agenda-days-list > * {
+  scroll-margin-top: 80px;
+}
+
+/* Hint discret pour les raccourcis clavier (desktop uniquement) */
+@media (min-width: 769px) {
+  .agenda-view::after {
+    content: '← → naviguer • T = aujourd\'hui • Esc = effacer filtres';
+    position: fixed;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 40;
+  }
+
+  .agenda-view:hover::after {
+    opacity: 0.7;
+  }
+}
+
 /* ==================== ACTIONS BAR ==================== */
 .agenda-actions-bar {
   display: flex;

@@ -86,6 +86,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showCerfaModal, setShowCerfaModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Bouton "Retour en haut" : visible après 400px de scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
@@ -1229,6 +1243,19 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           onCancel={() => setShowTeamModal(false)}
           loading={isUpdatingTeam}
         />
+      )}
+
+      {/* Bouton "Retour en haut" - apparaît après scroll */}
+      {showBackToTop && (
+        <button
+          type="button"
+          className="back-to-top-btn"
+          onClick={scrollToTop}
+          aria-label="Retour en haut"
+          title="Retour en haut"
+        >
+          ↑
+        </button>
       )}
     </div>
   );
