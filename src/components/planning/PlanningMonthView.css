@@ -4,8 +4,9 @@
   background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
+  overflow: visible;
+  border: 1px solid var(--border-color, #e2e8f0);
+  position: relative;
 }/* Header */
 .month-header {display: flex;
   justify-content: space-between;
@@ -90,6 +91,7 @@
 /* Grille */
 .month-grid {
   padding: 1rem;
+  overflow: visible;
 }
 
 .weekdays-header {
@@ -112,21 +114,28 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  overflow: visible;
 }
 
 .day-cell {
-  min-height: 90px;
+  min-height: 100px;
   padding: 0.5rem;
-  background: #fafbfc;
+  background: var(--bg-secondary, #fafbfc);
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .day-cell:hover {
-  background: #f1f5f9;
+  background: var(--bg-tertiary, #f1f5f9);
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+.day-cell.is-expanded {
+  z-index: 100;
 }
 
 .day-cell.other-month {
@@ -151,22 +160,59 @@
   background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
 }
 
+/* Ligne numéro du jour + badge */
+.day-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
 .day-number {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #334155;
-  margin-bottom: 0.375rem;
-}.day-cell.today .day-number {background: var(--color-copper);
+  color: var(--text-primary, #334155);
+  line-height: 1;
+}
+
+.day-cell.today .day-number {
+  background: var(--color-copper);
   color: var(--text-on-colored-bg);
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: center;}
+  justify-content: center;
+  font-size: 0.75rem;
+}
 
 .day-cell.other-month .day-number {
-  color: #94a3b8;
+  color: var(--text-tertiary, #94a3b8);
+}
+
+/* Badge nombre total d'interventions */
+.day-total-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-copper);
+  color: var(--text-on-colored-bg, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.day-cell.has-items .day-total-badge {
+  background: var(--color-copper);
+}
+
+.day-cell.today .day-total-badge {
+  background: var(--color-primary-700, #7c2d12);
 }
 
 /* Interventions du jour */
@@ -213,13 +259,174 @@
   text-overflow: ellipsis;
 }
 
-.more-count {
+/* Bouton "+X autres" — cliquable */
+.more-count-btn {
+  width: 100%;
+  padding: 0.2rem 0.375rem;
   font-size: 0.625rem;
-  color: #64748b;
-  font-weight: 600;
-  padding: 0.125rem 0.25rem;
+  font-weight: 700;
+  color: var(--color-copper-dark, #92400e);
+  background: rgba(184, 115, 51, 0.1);
+  border: 1px dashed rgba(184, 115, 51, 0.4);
+  border-radius: 0.25rem;
+  cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
 }
+
+.more-count-btn:hover {
+  background: rgba(184, 115, 51, 0.18);
+  border-color: var(--color-copper);
+}
+
+.more-count-btn.is-open {
+  background: rgba(184, 115, 51, 0.2);
+  border-style: solid;
+  color: var(--color-copper-dark, #7c2d12);
+}
+
+/* Backdrop pour fermer le panel */
+.overflow-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: transparent;
+}
+
+/* Panel flottant — détail du jour */
+.day-overflow-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  max-width: 280px;
+  z-index: 99;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: 0.625rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  animation: panelFadeIn 0.15s ease;
+}
+
+.day-overflow-panel.align-right {
+  left: auto;
+  right: 0;
+}
+
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.overflow-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, var(--color-copper-dark, #92400e), var(--color-copper, #b87333));
+  color: #fff;
+  gap: 0.5rem;
+}
+
+.overflow-panel-date {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.overflow-panel-count {
+  font-size: 0.6875rem;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.overflow-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.375rem;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+/* Chaque intervention dans le panel */
+.overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--color-copper);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+  font-family: inherit;
+}
+
+.overflow-item:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+  border-left-color: var(--color-copper-dark);
+  transform: translateX(2px);
+}
+
+.overflow-item.in-progress {
+  border-left-color: #f59e0b;
+}
+
+.overflow-item.completed {
+  border-left-color: #22c55e;
+  opacity: 0.75;
+}
+
+.overflow-item-time {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-copper-dark, #92400e);
+  flex-shrink: 0;
+  min-width: 36px;
+}
+
+.overflow-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.overflow-item-client {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-item-service {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.overflow-item-dot.dot-pending  { background: var(--color-copper); }
+.overflow-item-dot.dot-progress { background: #f59e0b; }
+.overflow-item-dot.dot-done     { background: #22c55e; }
 
 /* Légende */
 .month-legend {
@@ -332,12 +539,18 @@
   }
 
   .day-cell {
-    min-height: 70px;
+    min-height: 75px;
     padding: 0.375rem;
   }
 
   .day-number {
     font-size: 0.75rem;
+  }
+
+  .day-total-badge {
+    font-size: 0.5rem;
+    min-width: 14px;
+    height: 14px;
   }
 
   .intervention-dot {
@@ -348,12 +561,27 @@
     display: none;
   }
 
+  .more-count-btn {
+    font-size: 0.5625rem;
+    padding: 0.15rem 0.25rem;
+  }
+
   .absence-dot {
     padding: 0.125rem 0.25rem;
   }
 
   .absence-icon {
     font-size: 0.5625rem;
+  }
+
+  /* Panel plus large en mobile */
+  .day-overflow-panel {
+    min-width: 200px;
+    max-width: 260px;
+  }
+
+  .day-overflow-panel.align-right {
+    right: -8px;
   }
 }
 
@@ -364,7 +592,7 @@
   }
 
   .day-cell {
-    min-height: 50px;
+    min-height: 56px;
     padding: 0.25rem;
   }
 
@@ -373,9 +601,13 @@
   }
 
   .day-cell.today .day-number {
-    width: 22px;
-    height: 22px;
-    font-size: 0.625rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.6rem;
+  }
+
+  .day-total-badge {
+    display: none; /* Trop petit — utiliser le panel */
   }
 
   .intervention-dot {
@@ -384,6 +616,24 @@
 
   .dot-client {
     display: none;
+  }
+
+  /* Panel en mobile : position fixe centré */
+  .day-overflow-panel,
+  .day-overflow-panel.align-right {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    min-width: 280px;
+    max-width: calc(100vw - 2rem);
+    z-index: 200;
+  }
+
+  .overflow-panel-backdrop {
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 199;
   }
 
   .month-legend {

@@ -1,7 +1,7 @@
 // src/components/planning/PlanningCalendarView.jsx
 // Vue calendrier pour la gestion du planning
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '../SharedUI';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
 import './PlanningCalendarView.css';
@@ -119,8 +119,14 @@ const PlanningCalendarView = ({
   absences = []
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [expandedDay, setExpandedDay] = useState(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  const toggleExpanded = useCallback((key, e) => {
+    e.stopPropagation();
+    setExpandedDay(prev => prev === key ? null : key);
+  }, []);
 
   // Générer les jours du calendrier
   const calendarDays = useMemo(() =>
@@ -190,14 +196,17 @@ const PlanningCalendarView = ({
 
   // Navigation
   const goToPreviousMonth = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const goToNextMonth = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
   const goToToday = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date());
   };
 
@@ -213,6 +222,15 @@ const PlanningCalendarView = ({
 
   return (
     <div className="planning-calendar">
+      {/* Backdrop pour fermer le panel */}
+      {expandedDay && (
+        <div
+          className="overflow-panel-backdrop"
+          onClick={() => setExpandedDay(null)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Header avec navigation */}
       <div className="calendar-header">
         <div className="calendar-nav">
@@ -260,14 +278,36 @@ const PlanningCalendarView = ({
           const dayAbsences = absencesByDate[dateKey] || [];
           const hasInterventions = dayInterventions.length > 0;
           const hasAbsences = dayAbsences.length > 0;
+          const VISIBLE = 3;
+          const overflow = dayInterventions.length - VISIBLE;
+          const isExpanded = expandedDay === dateKey;
+          const panelAlignRight = (index % 7) >= 4;
 
           return (
             <div
               key={index}
-              className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${hasInterventions ? 'has-interventions' : ''} ${hasAbsences ? 'has-absences' : ''}`}
-              onClick={() => onDateClick?.(day.date, dayInterventions)}
+              className={[
+                'calendar-day',
+                !day.isCurrentMonth && 'other-month',
+                day.isToday && 'today',
+                hasInterventions && 'has-interventions',
+                hasAbsences && 'has-absences',
+                isExpanded && 'is-expanded'
+              ].filter(Boolean).join(' ')}
+              onClick={() => {
+                if (isExpanded) { setExpandedDay(null); return; }
+                onDateClick?.(day.date, dayInterventions);
+              }}
             >
-              <span className="day-number">{day.date.getDate()}</span>
+              {/* Numéro du jour + badge total */}
+              <div className="day-header-row">
+                <span className="day-number">{day.date.getDate()}</span>
+                {dayInterventions.length > 1 && day.isCurrentMonth && (
+                  <span className="day-total-badge" title={`${dayInterventions.length} interventions`}>
+                    {dayInterventions.length}
+                  </span>
+                )}
+              </div>
 
               {/* Absences du jour */}
               {hasAbsences && (
@@ -275,7 +315,7 @@ const PlanningCalendarView = ({
                   {dayAbsences.slice(0, 2).map((absence, idx) => {
                     const reason = absence.reason || 'Autre';
                     const icon = ABSENCE_ICONS[reason] || '📋';
-                    const absenceClass = `absence-${reason.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+                    const absenceClass = `absence-${reason.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')}`;
 
                     return (
                       <div
@@ -296,13 +336,13 @@ const PlanningCalendarView = ({
 
               {/* Interventions du jour */}
               <div className="day-interventions">
-                {dayInterventions.slice(0, 3).map(itv => (
+                {dayInterventions.slice(0, VISIBLE).map(itv => (
                   <div
                     key={itv.id}
                     className={`intervention-chip ${itv.status === 'Terminée' ? 'completed' : ''}`}
                     style={{
                       borderLeftColor: getTeamColor(itv),
-                      backgroundColor: `${getTeamColor(itv)}15`
+                      backgroundColor: `${getTeamColor(itv)}18`
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -315,12 +355,55 @@ const PlanningCalendarView = ({
                   </div>
                 ))}
 
-                {dayInterventions.length > 3 && (
-                  <div className="more-interventions">
-                    +{dayInterventions.length - 3} autres
-                  </div>
+                {overflow > 0 && (
+                  <button
+                    type="button"
+                    className={`more-interventions-btn${isExpanded ? ' is-open' : ''}`}
+                    onClick={(e) => toggleExpanded(dateKey, e)}
+                    title="Voir toutes les interventions"
+                  >
+                    {isExpanded ? '▲ Réduire' : `+${overflow} autres`}
+                  </button>
                 )}
               </div>
+
+              {/* Panel flottant — toutes les interventions du jour */}
+              {isExpanded && (
+                <div
+                  className={`day-overflow-panel${panelAlignRight ? ' align-right' : ''}`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="overflow-panel-header">
+                    <span className="overflow-panel-date">
+                      {day.date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </span>
+                    <span className="overflow-panel-count">
+                      {dayInterventions.length} intervention{dayInterventions.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="overflow-panel-list">
+                    {dayInterventions.map(itv => (
+                      <button
+                        key={itv.id}
+                        type="button"
+                        className={`overflow-item${itv.status === 'Terminée' ? ' completed' : itv.status === 'En cours' ? ' in-progress' : ''}`}
+                        style={{ borderLeftColor: getTeamColor(itv) }}
+                        onClick={() => {
+                          onInterventionClick?.(itv);
+                          setExpandedDay(null);
+                        }}
+                      >
+                        <span className="overflow-item-time">{itv.time || '--:--'}</span>
+                        <div className="overflow-item-info">
+                          <span className="overflow-item-client">{itv.client}</span>
+                          <span className="overflow-item-assignee">{getAssignedNames(itv)}</span>
+                        </div>
+                        <span className={`overflow-item-dot${itv.status === 'Terminée' ? ' dot-done' : itv.status === 'En cours' ? ' dot-progress' : ' dot-pending'}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

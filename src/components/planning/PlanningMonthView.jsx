@@ -1,7 +1,7 @@
 // src/components/planning/PlanningMonthView.jsx
 // Vue mensuelle du planning
 
-import { useMemo, useState, memo } from 'react';
+import { useMemo, useState, memo, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
 import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
@@ -64,6 +64,14 @@ const getMonthDays = (year, month) => {
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
+const ABSENCE_ICONS = {
+  'Congés': '🏖️',
+  'Maladie': '🏥',
+  'Formation': '📚',
+  'École': '🎓',
+  'Autre': '📋'
+};
+
 const PlanningMonthView = ({
   interventions = [],
   absences = [],
@@ -73,6 +81,12 @@ const PlanningMonthView = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
+  const [expandedDay, setExpandedDay] = useState(null);
+
+  const toggleExpanded = useCallback((dateStr, e) => {
+    e.stopPropagation();
+    setExpandedDay(prev => prev === dateStr ? null : dateStr);
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -117,7 +131,6 @@ const PlanningMonthView = ({
 
       if (!startDate || !endDate || !empId) return;
 
-      // Pour chaque jour de l'absence
       const start = new Date(startDate + 'T00:00:00');
       const end = new Date(endDate + 'T00:00:00');
 
@@ -139,14 +152,17 @@ const PlanningMonthView = ({
 
   // Navigation
   const goToPreviousMonth = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const goToNextMonth = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
   const goToToday = () => {
+    setExpandedDay(null);
     setCurrentDate(new Date());
   };
 
@@ -183,6 +199,15 @@ const PlanningMonthView = ({
 
   return (
     <div className="planning-month">
+      {/* Backdrop pour fermer le panel au clic extérieur */}
+      {expandedDay && (
+        <div
+          className="overflow-panel-backdrop"
+          onClick={() => setExpandedDay(null)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Header */}
       <div className="month-header">
         <div className="month-nav">
@@ -228,36 +253,57 @@ const PlanningMonthView = ({
 
         {/* Jours du mois */}
         <div className="days-grid">
-          {monthDays.map(day => {
+          {monthDays.map((day, index) => {
             const dayInterventions = interventionsByDate[day.dateStr] || [];
             const dayAbsences = absencesByDate[day.dateStr] || [];
             const hasInterventions = dayInterventions.length > 0;
             const hasAbsences = dayAbsences.length > 0;
+            const VISIBLE = hasAbsences ? 2 : 3;
+            const overflow = dayInterventions.length - VISIBLE;
+            const isExpanded = expandedDay === day.dateStr;
+            // Colonnes 5/6/7 (Jeu/Ven/Sam/Dim) → ouvrir le panel à gauche
+            const panelAlignRight = (index % 7) >= 4;
 
             return (
               <div
                 key={day.dateStr}
-                className={`day-cell ${day.isCurrentMonth ? '' : 'other-month'} ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${hasInterventions ? 'has-items' : ''} ${hasAbsences ? 'has-absences' : ''}`}
-                onClick={() => onDayClick?.(day.date, dayInterventions)}
+                className={[
+                  'day-cell',
+                  !day.isCurrentMonth && 'other-month',
+                  day.isToday && 'today',
+                  day.isWeekend && 'weekend',
+                  hasInterventions && 'has-items',
+                  hasAbsences && 'has-absences',
+                  isExpanded && 'is-expanded'
+                ].filter(Boolean).join(' ')}
+                onClick={() => {
+                  if (isExpanded) { setExpandedDay(null); return; }
+                  onDayClick?.(day.date, dayInterventions);
+                }}
               >
-                <span className="day-number">{day.dayNum}</span>
+                {/* Numéro du jour + badge total */}
+                <div className="day-header-row">
+                  <span className="day-number">{day.dayNum}</span>
+                  {dayInterventions.length > 1 && day.isCurrentMonth && (
+                    <span className="day-total-badge" title={`${dayInterventions.length} interventions`}>
+                      {dayInterventions.length}
+                    </span>
+                  )}
+                </div>
 
                 {/* Absences du jour */}
                 {hasAbsences && (
                   <div className="day-absences">
                     {dayAbsences.slice(0, 2).map((absence, idx) => {
-                      const reasonIcons = {
-                        'Congés': '🏖️',
-                        'Maladie': '🏥',
-                        'Formation': '📚',
-                        'École': '🎓',
-                        'Autre': '📋'
-                      };
-                      const icon = reasonIcons[absence.reason] || '🚫';
+                      const icon = ABSENCE_ICONS[absence.reason] || '🚫';
+                      const slug = (absence.reason || 'autre')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[̀-ͯ]/g, '');
                       return (
                         <div
                           key={`absence-${absence.employeeId}-${idx}`}
-                          className={`absence-dot absence-${(absence.reason || 'autre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}
+                          className={`absence-dot absence-${slug}`}
                           title={`${absence.employeeName} — ${absence.reason || 'Absent'}`}
                         >
                           <span className="absence-icon">{icon}</span>
@@ -274,7 +320,7 @@ const PlanningMonthView = ({
                 {/* Interventions du jour */}
                 {hasInterventions && (
                   <div className="day-interventions">
-                    {dayInterventions.slice(0, hasAbsences ? 2 : 3).map(itv => (
+                    {dayInterventions.slice(0, VISIBLE).map(itv => (
                       <div
                         key={itv.id}
                         className={`intervention-dot ${itv.status === 'Terminée' ? 'completed' : itv.status === 'En cours' ? 'in-progress' : ''}`}
@@ -288,9 +334,56 @@ const PlanningMonthView = ({
                         <span className="dot-client">{itv.client}</span>
                       </div>
                     ))}
-                    {dayInterventions.length > (hasAbsences ? 2 : 3) && (
-                      <span className="more-count">+{dayInterventions.length - (hasAbsences ? 2 : 3)}</span>
+
+                    {overflow > 0 && (
+                      <button
+                        type="button"
+                        className={`more-count-btn${isExpanded ? ' is-open' : ''}`}
+                        onClick={(e) => toggleExpanded(day.dateStr, e)}
+                        title="Voir toutes les interventions"
+                      >
+                        {isExpanded ? '▲ Réduire' : `+${overflow} autres`}
+                      </button>
                     )}
+                  </div>
+                )}
+
+                {/* Panel flottant avec toutes les interventions du jour */}
+                {isExpanded && (
+                  <div
+                    className={`day-overflow-panel${panelAlignRight ? ' align-right' : ''}`}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="overflow-panel-header">
+                      <span className="overflow-panel-date">
+                        {day.date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </span>
+                      <span className="overflow-panel-count">
+                        {dayInterventions.length} intervention{dayInterventions.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="overflow-panel-list">
+                      {dayInterventions.map(itv => (
+                        <button
+                          key={itv.id}
+                          type="button"
+                          className={`overflow-item${itv.status === 'Terminée' ? ' completed' : itv.status === 'En cours' ? ' in-progress' : ''}`}
+                          onClick={() => {
+                            onInterventionClick?.(itv);
+                            setExpandedDay(null);
+                          }}
+                        >
+                          <span className="overflow-item-time">{itv.time?.slice(0, 5) || '--:--'}</span>
+                          <div className="overflow-item-info">
+                            <span className="overflow-item-client">{itv.client}</span>
+                            {itv.service_type && (
+                              <span className="overflow-item-service">{itv.service_type}</span>
+                            )}
+                          </div>
+                          <span className={`overflow-item-dot${itv.status === 'Terminée' ? ' dot-done' : itv.status === 'En cours' ? ' dot-progress' : ' dot-pending'}`} />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
