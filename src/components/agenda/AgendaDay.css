@@ -128,7 +128,7 @@
 }
 
 .hours-col {
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--border-color);
   padding-right: 0.5rem;
   position: relative;
 }
@@ -149,7 +149,7 @@
 
 .events-col {
   position: relative;
-  background: linear-gradient(to bottom, transparent 50%, #f9fafb 50%);
+  background: linear-gradient(to bottom, transparent 50%, var(--bg-tertiary) 50%);
   background-size: 100% calc(100% / 14);
 }
 

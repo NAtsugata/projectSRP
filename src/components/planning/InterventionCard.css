@@ -130,6 +130,37 @@
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
+/* Light theme overrides — use darker shades for readable contrast on white backgrounds */
+.light-theme .status-blue {
+  background-color: rgba(14, 165, 233, 0.12);
+  color: #0369a1;
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.light-theme .status-yellow {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.light-theme .status-green {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.light-theme .status-default {
+  background-color: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+.light-theme .scheduled-date-chip {
+  background-color: rgba(184, 115, 51, 0.14);
+  color: #7c2d12;
+  border-color: rgba(184, 115, 51, 0.35);
+}
+
 .intervention-card-info {
   display: flex;
   flex-direction: column;
@@ -192,25 +223,65 @@
   .intervention-card {
     flex-direction: column;
     align-items: stretch;
-    padding: 1.25rem;
+    padding: 1rem;
+    gap: 0.875rem;
+  }
+
+  .intervention-card-content {
+    gap: 0.75rem;
+  }
+
+  .intervention-card-title {
+    font-size: 1rem;
+  }
+
+  .intervention-card-service {
+    font-size: 0.8125rem;
+  }
+
+  .info-item {
+    font-size: 0.85rem;
+    gap: 0.5rem;
   }
 
   .intervention-card-actions {
     flex-direction: row;
     width: 100%;
     justify-content: flex-end;
-    padding-top: 1rem;
+    padding-top: 0.875rem;
     border-top: 1px solid var(--border-color);
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
+    gap: 0.5rem;
+  }
+
+  /* Ensure touch targets are at least 44px on mobile */
+  .intervention-card-actions button {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  .status-badge {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.7rem;
   }
 }
 
 @media (max-width: 480px) {
+  .intervention-card {
+    padding: 0.875rem;
+    border-radius: var(--border-radius-md);
+  }
+
   .intervention-card-actions {
     flex-wrap: wrap;
   }
 
   .intervention-card-actions button {
     flex: 1 1 auto;
+  }
+
+  .intervention-card-title-row {
+    gap: 0.5rem;
   }
 }
