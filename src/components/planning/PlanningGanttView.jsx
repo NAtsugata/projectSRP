@@ -249,6 +249,7 @@ const InterventionBar = ({ intervention, color, onClick, onEditTeam, isSpanStart
  */
 const OverflowIndicator = ({ count, onClick }) => (
   <button className="overflow-indicator" onClick={onClick}>
+    <span className="overflow-indicator-icon">▼</span>
     +{count} autre{count > 1 ? 's' : ''}
   </button>
 );
@@ -295,6 +296,7 @@ const PlanningGanttView = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState('all');
+  const [expandedCell, setExpandedCell] = useState(null);
 
   // Générer les jours de la semaine
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
@@ -407,18 +409,21 @@ const PlanningGanttView = ({
 
   // Navigation
   const goToPreviousWeek = () => {
+    setExpandedCell(null);
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() - 7);
     setCurrentDate(newDate);
   };
 
   const goToNextWeek = () => {
+    setExpandedCell(null);
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + 7);
     setCurrentDate(newDate);
   };
 
   const goToToday = () => {
+    setExpandedCell(null);
     setCurrentDate(new Date());
   };
 
@@ -660,6 +665,14 @@ const PlanningGanttView = ({
                       key={day.dateStr}
                       className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''} ${absentMembers.length > 0 ? 'has-absent-member' : ''}`}
                     >
+                      {dayInterventions.length > 1 && (
+                        <span
+                          className="gantt-cell-count"
+                          title={`${dayInterventions.length} interventions ce jour`}
+                        >
+                          {dayInterventions.length}
+                        </span>
+                      )}
                       {absentMembers.map((member, idx) => (
                         <div
                           key={`absent-${idx}`}
@@ -686,10 +699,11 @@ const PlanningGanttView = ({
                       {hasOverflow && (
                         <OverflowIndicator
                           count={overflowCount}
-                          onClick={() => {
-                            const firstHidden = dayInterventions[MAX_VISIBLE_PER_CELL];
-                            onInterventionClick?.(firstHidden);
-                          }}
+                          onClick={() => setExpandedCell({
+                            team,
+                            day,
+                            interventions: dayInterventions
+                          })}
                         />
                       )}
                     </div>
@@ -720,6 +734,74 @@ const PlanningGanttView = ({
           <span>Absent</span>
         </div>
       </div>
+
+      {/* Modal d'expansion : toutes les interventions d'une équipe pour un jour */}
+      {expandedCell && (
+        <div
+          className="gantt-modal-backdrop"
+          onClick={() => setExpandedCell(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="gantt-modal"
+            onClick={e => e.stopPropagation()}
+            style={{ '--modal-team-color': expandedCell.team.color }}
+          >
+            <div className="gantt-modal-header">
+              <div className="gantt-modal-title">
+                <span className="gantt-modal-team-dot" />
+                <div className="gantt-modal-titles">
+                  <strong>{expandedCell.team.names?.join(' + ') || expandedCell.team.name}</strong>
+                  <span className="gantt-modal-date">
+                    {expandedCell.day.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="gantt-modal-close"
+                onClick={() => setExpandedCell(null)}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="gantt-modal-body">
+              <div className="gantt-modal-count">
+                {expandedCell.interventions.length} intervention{expandedCell.interventions.length > 1 ? 's' : ''}
+              </div>
+              <div className="gantt-modal-list">
+                {expandedCell.interventions.map(itv => (
+                  <button
+                    key={itv.id}
+                    type="button"
+                    className={`gantt-modal-item${itv.status === 'Terminée' ? ' completed' : itv.status === 'En cours' ? ' in-progress' : ''}`}
+                    onClick={() => {
+                      onInterventionClick?.(itv);
+                      setExpandedCell(null);
+                    }}
+                  >
+                    <span className="gantt-modal-item-time">{formatTime(itv.time)}</span>
+                    <div className="gantt-modal-item-info">
+                      <span className="gantt-modal-item-client">{itv.client}</span>
+                      {itv.service && (
+                        <span className="gantt-modal-item-service">{itv.service}</span>
+                      )}
+                      {itv.address && (
+                        <span className="gantt-modal-item-address">📍 {itv.address}</span>
+                      )}
+                    </div>
+                    <span className={`gantt-modal-item-status${itv.status === 'Terminée' ? ' status-done' : itv.status === 'En cours' ? ' status-progress' : ' status-pending'}`}>
+                      {itv.status === 'Terminée' ? '✓' : itv.status === 'En cours' ? '▶' : '○'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
