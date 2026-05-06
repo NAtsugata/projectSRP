@@ -646,6 +646,11 @@ const PlanningGanttView = ({
                   const visibleInterventions = dayInterventions.slice(0, MAX_VISIBLE_PER_CELL);
                   const overflowCount = dayInterventions.length - MAX_VISIBLE_PER_CELL;
                   const hasOverflow = overflowCount > 0;
+                  const loadClass = dayInterventions.length >= 4
+                    ? 'load-heavy'
+                    : dayInterventions.length >= 2
+                      ? 'load-medium'
+                      : '';
 
                   // Trouver les membres absents de cette équipe ce jour
                   const absentMembers = team.userIds
@@ -663,7 +668,7 @@ const PlanningGanttView = ({
                   return (
                     <div
                       key={day.dateStr}
-                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''} ${absentMembers.length > 0 ? 'has-absent-member' : ''}`}
+                      className={`gantt-day-cell ${day.isToday ? 'today' : ''} ${day.isWeekend ? 'weekend' : ''} ${dayInterventions.length > 0 ? 'has-items' : ''} ${hasOverflow ? 'has-overflow' : ''} ${absentMembers.length > 0 ? 'has-absent-member' : ''} ${loadClass}`}
                     >
                       {dayInterventions.length > 1 && (
                         <span

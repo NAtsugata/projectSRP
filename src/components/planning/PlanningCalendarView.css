@@ -175,6 +175,67 @@
   justify-content: center;
 }
 
+/* ==================== INDICATEURS DE CHARGE ==================== */
+.calendar-day.has-interventions.load-medium {
+  background: rgba(245, 158, 11, 0.07);
+}
+.calendar-day.has-interventions.load-medium .day-total-badge {
+  background: #f59e0b;
+}
+.calendar-day.has-interventions.load-heavy {
+  background: rgba(239, 68, 68, 0.08);
+}
+.calendar-day.has-interventions.load-heavy .day-total-badge {
+  background: #ef4444;
+  animation: calPulseHeavy 1.6s ease-in-out infinite;
+}
+@keyframes calPulseHeavy {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  50%      { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+}
+.calendar-day.has-interventions.load-medium::before,
+.calendar-day.has-interventions.load-heavy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+  z-index: 2;
+}
+.calendar-day.has-interventions.load-medium::before {
+  background: linear-gradient(90deg, transparent, #f59e0b 50%, transparent);
+}
+.calendar-day.has-interventions.load-heavy::before {
+  background: linear-gradient(90deg, transparent, #ef4444 50%, transparent);
+}
+.dark-theme .calendar-day.has-interventions.load-medium {
+  background: rgba(245, 158, 11, 0.13);
+}
+.dark-theme .calendar-day.has-interventions.load-heavy {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+/* Mini-barre de répartition par statut */
+.day-status-bar {
+  display: flex;
+  height: 3px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 2px 0 4px;
+  background: var(--bg-tertiary, #f1f5f9);
+}
+.status-segment {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+}
+.seg-pending { background: var(--color-copper, #b87333); }
+.seg-progress { background: #f59e0b; }
+.seg-done { background: #22c55e; }
+
 /* Interventions du jour */
 .day-interventions {
   flex: 1;

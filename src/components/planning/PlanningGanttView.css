@@ -583,6 +583,62 @@
   letter-spacing: 0.02em;
 }
 
+/* ==================== INDICATEURS DE CHARGE ==================== */
+/* Charge modérée (2-3 interventions) : teinte ambre */
+.gantt-day-cell.has-items.load-medium {
+  background: rgba(245, 158, 11, 0.07);
+}
+.gantt-day-cell.has-items.load-medium .gantt-cell-count {
+  background: #f59e0b;
+}
+
+/* Charge élevée (4+ interventions) : teinte rouge + pulsation du badge */
+.gantt-day-cell.has-items.load-heavy {
+  background: rgba(239, 68, 68, 0.08);
+}
+.gantt-day-cell.has-items.load-heavy .gantt-cell-count {
+  background: #ef4444;
+  animation: pulseHeavy 1.6s ease-in-out infinite;
+}
+
+@keyframes pulseHeavy {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* Préserver le fond "today" en cas de surcharge */
+.gantt-day-cell.today.has-items.load-medium,
+.gantt-day-cell.today.has-items.load-heavy {
+  background: linear-gradient(180deg, #ecfeff 0%, #e0f2fe 100%);
+}
+
+/* Stripe colorée en haut pour signaler la charge même sur today/weekend */
+.gantt-day-cell.has-items.load-medium::before,
+.gantt-day-cell.has-items.load-heavy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+  z-index: 2;
+}
+.gantt-day-cell.has-items.load-medium::before {
+  background: linear-gradient(90deg, transparent, #f59e0b 50%, transparent);
+}
+.gantt-day-cell.has-items.load-heavy::before {
+  background: linear-gradient(90deg, transparent, #ef4444 50%, transparent);
+}
+
+/* Dark theme : opacités plus marquées pour rester visibles */
+.dark-theme .gantt-day-cell.has-items.load-medium {
+  background: rgba(245, 158, 11, 0.12);
+}
+.dark-theme .gantt-day-cell.has-items.load-heavy {
+  background: rgba(239, 68, 68, 0.14);
+}
+
 /* ==================== MODAL D'EXPANSION ==================== */
 .gantt-modal-backdrop {
   position: fixed;

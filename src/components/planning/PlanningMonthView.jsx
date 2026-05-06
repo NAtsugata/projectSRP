@@ -264,6 +264,21 @@ const PlanningMonthView = ({
             // Colonnes 5/6/7 (Jeu/Ven/Sam/Dim) → ouvrir le panel à gauche
             const panelAlignRight = (index % 7) >= 4;
 
+            // Indicateur de charge : 4+ = élevée, 2-3 = modérée
+            const loadClass = dayInterventions.length >= 4
+              ? 'load-heavy'
+              : dayInterventions.length >= 2
+                ? 'load-medium'
+                : '';
+
+            // Répartition par statut pour la mini-barre
+            let pendingCount = 0, progressCount = 0, doneCount = 0;
+            for (const itv of dayInterventions) {
+              if (itv.status === 'Terminée') doneCount++;
+              else if (itv.status === 'En cours') progressCount++;
+              else pendingCount++;
+            }
+
             return (
               <div
                 key={day.dateStr}
@@ -274,7 +289,8 @@ const PlanningMonthView = ({
                   day.isWeekend && 'weekend',
                   hasInterventions && 'has-items',
                   hasAbsences && 'has-absences',
-                  isExpanded && 'is-expanded'
+                  isExpanded && 'is-expanded',
+                  loadClass
                 ].filter(Boolean).join(' ')}
                 onClick={() => {
                   if (isExpanded) { setExpandedDay(null); return; }
@@ -290,6 +306,24 @@ const PlanningMonthView = ({
                     </span>
                   )}
                 </div>
+
+                {/* Mini-barre de répartition par statut */}
+                {hasInterventions && day.isCurrentMonth && (
+                  <div
+                    className="day-status-bar"
+                    title={`À venir: ${pendingCount} • En cours: ${progressCount} • Terminées: ${doneCount}`}
+                  >
+                    {pendingCount > 0 && (
+                      <span className="status-segment seg-pending" style={{ flex: pendingCount }} />
+                    )}
+                    {progressCount > 0 && (
+                      <span className="status-segment seg-progress" style={{ flex: progressCount }} />
+                    )}
+                    {doneCount > 0 && (
+                      <span className="status-segment seg-done" style={{ flex: doneCount }} />
+                    )}
+                  </div>
+                )}
 
                 {/* Absences du jour */}
                 {hasAbsences && (
