@@ -12,8 +12,10 @@ import {
     saveCompanyInfo,
     saveGenerationRecord,
     getCurrentFicheInfo,
+    getCurrentFicheInfoFromDB,
     resetFicheCounter,
     getNextFicheNumber,
+    getNextFicheNumberFromDB,
     mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
@@ -91,14 +93,21 @@ function CerfaPage15498() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo('15498'));
     const [showAdminReset, setShowAdminReset] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
+    // Charger le compteur depuis Supabase au montage
+    useEffect(() => {
+        getCurrentFicheInfoFromDB('15498').then(setFicheInfo).catch(() => {});
+    }, []);
+
     // Rafraîchir le numéro de fiche après génération
     const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+        getCurrentFicheInfoFromDB('15498').then(setFicheInfo).catch(() => {
+            setFicheInfo(getCurrentFicheInfo('15498'));
+        });
     }, []);
 
     // Auto-save brouillon dans localStorage (debounce 1s) — persiste entre sessions
@@ -258,7 +267,7 @@ function CerfaPage15498() {
         setIsGenerating(true);
         try {
             // Générer le numéro de fiche
-            const ficheNumber = getNextFicheNumber('15498');
+            const ficheNumber = await getNextFicheNumberFromDB('15498');
             const clientName = (formData.acq_nom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
             const date = new Date().toISOString().split('T')[0];
 

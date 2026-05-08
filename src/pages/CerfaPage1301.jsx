@@ -12,7 +12,9 @@ import {
     getCompanyInfo,
     saveGenerationRecord,
     getCurrentFicheInfo,
+    getCurrentFicheInfoFromDB,
     getNextFicheNumber,
+    getNextFicheNumberFromDB,
     mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
@@ -93,13 +95,20 @@ function CerfaPage1301() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo('1301'));
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
+    // Charger le compteur depuis Supabase au montage
+    useEffect(() => {
+        getCurrentFicheInfoFromDB('1301').then(setFicheInfo).catch(() => {});
+    }, []);
+
     // Rafraîchir le numéro de fiche
     const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+        getCurrentFicheInfoFromDB('1301').then(setFicheInfo).catch(() => {
+            setFicheInfo(getCurrentFicheInfo('1301'));
+        });
     }, []);
 
     // Charger les informations entreprise (Supabase en priorité)
@@ -293,7 +302,7 @@ function CerfaPage1301() {
 
         try {
             // Obtenir le prochain numéro de fiche
-            const ficheNumber = getNextFicheNumber('1301');
+            const ficheNumber = await getNextFicheNumberFromDB('1301');
 
             // Générer le PDF
             const pdfBlob = await fillCerfa1301({

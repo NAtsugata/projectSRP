@@ -6,6 +6,8 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
 import { safeStorage } from './safeStorage';
+import { supabase } from '../lib/supabase';
+import { getOrgId } from './orgHelper';
 
 // Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
@@ -78,6 +80,69 @@ export const getNextFicheNumber = (cerfaType = '15497') => {
         logger.error('Erreur génération numéro fiche:', e);
         return `CERFA-${cerfaType || 'UNKN'}-${Date.now()}`;
     }
+};
+
+// =============================
+// NUMÉROTATION VIA SUPABASE (séquence partagée entre appareils)
+// =============================
+
+/**
+ * Génère le prochain numéro CERFA via compteur Supabase (atomique, partagé).
+ * Fallback localStorage si Supabase indisponible.
+ */
+export const getNextFicheNumberFromDB = async (cerfaType = '15497') => {
+    const orgId = getOrgId();
+    const year = new Date().getFullYear();
+    if (orgId) {
+        try {
+            const { data, error } = await supabase.rpc('increment_cerfa_counter', {
+                p_org_id: orgId,
+                p_cerfa_type: cerfaType,
+                p_year: year,
+            });
+            if (!error && data != null) {
+                const padded = String(data).padStart(4, '0');
+                return `CERFA-${cerfaType}-${year}-${padded}`;
+            }
+            logger.warn('[CERFA] Fallback localStorage (RPC error):', error?.message);
+        } catch (e) {
+            logger.warn('[CERFA] Fallback localStorage (exception):', e);
+        }
+    }
+    // Fallback : localStorage (pas d'org ou Supabase indisponible)
+    return getNextFicheNumber(cerfaType);
+};
+
+/**
+ * Lit le compteur actuel depuis Supabase sans l'incrémenter (prévisualisation).
+ * Fallback localStorage.
+ */
+export const getCurrentFicheInfoFromDB = async (cerfaType = '15497') => {
+    const orgId = getOrgId();
+    const year = new Date().getFullYear();
+    if (orgId) {
+        try {
+            const { data, error } = await supabase.rpc('get_cerfa_counter', {
+                p_org_id: orgId,
+                p_cerfa_type: cerfaType,
+                p_year: year,
+            });
+            if (!error && data != null) {
+                const count = data;
+                return {
+                    year,
+                    count,
+                    nextNumber: count + 1,
+                    formatted: `CERFA-${cerfaType}-${year}-${String(count + 1).padStart(4, '0')}`,
+                    cerfaType,
+                    source: 'db',
+                };
+            }
+        } catch (e) {
+            logger.warn('[CERFA] Fallback ficheInfo localStorage:', e);
+        }
+    }
+    return { ...getCurrentFicheInfo(cerfaType), source: 'local' };
 };
 
 /**
