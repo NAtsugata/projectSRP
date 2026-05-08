@@ -242,6 +242,34 @@
   height: 1.25rem;
 }
 
+/* Bouton HD */
+.lightbox-btn-hd {
+  width: auto !important;
+  padding: 0 0.625rem;
+  gap: 0.3rem;
+  background: rgba(34, 197, 94, 0.25) !important;
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+  font-size: 0.75rem;
+  font-weight: 700;
+  position: relative;
+}
+
+.lightbox-btn-hd:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.4) !important;
+}
+
+.lightbox-btn-hd:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hd-badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #86efac;
+}
+
 /* Lightbox Image Container */
 .lightbox-image-container {
   flex: 1;

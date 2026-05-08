@@ -164,16 +164,14 @@ const FileUploader = ({
 
           // Reconstruire le fichier depuis IndexedDB
           const file = arrayBufferToFile(item);
-
-          // Compresser si c'est une image
-          const fileToUpload = await compressImage(file);
+          const isImage = file.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(file.name);
 
           // Simuler progression
           let progress = 20;
           const progressInterval = setInterval(() => {
-            if (progress < 90) {
-              progress += Math.random() * 15;
-              progress = Math.min(progress, 90);
+            if (progress < 80) {
+              progress += Math.random() * 10;
+              progress = Math.min(progress, 80);
               onUploadProgress?.({
                 id: item.id,
                 progress: Math.round(progress),
@@ -182,18 +180,42 @@ const FileUploader = ({
             }
           }, 300);
 
-          // Upload vers Supabase
-          const result = await storageService.uploadInterventionFile(
-            fileToUpload,
-            item.metadata.interventionId,
-            item.metadata.folder
-          );
+          // Pour les images : uploader l'original EN PARALLÈLE avec la version compressée
+          let result, originalResult = null;
+
+          if (isImage) {
+            const compressedFile = await compressImage(file);
+
+            // Upload en parallèle : compressé (affichage) + original (HD)
+            [result, originalResult] = await Promise.all([
+              storageService.uploadInterventionFile(
+                compressedFile,
+                item.metadata.interventionId,
+                item.metadata.folder
+              ),
+              storageService.uploadInterventionFile(
+                file,
+                item.metadata.interventionId,
+                `${item.metadata.folder}/original`
+              )
+            ]);
+          } else {
+            // Non-image : un seul upload, pas de compression
+            result = await storageService.uploadInterventionFile(
+              file,
+              item.metadata.interventionId,
+              item.metadata.folder
+            );
+          }
 
           clearInterval(progressInterval);
 
           if (result.error) throw result.error;
 
           const publicUrl = withCacheBust(result.publicURL?.publicUrl || result.publicURL);
+          const originalUrl = originalResult && !originalResult.error
+            ? (originalResult.publicURL?.publicUrl || originalResult.publicURL)
+            : null;
 
           // Marquer comme complété
           await updateUploadStatus(item.id, 'completed', { uploadedUrl: publicUrl });
@@ -209,14 +231,15 @@ const FileUploader = ({
             url: publicUrl
           });
 
-          logger.log(`✅ Upload réussi: ${item.fileName}`);
+          logger.log(`✅ Upload réussi: ${item.fileName}${originalUrl ? ' + original HD' : ''}`);
 
           return {
             success: true,
             id: item.id,
             name: item.fileName,
             url: publicUrl,
-            type: item.fileType
+            type: item.fileType,
+            ...(originalUrl ? { originalUrl, originalSize: file.size } : {})
           };
 
         } catch (err) {

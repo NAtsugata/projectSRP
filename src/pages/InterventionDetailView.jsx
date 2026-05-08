@@ -385,8 +385,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   // -------- Téléchargement de tous les fichiers en ZIP --------
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [isDownloadingHDZip, setIsDownloadingHDZip] = useState(false);
 
-  const handleDownloadAllAsZip = useCallback(async () => {
+  // Vérifie si au moins une image a un original HD
+  const hasAnyHD = (report?.files || []).some(f => f.originalUrl);
+
+  const handleDownloadAllAsZip = useCallback(async (useHD = false) => {
     if (!window.JSZip) {
       alert('Erreur: Librairie de compression non disponible');
       return;
@@ -397,7 +401,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       return;
     }
 
-    setIsDownloadingZip(true);
+    if (useHD) setIsDownloadingHDZip(true);
+    else setIsDownloadingZip(true);
     try {
       const JSZip = window.JSZip;
       const zip = new JSZip();
@@ -405,7 +410,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       let successCount = 0;
       let failCount = 0;
 
-      logger.log('📦 Création du ZIP avec', totalFiles, 'fichier(s)');
+      logger.log(`📦 Création du ZIP avec ${totalFiles} fichier(s) ${useHD ? '(HD)' : '(standard)'}`);
 
       // Fonction pour télécharger un fichier avec retry
       const downloadFile = async (file, index) => {
@@ -418,7 +423,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-            const response = await fetch(file.url, {
+            // Utiliser l'URL originale (HD) si disponible et demandée
+            const fetchUrl = (useHD && file.originalUrl) ? file.originalUrl : file.url;
+            const response = await fetch(fetchUrl, {
               signal: controller.signal,
               cache: 'no-store',
               headers: { 'Cache-Control': 'no-cache' }
@@ -483,7 +490,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       });
 
       // Télécharger le ZIP - méthode optimisée mobile
-      const zipName = `Intervention-${intervention.client || intervention.id}-Fichiers.zip`;
+      const zipName = `Intervention-${intervention.client || intervention.id}-Fichiers${useHD ? '-HD' : ''}.zip`;
 
       // Utiliser saveAs si disponible (plus fiable sur mobile)
       if (window.saveAs) {
@@ -514,7 +521,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       logger.error('❌ Erreur création ZIP:', error);
       alert('Erreur lors de la création du fichier ZIP: ' + error.message);
     } finally {
-      setIsDownloadingZip(false);
+      if (useHD) setIsDownloadingHDZip(false);
+      else setIsDownloadingZip(false);
     }
   }, [report?.files, intervention]);
 
@@ -890,18 +898,47 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     </span>
                   )}
                 </h3>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   {report.files && report.files.length > 1 && (
-                    <button
-                      onClick={handleDownloadAllAsZip}
-                      disabled={isDownloadingZip}
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                      title="Télécharger tous les fichiers en ZIP"
-                    >
-                      <DownloadIcon />
-                      {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleDownloadAllAsZip(false)}
+                        disabled={isDownloadingZip || isDownloadingHDZip}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                        title="Télécharger tous les fichiers en ZIP (qualité affichage)"
+                      >
+                        <DownloadIcon />
+                        {isDownloadingZip ? 'Préparation...' : 'Tout télécharger'}
+                      </button>
+                      {hasAnyHD && (
+                        <button
+                          onClick={() => handleDownloadAllAsZip(true)}
+                          disabled={isDownloadingZip || isDownloadingHDZip}
+                          className="btn btn-secondary"
+                          style={{
+                            fontSize: '0.875rem',
+                            padding: '0.5rem 1rem',
+                            background: 'rgba(34,197,94,0.12)',
+                            borderColor: '#22c55e',
+                            color: '#15803d'
+                          }}
+                          title="Télécharger tous les fichiers en haute qualité (originaux) en ZIP"
+                        >
+                          <DownloadIcon />
+                          {isDownloadingHDZip ? 'Préparation HD...' : 'Tout HD'}
+                          <span style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 800,
+                            marginLeft: '0.2rem',
+                            background: '#22c55e',
+                            color: '#fff',
+                            padding: '1px 5px',
+                            borderRadius: '999px'
+                          }}>HD</span>
+                        </button>
+                      )}
+                    </>
                   )}
                   <button onClick={refreshData} className="btn-icon" title="Rafraîchir"><RefreshCwIcon /></button>
                 </div>
@@ -911,6 +948,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <ImageGalleryOptimized
                 images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
                   url: f.url,
+                  originalUrl: f.originalUrl || null,
+                  originalSize: f.originalSize || null,
                   name: f.name,
                   type: f.type
                 }))}

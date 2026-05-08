@@ -369,9 +369,23 @@ const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
   };
 
   const { downloadFile } = useDownload();
+  const [isDownloadingHD, setIsDownloadingHD] = useState(false);
 
   const handleDownload = async () => {
     await downloadFile(currentImage.url, currentImage.name || 'image.jpg');
+  };
+
+  const handleDownloadHD = async () => {
+    if (!currentImage.originalUrl || isDownloadingHD) return;
+    setIsDownloadingHD(true);
+    try {
+      const hdName = currentImage.name
+        ? currentImage.name.replace(/(\.[^.]+)?$/, (_, ext) => `-HD${ext || '.jpg'}`)
+        : 'image-HD.jpg';
+      await downloadFile(currentImage.originalUrl, hdName);
+    } finally {
+      setIsDownloadingHD(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -415,9 +429,26 @@ const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
             )}
           </div>
           <div className="lightbox-actions">
-            <button className="lightbox-btn" onClick={handleDownload} title="Télécharger">
+            <button className="lightbox-btn" onClick={handleDownload} title="Télécharger (qualité affichage)">
               <DownloadIcon />
             </button>
+            {currentImage.originalUrl && (
+              <button
+                className="lightbox-btn lightbox-btn-hd"
+                onClick={handleDownloadHD}
+                disabled={isDownloadingHD}
+                title="Télécharger en haute qualité (fichier original)"
+              >
+                {isDownloadingHD ? (
+                  <LoaderIcon className="animate-spin" style={{ width: 16, height: 16 }} />
+                ) : (
+                  <>
+                    <DownloadIcon />
+                    <span className="hd-badge">HD</span>
+                  </>
+                )}
+              </button>
+            )}
             {onDelete && (
               <button
                 className="lightbox-btn lightbox-btn-delete"
