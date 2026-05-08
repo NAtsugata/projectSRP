@@ -205,13 +205,13 @@ function CerfaPage() {
         setFicheInfo(getCurrentFicheInfo());
     }, []);
 
-    // Auto-save brouillon dans sessionStorage (debounce 1s)
+    // Auto-save brouillon dans localStorage (debounce 1s) — persiste entre sessions
     useEffect(() => {
         if (!draftRestored) return; // Ne pas sauvegarder avant la restauration
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             try {
-                sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
             } catch (e) { /* quota exceeded, ignore */ }
         }, 1000);
         return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
@@ -220,7 +220,7 @@ function CerfaPage() {
     // Restaurer le brouillon au montage
     useEffect(() => {
         try {
-            const draft = sessionStorage.getItem(DRAFT_KEY);
+            const draft = localStorage.getItem(DRAFT_KEY);
             if (draft) {
                 const parsed = JSON.parse(draft);
                 // Ne restaurer que si le brouillon a du contenu significatif
@@ -421,7 +421,7 @@ function CerfaPage() {
             });
 
             // Effacer le brouillon après génération réussie
-            try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+            try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
 
             showToast(`CERFA ${ficheNumber} généré avec succès !`, 'success');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche
