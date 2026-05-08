@@ -4,6 +4,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
+import QuickInterventionModal from '../components/planning/QuickInterventionModal';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
 import AbsenceManager from '../components/agenda/AbsenceManager';
 import { Button, ConfirmDialog } from '../components/ui';
@@ -48,6 +49,7 @@ export default function AdminPlanningView({
   const [editTeamIntervention, setEditTeamIntervention] = useState(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [absences, setAbsences] = useState([]);
+  const [showQuickModal, setShowQuickModal] = useState(false);
   const unreadAlertsCount = useUnreadAlertsCount();
 
   const handleAbsencesChange = useCallback((newAbsences) => {
@@ -308,6 +310,26 @@ export default function AdminPlanningView({
       {showAlerts && (
         <EmployeeAlertsPanel onClose={() => setShowAlerts(false)} />
       )}
+
+      {/* FAB saisie rapide */}
+      <button
+        type="button"
+        className="quick-intervention-fab"
+        onClick={() => setShowQuickModal(true)}
+        title="Saisie rapide d'intervention"
+        aria-label="Créer une intervention rapide"
+      >
+        ⚡
+        <span className="fab-label">Intervention rapide</span>
+      </button>
+
+      {/* Modal saisie rapide */}
+      <QuickInterventionModal
+        isOpen={showQuickModal}
+        onClose={() => setShowQuickModal(false)}
+        onSubmit={onAddIntervention}
+        users={users}
+      />
     </div>
   );
 }
