@@ -401,12 +401,12 @@ function CerfaPage1301() {
             <div className="cerfa-header">
                 <h1>📋 CERFA 1301-SD</h1>
                 <p className="cerfa-subtitle">Attestation simplifiée - TVA taux réduit 10%</p>
-                <div className="cerfa-fiche-info" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span>Prochain n°: <strong>{ficheInfo.formatted}</strong></span>
+                <div className="cerfa-fiche-info">
+                    <span>N° <strong>{ficheInfo.formatted}</strong></span>
                     <button
                         type="button"
+                        className="cerfa-fiche-badge-admin"
                         onClick={() => setShowAdminCounter(v => !v)}
-                        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem' }}
                     >
                         ⚙️ Ajuster
                     </button>

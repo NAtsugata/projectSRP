@@ -336,36 +336,19 @@ function CerfaPage15498() {
                         </div>
                     </div>
                     {/* Numéro de fiche */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-end',
-                        gap: '0.25rem'
-                    }}>
-                        <div style={{
-                            background: 'rgba(156, 39, 176, 0.2)',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.9rem'
-                        }}>
-                            <span style={{ opacity: 0.7 }}>Prochaine fiche: </span>
+                    <div className="cerfa-fiche-badge">
+                        <div className="cerfa-fiche-badge-number" style={{ background: 'rgba(156, 39, 176, 0.2)' }}>
+                            <span style={{ opacity: 0.7 }}>N° </span>
                             <strong style={{ color: '#9C27B0' }}>
                                 CERFA-{ficheInfo.year}-{String(ficheInfo.nextNumber).padStart(4, '0')}
                             </strong>
                         </div>
                         <button
                             type="button"
+                            className="cerfa-fiche-badge-admin"
                             onClick={() => setShowAdminReset(!showAdminReset)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'rgba(255,255,255,0.4)',
-                                fontSize: '0.7rem',
-                                cursor: 'pointer',
-                                padding: '0.25rem'
-                            }}
                         >
-                            ⚙️ Admin
+                            ⚙️ Ajuster
                         </button>
                     </div>
                 </div>

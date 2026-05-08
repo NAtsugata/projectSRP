@@ -529,9 +529,85 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
     padding: 1.5rem 2rem;
     background: linear-gradient(90deg, rgba(14, 165, 165, 0.15), transparent);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Côté gauche : titre — peut rétrécir */
+.cerfa-modal-title {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Côté droit : badge numéro — ne grossit pas, ne déborde pas */
+.cerfa-fiche-badge {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    max-width: 220px;
+    min-width: 0;
+}
+
+.cerfa-fiche-badge-number {
+    background: rgba(33, 150, 243, 0.2);
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.cerfa-fiche-badge-admin {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+/* Header CERFA 1301 (structure différente des 15497/15498) */
+.cerfa-header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(90deg, rgba(14, 165, 165, 0.15), transparent);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cerfa-header h1 {
+    margin: 0 0 0.125rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.cerfa-subtitle {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.cerfa-fiche-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    background: rgba(33, 150, 243, 0.15);
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.cerfa-fiche-info strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .cerfa-page-header h1 {
