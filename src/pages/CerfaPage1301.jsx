@@ -11,12 +11,9 @@ import {
     downloadCerfa,
     getCompanyInfo,
     saveGenerationRecord,
-    getCurrentFicheInfo,
-    getCurrentFicheInfoFromDB,
-    getNextFicheNumber,
-    getNextFicheNumberFromDB,
     mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
+import { useCerfaCounter } from '../hooks/useCerfaCounter';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import SignaturePad from '../components/SignaturePad';
@@ -95,21 +92,9 @@ function CerfaPage1301() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo('1301'));
+    const { ficheInfo, getNextNumber, refresh: refreshFicheInfo } = useCerfaCounter('1301');
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
-
-    // Charger le compteur depuis Supabase au montage
-    useEffect(() => {
-        getCurrentFicheInfoFromDB('1301').then(setFicheInfo).catch(() => {});
-    }, []);
-
-    // Rafraîchir le numéro de fiche
-    const refreshFicheInfo = useCallback(() => {
-        getCurrentFicheInfoFromDB('1301').then(setFicheInfo).catch(() => {
-            setFicheInfo(getCurrentFicheInfo('1301'));
-        });
-    }, []);
 
     // Charger les informations entreprise (Supabase en priorité)
     useEffect(() => {
@@ -302,7 +287,7 @@ function CerfaPage1301() {
 
         try {
             // Obtenir le prochain numéro de fiche
-            const ficheNumber = await getNextFicheNumberFromDB('1301');
+            const ficheNumber = await getNextNumber();
 
             // Générer le PDF
             const pdfBlob = await fillCerfa1301({
