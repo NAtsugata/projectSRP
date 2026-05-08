@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import { getOrgId } from '../utils/orgHelper';
 import {
     getCurrentFicheInfo,
     getCurrentFicheInfoFromDB,
@@ -41,5 +43,28 @@ export function useCerfaCounter(cerfaType) {
         return number;
     }, [cerfaType]);
 
-    return { ficheInfo, getNextNumber, refresh };
+    // Forcer le compteur à une valeur précise (CERFA papiers, correction)
+    const setCounter = useCallback(async (count) => {
+        const orgId = getOrgId();
+        const year = new Date().getFullYear();
+        if (orgId) {
+            const { error } = await supabase.rpc('set_cerfa_counter', {
+                p_org_id: orgId,
+                p_cerfa_type: cerfaType,
+                p_count: count,
+                p_year: year,
+            });
+            if (error) throw error;
+        }
+        // Aussi mettre à jour le localStorage (fallback)
+        try {
+            const key = 'cerfa_fiche_counters';
+            const all = JSON.parse(localStorage.getItem(key) || '{}');
+            all[cerfaType] = { year, count };
+            localStorage.setItem(key, JSON.stringify(all));
+        } catch { /* ignore */ }
+        await refresh();
+    }, [cerfaType, refresh]);
+
+    return { ficheInfo, getNextNumber, setCounter, refresh };
 }

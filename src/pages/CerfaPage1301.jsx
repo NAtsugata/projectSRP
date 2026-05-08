@@ -17,6 +17,7 @@ import { useCerfaCounter } from '../hooks/useCerfaCounter';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import SignaturePad from '../components/SignaturePad';
+import CerfaCounterEditor from '../components/CerfaCounterEditor';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
 
@@ -92,7 +93,8 @@ function CerfaPage1301() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const { ficheInfo, getNextNumber, refresh: refreshFicheInfo } = useCerfaCounter('1301');
+    const { ficheInfo, getNextNumber, setCounter, refresh: refreshFicheInfo } = useCerfaCounter('1301');
+    const [showAdminCounter, setShowAdminCounter] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
@@ -399,10 +401,28 @@ function CerfaPage1301() {
             <div className="cerfa-header">
                 <h1>📋 CERFA 1301-SD</h1>
                 <p className="cerfa-subtitle">Attestation simplifiée - TVA taux réduit 10%</p>
-                <div className="cerfa-fiche-info">
+                <div className="cerfa-fiche-info" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span>Prochain n°: <strong>{ficheInfo.formatted}</strong></span>
+                    <button
+                        type="button"
+                        onClick={() => setShowAdminCounter(v => !v)}
+                        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem' }}
+                    >
+                        ⚙️ Ajuster
+                    </button>
                 </div>
             </div>
+
+            {/* Ajuster le compteur */}
+            {showAdminCounter && (
+                <div style={{ maxWidth: '480px', margin: '0 auto 1rem' }}>
+                    <CerfaCounterEditor
+                        ficheInfo={ficheInfo}
+                        setCounter={setCounter}
+                        onClose={() => setShowAdminCounter(false)}
+                    />
+                </div>
+            )}
 
             {/* Toast */}
             {toast && (

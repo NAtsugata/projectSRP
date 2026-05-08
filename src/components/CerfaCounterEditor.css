@@ -1,0 +1,127 @@
+.cce-panel {
+  background: var(--bg-secondary, #1e2533);
+  border: 1px solid rgba(244, 67, 54, 0.35);
+  border-radius: 0.625rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary, #e2e8f0);
+}
+
+.cce-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.cce-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #f87171;
+}
+
+.cce-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.cce-close:hover { color: #f87171; }
+
+.cce-help {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.cce-current {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748b);
+  margin-bottom: 0.875rem;
+  padding: 0.375rem 0.625rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+}
+
+.cce-row { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.cce-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.cce-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cce-input {
+  width: 7rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-primary, #141929);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: var(--text-primary, #e2e8f0);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+.cce-input:focus {
+  outline: none;
+  border-color: #60a5fa;
+}
+
+.cce-arrow {
+  color: var(--text-muted, #64748b);
+  font-size: 1.1rem;
+}
+
+.cce-preview {
+  font-size: 0.875rem;
+  color: #60a5fa;
+}
+
+.cce-error {
+  font-size: 0.8125rem;
+  color: #f87171;
+  margin: 0.25rem 0 0;
+}
+
+.cce-actions {
+  display: flex;
+  gap: 0.625rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.cce-btn {
+  padding: 0.5rem 1.125rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cce-btn--cancel {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-secondary, #94a3b8);
+}
+.cce-btn--cancel:hover { background: rgba(255,255,255,0.12); }
+
+.cce-btn--apply {
+  background: #2563eb;
+  color: #fff;
+}
+.cce-btn--apply:hover:not(:disabled) { background: #1d4ed8; }
+.cce-btn--apply:disabled { opacity: 0.5; cursor: not-allowed; }

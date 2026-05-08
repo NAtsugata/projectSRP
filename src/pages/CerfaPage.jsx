@@ -12,7 +12,6 @@ import {
     getCompanyInfo,
     saveCompanyInfo,
     saveGenerationRecord,
-    resetFicheCounter,
     mapOrganizationToCompanyInfo
 } from '../utils/cerfaService';
 import { useCerfaCounter } from '../hooks/useCerfaCounter';
@@ -20,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
+import CerfaCounterEditor from '../components/CerfaCounterEditor';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
 
@@ -194,7 +194,7 @@ function CerfaPage() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const { ficheInfo, getNextNumber, refresh: refreshFicheInfo } = useCerfaCounter('15497');
+    const { ficheInfo, getNextNumber, setCounter, refresh: refreshFicheInfo } = useCerfaCounter('15497');
     const [showAdminReset, setShowAdminReset] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
@@ -427,25 +427,6 @@ function CerfaPage() {
         }
     }, [formData, calculatedTeqCO2, totaux, controlFrequency, fluidCategory, showToast, refreshFicheInfo]);
 
-    // Réinitialiser ou ajuster le compteur (admin)
-    const handleResetCounter = useCallback(() => {
-        const input = window.prompt(
-            `Définir le compteur de fiches CERFA 15497.\nNuméro actuel: ${ficheInfo.count} (prochain: ${ficheInfo.nextNumber}).\nEntrez le numéro du dernier CERFA généré (le prochain sera +1) :`,
-            String(ficheInfo.count)
-        );
-        if (input === null) return;
-        const trimmed = input.trim();
-        if (trimmed === '') return;
-        const parsed = parseInt(trimmed, 10);
-        if (isNaN(parsed) || parsed < 0) {
-            showToast('Numéro invalide', 'error');
-            return;
-        }
-        resetFicheCounter('15497', parsed);
-        refreshFicheInfo();
-        showToast(`Compteur ajusté à ${parsed}. Prochain CERFA: ${parsed + 1}`, 'success');
-        setShowAdminReset(false);
-    }, [ficheInfo, refreshFicheInfo, showToast]);
 
     return (
         <div className="cerfa-page">
@@ -501,39 +482,13 @@ function CerfaPage() {
                     </div>
                 </div>
 
-                {/* Admin: Réinitialiser le compteur */}
+                {/* Admin: Ajuster le compteur */}
                 {showAdminReset && (
-                    <div style={{
-                        background: 'rgba(244, 67, 54, 0.1)',
-                        border: '1px solid rgba(244, 67, 54, 0.3)',
-                        borderRadius: '0.5rem',
-                        padding: '1rem',
-                        marginBottom: '1rem'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <strong style={{ color: '#f44336' }}>Administration</strong>
-                                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', opacity: 0.7 }}>
-                                    Compteur actuel: {ficheInfo.count} fiches générées en {ficheInfo.year}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleResetCounter}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    background: 'rgba(244, 67, 54, 0.8)',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    color: 'white',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem'
-                                }}
-                            >
-                                🔄 Réinitialiser à 0
-                            </button>
-                        </div>
-                    </div>
+                    <CerfaCounterEditor
+                        ficheInfo={ficheInfo}
+                        setCounter={setCounter}
+                        onClose={() => setShowAdminReset(false)}
+                    />
                 )}
 
                 {/* Body */}
