@@ -9,12 +9,14 @@ import './PlanViewer3D.css';
 function cmToM(cm) { return cm / 100; }
 
 // ── Compound 3D element builder ──────────────────────────────────────────────
+// Convention : dans le repère local du groupe, -Z = arrière (mur), +Z = avant (pièce).
+// La rotation 2D (el.rotation) est appliquée comme rotation Y sur le groupe entier.
 function buildElementGroup(el, def) {
   const group = new THREE.Group();
 
-  const isRotated = el.rotation % 180 !== 0;
-  const w = cmToM(isRotated ? el.depth : el.width);
-  const d = cmToM(isRotated ? el.width : el.depth);
+  // Dimensions originales (pas de swap) — la rotation est appliquée au groupe
+  const w = cmToM(el.width);
+  const d = cmToM(el.depth);
   const elH = cmToM(el.height);
 
   const mainColor = new THREE.Color(def.color);
@@ -47,36 +49,45 @@ function buildElementGroup(el, def) {
 
     /* ── WC ─────────────────────────────────────────────── */
     case 'wc': {
-      // Bowl (front 65 %)
-      add(new THREE.BoxGeometry(w, elH * 0.58, d * 0.65), mats.main(), 0, elH * 0.29, -d * 0.175);
-      // Rounded pedestal base
-      add(new THREE.CylinderGeometry(w * 0.28, w * 0.32, elH * 0.28, 16), mats.main(), 0, elH * 0.14, -d * 0.1);
-      // Tank (rear)
-      add(new THREE.BoxGeometry(w * 0.88, elH * 0.42, d * 0.32), mats.main(), 0, elH * 0.58 + elH * 0.21, d * 0.34);
-      // Tank lid
-      add(new THREE.BoxGeometry(w * 0.9, 0.022, d * 0.34), mats.light(), 0, elH * 0.8 + 0.011, d * 0.34);
-      // Seat lid (open, horizontal)
-      add(new THREE.BoxGeometry(w * 0.96, 0.025, d * 0.68), mats.white(), 0, elH * 0.58 + 0.013, -d * 0.15);
-      // Flush button
-      add(new THREE.CylinderGeometry(0.025, 0.025, 0.018, 10), mats.chrome(), 0, elH * 0.8 + 0.022 + 0.009, d * 0.34);
+      // Réservoir (arrière, contre le mur)
+      add(new THREE.BoxGeometry(w * 0.88, elH * 0.42, d * 0.32), mats.main(), 0, elH * 0.58 + elH * 0.21, -d * 0.34);
+      // Couvercle réservoir
+      add(new THREE.BoxGeometry(w * 0.9, 0.022, d * 0.34), mats.light(), 0, elH * 0.8 + 0.011, -d * 0.34);
+      // Cuvette (devant)
+      add(new THREE.BoxGeometry(w, elH * 0.58, d * 0.65), mats.main(), 0, elH * 0.29, d * 0.175);
+      // Base arrondie sous la cuvette
+      add(new THREE.CylinderGeometry(w * 0.28, w * 0.32, elH * 0.28, 16), mats.main(), 0, elH * 0.14, d * 0.1);
+      // Lunette (assise) horizontale
+      add(new THREE.BoxGeometry(w * 0.96, 0.025, d * 0.68), mats.white(), 0, elH * 0.58 + 0.013, d * 0.15);
+      // Bouton de chasse (sur le couvercle du réservoir)
+      add(new THREE.CylinderGeometry(0.025, 0.025, 0.018, 10), mats.chrome(), 0, elH * 0.8 + 0.022 + 0.009, -d * 0.34);
       break;
     }
 
     /* ── Lavabo ──────────────────────────────────────────── */
     case 'sink': {
-      // Basin rim
+      // Plan vasque (rim)
       add(new THREE.BoxGeometry(w, elH * 0.16, d), mats.main(), 0, elH - elH * 0.08, 0);
-      // Inner bowl (dark depression)
+      // Vasque creuse (sombre)
       add(new THREE.BoxGeometry(w * 0.78, elH * 0.10, d * 0.78), mats.dark(), 0, elH - elH * 0.05, 0);
-      // Pedestal column
+      // Colonne / pied
       add(new THREE.CylinderGeometry(w * 0.13, w * 0.16, elH * 0.84, 14), mats.main(), 0, elH * 0.42, 0);
-      // Faucet base
-      add(new THREE.BoxGeometry(0.06, 0.08, 0.06), mats.chrome(), 0, elH + 0.04, -d * 0.18);
-      // Faucet spout (along Z toward user)
-      add(new THREE.CylinderGeometry(0.012, 0.012, d * 0.28, 8), mats.chrome(), 0, elH + 0.1, -d * 0.04, PI2, 0, 0);
-      // Hot/cold handles
-      add(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 8), mats.chrome(), -0.06, elH + 0.06, -d * 0.18);
-      add(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 8), mats.chrome(),  0.06, elH + 0.06, -d * 0.18);
+
+      // ─── Mitigeur monocommande (au fond du plan vasque) ───
+      // Socle plat sur la vasque
+      add(new THREE.CylinderGeometry(0.028, 0.032, 0.012, 16), mats.chrome(), 0, elH + 0.006, -d * 0.34);
+      // Corps cylindrique vertical
+      add(new THREE.CylinderGeometry(0.022, 0.022, 0.11, 14), mats.chrome(), 0, elH + 0.067, -d * 0.34);
+      // Manette unique inclinée vers l'avant et le haut
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.08, 8), mats.chrome(), 0, elH + 0.16, -d * 0.3, -0.4, 0, 0);
+      // Bille extrémité de la manette
+      add(new THREE.SphereGeometry(0.014, 10, 10), mats.chrome(), 0, elH + 0.185, -d * 0.255);
+      // Bec verseur courbé (allonge vers le centre de la vasque)
+      add(new THREE.CylinderGeometry(0.013, 0.013, d * 0.42, 10), mats.chrome(), 0, elH + 0.135, -d * 0.13, PI2, 0, 0);
+      // Coude au-dessus du corps
+      add(new THREE.SphereGeometry(0.014, 10, 10), mats.chrome(), 0, elH + 0.135, -d * 0.34);
+      // Mousseur (embout) dirigé vers le bas
+      add(new THREE.CylinderGeometry(0.014, 0.012, 0.025, 12), mats.chrome(), 0, elH + 0.118, d * 0.08);
       break;
     }
 
@@ -141,16 +152,23 @@ function buildElementGroup(el, def) {
       break;
     }
 
-    /* ── Mitigeur ────────────────────────────────────────── */
+    /* ── Mitigeur de douche (monocommande mural) ─────────── */
     case 'shower_mixer': {
-      // Body plate
-      add(new THREE.BoxGeometry(w * 0.5, elH * 0.72, d * 0.22), mats.main(), 0, elH * 0.36, 0);
-      // Temperature knob (large dial)
-      add(new THREE.CylinderGeometry(w * 0.22, w * 0.22, 0.045, 14), mats.chrome(), 0, elH * 0.62, d * 0.12);
-      // Volume knob (smaller)
-      add(new THREE.CylinderGeometry(w * 0.14, w * 0.14, 0.035, 12), mats.chrome(), 0, elH * 0.34, d * 0.12);
-      // Outlet spout
-      add(new THREE.CylinderGeometry(0.018, 0.018, d * 0.3, 8), mats.chrome(), 0, elH * 0.18, d * 0.06, PI2, 0, 0);
+      // Plaque murale rectangulaire (collée au mur)
+      add(new THREE.BoxGeometry(w * 0.95, elH * 0.85, d * 0.25), mats.chrome(), 0, elH * 0.5, -d / 2 + d * 0.125);
+      // Corps central cylindrique horizontal qui sort du mur
+      add(new THREE.CylinderGeometry(w * 0.42, w * 0.42, d * 0.65, 24), mats.chrome(), 0, elH * 0.5, 0, PI2, 0, 0);
+      // Anneau décoratif sombre à l'avant
+      add(new THREE.CylinderGeometry(w * 0.44, w * 0.44, 0.006, 24), mats.dark(), 0, elH * 0.5, d * 0.33, PI2, 0, 0);
+      // Indicateur rouge/bleu au centre
+      add(new THREE.CylinderGeometry(w * 0.08, w * 0.08, 0.004, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 }), -w * 0.12, elH * 0.5, d * 0.335, PI2, 0, 0);
+      add(new THREE.CylinderGeometry(w * 0.08, w * 0.08, 0.004, 16), new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.5 }),  w * 0.12, elH * 0.5, d * 0.335, PI2, 0, 0);
+      // Levier unique horizontal vers la droite
+      add(new THREE.CylinderGeometry(0.014, 0.014, w * 0.7, 10), mats.chrome(), w * 0.2, elH * 0.5, d * 0.38, 0, 0, PI2);
+      // Bille extrémité du levier
+      add(new THREE.SphereGeometry(0.02, 12, 12), mats.chrome(), w * 0.48, elH * 0.5, d * 0.38);
+      // Tuyau de sortie vers le bas (eau)
+      add(new THREE.CylinderGeometry(0.014, 0.014, elH * 0.18, 8), mats.chrome(), 0, elH * 0.06, d * 0.18);
       break;
     }
 
@@ -183,19 +201,19 @@ function buildElementGroup(el, def) {
 
     /* ── Baignoire ───────────────────────────────────────── */
     case 'bathtub': {
-      // Outer shell
+      // Coque extérieure
       add(new THREE.BoxGeometry(w, elH, d), mats.main(), 0, elH / 2, 0);
-      // Inner cavity (white tub interior)
+      // Cuve intérieure blanche
       add(new THREE.BoxGeometry(w - 0.1, elH * 0.82, d - 0.1), mats.white(), 0, elH * 0.59, 0);
-      // Headrest end
+      // Appui-tête (côté mur / arrière)
       add(new THREE.BoxGeometry(w - 0.1, elH * 0.2, 0.06), mats.light(), 0, elH * 0.9, -d * 0.45);
-      // Faucet body
-      add(new THREE.BoxGeometry(0.06, 0.1, 0.06), mats.chrome(), w * 0.36, elH + 0.05, d * 0.28);
-      // Spout (along Z)
-      add(new THREE.CylinderGeometry(0.014, 0.014, d * 0.18, 8), mats.chrome(), w * 0.36, elH + 0.1, d * 0.17, PI2, 0, 0);
-      // Hot/cold knobs
-      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 8), mats.chrome(), w * 0.36 - 0.07, elH + 0.06, d * 0.28);
-      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 8), mats.chrome(), w * 0.36 + 0.07, elH + 0.06, d * 0.28);
+      // Corps du mitigeur (sur le rebord arrière)
+      add(new THREE.BoxGeometry(0.06, 0.1, 0.06), mats.chrome(), w * 0.36, elH + 0.05, -d * 0.28);
+      // Bec verseur (vers l'intérieur de la baignoire)
+      add(new THREE.CylinderGeometry(0.014, 0.014, d * 0.18, 8), mats.chrome(), w * 0.36, elH + 0.1, -d * 0.17, PI2, 0, 0);
+      // Robinets chaud/froid
+      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 8), mats.chrome(), w * 0.36 - 0.07, elH + 0.06, -d * 0.28);
+      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 8), mats.chrome(), w * 0.36 + 0.07, elH + 0.06, -d * 0.28);
       break;
     }
 
@@ -282,20 +300,31 @@ function buildElementGroup(el, def) {
       break;
     }
 
-    /* ── Sèche-serviettes ────────────────────────────────── */
+    /* ── Sèche-serviettes (échelle verticale murale) ─────── */
     case 'towel_rail': {
-      // Vertical side rails
-      add(new THREE.BoxGeometry(0.025, elH, 0.025), mats.chrome(),  w * 0.44, elH / 2, 0);
-      add(new THREE.BoxGeometry(0.025, elH, 0.025), mats.chrome(), -w * 0.44, elH / 2, 0);
-      // Wall back plates
-      add(new THREE.BoxGeometry(0.05, 0.08, 0.012), mats.chrome(),  w * 0.44, elH * 0.88, -d / 2 + 0.006);
-      add(new THREE.BoxGeometry(0.05, 0.08, 0.012), mats.chrome(), -w * 0.44, elH * 0.88, -d / 2 + 0.006);
-      // Horizontal bars (towel rails)
-      const barCount = Math.max(2, Math.floor(elH / 0.22));
-      for (let i = 0; i < barCount; i++) {
-        const by = (elH * 0.15) + i * ((elH * 0.75) / Math.max(1, barCount - 1));
-        add(new THREE.CylinderGeometry(0.012, 0.012, w * 0.88, 10), mats.chrome(), 0, by, 0, 0, 0, PI2);
+      const backZ  = -d / 2 + 0.006;          // contre le mur
+      const frontZ =  d / 2 - 0.014;          // face avant
+
+      // Plaques murales (haut + bas, côtés gauche + droit)
+      for (const sx of [-w * 0.42, w * 0.42]) {
+        add(new THREE.BoxGeometry(0.06, 0.06, 0.012), mats.chrome(), sx, elH - 0.06, backZ);
+        add(new THREE.BoxGeometry(0.06, 0.06, 0.012), mats.chrome(), sx, 0.06,        backZ);
+        // Bras de fixation qui relient le mur à l'échelle
+        add(new THREE.BoxGeometry(0.022, 0.025, d - 0.025), mats.chrome(), sx, elH - 0.06, 0);
+        add(new THREE.BoxGeometry(0.022, 0.025, d - 0.025), mats.chrome(), sx, 0.06,        0);
       }
+      // Montants verticaux (côté avant — c'est ce qu'on voit en face)
+      add(new THREE.BoxGeometry(0.024, elH * 0.92, 0.024), mats.chrome(),  w * 0.42, elH / 2, frontZ);
+      add(new THREE.BoxGeometry(0.024, elH * 0.92, 0.024), mats.chrome(), -w * 0.42, elH / 2, frontZ);
+      // Barreaux horizontaux (échelons sur lesquels on pose les serviettes)
+      const barCount = Math.max(4, Math.floor(elH / 0.16));
+      for (let i = 0; i < barCount; i++) {
+        const by = 0.12 + i * ((elH - 0.24) / Math.max(1, barCount - 1));
+        add(new THREE.CylinderGeometry(0.013, 0.013, w * 0.86, 12), mats.chrome(), 0, by, frontZ, 0, 0, PI2);
+      }
+      // Robinet thermostatique (côté bas droit)
+      add(new THREE.CylinderGeometry(0.018, 0.018, 0.07, 10), mats.chrome(), w * 0.42, 0.06, -d / 2 - 0.04, PI2, 0, 0);
+      add(new THREE.SphereGeometry(0.022, 10, 10), mats.chrome(), w * 0.42, 0.06, -d / 2 - 0.08);
       break;
     }
 
@@ -335,10 +364,18 @@ function buildElementGroup(el, def) {
     }
   }
 
-  const cx = cmToM(el.x) + w / 2;
-  const cz = cmToM(el.y) + d / 2;
+  // Bounding-box après rotation (pour centrer correctement le groupe sur la zone 2D)
+  const rotDeg = ((el.rotation || 0) % 360 + 360) % 360;
+  const isRotated = rotDeg === 90 || rotDeg === 270;
+  const bbW = isRotated ? d : w;
+  const bbD = isRotated ? w : d;
+
+  const cx = cmToM(el.x) + bbW / 2;
+  const cz = cmToM(el.y) + bbD / 2;
   const baseY = def.mountHeight ? cmToM(def.mountHeight) : 0;
   group.position.set(cx, baseY, cz);
+  // Rotation 2D (sens horaire vu de dessus) → rotation Y négative en Three.js
+  group.rotation.y = -rotDeg * Math.PI / 180;
 
   return group;
 }
