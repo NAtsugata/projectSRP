@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react';
 import './SmartAlerts.css';
 
-const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
+const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
   const alerts = useMemo(() => {
     const alertList = [];
 
@@ -88,31 +88,24 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
 
   if (alerts.length === 0) return null;
 
-  const scrollToSection = (action) => {
-    const sectionMap = {
-      photos: 'photos-section',
-      signature: 'signature-section',
-      checklist: 'checklist-section',
-    };
+  // tab index: 0=Infos, 1=Photos, 2=Checks, 3=Rapport
+  const actionTabMap = {
+    photos: 1,
+    checklist: 2,
+    signature: 3,
+  };
 
-    const targetId = sectionMap[action];
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Flash effect
-        element.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.3)';
-        setTimeout(() => {
-          element.style.boxShadow = '';
-        }, 1500);
-      }
+  const handleAction = (action) => {
+    const tabIndex = actionTabMap[action];
+    if (tabIndex !== undefined && onNavigate) {
+      onNavigate(tabIndex);
     }
   };
 
   const handleKeyDown = (event, action) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      scrollToSection(action);
+      handleAction(action);
     }
   };
 
@@ -122,7 +115,7 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
         <div
           key={index}
           className={`smart-alert alert-${alert.type}`}
-          onClick={() => scrollToSection(alert.action)}
+          onClick={() => handleAction(alert.action)}
           onKeyDown={(e) => handleKeyDown(e, alert.action)}
           role={alert.action ? 'button' : 'status'}
           tabIndex={alert.action ? 0 : undefined}

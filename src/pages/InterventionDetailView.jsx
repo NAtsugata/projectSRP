@@ -86,6 +86,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showCerfaModal, setShowCerfaModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
@@ -701,6 +702,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           report={report}
           intervention={intervention}
           MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
+          onNavigate={setActiveTab}
         />
 
         {/* ACTIONS RAPIDES */}
@@ -791,7 +793,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         )}
 
         {/* CONTENU ORGANISÉ EN TABS */}
-        <Tabs defaultTab={0}>
+        <Tabs activeTab={activeTab} onChange={setActiveTab}>
           {/* ONGLET INFOS */}
           <Tab label="Infos" icon="📋">
             <div>
