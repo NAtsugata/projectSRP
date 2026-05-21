@@ -334,6 +334,22 @@
   font-weight: 600;
 }
 
+.days-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.days-badge.multi {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;

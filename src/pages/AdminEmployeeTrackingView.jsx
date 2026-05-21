@@ -47,11 +47,9 @@ function computeNetDuration(report) {
   return `${h}h${String(m).padStart(2, '0')}`;
 }
 
-// Normalize any date input to YYYY-MM-DD for safe string comparison
 function toDateKey(input) {
   if (!input) return '';
   const str = String(input);
-  // Already YYYY-MM-DD format
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
   const d = new Date(str);
   if (Number.isNaN(d.getTime())) return '';
@@ -76,11 +74,9 @@ function getInterventionDate(iv) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
-  const today = new Date();
-  const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
-
+  // Pas de filtre date par défaut → tout l'historique visible
   const [filterUser, setFilterUser] = useState('all');
-  const [filterStart, setFilterStart] = useState(firstOfMonth);
+  const [filterStart, setFilterStart] = useState('');
   const [filterEnd, setFilterEnd] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -99,7 +95,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
     });
   }, [rows, filterUser, filterStart, filterEnd, filterStatus]);
 
-  // ── Stats per employee (from filtered rows) ──
+  // ── Stats par employé (sur les lignes filtrées) ──
   const employeeStats = useMemo(() => {
     const map = {};
     filtered.forEach(row => {
@@ -107,21 +103,23 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
         map[row.userId] = {
           userId: row.userId,
           name: row.userName,
-          total: 0,
+          totalInterventions: 0,
+          totalDays: 0,
           done: 0,
           totalMinutes: 0,
         };
       }
       const s = map[row.userId];
-      s.total++;
+      s.totalInterventions++;
+      s.totalDays += row.days || 1;
       if (statusLabel(row.intervention.status).cls === 'completed') s.done++;
       const dur = computeNetDuration(row.intervention.report);
       if (dur) {
-        const [h, m] = dur.split('h');
-        s.totalMinutes += parseInt(h, 10) * 60 + parseInt(m || '0', 10);
+        const [h, rest] = dur.split('h');
+        s.totalMinutes += parseInt(h, 10) * 60 + parseInt(rest || '0', 10);
       }
     });
-    return Object.values(map).sort((a, b) => b.total - a.total);
+    return Object.values(map).sort((a, b) => b.totalDays - a.totalDays);
   }, [filtered]);
 
   const formatMinutes = (min) => {
@@ -132,7 +130,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
 
   const resetFilters = () => {
     setFilterUser('all');
-    setFilterStart(firstOfMonth);
+    setFilterStart('');
     setFilterEnd('');
     setFilterStatus('all');
   };
@@ -163,7 +161,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
         </label>
         <label>
           Du
-          <input type="date" value={filterStart} onChange={e => setFilterStart(e.target.value)} />
+          <input type="date" value={filterStart} onChange={e => setFilterStart(e.target.value)} placeholder="Depuis toujours" />
         </label>
         <label>
           Au
@@ -197,22 +195,26 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
               </div>
               <div className="stat-card-metrics">
                 <div className="stat-metric">
-                  <span className="stat-metric-value">{s.total}</span>
+                  <span className="stat-metric-value">{s.totalInterventions}</span>
                   <span className="stat-metric-label">Interv.</span>
+                </div>
+                <div className="stat-metric">
+                  <span className="stat-metric-value">{s.totalDays}</span>
+                  <span className="stat-metric-label">Jours</span>
                 </div>
                 <div className="stat-metric">
                   <span className="stat-metric-value">{formatMinutes(s.totalMinutes)}</span>
                   <span className="stat-metric-label">Temps net</span>
                 </div>
                 <div className="stat-metric">
-                  <span className="stat-metric-value">{s.total > 0 ? Math.round(s.done / s.total * 100) : 0}%</span>
+                  <span className="stat-metric-value">{s.totalInterventions > 0 ? Math.round(s.done / s.totalInterventions * 100) : 0}%</span>
                   <span className="stat-metric-label">Terminées</span>
                 </div>
               </div>
               <div className="stat-completion-bar">
                 <div
                   className="stat-completion-fill"
-                  style={{ width: `${s.total > 0 ? (s.done / s.total * 100) : 0}%` }}
+                  style={{ width: `${s.totalInterventions > 0 ? (s.done / s.totalInterventions * 100) : 0}%` }}
                 />
               </div>
             </div>
@@ -240,7 +242,8 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
                   <th>Employé</th>
                   <th>Client</th>
                   <th>Adresse</th>
-                  <th>Date</th>
+                  <th>Date début</th>
+                  <th>Jours</th>
                   <th>Arrivée</th>
                   <th>Départ</th>
                   <th>Durée nette</th>
@@ -258,6 +261,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
                   const totalChecks = report.quick_checkpoints?.length || 0;
                   const doneChecks = report.quick_checkpoints?.filter(c => c.done).length || 0;
                   const checksOk = totalChecks > 0 && doneChecks === totalChecks;
+                  const days = row.days || 1;
 
                   return (
                     <tr key={`${row.userId}-${iv.id}-${i}`}>
@@ -272,6 +276,11 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
                         <div className="td-address" title={iv.address}>{iv.address || '—'}</div>
                       </td>
                       <td>{formatDate(getInterventionDate(iv))}</td>
+                      <td>
+                        <span className={`days-badge${days > 1 ? ' multi' : ''}`}>
+                          {days} j
+                        </span>
+                      </td>
                       <td className="td-time">{formatTime(report.arrivalTime)}</td>
                       <td className="td-time">{formatTime(report.departureTime)}</td>
                       <td className="td-duration">{dur || '—'}</td>

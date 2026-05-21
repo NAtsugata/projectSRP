@@ -8,7 +8,6 @@ export default function AdminEmployeeTrackingViewContainer() {
   const [rows, setRows] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -25,6 +24,7 @@ export default function AdminEmployeeTrackingViewContainer() {
             .from('interventions')
             .select(`
               id, client, address, date, scheduled_dates, status, report,
+              daily_assignments,
               intervention_assignments (
                 user_id,
                 profiles (id, full_name)
@@ -46,25 +46,55 @@ export default function AdminEmployeeTrackingViewContainer() {
         const nameMap = {};
         profiles.forEach(p => { nameMap[p.id] = p.full_name || 'Sans nom'; });
 
-        // Dedupe assignments per intervention (user_id) to avoid duplicates
         const expanded = [];
+
         for (const iv of interventions) {
-          const seen = new Set();
-          const assignments = (iv.intervention_assignments || []).filter(a => {
-            if (!a?.user_id || seen.has(a.user_id)) return false;
-            seen.add(a.user_id);
-            return true;
-          });
-          if (assignments.length === 0) continue;
+          // ── Collecter tous les userIds depuis les deux systèmes ──
 
-          const teamNames = assignments.map(a =>
-            a.profiles?.full_name || nameMap[a.user_id] || 'Inconnu'
-          );
+          // Système 1 : intervention_assignments (table relationnelle)
+          const assignMap = {}; // userId → full_name
+          for (const a of (iv.intervention_assignments || [])) {
+            if (!a?.user_id) continue;
+            assignMap[a.user_id] = a.profiles?.full_name || nameMap[a.user_id] || 'Inconnu';
+          }
 
-          for (const assignment of assignments) {
-            const userId = assignment.user_id;
-            const userName = assignment.profiles?.full_name || nameMap[userId] || 'Inconnu';
-            expanded.push({ userId, userName, teamNames, intervention: iv });
+          // Système 2 : daily_assignments (JSONB { "YYYY-MM-DD": ["userId", ...] })
+          const dailyMap = iv.daily_assignments;
+          if (dailyMap && typeof dailyMap === 'object') {
+            for (const userIds of Object.values(dailyMap)) {
+              if (!Array.isArray(userIds)) continue;
+              for (const uid of userIds) {
+                if (uid && !assignMap[uid]) {
+                  assignMap[uid] = nameMap[uid] || 'Inconnu';
+                }
+              }
+            }
+          }
+
+          if (Object.keys(assignMap).length === 0) continue;
+
+          // Nombre de jours : scheduled_dates ou entrées daily_assignments ou 1
+          let days = 1;
+          if (Array.isArray(iv.scheduled_dates) && iv.scheduled_dates.length > 0) {
+            days = iv.scheduled_dates.length;
+          } else if (dailyMap && typeof dailyMap === 'object') {
+            const dayCount = Object.keys(dailyMap).length;
+            if (dayCount > 0) days = dayCount;
+          }
+
+          const teamNames = Object.values(assignMap);
+
+          for (const [userId, userName] of Object.entries(assignMap)) {
+            // Jours travaillés par cet employé spécifiquement selon daily_assignments
+            let userDays = days;
+            if (dailyMap && typeof dailyMap === 'object') {
+              const personalDays = Object.values(dailyMap).filter(
+                uids => Array.isArray(uids) && uids.includes(userId)
+              ).length;
+              if (personalDays > 0) userDays = personalDays;
+            }
+
+            expanded.push({ userId, userName, teamNames, intervention: iv, days: userDays });
           }
         }
 
