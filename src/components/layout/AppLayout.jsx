@@ -61,6 +61,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
         { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
         { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
+        { name: 'Suivi Employés', href: '/employee-tracking', icon: LayoutDashboardIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
         { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
         { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
         { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },

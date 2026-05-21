@@ -39,6 +39,7 @@ const AdminChecklistTemplatesViewContainer = lazy(() => import('./pages/AdminChe
 const AdminContractsViewContainer = lazy(() => import('./pages/AdminContractsViewContainer'));
 const ContractDetailViewContainer = lazy(() => import('./pages/ContractDetailViewContainer'));
 const AdminMonthlyExportViewContainer = lazy(() => import('./pages/AdminMonthlyExportViewContainer'));
+const AdminEmployeeTrackingViewContainer = lazy(() => import('./pages/AdminEmployeeTrackingViewContainer'));
 const AdminOrganizationsViewContainer = lazy(() => import('./pages/AdminOrganizationsViewContainer'));
 const AdminClientsViewContainer = lazy(() => import('./pages/AdminClientsViewContainer'));
 const AdminInvoicesViewContainer = lazy(() => import('./pages/AdminInvoicesViewContainer'));
@@ -396,6 +397,13 @@ function App() {
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminMonthlyExportViewContainer />
                     </Suspense>
+                  } />
+                  <Route path="employee-tracking" element={
+                    <PermissionRoute requiredPermission="is_admin">
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <AdminEmployeeTrackingViewContainer />
+                    </Suspense>
+                    </PermissionRoute>
                   } />
                   <Route path="contracts" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
