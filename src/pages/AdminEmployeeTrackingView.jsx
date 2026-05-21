@@ -10,27 +10,52 @@ function initials(name = '') {
 
 function formatTime(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function computeNetDuration(report) {
-  if (!report?.arrivalTime || !report?.departureTime) return null;
-  const ms = new Date(report.departureTime) - new Date(report.arrivalTime);
+  if (!report || typeof report !== 'object') return null;
+  if (!report.arrivalTime || !report.departureTime) return null;
+  const arr = new Date(report.arrivalTime).getTime();
+  const dep = new Date(report.departureTime).getTime();
+  if (Number.isNaN(arr) || Number.isNaN(dep)) return null;
+  const ms = dep - arr;
   if (ms <= 0) return null;
-  const pauseMs = (report.pauseHistory || []).reduce((acc, p) => {
-    if (p.start && p.end) return acc + (new Date(p.end) - new Date(p.start));
-    if (p.duration) return acc + p.duration * 1000;
+  const pauseMs = (Array.isArray(report.pauseHistory) ? report.pauseHistory : []).reduce((acc, p) => {
+    if (!p) return acc;
+    if (p.start && p.end) {
+      const ps = new Date(p.start).getTime();
+      const pe = new Date(p.end).getTime();
+      if (Number.isNaN(ps) || Number.isNaN(pe) || pe <= ps) return acc;
+      return acc + (pe - ps);
+    }
+    if (typeof p.duration === 'number' && p.duration > 0) return acc + p.duration * 1000;
     return acc;
   }, 0);
-  const net = Math.max(0, ms - pauseMs);
+  const net = Math.max(0, ms - Math.min(pauseMs, ms));
   const h = Math.floor(net / 3600000);
   const m = Math.floor((net % 3600000) / 60000);
   return `${h}h${String(m).padStart(2, '0')}`;
+}
+
+// Normalize any date input to YYYY-MM-DD for safe string comparison
+function toDateKey(input) {
+  if (!input) return '';
+  const str = String(input);
+  // Already YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+  const d = new Date(str);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
 }
 
 function statusLabel(status) {
@@ -42,7 +67,9 @@ function statusLabel(status) {
 }
 
 function getInterventionDate(iv) {
-  if (iv.scheduled_dates?.length) return iv.scheduled_dates[0];
+  if (Array.isArray(iv.scheduled_dates) && iv.scheduled_dates.length > 0) {
+    return iv.scheduled_dates[0];
+  }
   return iv.date || '';
 }
 
@@ -61,9 +88,9 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
   const filtered = useMemo(() => {
     return rows.filter(row => {
       if (filterUser !== 'all' && row.userId !== filterUser) return false;
-      const date = getInterventionDate(row.intervention);
-      if (filterStart && date && date < filterStart) return false;
-      if (filterEnd && date && date > filterEnd) return false;
+      const dateKey = toDateKey(getInterventionDate(row.intervention));
+      if (filterStart && dateKey && dateKey < filterStart) return false;
+      if (filterEnd && dateKey && dateKey > filterEnd) return false;
       if (filterStatus !== 'all') {
         const { cls } = statusLabel(row.intervention.status);
         if (cls !== filterStatus) return false;
@@ -130,7 +157,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
           <select value={filterUser} onChange={e => setFilterUser(e.target.value)}>
             <option value="all">Tous</option>
             {users.map(u => (
-              <option key={u.id} value={u.id}>{u.full_name}</option>
+              <option key={u.id} value={u.id}>{u.full_name || 'Sans nom'}</option>
             ))}
           </select>
         </label>
@@ -240,7 +267,7 @@ export default function AdminEmployeeTrackingView({ rows, users, isLoading }) {
                           {row.userName}
                         </div>
                       </td>
-                      <td className="td-client">{iv.client || iv.client_data?.name || '—'}</td>
+                      <td className="td-client">{iv.client || '—'}</td>
                       <td>
                         <div className="td-address" title={iv.address}>{iv.address || '—'}</div>
                       </td>

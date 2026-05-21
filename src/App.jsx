@@ -399,11 +399,9 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="employee-tracking" element={
-                    <PermissionRoute requiredPermission="is_admin">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminEmployeeTrackingViewContainer />
                     </Suspense>
-                    </PermissionRoute>
                   } />
                   <Route path="contracts" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>

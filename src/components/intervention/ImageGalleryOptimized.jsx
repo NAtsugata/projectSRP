@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LoaderIcon } from '../SharedUI';
 import { useDownload } from '../../hooks/useDownload';
+import { formatMetadata } from '../../services/photoMetadataService';
 import logger from '../../utils/logger';
 import './ImageGallery.css';
 
@@ -449,6 +450,37 @@ const Lightbox = ({ images, initialIndex, onClose, onDelete }) => {
             draggable={false}
           />
         </div>
+
+        {/* Métadonnées EXIF (date, heure, GPS) */}
+        {(() => {
+          const meta = formatMetadata(currentImage.metadata);
+          if (!meta || (!meta.date && !meta.coords)) return null;
+          return (
+            <div className="lightbox-metadata">
+              {meta.date && (
+                <span className="lightbox-meta-item" title="Date de prise de la photo">
+                  📅 {meta.date}{meta.time ? ` à ${meta.time}` : ''}
+                </span>
+              )}
+              {meta.coords && (
+                <a
+                  className="lightbox-meta-item lightbox-meta-link"
+                  href={meta.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Ouvrir dans Google Maps"
+                >
+                  📍 {meta.coords}
+                </a>
+              )}
+              {meta.source && meta.source !== 'none' && (
+                <span className="lightbox-meta-source" title="Origine de la métadonnée">
+                  ({meta.source === 'exif' ? 'EXIF photo' : meta.source === 'upload-geo' ? 'GPS upload' : 'horodatage fichier'})
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Navigation */}
         {images.length > 1 && (

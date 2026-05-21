@@ -14,6 +14,7 @@ import {
   deleteUpload
 } from '../../utils/indexedDBCache.jsx';
 import logger from '../../utils/logger';
+import { extractPhotoMetadata, getBrowserGeolocation } from '../../services/photoMetadataService';
 import './FileUploader.css';
 
 /**
@@ -216,7 +217,8 @@ const FileUploader = ({
             id: item.id,
             name: item.fileName,
             url: publicUrl,
-            type: item.fileType
+            type: item.fileType,
+            metadata: item.metadata?.photoMetadata || null
           };
 
         } catch (err) {
@@ -241,7 +243,7 @@ const FileUploader = ({
       // Filtrer les succès
       const uploaded = results
         .filter(r => r.success)
-        .map(r => ({ id: r.id, name: r.name, url: r.url, type: r.type }));
+        .map(r => ({ id: r.id, name: r.name, url: r.url, type: r.type, metadata: r.metadata }));
 
       // Notifier les uploads terminés
       if (uploaded.length && onUploadComplete) {
@@ -276,6 +278,11 @@ const FileUploader = ({
 
     const debugInfo = `📸 ${files.length} fichier(s): ${files.map(f => f.name).join(', ')}`;
     logger.log(debugInfo);
+
+    // Récupérer la position GPS du navigateur une seule fois pour cette série
+    // (utilisée en fallback si les photos n'ont pas d'EXIF GPS)
+    const hasImage = files.some(f => f.type?.startsWith('image/') || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name));
+    const uploadGeo = hasImage ? await getBrowserGeolocation(3000) : null;
 
     // Traiter chaque fichier - PREVIEW D'ABORD, stockage ensuite
     for (let i = 0; i < files.length; i++) {
@@ -335,6 +342,17 @@ const FileUploader = ({
         logger.error(`❌ Blob URL error:`, err);
       }
 
+      // Extraire métadonnées EXIF (date, GPS) pour les images uniquement
+      let photoMetadata = null;
+      if (fileType.startsWith('image/')) {
+        try {
+          photoMetadata = await extractPhotoMetadata(file, { uploadGeo });
+          logger.log(`📍 EXIF ${file.name}:`, photoMetadata);
+        } catch (err) {
+          logger.warn('Métadonnées EXIF KO:', err?.message);
+        }
+      }
+
       // Envoyer la preview au parent IMMÉDIATEMENT (avant IndexedDB)
       if (onLocalPreview) {
         const previewData = {
@@ -344,7 +362,8 @@ const FileUploader = ({
           type: fileType,
           localUrl,
           status: 'pending',
-          progress: 0
+          progress: 0,
+          metadata: photoMetadata
         };
         logger.log('📤 Envoi preview:', previewData.id, 'type:', previewData.type);
         onLocalPreview(previewData);
@@ -358,7 +377,8 @@ const FileUploader = ({
           interventionId,
           folder,
           originalName: file.name,
-          correctedType: fileType // Passer le type corrigé en metadata
+          correctedType: fileType, // Passer le type corrigé en metadata
+          photoMetadata // EXIF: takenAt, latitude, longitude, source
         }, fileId);
         logger.log(`💾 IndexedDB OK: ${fileId}, type: ${fileType}`);
       } catch (err) {
