@@ -99,6 +99,11 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
     const tabIndex = actionTabMap[action];
     if (tabIndex !== undefined && onNavigate) {
       onNavigate(tabIndex);
+      // Scroll vers les tabs après le switch (laisse React rendre l'onglet)
+      requestAnimationFrame(() => {
+        const tabsEl = document.getElementById('intervention-tabs');
+        if (tabsEl) tabsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
   };
 

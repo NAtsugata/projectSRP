@@ -793,6 +793,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         )}
 
         {/* CONTENU ORGANISÉ EN TABS */}
+        <div id="intervention-tabs">
         <Tabs activeTab={activeTab} onChange={setActiveTab}>
           {/* ONGLET INFOS */}
           <Tab label="Infos" icon="📋">
@@ -1142,6 +1143,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </Tab>
         </Tabs>
+        </div>
 
         {/* Save button section */}
         {isAdmin ? (
