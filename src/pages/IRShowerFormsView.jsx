@@ -8,6 +8,7 @@ import { Section, Row, Col, Label, Input, Check, Radio, Small } from '../compone
 import { usePlanCanvas } from '../hooks/usePlanCanvas';
 import { useUndoRedo } from '../hooks/useUndoRedo';
 import { PLAN_TEMPLATES, getTemplateElements } from '../data/planTemplates';
+import PlanEditorModal from '../components/ir-shower/planEditor/PlanEditorModal';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -91,6 +92,8 @@ export default function IRShowerFormsView({ profile }) {
 
   const [preview, setPreview] = useState(null);
   const [tool, setTool] = useState("select");
+  const [showPlanEditor, setShowPlanEditor] = useState(false);
+  const [plan3D, setPlan3D] = useState(null);
   const [snap, setSnap] = useState(true);
   const [ortho, setOrtho] = useState(true);
   const [startPt, setStartPt] = useState(null);
@@ -1910,8 +1913,46 @@ export default function IRShowerFormsView({ profile }) {
             <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>Exemplaire à destination du client</div>
           </Section>
 
+          {/* NOUVEL EDITEUR 2D + 3D */}
+          <Section title="✨ Nouvel éditeur 2D / 3D">
+            <Small style={{ marginBottom: 8, display: 'block' }}>
+              Crée un plan intuitif avec drag & drop puis bascule en 3D pour visualiser le résultat.
+              Compatible mobile et desktop.
+            </Small>
+            <button
+              type="button"
+              onClick={() => setShowPlanEditor(true)}
+              style={{
+                padding: '12px 20px',
+                borderRadius: 12,
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 14,
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              🎨 Ouvrir l'éditeur de plan
+              {plan3D && plan3D.elements?.length > 0 && (
+                <span style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}>
+                  {plan3D.elements.length} élément{plan3D.elements.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </button>
+          </Section>
+
           {/* TEMPLATES */}
-          <Section title="Templates de plan">
+          <Section title="Templates de plan (ancien éditeur)">
             <Small style={{ marginBottom: 8, display: 'block' }}>Cliquez sur un template pour charger une configuration prédéfinie</Small>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {PLAN_TEMPLATES.map((template) => (
@@ -2479,6 +2520,15 @@ export default function IRShowerFormsView({ profile }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Editeur de plan 2D/3D */}
+      {showPlanEditor && (
+        <PlanEditorModal
+          initialPlan={plan3D}
+          onSave={(newPlan) => setPlan3D(newPlan)}
+          onClose={() => setShowPlanEditor(false)}
+        />
       )}
     </div>
   );

@@ -1,0 +1,63 @@
+/* PlanViewer3D.css */
+
+.plan-viewer-3d {
+  position: fixed;
+  inset: 0;
+  background: #eef2f7;
+  display: flex;
+  flex-direction: column;
+  z-index: 9100;
+}
+
+.pv-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.pv-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pv-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.pv-container canvas {
+  display: block;
+  outline: none;
+  touch-action: none;
+}
+
+.pv-hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  max-width: 95%;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .pv-hint {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.75rem;
+  }
+}
