@@ -389,6 +389,8 @@
   flex-shrink: 0;
   transition: background 0.12s ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .pe-stepper-btn:hover { background: #e2e8f0; }

@@ -44,28 +44,44 @@ export function createElement(type, overrides = {}) {
 /**
  * Garantit qu'un plan est conforme et sain (utile au chargement depuis BDD).
  */
+// Bornes physiques (cm) — partagées entre éditeur 2D et viewer 3D
+export const ROOM_LIMITS = {
+  width:  { min: 50,  max: 2000 },
+  depth:  { min: 50,  max: 2000 },
+  height: { min: 150, max: 500  },
+};
+
+const clampNum = (val, fallback, min, max) => {
+  const n = Number(val);
+  if (!isFinite(n) || n <= 0) return fallback;
+  return Math.max(min, Math.min(max, n));
+};
+
 export function normalizePlan(input) {
   if (!input || typeof input !== 'object') return createEmptyPlan();
   const base = createEmptyPlan();
   const out = {
     version: 1,
     room: {
-      width: Number(input.room?.width) || base.room.width,
-      depth: Number(input.room?.depth) || base.room.depth,
-      height: Number(input.room?.height) || base.room.height,
+      width:  clampNum(input.room?.width,  base.room.width,  ROOM_LIMITS.width.min,  ROOM_LIMITS.width.max),
+      depth:  clampNum(input.room?.depth,  base.room.depth,  ROOM_LIMITS.depth.min,  ROOM_LIMITS.depth.max),
+      height: clampNum(input.room?.height, base.room.height, ROOM_LIMITS.height.min, ROOM_LIMITS.height.max),
     },
     elements: Array.isArray(input.elements) ? input.elements
       .filter(e => e && ELEMENT_CATALOG[e.type])
-      .map(e => ({
-        id: e.id || genId(),
-        type: e.type,
-        x: Number(e.x) || 0,
-        y: Number(e.y) || 0,
-        width: Number(e.width) || ELEMENT_CATALOG[e.type].defaultWidth,
-        depth: Number(e.depth) || ELEMENT_CATALOG[e.type].defaultDepth,
-        height: Number(e.height) || ELEMENT_CATALOG[e.type].defaultHeight,
-        rotation: Number(e.rotation) || 0,
-      })) : [],
+      .map(e => {
+        const def = ELEMENT_CATALOG[e.type];
+        return {
+          id: e.id || genId(),
+          type: e.type,
+          x: Number(e.x) || 0,
+          y: Number(e.y) || 0,
+          width:  Math.max(1, Number(e.width)  || def.defaultWidth),
+          depth:  Math.max(1, Number(e.depth)  || def.defaultDepth),
+          height: Math.max(1, Number(e.height) || def.defaultHeight),
+          rotation: ((Number(e.rotation) || 0) % 360 + 360) % 360,
+        };
+      }) : [],
   };
   return out;
 }

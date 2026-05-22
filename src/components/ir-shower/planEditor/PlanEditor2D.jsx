@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ELEMENT_CATEGORIES, ELEMENT_CATALOG, getElementsByCategory } from '../../../lib/planElements';
-import { createElement, snap, clampToRoom } from '../../../lib/planModel';
+import { createElement, snap, clampToRoom, ROOM_LIMITS } from '../../../lib/planModel';
 import './PlanEditor2D.css';
 
 const GRID_SIZE = 10;   // cm
@@ -92,7 +92,11 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
   const updateElement = useCallback((id, patch) => {
     onChange({
       ...plan,
-      elements: plan.elements.map(e => e.id === id ? { ...e, ...patch } : e),
+      elements: plan.elements.map(e => {
+        if (e.id !== id) return e;
+        const merged = { ...e, ...patch };
+        return clampToRoom(merged, plan.room);
+      }),
     });
   }, [plan, onChange]);
 
@@ -105,9 +109,9 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
     const src = plan.elements.find(e => e.id === id);
     if (!src) return;
     const offset = 20;
-    const newX = snap(Math.min(plan.room.width - src.width - 1, src.x + offset));
-    const newY = snap(Math.min(plan.room.depth - src.depth - 1, src.y + offset));
-    const copy = createElement(src.type, { ...src, x: newX, y: newY });
+    const draft = createElement(src.type, { ...src, x: src.x + offset, y: src.y + offset });
+    const clamped = clampToRoom(draft, plan.room);
+    const copy = { ...clamped, x: snap(clamped.x), y: snap(clamped.y) };
     onChange({ ...plan, elements: [...plan.elements, copy] });
     setSelectedId(copy.id);
   }, [plan, onChange]);
@@ -165,9 +169,22 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
   };
 
   const updateRoom = (key, value) => {
-    const v = Math.max(50, Math.min(2000, Number(value) || 0));
-    onChange({ ...plan, room: { ...plan.room, [key]: v } });
+    const lim = ROOM_LIMITS[key] || { min: 50, max: 2000 };
+    const v = Math.max(lim.min, Math.min(lim.max, Number(value) || lim.min));
+    const nextRoom = { ...plan.room, [key]: v };
+    // Reclamp tous les éléments pour qu'aucun ne sorte de la nouvelle pièce
+    const nextElements = plan.elements.map(el => clampToRoom(el, nextRoom));
+    onChange({ ...plan, room: nextRoom, elements: nextElements });
   };
+
+  // Pivote un élément de 90° et reclamp pour éviter qu'il sorte de la pièce
+  const rotateElement = useCallback((id) => {
+    const el = plan.elements.find(e => e.id === id);
+    if (!el) return;
+    const rotated = { ...el, rotation: (el.rotation + 90) % 360 };
+    const clamped = clampToRoom(rotated, plan.room);
+    updateElement(id, { rotation: clamped.rotation, x: clamped.x, y: clamped.y });
+  }, [plan, updateElement]);
 
   // ── Rendu d'un élément 2D ──
   const renderElement = (el) => {
@@ -322,7 +339,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
                 <Stepper
                   value={plan.room.width}
                   onChange={(v) => updateRoom('width', v)}
-                  step={10} min={50} max={2000}
+                  step={10} min={ROOM_LIMITS.width.min} max={ROOM_LIMITS.width.max}
                 />
               </label>
               <label>
@@ -330,7 +347,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
                 <Stepper
                   value={plan.room.depth}
                   onChange={(v) => updateRoom('depth', v)}
-                  step={10} min={50} max={2000}
+                  step={10} min={ROOM_LIMITS.depth.min} max={ROOM_LIMITS.depth.max}
                 />
               </label>
               <label>
@@ -338,7 +355,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
                 <Stepper
                   value={plan.room.height}
                   onChange={(v) => updateRoom('height', v)}
-                  step={5} min={150} max={500}
+                  step={5} min={ROOM_LIMITS.height.min} max={ROOM_LIMITS.height.max}
                 />
               </label>
             </div>
@@ -387,6 +404,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             onClick={handleCanvasClick}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             preserveAspectRatio="xMidYMid meet"
           >
             <rect
@@ -450,7 +468,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             <div className="pe-fab-bar">
               <button
                 className="pe-fab"
-                onClick={() => updateElement(selectedElement.id, { rotation: (selectedElement.rotation + 90) % 360 })}
+                onClick={() => rotateElement(selectedElement.id)}
                 title="Pivoter 90°"
                 aria-label="Pivoter"
               >↻</button>
@@ -528,7 +546,7 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             <div className="pe-props-actions">
               <button
                 className="pe-btn pe-btn-rotate"
-                onClick={() => updateElement(selectedElement.id, { rotation: (selectedElement.rotation + 90) % 360 })}
+                onClick={() => rotateElement(selectedElement.id)}
               >
                 ↻ Pivoter
               </button>

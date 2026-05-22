@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ELEMENT_CATALOG } from '../../../lib/planElements';
+import { ROOM_LIMITS, clampToRoom } from '../../../lib/planModel';
 import './PlanViewer3D.css';
 
 function cmToM(cm) { return cm / 100; }
@@ -543,7 +544,12 @@ export default function PlanViewer3D({ plan, onChange, onClose, onBackTo2D }) {
   const [showPanel, setShowPanel] = useState(false);
 
   const updateRoom = (key, val) => {
-    if (onChange) onChange({ ...plan, room: { ...plan.room, [key]: val } });
+    if (!onChange) return;
+    const lim = ROOM_LIMITS[key] || { min: 50, max: 2000 };
+    const v = Math.max(lim.min, Math.min(lim.max, Number(val) || lim.min));
+    const nextRoom = { ...plan.room, [key]: v };
+    const nextElements = plan.elements.map(el => clampToRoom(el, nextRoom));
+    onChange({ ...plan, room: nextRoom, elements: nextElements });
   };
 
   useEffect(() => {
@@ -695,9 +701,9 @@ export default function PlanViewer3D({ plan, onChange, onClose, onBackTo2D }) {
         {showPanel && (
           <div className="pv-dim-panel">
             <div className="pv-dim-title">Pièce</div>
-            <DimStepper label="Largeur"    value={plan.room.width}  onStep={v => updateRoom('width',  v)} min={100} max={2000} />
-            <DimStepper label="Profondeur" value={plan.room.depth}  onStep={v => updateRoom('depth',  v)} min={100} max={2000} />
-            <DimStepper label="Hauteur"    value={plan.room.height} onStep={v => updateRoom('height', v)} step={5}  min={200} max={400} />
+            <DimStepper label="Largeur"    value={plan.room.width}  onStep={v => updateRoom('width',  v)} min={ROOM_LIMITS.width.min}  max={ROOM_LIMITS.width.max} />
+            <DimStepper label="Profondeur" value={plan.room.depth}  onStep={v => updateRoom('depth',  v)} min={ROOM_LIMITS.depth.min}  max={ROOM_LIMITS.depth.max} />
+            <DimStepper label="Hauteur"    value={plan.room.height} onStep={v => updateRoom('height', v)} step={5}  min={ROOM_LIMITS.height.min} max={ROOM_LIMITS.height.max} />
           </div>
         )}
         <div className="pv-hint">
