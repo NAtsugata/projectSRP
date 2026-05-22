@@ -497,14 +497,41 @@ function makeOrbitControls(camera, domElement) {
 
 // ── Dimension Stepper ─────────────────────────────────────────────────────────
 function DimStepper({ label, value, onStep, step = 10, min = 50, max = 2000 }) {
+  const [draft, setDraft] = React.useState(String(value));
+
+  React.useEffect(() => { setDraft(String(value)); }, [value]);
+
+  function commit(raw) {
+    const num = parseInt(raw, 10);
+    const clamped = isNaN(num) ? value : Math.max(min, Math.min(max, num));
+    setDraft(String(clamped));
+    onStep(clamped);
+  }
+
+  function stepBy(delta) {
+    const next = Math.max(min, Math.min(max, value + delta));
+    setDraft(String(next));
+    onStep(next);
+  }
+
   return (
     <div className="pv-dim-row">
       <span className="pv-dim-label">{label}</span>
       <div className="pv-stepper">
-        <button className="pv-step-btn" onClick={() => onStep(Math.max(min, value - step))}>−</button>
-        <span className="pv-step-val">{value}</span>
+        <button className="pv-step-btn" onClick={() => stepBy(-step)}>−</button>
+        <input
+          type="number"
+          className="pv-step-input"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={e => commit(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && commit(draft)}
+          min={min}
+          max={max}
+          step={step}
+        />
         <span className="pv-step-unit">cm</span>
-        <button className="pv-step-btn" onClick={() => onStep(Math.min(max, value + step))}>+</button>
+        <button className="pv-step-btn" onClick={() => stepBy(step)}>+</button>
       </div>
     </div>
   );

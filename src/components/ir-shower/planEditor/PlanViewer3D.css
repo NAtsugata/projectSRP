@@ -137,14 +137,21 @@
 .pv-step-btn:hover  { background: #e2e8f0; border-color: #94a3b8; }
 .pv-step-btn:active { background: #cbd5e1; }
 
-.pv-step-val {
-  min-width: 2.8rem;
+.pv-step-input {
+  width: 3.2rem;
   text-align: center;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #0f172a;
-  font-variant-numeric: tabular-nums;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.25rem 0.15rem;
+  background: #f8fafc;
+  -moz-appearance: textfield;
 }
+.pv-step-input::-webkit-outer-spin-button,
+.pv-step-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pv-step-input:focus { outline: 2px solid #93c5fd; border-color: #3b82f6; background: #fff; }
 
 .pv-step-unit {
   font-size: 0.75rem;

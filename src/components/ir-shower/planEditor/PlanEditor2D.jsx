@@ -12,6 +12,45 @@ const MIN_HIT_CM = 40;  // taille minimale (en cm) de la zone tactile d'un élé
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 
+// ── Stepper (module-level so hooks are stable across renders) ─────────────────
+function Stepper({ value, onChange: onStepChange, step = 10, min = 1, max = 500, unit = 'cm' }) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => { setDraft(String(value)); }, [value]);
+
+  function commit(raw) {
+    const num = parseInt(raw, 10);
+    const clamped = isNaN(num) ? value : Math.max(min, Math.min(max, num));
+    setDraft(String(clamped));
+    onStepChange(clamped);
+  }
+
+  function stepBy(delta) {
+    const next = Math.max(min, Math.min(max, value + delta));
+    setDraft(String(next));
+    onStepChange(next);
+  }
+
+  return (
+    <div className="pe-stepper">
+      <button type="button" className="pe-stepper-btn" onClick={() => stepBy(-step)} aria-label="Diminuer">−</button>
+      <input
+        type="number"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={e => commit(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && commit(draft)}
+        min={min}
+        max={max}
+        step={step}
+        className="pe-stepper-input"
+      />
+      <span className="pe-stepper-unit">{unit}</span>
+      <button type="button" className="pe-stepper-btn" onClick={() => stepBy(step)} aria-label="Augmenter">+</button>
+    </div>
+  );
+}
+
 export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const [activeCategory, setActiveCategory] = useState('shower');
@@ -129,34 +168,6 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
     const v = Math.max(50, Math.min(2000, Number(value) || 0));
     onChange({ ...plan, room: { ...plan.room, [key]: v } });
   };
-
-  // ── Stepper helper pour les inputs nombres ──
-  const Stepper = ({ value, onChange: onStepChange, step = 10, min = 1, max = 500, unit = 'cm' }) => (
-    <div className="pe-stepper">
-      <button
-        type="button"
-        className="pe-stepper-btn"
-        onClick={() => onStepChange(Math.max(min, value - step))}
-        aria-label="Diminuer"
-      >−</button>
-      <input
-        type="number"
-        value={value}
-        onChange={e => onStepChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))}
-        min={min}
-        max={max}
-        step={step}
-        className="pe-stepper-input"
-      />
-      <span className="pe-stepper-unit">{unit}</span>
-      <button
-        type="button"
-        className="pe-stepper-btn"
-        onClick={() => onStepChange(Math.min(max, value + step))}
-        aria-label="Augmenter"
-      >+</button>
-    </div>
-  );
 
   // ── Rendu d'un élément 2D ──
   const renderElement = (el) => {
