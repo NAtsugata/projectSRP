@@ -55,9 +55,136 @@
   text-align: center;
 }
 
+/* ── Dimension toggle button ── */
+.pv-dim-toggle {
+  font-size: 0.85rem;
+}
+.pv-dim-toggle--active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+/* ── Floating dimension panel ── */
+.pv-dim-panel {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  min-width: 230px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.13);
+  z-index: 10;
+}
+
+.pv-dim-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.pv-dim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+.pv-dim-row:last-child {
+  margin-bottom: 0;
+}
+
+.pv-dim-label {
+  font-size: 0.85rem;
+  color: #334155;
+  min-width: 82px;
+  flex-shrink: 0;
+}
+
+/* ── Stepper ── */
+.pv-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pv-step-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 1.15rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  user-select: none;
+}
+.pv-step-btn:hover  { background: #e2e8f0; border-color: #94a3b8; }
+.pv-step-btn:active { background: #cbd5e1; }
+
+.pv-step-val {
+  min-width: 2.8rem;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.pv-step-unit {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  min-width: 1.6rem;
+}
+
 @media (max-width: 768px) {
   .pv-hint {
     font-size: 0.7rem;
     padding: 0.4rem 0.75rem;
+  }
+
+  .pv-dim-toggle {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .pv-dim-panel {
+    top: 0.5rem;
+    left: 0.5rem;
+    min-width: 200px;
+    padding: 0.75rem 0.85rem;
+    border-radius: 12px;
+  }
+
+  .pv-step-btn {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 1.2rem;
+    border-radius: 8px;
+  }
+
+  .pv-dim-label {
+    font-size: 0.8rem;
+    min-width: 72px;
+  }
+
+  .pv-step-val {
+    font-size: 0.9rem;
+    min-width: 2.5rem;
   }
 }

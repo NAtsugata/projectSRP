@@ -19,6 +19,7 @@ export default function PlanEditorModal({ initialPlan, onSave, onClose }) {
     return (
       <PlanViewer3D
         plan={plan}
+        onChange={setPlan}
         onClose={handleClose}
         onBackTo2D={() => setMode('2d')}
       />

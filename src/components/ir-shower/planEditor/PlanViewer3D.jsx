@@ -1,7 +1,7 @@
 // src/components/ir-shower/planEditor/PlanViewer3D.jsx
 // Viewer 3D du plan : extrude la pièce et les éléments en 3D avec Three.js.
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ELEMENT_CATALOG } from '../../../lib/planElements';
 import './PlanViewer3D.css';
@@ -495,9 +495,29 @@ function makeOrbitControls(camera, domElement) {
   };
 }
 
+// ── Dimension Stepper ─────────────────────────────────────────────────────────
+function DimStepper({ label, value, onStep, step = 10, min = 50, max = 2000 }) {
+  return (
+    <div className="pv-dim-row">
+      <span className="pv-dim-label">{label}</span>
+      <div className="pv-stepper">
+        <button className="pv-step-btn" onClick={() => onStep(Math.max(min, value - step))}>−</button>
+        <span className="pv-step-val">{value}</span>
+        <span className="pv-step-unit">cm</span>
+        <button className="pv-step-btn" onClick={() => onStep(Math.min(max, value + step))}>+</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function PlanViewer3D({ plan, onClose, onBackTo2D }) {
+export default function PlanViewer3D({ plan, onChange, onClose, onBackTo2D }) {
   const containerRef = useRef(null);
+  const [showPanel, setShowPanel] = useState(false);
+
+  const updateRoom = (key, val) => {
+    if (onChange) onChange({ ...plan, room: { ...plan.room, [key]: val } });
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -630,12 +650,29 @@ export default function PlanViewer3D({ plan, onClose, onBackTo2D }) {
       <div className="pv-toolbar">
         <button className="pe-btn" onClick={onClose} title="Fermer">✕</button>
         <span className="pv-title">Vue 3D</span>
+        {onChange && (
+          <button
+            className={`pe-btn pv-dim-toggle${showPanel ? ' pv-dim-toggle--active' : ''}`}
+            onClick={() => setShowPanel(p => !p)}
+            title="Modifier les dimensions"
+          >
+            📐 Dimensions
+          </button>
+        )}
         <button className="pe-btn pe-btn-primary" onClick={onBackTo2D} title="Retour à l'édition">
           ✏️ Éditer en 2D
         </button>
       </div>
 
       <div className="pv-container" ref={containerRef}>
+        {showPanel && (
+          <div className="pv-dim-panel">
+            <div className="pv-dim-title">Pièce</div>
+            <DimStepper label="Largeur"    value={plan.room.width}  onStep={v => updateRoom('width',  v)} min={100} max={2000} />
+            <DimStepper label="Profondeur" value={plan.room.depth}  onStep={v => updateRoom('depth',  v)} min={100} max={2000} />
+            <DimStepper label="Hauteur"    value={plan.room.height} onStep={v => updateRoom('height', v)} step={5}  min={200} max={400} />
+          </div>
+        )}
         <div className="pv-hint">
           🖱️ Glisser pour pivoter · molette pour zoomer · clic-droit pour déplacer · 📱 Pincer pour zoomer
         </div>
