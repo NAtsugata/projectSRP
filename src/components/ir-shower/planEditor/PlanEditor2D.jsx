@@ -1,19 +1,22 @@
 // src/components/ir-shower/planEditor/PlanEditor2D.jsx
 // Éditeur de plan 2D, optimisé tactile + souris.
-// Utilise SVG pour les performances et la précision sur tous écrans.
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ELEMENT_CATEGORIES, ELEMENT_CATALOG, getElementsByCategory } from '../../../lib/planElements';
 import { createElement, snap, clampToRoom } from '../../../lib/planModel';
 import './PlanEditor2D.css';
 
-const GRID_SIZE = 10; // cm
-const PADDING = 30;   // cm autour de la pièce pour l'affichage SVG
+const GRID_SIZE = 10;   // cm
+const PADDING = 30;     // cm autour de la pièce pour l'affichage SVG
+const MIN_HIT_CM = 40;  // taille minimale (en cm) de la zone tactile d'un élément
+
+const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 
 export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const [activeCategory, setActiveCategory] = useState('shower');
-  const [showPalette, setShowPalette] = useState(true);
+  const [showPalette, setShowPalette] = useState(() => !isMobileViewport());
+  const [showProps, setShowProps] = useState(false);
   const svgRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -23,7 +26,11 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
     [plan.elements, selectedId]
   );
 
-  // Dimensions de la viewBox SVG
+  // Ferme automatiquement le panneau de propriétés si l'élément est désélectionné
+  useEffect(() => {
+    if (!selectedId) setShowProps(false);
+  }, [selectedId]);
+
   const vbX = -PADDING;
   const vbY = -PADDING;
   const vbW = plan.room.width + PADDING * 2;
@@ -55,10 +62,29 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
     setSelectedId(null);
   }, [plan, onChange]);
 
+  const duplicateElement = useCallback((id) => {
+    const src = plan.elements.find(e => e.id === id);
+    if (!src) return;
+    const offset = 20;
+    const newX = snap(Math.min(plan.room.width - src.width - 1, src.x + offset));
+    const newY = snap(Math.min(plan.room.depth - src.depth - 1, src.y + offset));
+    const copy = createElement(src.type, { ...src, x: newX, y: newY });
+    onChange({ ...plan, elements: [...plan.elements, copy] });
+    setSelectedId(copy.id);
+  }, [plan, onChange]);
+
   const addElement = useCallback((type) => {
-    const el = createElement(type, { x: snap(plan.room.width / 2 - 30), y: snap(plan.room.depth / 2 - 30) });
+    const def = ELEMENT_CATALOG[type];
+    const w = def?.defaultWidth ?? 60;
+    const d = def?.defaultDepth ?? 60;
+    const el = createElement(type, {
+      x: snap(Math.max(0, plan.room.width / 2 - w / 2)),
+      y: snap(Math.max(0, plan.room.depth / 2 - d / 2)),
+    });
     onChange({ ...plan, elements: [...plan.elements, el] });
     setSelectedId(el.id);
+    // Ferme la palette automatiquement sur mobile pour voir l'élément ajouté
+    if (isMobileViewport()) setShowPalette(false);
   }, [plan, onChange]);
 
   // ── Drag handlers ──
@@ -94,17 +120,43 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
   };
 
   const handleCanvasClick = (e) => {
-    // Désélectionner si on clique le fond
     if (e.target === svgRef.current || e.target.classList.contains('plan-bg')) {
       setSelectedId(null);
     }
   };
 
-  // ── Modification de la pièce ──
   const updateRoom = (key, value) => {
     const v = Math.max(50, Math.min(2000, Number(value) || 0));
     onChange({ ...plan, room: { ...plan.room, [key]: v } });
   };
+
+  // ── Stepper helper pour les inputs nombres ──
+  const Stepper = ({ value, onChange: onStepChange, step = 10, min = 1, max = 500, unit = 'cm' }) => (
+    <div className="pe-stepper">
+      <button
+        type="button"
+        className="pe-stepper-btn"
+        onClick={() => onStepChange(Math.max(min, value - step))}
+        aria-label="Diminuer"
+      >−</button>
+      <input
+        type="number"
+        value={value}
+        onChange={e => onStepChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))}
+        min={min}
+        max={max}
+        step={step}
+        className="pe-stepper-input"
+      />
+      <span className="pe-stepper-unit">{unit}</span>
+      <button
+        type="button"
+        className="pe-stepper-btn"
+        onClick={() => onStepChange(Math.min(max, value + step))}
+        aria-label="Augmenter"
+      >+</button>
+    </div>
+  );
 
   // ── Rendu d'un élément 2D ──
   const renderElement = (el) => {
@@ -114,6 +166,11 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
     const isRotated = el.rotation % 180 !== 0;
     const w = isRotated ? el.depth : el.width;
     const h = isRotated ? el.width : el.depth;
+
+    // Zone de tap agrandie pour les petits éléments
+    const padX = Math.max(0, (MIN_HIT_CM - w) / 2);
+    const padY = Math.max(0, (MIN_HIT_CM - h) / 2);
+
     return (
       <g
         key={el.id}
@@ -125,6 +182,18 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
         onPointerCancel={handlePointerUp}
         style={{ cursor: 'move', touchAction: 'none' }}
       >
+        {/* Zone de tap invisible (au moins MIN_HIT_CM × MIN_HIT_CM) */}
+        {(padX > 0 || padY > 0) && (
+          <rect
+            x={-padX}
+            y={-padY}
+            width={w + padX * 2}
+            height={h + padY * 2}
+            fill="transparent"
+            pointerEvents="all"
+          />
+        )}
+        {/* Forme visible */}
         <rect
           x={0}
           y={0}
@@ -133,38 +202,52 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
           fill={def.color}
           fillOpacity={def.opacity ?? 0.85}
           stroke={isSelected ? '#2563eb' : '#475569'}
-          strokeWidth={isSelected ? 2 : 1}
-          rx={2}
+          strokeWidth={isSelected ? 2.5 : 1}
+          rx={3}
         />
         <text
           x={w / 2}
           y={h / 2}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={Math.min(w, h) * 0.35}
+          fontSize={Math.min(w, h) * 0.4}
           fill="#1e293b"
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {def.icon}
         </text>
         {isSelected && (
-          <text
-            x={w / 2}
-            y={h + 14}
-            textAnchor="middle"
-            fontSize={10}
-            fill="#2563eb"
-            fontWeight="700"
-            style={{ pointerEvents: 'none', userSelect: 'none' }}
-          >
-            {def.label} · {el.width}×{el.depth}cm
-          </text>
+          <>
+            {/* Halo de sélection */}
+            <rect
+              x={-3}
+              y={-3}
+              width={w + 6}
+              height={h + 6}
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              rx={4}
+              style={{ pointerEvents: 'none' }}
+            />
+            <text
+              x={w / 2}
+              y={h + 16}
+              textAnchor="middle"
+              fontSize={11}
+              fill="#2563eb"
+              fontWeight="700"
+              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            >
+              {def.label} · {el.width}×{el.depth}cm
+            </text>
+          </>
         )}
       </g>
     );
   };
 
-  // ── Rendu de la grille ──
   const gridLines = useMemo(() => {
     const lines = [];
     for (let x = 0; x <= plan.room.width; x += GRID_SIZE * 5) {
@@ -181,54 +264,70 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
       {/* ── Toolbar ── */}
       <div className="pe-toolbar">
         <div className="pe-toolbar-left">
-          <button className="pe-btn" onClick={onClose} title="Fermer">✕</button>
+          <button className="pe-btn pe-btn-icon-big" onClick={onClose} title="Fermer">✕</button>
           <span className="pe-title">Plan IR Douche</span>
         </div>
         <div className="pe-toolbar-right">
           <button
-            className="pe-btn pe-btn-palette"
+            className={`pe-btn pe-btn-icon-big ${showPalette ? 'active' : ''}`}
             onClick={() => setShowPalette(s => !s)}
-            title="Afficher / cacher la palette"
+            title="Palette"
+            aria-label="Afficher la palette"
           >
-            {showPalette ? '◀ Palette' : 'Palette ▶'}
+            📦
           </button>
           <button className="pe-btn pe-btn-primary" onClick={onOpen3D} title="Voir en 3D">
-            🎲 Voir en 3D
+            🎲 <span className="pe-btn-text">3D</span>
           </button>
         </div>
       </div>
 
       <div className="pe-body">
+        {/* ── Backdrop mobile pour fermer la palette en tapant à côté ── */}
+        {showPalette && (
+          <div
+            className="pe-palette-backdrop"
+            onClick={() => setShowPalette(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* ── Palette d'éléments ── */}
         {showPalette && (
           <aside className="pe-palette">
+            <div className="pe-palette-header">
+              <h4>Éléments</h4>
+              <button
+                className="pe-btn-icon"
+                onClick={() => setShowPalette(false)}
+                aria-label="Fermer la palette"
+              >✕</button>
+            </div>
+
             <div className="pe-room-controls">
               <h4>Pièce</h4>
               <label>
-                Largeur (cm)
-                <input
-                  type="number"
+                Largeur
+                <Stepper
                   value={plan.room.width}
-                  onChange={e => updateRoom('width', e.target.value)}
-                  min={50} max={2000} step={10}
+                  onChange={(v) => updateRoom('width', v)}
+                  step={10} min={50} max={2000}
                 />
               </label>
               <label>
-                Profondeur (cm)
-                <input
-                  type="number"
+                Profondeur
+                <Stepper
                   value={plan.room.depth}
-                  onChange={e => updateRoom('depth', e.target.value)}
-                  min={50} max={2000} step={10}
+                  onChange={(v) => updateRoom('depth', v)}
+                  step={10} min={50} max={2000}
                 />
               </label>
               <label>
-                Hauteur (cm)
-                <input
-                  type="number"
+                Hauteur
+                <Stepper
                   value={plan.room.height}
-                  onChange={e => updateRoom('height', e.target.value)}
-                  min={150} max={500} step={5}
+                  onChange={(v) => updateRoom('height', v)}
+                  step={5} min={150} max={500}
                 />
               </label>
             </div>
@@ -279,7 +378,6 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             onPointerUp={handlePointerUp}
             preserveAspectRatio="xMidYMid meet"
           >
-            {/* Fond + grille */}
             <rect
               className="plan-bg"
               x={vbX} y={vbY} width={vbW} height={vbH}
@@ -295,7 +393,6 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             />
             <g>{gridLines}</g>
 
-            {/* Cotes de la pièce */}
             <g className="pe-dimensions" style={{ pointerEvents: 'none' }}>
               <text
                 x={plan.room.width / 2}
@@ -320,83 +417,117 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
               </text>
             </g>
 
-            {/* Éléments */}
             {plan.elements.map(renderElement)}
           </svg>
 
-          {/* Hint quand vide */}
-          {plan.elements.length === 0 && (
+          {/* ── Hint quand vide ── */}
+          {plan.elements.length === 0 && !showPalette && (
             <div className="pe-empty-hint">
-              <div className="pe-empty-icon">👆</div>
-              <p>Choisis un élément dans la palette pour commencer</p>
+              <div className="pe-empty-icon">📦</div>
+              <p>Touchez « Palette » pour ajouter un élément</p>
+              <button
+                className="pe-btn pe-btn-primary pe-empty-cta"
+                onClick={() => setShowPalette(true)}
+              >
+                Ouvrir la palette
+              </button>
+            </div>
+          )}
+
+          {/* ── FAB (actions flottantes) pour l'élément sélectionné ── */}
+          {selectedElement && (
+            <div className="pe-fab-bar">
+              <button
+                className="pe-fab"
+                onClick={() => updateElement(selectedElement.id, { rotation: (selectedElement.rotation + 90) % 360 })}
+                title="Pivoter 90°"
+                aria-label="Pivoter"
+              >↻</button>
+              <button
+                className="pe-fab"
+                onClick={() => duplicateElement(selectedElement.id)}
+                title="Dupliquer"
+                aria-label="Dupliquer"
+              >⎘</button>
+              <button
+                className="pe-fab pe-fab-edit"
+                onClick={() => setShowProps(true)}
+                title="Modifier les dimensions"
+                aria-label="Modifier"
+              >✎</button>
+              <button
+                className="pe-fab pe-fab-delete"
+                onClick={() => deleteElement(selectedElement.id)}
+                title="Supprimer"
+                aria-label="Supprimer"
+              >🗑</button>
             </div>
           )}
         </div>
 
-        {/* ── Panneau propriétés ── */}
-        {selectedElement && (
+        {/* ── Panneau propriétés (bottom-sheet sur mobile) ── */}
+        {selectedElement && showProps && (
           <aside className="pe-props">
             <div className="pe-props-header">
               <h4>{ELEMENT_CATALOG[selectedElement.type]?.label}</h4>
-              <button className="pe-btn-icon" onClick={() => setSelectedId(null)} title="Fermer">✕</button>
+              <button className="pe-btn-icon" onClick={() => setShowProps(false)} title="Fermer">✕</button>
             </div>
+
             <label>
-              Largeur (cm)
-              <input
-                type="number"
+              Largeur
+              <Stepper
                 value={selectedElement.width}
-                onChange={e => updateElement(selectedElement.id, { width: Number(e.target.value) || 1 })}
-                min={1} max={500}
+                onChange={(v) => updateElement(selectedElement.id, { width: v })}
+                step={5} min={1} max={500}
               />
             </label>
             <label>
-              Profondeur (cm)
-              <input
-                type="number"
+              Profondeur
+              <Stepper
                 value={selectedElement.depth}
-                onChange={e => updateElement(selectedElement.id, { depth: Number(e.target.value) || 1 })}
-                min={1} max={500}
+                onChange={(v) => updateElement(selectedElement.id, { depth: v })}
+                step={5} min={1} max={500}
               />
             </label>
             <label>
-              Hauteur (cm)
-              <input
-                type="number"
+              Hauteur
+              <Stepper
                 value={selectedElement.height}
-                onChange={e => updateElement(selectedElement.id, { height: Number(e.target.value) || 1 })}
-                min={1} max={300}
+                onChange={(v) => updateElement(selectedElement.id, { height: v })}
+                step={5} min={1} max={300}
               />
             </label>
             <label>
-              Position X (cm)
-              <input
-                type="number"
+              Position X
+              <Stepper
                 value={selectedElement.x}
-                onChange={e => updateElement(selectedElement.id, { x: snap(Number(e.target.value) || 0) })}
-                step={GRID_SIZE}
+                onChange={(v) => updateElement(selectedElement.id, { x: snap(v) })}
+                step={GRID_SIZE} min={0} max={plan.room.width}
               />
             </label>
             <label>
-              Position Y (cm)
-              <input
-                type="number"
+              Position Y
+              <Stepper
                 value={selectedElement.y}
-                onChange={e => updateElement(selectedElement.id, { y: snap(Number(e.target.value) || 0) })}
-                step={GRID_SIZE}
+                onChange={(v) => updateElement(selectedElement.id, { y: snap(v) })}
+                step={GRID_SIZE} min={0} max={plan.room.depth}
               />
             </label>
-            <button
-              className="pe-btn pe-btn-rotate"
-              onClick={() => updateElement(selectedElement.id, { rotation: (selectedElement.rotation + 90) % 360 })}
-            >
-              ↻ Rotation 90°
-            </button>
-            <button
-              className="pe-btn pe-btn-delete"
-              onClick={() => deleteElement(selectedElement.id)}
-            >
-              🗑️ Supprimer
-            </button>
+
+            <div className="pe-props-actions">
+              <button
+                className="pe-btn pe-btn-rotate"
+                onClick={() => updateElement(selectedElement.id, { rotation: (selectedElement.rotation + 90) % 360 })}
+              >
+                ↻ Pivoter
+              </button>
+              <button
+                className="pe-btn pe-btn-delete"
+                onClick={() => deleteElement(selectedElement.id)}
+              >
+                🗑 Supprimer
+              </button>
+            </div>
           </aside>
         )}
       </div>

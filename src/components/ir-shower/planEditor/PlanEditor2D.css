@@ -327,6 +327,182 @@
   background: #fecaca;
 }
 
+/* ── Header palette (avec bouton fermer) ── */
+.pe-palette-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+
+.pe-palette-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Bouton icône grande taille (toolbar) ── */
+.pe-btn-icon-big {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+.pe-btn-icon-big.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+/* ── Stepper (input numérique tactile avec +/-) ── */
+.pe-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 2px;
+  margin-top: 0.25rem;
+}
+
+.pe-stepper-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pe-stepper-btn:hover { background: #e2e8f0; }
+.pe-stepper-btn:active { background: #cbd5e1; }
+
+.pe-stepper-input {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  outline: none !important;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: transparent;
+  padding: 0 0.25rem !important;
+  -moz-appearance: textfield;
+}
+
+.pe-stepper-input::-webkit-outer-spin-button,
+.pe-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pe-stepper-unit {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  padding-right: 0.4rem;
+}
+
+/* ── FAB (Floating Action Bar) pour l'élément sélectionné ── */
+.pe-fab-bar {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  z-index: 30;
+  animation: fabAppear 0.2s ease-out;
+}
+
+@keyframes fabAppear {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.pe-fab {
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pe-fab:hover { background: #e2e8f0; }
+.pe-fab:active { transform: scale(0.92); background: #cbd5e1; }
+
+.pe-fab-edit { background: #dbeafe; color: #1d4ed8; }
+.pe-fab-edit:hover { background: #bfdbfe; }
+
+.pe-fab-delete { background: #fee2e2; color: #991b1b; }
+.pe-fab-delete:hover { background: #fecaca; }
+
+/* ── Backdrop palette ── */
+.pe-palette-backdrop { display: none; }
+
+/* ── Empty hint avec CTA cliquable ── */
+.pe-empty-hint {
+  pointer-events: none;
+}
+.pe-empty-cta {
+  margin-top: 0.85rem;
+  pointer-events: auto;
+}
+
+/* ── Actions horizontales dans le panneau props ── */
+.pe-props-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pe-props-actions .pe-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* ── Espacement labels ── */
+.pe-room-controls label,
+.pe-props label {
+  margin-bottom: 0.85rem;
+}
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .pe-toolbar {
@@ -342,7 +518,7 @@
     font-size: 0.8rem;
   }
 
-  .pe-btn-palette {
+  .pe-btn-text {
     display: none;
   }
 
@@ -351,10 +527,11 @@
     top: 0;
     bottom: 0;
     left: 0;
-    width: 80vw;
-    max-width: 280px;
-    z-index: 10;
-    box-shadow: 4px 0 12px rgba(0,0,0,0.1);
+    width: 85vw;
+    max-width: 320px;
+    z-index: 20;
+    box-shadow: 4px 0 16px rgba(0,0,0,0.18);
+    animation: slideInLeft 0.22s ease-out;
   }
 
   .pe-props {
@@ -363,10 +540,79 @@
     left: 0;
     right: 0;
     width: 100%;
-    max-height: 50vh;
+    max-height: 70vh;
     border-left: none;
     border-top: 1px solid #e2e8f0;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-    z-index: 10;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.18);
+    z-index: 25;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    animation: slideInBottom 0.22s ease-out;
   }
+
+  .pe-palette-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 15;
+    animation: fadeIn 0.18s ease-out;
+  }
+
+  .pe-elements-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    padding: 0.85rem 1rem 2rem;
+  }
+
+  .pe-element-tile {
+    padding: 0.85rem 0.5rem;
+    min-height: 92px;
+  }
+
+  .pe-element-preview {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+  }
+
+  .pe-element-name {
+    font-size: 0.78rem;
+  }
+
+  .pe-cat-btn {
+    padding: 0.75rem 0.4rem;
+    min-height: 56px;
+  }
+
+  .pe-cat-icon {
+    font-size: 1.4rem;
+  }
+
+  .pe-fab {
+    width: 50px;
+    height: 50px;
+    font-size: 1.35rem;
+  }
+
+  .pe-stepper-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+  }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slideInBottom {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
