@@ -122,21 +122,19 @@ describe('validators', () => {
             time: '09:00',
         };
 
-        it('accepte une intervention valide', () => {
+        it('accepte une intervention valide (objet vide)', () => {
             const result = validateIntervention(validIntervention);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
+            expect(Object.keys(result)).toHaveLength(0);
         });
 
         it('rejette si le client est manquant', () => {
             const result = validateIntervention({ ...validIntervention, client: '' });
-            expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Le nom du client est requis');
+            expect(result.client).toBeTruthy();
         });
 
         it('rejette un téléphone invalide', () => {
             const result = validateIntervention({ ...validIntervention, client_phone: '123' });
-            expect(result.isValid).toBe(false);
+            expect(result.client_phone).toBeTruthy();
         });
 
         it('valide optionnellement email et téléphone secondaire', () => {
@@ -145,8 +143,8 @@ describe('validators', () => {
                 client_email: 'invalid',
                 secondary_phone: '123',
             });
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThanOrEqual(2);
+            expect(result.client_email).toBeTruthy();
+            expect(result.secondary_phone).toBeTruthy();
         });
     });
 
