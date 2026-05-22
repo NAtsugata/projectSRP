@@ -581,7 +581,9 @@ export default function PlanViewer3D({ plan, onChange, onClose, onBackTo2D }) {
     sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
     sun.shadow.camera.top  =  14; sun.shadow.camera.bottom = -14;
     scene.add(sun);
-    scene.add(Object.assign(new THREE.DirectionalLight(0xd8e8ff, 0.30), { position: new THREE.Vector3(-4, 5, -3) }));
+    const fill = new THREE.DirectionalLight(0xd8e8ff, 0.30);
+    fill.position.set(-4, 5, -3);
+    scene.add(fill);
 
     const roomW = cmToM(plan.room.width);
     const roomD = cmToM(plan.room.depth);
