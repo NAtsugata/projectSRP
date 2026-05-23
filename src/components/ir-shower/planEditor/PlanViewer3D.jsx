@@ -101,9 +101,9 @@ function buildElementGroup(el, def) {
       // demi-cylindre arrondi sur la face avant (+Z = côté pièce)
       const fR   = w * 0.38;
       const fGeo = new THREE.CylinderGeometry(fR, fR * 0.88, seatH, 28, 1, false, 0, Math.PI);
-      addMesh(Object.assign(new THREE.Mesh(fGeo, ceramic()), {
-        position: new THREE.Vector3(0, seatH / 2, d * 0.28),
-      }));
+      const fMesh = new THREE.Mesh(fGeo, ceramic());
+      fMesh.position.set(0, seatH / 2, d * 0.28);
+      addMesh(fMesh);
 
       // ── Cuvette ──────────────────────────────────────────────────────────
       const bowlZ = d * 0.08;
@@ -447,7 +447,7 @@ function buildElementGroup(el, def) {
         else { const p = (t2 - 0.12) / 0.88; r = w * 0.23 + w * 0.24 * Math.sin(p * Math.PI * 0.90); }
         biPts.push([r, t2 * bBH]);
       }
-      addMesh(Object.assign(latheOval(biPts, 20, ceramic(), ovalF), { position: new THREE.Vector3() }));
+      addMesh(latheOval(biPts, 20, ceramic(), ovalF));
       const biW = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.20, w * 0.17, 0.010, 20), darkSl());
       biW.position.set(0, bBH * 0.52, 0); biW.scale.z = ovalF; addMesh(biW);
       add(new THREE.CylinderGeometry(w * 0.13, w * 0.17, H * 0.44, 14), ceramic(), 0, H * 0.22, 0);
