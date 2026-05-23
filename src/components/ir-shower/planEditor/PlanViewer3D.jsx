@@ -54,70 +54,111 @@ function buildElementGroup(el, def) {
 
   switch (el.type) {
 
-    /* ── WC ──────────────────────────────────────────────── */
+    /* ── WC (cuvette suspendue moderne) ──────────────────── */
     case 'wc': {
-      const bowlH = H * 0.58;
-      // Cuvette LatheGeometry (profil de révolution, étiré en ovale)
-      const bPts = [];
-      for (let i = 0; i <= 20; i++) {
-        const t = i / 20;
+      // Convention : réservoir contre le mur (-Z), cuvette vers la pièce (+Z)
+      const seatY  = H * 0.52;                 // hauteur de l'assise
+      const ovalZ  = (d * 0.60) / (w * 0.46);  // étirement ovale (avant-arrière)
+
+      // ── Bâti / pied : forme galbée du sol jusqu'à l'assise ──
+      const skPts = [];
+      for (let i = 0; i <= 18; i++) {
+        const t = i / 18;
         let r;
-        if (t < 0.10) r = w * 0.07 + w * 0.11 * (t / 0.10);
-        else { const p = (t - 0.10) / 0.90; r = w * 0.18 + w * 0.28 * Math.sin(p * Math.PI * 0.92); }
-        bPts.push([r, t * bowlH]);
+        if (t < 0.20)      r = w * 0.17 + w * 0.05 * (t / 0.20);          // socle
+        else if (t < 0.55) r = w * 0.22 - w * 0.09 * ((t - 0.20) / 0.35); // taille fine
+        else               r = w * 0.13 + w * 0.33 * Math.sin(((t - 0.55) / 0.45) * Math.PI * 0.55); // évasement vers la cuvette
+        skPts.push([r, t * seatY]);
       }
-      const bowl = latheOval(bPts, 22, ceramic(), (d * 0.72) / (w * 0.46));
-      bowl.position.set(0, 0, d * 0.06);
-      addMesh(bowl);
-      // Surface eau (sombre)
-      const water = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.22, w * 0.18, 0.012, 20), darkSl());
-      water.position.set(0, bowlH * 0.52, d * 0.06); water.scale.z = (d * 0.72) / (w * 0.46);
+      const skirt = latheOval(skPts, 24, ceramic(), ovalZ);
+      skirt.position.set(0, 0, d * 0.05);
+      addMesh(skirt);
+
+      // ── Intérieur de cuvette (eau sombre) ──
+      const water = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.24, w * 0.17, 0.012, 22), darkSl());
+      water.position.set(0, seatY * 0.80, d * 0.05); water.scale.z = ovalZ;
       addMesh(water);
-      // Lunette (torus ovale)
-      const seat = new THREE.Mesh(new THREE.TorusGeometry(w * 0.29, 0.022, 8, 24), porcelan());
-      seat.position.set(0, bowlH + 0.014, d * 0.06); seat.rotation.x = -PI2;
-      seat.scale.y = (d * 0.64) / (w * 0.58); addMesh(seat);
-      // Abattant plat
-      const lid = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.30, w * 0.30, 0.016, 24), porcelan());
-      lid.position.set(0, bowlH + 0.036, d * 0.06); lid.scale.z = (d * 0.64) / (w * 0.60); addMesh(lid);
-      // Réservoir slim mural
-      const tkH = H * 0.35, tkZ = -d * 0.5 + d * 0.13;
-      add(new THREE.BoxGeometry(w * 0.90, tkH, d * 0.22), ceramic(), 0, H - tkH / 2, tkZ);
-      add(new THREE.BoxGeometry(w * 0.92, 0.015, d * 0.235), lightGr(), 0, H - 0.0075, tkZ);
-      add(new THREE.CylinderGeometry(0.034, 0.034, 0.013, 18), chrome(), 0, H + 0.0065, tkZ);
-      add(new THREE.CylinderGeometry(0.020, 0.020, 0.011, 16), brushed(), 0, H + 0.0055, tkZ);
-      add(new THREE.BoxGeometry(0.004, 0.013, 0.001), chrome(), 0, H + 0.0065, tkZ);
+      // anneau intérieur de la cuvette
+      const innerRim = new THREE.Mesh(new THREE.TorusGeometry(w * 0.30, 0.018, 8, 26), porcelan());
+      innerRim.position.set(0, seatY * 0.96, d * 0.05); innerRim.rotation.x = -PI2;
+      innerRim.scale.y = ovalZ; addMesh(innerRim);
+
+      // ── Lunette (abattant baissé, ovale) ──
+      const seat = new THREE.Mesh(new THREE.TorusGeometry(w * 0.33, 0.026, 10, 28), porcelan());
+      seat.position.set(0, seatY + 0.013, d * 0.05); seat.rotation.x = -PI2;
+      seat.scale.y = ovalZ; addMesh(seat);
+
+      // ── Couvercle relevé contre le réservoir ──
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.34, w * 0.34, 0.020, 26), porcelan());
+      lid.position.set(0, seatY + 0.13, -d * 0.27);
+      lid.rotation.x = 0.30; lid.scale.z = ovalZ * 0.92;
+      addMesh(lid);
+
+      // ── Réservoir mural (caisson arrondi) ──
+      const tkH = H * 0.46, tkD = d * 0.20, tkZ = -d * 0.5 + tkD * 0.5;
+      add(new THREE.BoxGeometry(w * 0.78, tkH, tkD), ceramic(), 0, H - tkH / 2, tkZ);
+      // chanfreins haut/bas
+      add(new THREE.BoxGeometry(w * 0.80, 0.018, tkD + 0.012), porcelan(), 0, H - 0.009, tkZ);
+      add(new THREE.BoxGeometry(w * 0.80, 0.018, tkD + 0.012), porcelan(), 0, H - tkH + 0.009, tkZ);
+      // plaque double-chasse
+      add(new THREE.BoxGeometry(w * 0.34, 0.075, 0.010), brushed(), 0, H - 0.06, tkZ + tkD * 0.5 + 0.003);
+      add(new THREE.CylinderGeometry(0.016, 0.016, 0.006, 16), chrome(), -w * 0.07, H - 0.045, tkZ + tkD * 0.5 + 0.008, PI2, 0, 0);
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.006, 16), chrome(),  w * 0.07, H - 0.075, tkZ + tkD * 0.5 + 0.008, PI2, 0, 0);
       break;
     }
 
-    /* ── Lavabo ───────────────────────────────────────────── */
+    /* ── Lavabo (vasque à poser sur meuble moderne) ──────── */
     case 'sink': {
-      const rimH = 0.048;
-      add(new THREE.BoxGeometry(w, rimH, d), ceramic(), 0, H - rimH / 2, 0);
-      // Vasque LatheGeometry ovale
-      const basinR = Math.min(w, d) * 0.40, basinD = 0.13;
-      const aPts = [];
-      for (let i = 0; i <= 16; i++) {
-        const t = i / 16;
-        aPts.push([basinR * (0.12 + 0.88 * Math.sin(t * Math.PI * 0.85)), -t * basinD]);
-      }
-      const basin = new THREE.Mesh(new THREE.LatheGeometry(aPts.map(([r, y]) => new THREE.Vector2(r, y)), 20), darkSl());
-      basin.position.set(0, H - 0.004, 0); basin.scale.z = d / w; addMesh(basin);
-      add(new THREE.CylinderGeometry(0.020, 0.020, 0.005, 14), chrome(), 0, H - basinD, 0);
-      // Piédestal 3 sections (waist)
-      add(new THREE.CylinderGeometry(w * 0.165, w * 0.185, H * 0.28, 14), ceramic(), 0, H * 0.14, 0);
-      add(new THREE.CylinderGeometry(w * 0.095, w * 0.125, H * 0.44, 12), ceramic(), 0, H * 0.46, 0);
-      add(new THREE.CylinderGeometry(w * 0.155, w * 0.095, H * 0.26, 14), ceramic(), 0, H * 0.77, 0);
-      // Mitigeur monocommande
-      const fz = -d * 0.34;
-      add(new THREE.CylinderGeometry(0.026, 0.030, 0.009, 16), chrome(), 0, H + 0.0045, fz);
-      add(new THREE.CylinderGeometry(0.018, 0.018, 0.090, 13), chrome(), 0, H + 0.054,  fz);
-      add(new THREE.SphereGeometry(0.018, 10, 10), chrome(), 0, H + 0.103, fz);
-      add(new THREE.CylinderGeometry(0.009, 0.009, 0.068, 8), chrome(), 0, H + 0.138, fz - 0.012, -0.38, 0, 0);
-      add(new THREE.SphereGeometry(0.012, 8, 8), chrome(), 0, H + 0.162, fz + 0.008);
-      add(new THREE.CylinderGeometry(0.011, 0.013, d * 0.38, 10), chrome(), 0, H + 0.120, fz + d * 0.19, PI2, 0, 0);
-      add(new THREE.SphereGeometry(0.012, 8, 8), chrome(), 0, H + 0.120, fz);
-      add(new THREE.CylinderGeometry(0.011, 0.009, 0.020, 11), chrome(), 0, H + 0.105, fz + d * 0.38 - 0.01);
+      // Convention : robinet/mur à l'arrière (-Z), façade vers la pièce (+Z)
+      const topY  = H * 0.86;             // hauteur du plan de toilette
+      const topT  = 0.045;                // épaisseur du plateau
+      const cabH  = topY - topT;          // hauteur du caisson
+
+      // ── Caisson suspendu (bois clair) ──
+      add(new THREE.BoxGeometry(w, cabH * 0.80, d * 0.92), woodLt(), 0, topY - topT - cabH * 0.40, 0);
+      // tiroir : façade + poignée linéaire
+      add(new THREE.BoxGeometry(w * 0.94, cabH * 0.40, 0.010), woodDk(), 0, topY - topT - cabH * 0.22, d * 0.46 + 0.006);
+      add(new THREE.BoxGeometry(w * 0.50, 0.012, 0.012), brushed(), 0, topY - topT - cabH * 0.06, d * 0.46 + 0.012);
+      // pieds discrets
+      for (const lx of [-w * 0.42, w * 0.42])
+        add(new THREE.CylinderGeometry(0.012, 0.012, cabH * 0.18, 8), brushed(), lx, cabH * 0.09, d * 0.30);
+
+      // ── Plan de toilette (céramique mat) ──
+      add(new THREE.BoxGeometry(w, topT, d), porcelan(), 0, topY - topT / 2, 0);
+      add(new THREE.BoxGeometry(w, 0.06, 0.012), porcelan(), 0, topY + 0.018, -d * 0.5 + 0.006); // dosseret arrière
+
+      // ── Vasque rectangulaire à poser ──
+      const vW = w * 0.50, vD = d * 0.46, vH = 0.11;
+      add(new THREE.BoxGeometry(vW, vH, vD), ceramic(), 0, topY + vH / 2, d * 0.04);
+      // creux intérieur sombre
+      add(new THREE.BoxGeometry(vW - 0.04, vH * 0.7, vD - 0.04), darkSl(), 0, topY + vH * 0.62, d * 0.04);
+      // bonde
+      add(new THREE.CylinderGeometry(0.014, 0.014, 0.006, 14), chrome(), 0, topY + vH * 0.30, d * 0.04);
+
+      // ── Mitigeur haut design (col cygne) ──
+      const fz = -d * 0.30;
+      add(new THREE.CylinderGeometry(0.025, 0.030, 0.012, 18), chrome(), 0, topY + 0.006, fz);      // embase
+      add(new THREE.CylinderGeometry(0.014, 0.016, 0.16, 14), chrome(), 0, topY + 0.086, fz);       // corps vertical
+      // bec coudé vers l'avant
+      add(new THREE.CylinderGeometry(0.013, 0.013, d * 0.30, 12), chrome(), 0, topY + 0.168, fz + d * 0.13, PI2, 0, 0);
+      add(new THREE.SphereGeometry(0.014, 10, 10), chrome(), 0, topY + 0.168, fz);                  // coude
+      add(new THREE.CylinderGeometry(0.012, 0.010, 0.018, 10), chrome(), 0, topY + 0.150, fz + d * 0.27); // sortie
+      // manette latérale
+      add(new THREE.CylinderGeometry(0.007, 0.007, 0.055, 8), brushed(), 0.020, topY + 0.072, fz + 0.010, 0, 0, -0.5);
+      break;
+    }
+
+    /* ── Robinet (mitigeur seul) ─────────────────────────── */
+    case 'faucet': {
+      // Convention : façade vers +Z
+      add(new THREE.CylinderGeometry(w * 0.42, w * 0.50, H * 0.06, 18), chrome(), 0, H * 0.03, 0);            // embase
+      add(new THREE.CylinderGeometry(w * 0.28, w * 0.34, H * 0.55, 16), chrome(), 0, H * 0.34, 0);            // corps
+      // bec coudé vers l'avant (+Z)
+      add(new THREE.SphereGeometry(w * 0.30, 12, 12), chrome(), 0, H * 0.62, 0);
+      add(new THREE.CylinderGeometry(w * 0.24, w * 0.24, d * 0.55, 14), chrome(), 0, H * 0.62, d * 0.27, PI2, 0, 0);
+      add(new THREE.CylinderGeometry(w * 0.22, w * 0.18, H * 0.08, 12), chrome(), 0, H * 0.57, d * 0.50);     // sortie
+      // manette mono-commande
+      add(new THREE.BoxGeometry(w * 0.55, H * 0.07, w * 0.18), brushed(), w * 0.10, H * 0.50, -d * 0.10, 0, 0, -0.35);
       break;
     }
 
@@ -132,18 +173,119 @@ function buildElementGroup(el, def) {
       break;
     }
 
-    /* ── Paroi vitrée ────────────────────────────────────── */
+    /* ── Paroi fixe (panneau vitré droit walk-in) ────────── */
     case 'shower_glass': {
-      const t = Math.min(w, 0.018);
-      add(new THREE.BoxGeometry(t, H - 0.055, d), glass(), 0, H / 2, 0);
-      add(new THREE.BoxGeometry(t + 0.014, 0.030, d + 0.018), brushed(), 0, H - 0.015, 0);
-      add(new THREE.BoxGeometry(t + 0.014, 0.034, d + 0.018), brushed(), 0, 0.017, 0);
-      for (const sz of [-d / 2 - 0.010, d / 2 + 0.010]) add(new THREE.BoxGeometry(t + 0.010, H, 0.020), brushed(), 0, H / 2, sz);
-      for (const ox of [t + 0.024, -(t + 0.024)]) {
-        add(new THREE.CylinderGeometry(0.010, 0.010, H * 0.36, 10), chrome(), ox, H * 0.5, 0);
-        add(new THREE.SphereGeometry(0.010, 8, 8), chrome(), ox, H * 0.5 + H * 0.18, 0);
-        add(new THREE.SphereGeometry(0.010, 8, 8), chrome(), ox, H * 0.5 - H * 0.18, 0);
+      // La paroi s'étend sur la LARGEUR (w), épaisseur = profondeur (d)
+      const t = Math.min(d, 0.012);
+      add(new THREE.BoxGeometry(w - 0.04, H - 0.04, t), glass(), 0, H / 2, 0);            // vitre
+      add(new THREE.BoxGeometry(0.028, H, t + 0.014), brushed(), -w / 2 + 0.014, H / 2, 0); // montant gauche (fixation mur)
+      add(new THREE.BoxGeometry(w, 0.022, t + 0.012), brushed(), 0, H - 0.011, 0);         // profil haut
+      // barre de stabilisation chromée vers le mur
+      add(new THREE.CylinderGeometry(0.009, 0.009, w * 0.30, 10), chrome(), -w * 0.30, H * 0.86, 0, 0, 0, PI2);
+      add(new THREE.SphereGeometry(0.012, 8, 8), chrome(), -w / 2 + 0.02, H * 0.86, 0);
+      // pied de fixation au sol
+      add(new THREE.BoxGeometry(0.05, 0.03, t + 0.04), brushed(), -w / 2 + 0.02, 0.015, 0);
+      break;
+    }
+
+    /* ── Porte de douche (vitre + poignée + charnières) ──── */
+    case 'shower_door': {
+      const t = Math.min(d, 0.012);
+      add(new THREE.BoxGeometry(w - 0.05, H - 0.04, t), glass(), 0, H / 2, 0);
+      // cadre fin sur le pourtour
+      add(new THREE.BoxGeometry(w, 0.020, t + 0.012), brushed(), 0, H - 0.010, 0);
+      add(new THREE.BoxGeometry(w, 0.024, t + 0.012), brushed(), 0, 0.012, 0);
+      add(new THREE.BoxGeometry(0.022, H, t + 0.012), brushed(), -w / 2 + 0.011, H / 2, 0);
+      add(new THREE.BoxGeometry(0.022, H, t + 0.012), brushed(),  w / 2 - 0.011, H / 2, 0);
+      // charnières (côté gauche)
+      for (const hy of [H * 0.20, H * 0.80])
+        add(new THREE.CylinderGeometry(0.016, 0.016, 0.05, 12), chrome(), -w / 2 + 0.011, hy, 0, 0, 0, PI2);
+      // poignée verticale (côté droit)
+      add(new THREE.CylinderGeometry(0.011, 0.011, H * 0.26, 10), chrome(), w / 2 - 0.05, H * 0.5, t + 0.03);
+      for (const oy of [-H * 0.13, H * 0.13]) {
+        add(new THREE.CylinderGeometry(0.008, 0.008, 0.04, 8), chrome(), w / 2 - 0.05, H * 0.5 + oy, t + 0.015, PI2, 0, 0);
+        add(new THREE.SphereGeometry(0.011, 8, 8), chrome(), w / 2 - 0.05, H * 0.5 + oy, t + 0.03);
       }
+      break;
+    }
+
+    /* ── Paroi d'angle (deux vitres en L) ────────────────── */
+    case 'shower_corner': {
+      const t = 0.012;
+      // panneau le long de X (face arrière, -Z)
+      add(new THREE.BoxGeometry(w - 0.04, H - 0.04, t), glass(), 0, H / 2, -d / 2 + t / 2 + 0.006);
+      add(new THREE.BoxGeometry(w, 0.020, t + 0.012), brushed(), 0, H - 0.010, -d / 2 + t / 2 + 0.006);
+      // panneau le long de Z (côté gauche, -X)
+      add(new THREE.BoxGeometry(t, H - 0.04, d - 0.04), glass(), -w / 2 + t / 2 + 0.006, H / 2, 0);
+      add(new THREE.BoxGeometry(t + 0.012, 0.020, d), brushed(), -w / 2 + t / 2 + 0.006, H - 0.010, 0);
+      // montant d'angle chromé
+      add(new THREE.CylinderGeometry(0.018, 0.018, H, 14), chrome(), -w / 2 + 0.012, H / 2, -d / 2 + 0.012);
+      // montants extérieurs
+      add(new THREE.BoxGeometry(0.022, H, 0.030), brushed(), w / 2 - 0.011, H / 2, -d / 2 + 0.012);
+      add(new THREE.BoxGeometry(0.030, H, 0.022), brushed(), -w / 2 + 0.012, H / 2, d / 2 - 0.011);
+      // poignée sur le panneau frontal
+      add(new THREE.CylinderGeometry(0.010, 0.010, H * 0.22, 10), chrome(), w * 0.30, H * 0.5, -d / 2 + 0.05);
+      break;
+    }
+
+    /* ── Cabine fermée (enceinte 4 côtés + porte + ciel) ─── */
+    case 'shower_cabin': {
+      const t = 0.012;
+      // receveur bas
+      add(new THREE.BoxGeometry(w, 0.05, d), ceramic(), 0, 0.025, 0);
+      add(new THREE.BoxGeometry(w - 0.04, 0.012, d - 0.04), darkSl(), 0, 0.052, 0);
+      // 2 parois pleines à l'arrière (-Z et -X)
+      add(new THREE.BoxGeometry(w - 0.02, H - 0.06, t), glass(), 0, H / 2 + 0.03, -d / 2 + t / 2 + 0.004);
+      add(new THREE.BoxGeometry(t, H - 0.06, d - 0.02), glass(), -w / 2 + t / 2 + 0.004, H / 2 + 0.03, 0);
+      // 2 portes à l'avant (+Z) avec séparation centrale
+      for (const sx of [-w * 0.25, w * 0.25])
+        add(new THREE.BoxGeometry(w * 0.48, H - 0.06, t), glass(), sx, H / 2 + 0.03, d / 2 - t / 2 - 0.004);
+      // cadre/montants verticaux aux 4 coins
+      for (const [cx, cz] of [[-w/2+0.012,-d/2+0.012],[w/2-0.012,-d/2+0.012],[-w/2+0.012,d/2-0.012],[w/2-0.012,d/2-0.012]])
+        add(new THREE.BoxGeometry(0.024, H, 0.024), brushed(), cx, H / 2 + 0.03, cz);
+      // ciel de cabine (cadre haut)
+      for (const [bx, bz, bw, bd] of [[0,-d/2+0.012,w,0.024],[0,d/2-0.012,w,0.024],[-w/2+0.012,0,0.024,d],[w/2-0.012,0,0.024,d]])
+        add(new THREE.BoxGeometry(bw, 0.024, bd), brushed(), bx, H + 0.018, bz);
+      // poignées sur les portes
+      for (const sx of [-w * 0.06, w * 0.06])
+        add(new THREE.CylinderGeometry(0.010, 0.010, H * 0.20, 10), chrome(), sx, H * 0.5, d / 2 + 0.025);
+      break;
+    }
+
+    /* ── Colonne de douche (encastrée murale complète) ───── */
+    case 'shower_column': {
+      // Convention : dos contre le mur (-Z), commandes et pommeau vers +Z
+      const backZ = -d / 2 + 0.02;
+      // platine murale
+      add(new THREE.BoxGeometry(w * 0.92, H, 0.04), brushed(), 0, H / 2, backZ);
+      add(new THREE.BoxGeometry(w * 0.70, H * 0.97, 0.02), lightGr(), 0, H / 2, backZ + 0.026);
+      // colonne / riser chromé central
+      add(new THREE.CylinderGeometry(w * 0.16, w * 0.16, H * 0.62, 16), chrome(), 0, H * 0.30, backZ + 0.07);
+      // ── Mitigeur thermostatique (≈ 1,1 m) ──
+      const mY = 0.52; // m (≈110cm depuis le sol relatif à la base de la colonne)
+      add(new THREE.BoxGeometry(w * 0.80, 0.10, 0.07), chrome(), 0, mY, backZ + 0.06);
+      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 16), chrome(), -w * 0.26, mY, backZ + 0.10, PI2, 0, 0); // poignée temp
+      add(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 16), chrome(),  w * 0.26, mY, backZ + 0.10, PI2, 0, 0); // poignée débit
+      add(new THREE.CylinderGeometry(0.026, 0.026, 0.003, 12), cold(), -w * 0.26, mY, backZ + 0.12, PI2, 0, 0);
+      add(new THREE.CylinderGeometry(0.026, 0.026, 0.003, 12), hot(),   w * 0.26, mY, backZ + 0.12, PI2, 0, 0);
+      // ── Douchette à main sur support ──
+      add(new THREE.BoxGeometry(0.05, 0.07, 0.04), brushed(), w * 0.18, mY + 0.16, backZ + 0.07);
+      add(new THREE.CylinderGeometry(0.016, 0.020, 0.16, 12), chrome(), w * 0.20, mY + 0.10, backZ + 0.11, 0.25, 0, 0);
+      add(new THREE.CylinderGeometry(0.034, 0.030, 0.02, 16), chrome(), w * 0.205, mY + 0.185, backZ + 0.135);
+      // flexible (petits maillons)
+      for (let i = 0; i < 5; i++)
+        add(new THREE.TorusGeometry(0.012, 0.005, 6, 10), brushed(), w * 0.10, mY - 0.02 - i * 0.03, backZ + 0.10, PI2, 0, 0);
+      // ── Bras + pommeau de pluie au sommet ──
+      const armY = H - 0.12;
+      add(new THREE.CylinderGeometry(0.016, 0.016, 0.22, 12), chrome(), 0, armY, backZ + 0.12, PI2, 0, 0); // bras horizontal
+      const headZ = backZ + 0.22;
+      const headR = Math.max(w * 0.55, 0.10);
+      add(new THREE.CylinderGeometry(headR, headR * 0.92, 0.03, 28), chrome(), 0, armY - 0.02, headZ);     // pommeau pluie
+      add(new THREE.CylinderGeometry(headR * 0.88, headR * 0.88, 0.005, 28), rubber(), 0, armY - 0.038, headZ);
+      for (const fr of [0.3, 0.6, 0.88])
+        add(new THREE.TorusGeometry(headR * fr, 0.003, 4, 24), darkSl(), 0, armY - 0.043, headZ, PI2, 0, 0);
+      // tablette porte-savon
+      add(new THREE.BoxGeometry(w * 0.74, 0.012, 0.07), lightGr(), 0, mY + 0.34, backZ + 0.05);
       break;
     }
 
@@ -363,10 +505,18 @@ function buildElementGroup(el, def) {
       break;
     }
 
-    /* ── Default ─────────────────────────────────────────── */
+    /* ── Default (forme générique soignée) ───────────────── */
     default: {
-      if (def.shape === 'cylinder') add(new THREE.CylinderGeometry(Math.min(w, d) / 2, Math.min(w, d) / 2, H, 24), mainM(), 0, H / 2, 0);
-      else add(new THREE.BoxGeometry(w, H, d), mainM(), 0, H / 2, 0);
+      if (def.shape === 'cylinder') {
+        const r = Math.min(w, d) / 2;
+        add(new THREE.CylinderGeometry(r, r * 0.94, H, 28), mainM(), 0, H / 2, 0);
+        add(new THREE.CylinderGeometry(r * 1.02, r * 1.02, 0.01, 28), lightGr(), 0, H - 0.005, 0); // liseré haut
+      } else {
+        // caisson avec chanfreins (cadre fin haut/bas) pour un rendu moins brut
+        add(new THREE.BoxGeometry(w * 0.98, H * 0.96, d * 0.98), mainM(), 0, H / 2, 0);
+        add(new THREE.BoxGeometry(w, H * 0.03, d), lightGr(), 0, H - H * 0.015, 0);
+        add(new THREE.BoxGeometry(w, H * 0.03, d), lightGr(), 0, H * 0.015, 0);
+      }
     }
   }
 

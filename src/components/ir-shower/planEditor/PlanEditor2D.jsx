@@ -15,6 +15,20 @@ const HISTORY_LIMIT = 60;
 const isMobileViewport = () =>
   typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 
+// Triangle (chevron) indiquant le "devant" de l'élément selon sa rotation.
+// Convention 2D : rotation 0 → devant en bas (+Y) ; 90 → gauche ; 180 → haut ; 270 → droite.
+function frontMarkerPoints(rotation, w, h) {
+  const s = Math.max(4, Math.min(w, h) * 0.16); // demi-base du triangle
+  const dpt = s * 1.15;                          // profondeur du triangle
+  const inset = 2.5;
+  const r = ((rotation % 360) + 360) % 360;
+  if (r === 0)   return `${w/2},${h-inset} ${w/2-s},${h-inset-dpt} ${w/2+s},${h-inset-dpt}`;
+  if (r === 90)  return `${inset},${h/2} ${inset+dpt},${h/2-s} ${inset+dpt},${h/2+s}`;
+  if (r === 180) return `${w/2},${inset} ${w/2-s},${inset+dpt} ${w/2+s},${inset+dpt}`;
+  if (r === 270) return `${w-inset},${h/2} ${w-inset-dpt},${h/2-s} ${w-inset-dpt},${h/2+s}`;
+  return '';
+}
+
 // ── Stepper (module-level — hooks must not be inside component body) ──────────
 function Stepper({ value, onChange: onStepChange, step = 10, min = 1, max = 500, unit = 'cm' }) {
   const [draft, setDraft] = useState(String(value));
@@ -360,6 +374,14 @@ export default function PlanEditor2D({ plan, onChange, onOpen3D, onClose }) {
             {el.width}×{el.depth}
           </text>
         )}
+
+        {/* Orientation marker — montre le "devant" de l'objet */}
+        <polygon
+          points={frontMarkerPoints(el.rotation, w, h)}
+          fill={isSelected ? '#2563eb' : '#64748b'}
+          fillOpacity={0.9}
+          style={{ pointerEvents: 'none' }}
+        />
 
         {isSelected && (
           <>
