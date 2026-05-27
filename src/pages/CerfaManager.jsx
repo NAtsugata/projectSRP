@@ -15,6 +15,7 @@ import {
 import './CerfaManager.css';
 import logger from '../utils/logger';
 import { onConnectionChange } from '../utils/connectionMonitor';
+import { getAllCountersInfo, resetFicheCounter } from '../utils/cerfaService';
 
 // Templates CERFA disponibles
 const CERFA_TEMPLATES = [
@@ -91,6 +92,17 @@ function CerfaManager() {
     const [editingNumero, setEditingNumero] = useState(null);
     const [viewMode, setViewMode] = useState('clients'); // 'list' ou 'clients'
     const [expandedClients, setExpandedClients] = useState({});
+    const [counters, setCounters] = useState([]);
+    const [showCounters, setShowCounters] = useState(false);
+    const [resetTarget, setResetTarget] = useState(null); // { type, value }
+
+    // Charger les compteurs
+    const loadCounters = useCallback(async () => {
+        const data = await getAllCountersInfo();
+        setCounters(data || []);
+    }, []);
+
+    useEffect(() => { loadCounters(); }, [loadCounters]);
 
     // Charger les documents
     const loadDocuments = useCallback(async () => {
@@ -208,6 +220,17 @@ function CerfaManager() {
     // Ouvrir un template PDF
     const openTemplate = (template) => {
         navigate(template.path);
+    };
+
+    // Réinitialiser un compteur
+    const handleResetCounter = async (cerfaType, newValue) => {
+        const val = parseInt(newValue, 10);
+        if (isNaN(val) || val < 0) { toast.error('Valeur invalide'); return; }
+        if (!window.confirm(`Réinitialiser le compteur ${cerfaType} à ${val} ?`)) return;
+        await resetFicheCounter(cerfaType, val);
+        toast.success(`Compteur ${cerfaType} remis à ${val}`);
+        setResetTarget(null);
+        loadCounters();
     };
 
     // Gérer la sélection de fichier
@@ -411,6 +434,62 @@ function CerfaManager() {
                 <h1>📄 Gestionnaire CERFA</h1>
                 <p>Sélectionnez un template, remplissez-le, puis enregistrez-le</p>
             </div>
+
+            {/* Section Compteurs */}
+            <section className="cerfa-section">
+                <div className="section-header">
+                    <h2>🔢 Numérotation des fiches</h2>
+                    <button className="btn-text" onClick={() => setShowCounters(v => !v)}>
+                        {showCounters ? '▲ Masquer' : '▼ Afficher les compteurs'}
+                    </button>
+                </div>
+                {showCounters && (
+                    <div className="cerfa-counters">
+                        {counters.length === 0 ? (
+                            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Aucun CERFA généré cette année.</p>
+                        ) : counters.map(c => (
+                            <div key={c.cerfa_type + c.year} className="counter-row">
+                                <div className="counter-info">
+                                    <span className="counter-type">CERFA {c.cerfa_type}</span>
+                                    <span className="counter-year">{c.year}</span>
+                                    <span className="counter-count">{c.count} fiche{c.count > 1 ? 's' : ''} générée{c.count > 1 ? 's' : ''}</span>
+                                    <span className="counter-next">Prochain : <strong>{c.next_formatted}</strong></span>
+                                </div>
+                                <div className="counter-actions">
+                                    {resetTarget?.type === c.cerfa_type ? (
+                                        <>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                defaultValue="0"
+                                                className="counter-reset-input"
+                                                id={`reset-input-${c.cerfa_type}`}
+                                                placeholder="0"
+                                                style={{ width: '5rem' }}
+                                            />
+                                            <button
+                                                className="btn-confirm"
+                                                onClick={() => handleResetCounter(c.cerfa_type, document.getElementById(`reset-input-${c.cerfa_type}`).value)}
+                                            >
+                                                ✓ Confirmer
+                                            </button>
+                                            <button className="btn-cancel-small" onClick={() => setResetTarget(null)}>✗</button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            className="btn-icon"
+                                            title="Réinitialiser le compteur"
+                                            onClick={() => setResetTarget({ type: c.cerfa_type })}
+                                        >
+                                            🔄
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
 
             {/* Section Templates */}
             <section className="cerfa-section">

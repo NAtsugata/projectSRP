@@ -87,15 +87,20 @@ function CerfaPage15498() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState({ cerfaType: '15498', year: new Date().getFullYear(), count: 0, nextNumber: 1, next_formatted: '' });
+    const [customNumero, setCustomNumero] = useState('');
     const [showAdminReset, setShowAdminReset] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
-    // Rafraîchir le numéro de fiche après génération
-    const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+    // Rafraîchir le numéro de fiche
+    const refreshFicheInfo = useCallback(async () => {
+        const info = await getCurrentFicheInfo('15498');
+        setFicheInfo(info);
+        setCustomNumero(info.next_formatted || `CERFA-15498-${info.year}-${String(info.nextNumber).padStart(4, '0')}`);
     }, []);
+
+    useEffect(() => { refreshFicheInfo(); }, [refreshFicheInfo]);
 
     // Auto-save brouillon dans sessionStorage (debounce 1s)
     useEffect(() => {
@@ -226,8 +231,8 @@ function CerfaPage15498() {
 
         setIsGenerating(true);
         try {
-            // Générer le numéro de fiche
-            const ficheNumber = getNextFicheNumber('15498');
+            // Utiliser le numéro personnalisé ou en générer un nouveau
+            const ficheNumber = customNumero.trim() || await getNextFicheNumber('15498');
             const clientName = (formData.acq_nom || 'client').replace(/[^a-zA-Z0-9]/g, '_');
             const date = new Date().toISOString().split('T')[0];
 
@@ -291,10 +296,10 @@ function CerfaPage15498() {
     }, [formData, showToast, refreshFicheInfo, validateForm]);
 
     // Réinitialiser le compteur (admin)
-    const handleResetCounter = useCallback(() => {
-        if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA à 0 ?')) {
-            resetFicheCounter(0);
-            refreshFicheInfo();
+    const handleResetCounter = useCallback(async () => {
+        if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA 15498 à 0 ?')) {
+            await resetFicheCounter('15498', 0);
+            await refreshFicheInfo();
             showToast('Compteur réinitialisé', 'success');
             setShowAdminReset(false);
         }
@@ -326,16 +331,25 @@ function CerfaPage15498() {
                         alignItems: 'flex-end',
                         gap: '0.25rem'
                     }}>
-                        <div style={{
-                            background: 'rgba(156, 39, 176, 0.2)',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.9rem'
-                        }}>
-                            <span style={{ opacity: 0.7 }}>Prochaine fiche: </span>
-                            <strong style={{ color: '#9C27B0' }}>
-                                CERFA-{ficheInfo.year}-{String(ficheInfo.nextNumber).padStart(4, '0')}
-                            </strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>N° fiche :</span>
+                            <input
+                                type="text"
+                                value={customNumero}
+                                onChange={(e) => setCustomNumero(e.target.value)}
+                                placeholder={`CERFA-15498-${ficheInfo.year}-${String(ficheInfo.nextNumber).padStart(4, '0')}`}
+                                style={{
+                                    background: 'rgba(156,39,176,0.15)',
+                                    border: '1px solid rgba(156,39,176,0.4)',
+                                    borderRadius: '0.4rem',
+                                    color: '#fff',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    padding: '0.3rem 0.6rem',
+                                    width: '18ch',
+                                    textAlign: 'center',
+                                }}
+                            />
                         </div>
                         <button
                             type="button"

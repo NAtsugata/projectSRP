@@ -90,14 +90,19 @@ function CerfaPage1301() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState({ cerfaType: '1301', year: new Date().getFullYear(), count: 0, nextNumber: 1, next_formatted: '' });
+    const [customNumero, setCustomNumero] = useState('');
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
     // Rafraîchir le numéro de fiche
-    const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+    const refreshFicheInfo = useCallback(async () => {
+        const info = await getCurrentFicheInfo('1301');
+        setFicheInfo(info);
+        setCustomNumero(info.next_formatted || `CERFA-1301-${info.year}-${String(info.nextNumber).padStart(4, '0')}`);
     }, []);
+
+    useEffect(() => { refreshFicheInfo(); }, [refreshFicheInfo]);
 
     // Charger les informations entreprise par défaut
     useEffect(() => {
@@ -263,8 +268,8 @@ function CerfaPage1301() {
         setIsGenerating(true);
 
         try {
-            // Obtenir le prochain numéro de fiche
-            const ficheNumber = getNextFicheNumber('1301');
+            // Utiliser le numéro personnalisé ou en générer un nouveau
+            const ficheNumber = customNumero.trim() || await getNextFicheNumber('1301');
 
             // Générer le PDF
             const pdfBlob = await fillCerfa1301({
@@ -376,8 +381,25 @@ function CerfaPage1301() {
             <div className="cerfa-header">
                 <h1>📋 CERFA 1301-SD</h1>
                 <p className="cerfa-subtitle">Attestation simplifiée - TVA taux réduit 10%</p>
-                <div className="cerfa-fiche-info">
-                    <span>Prochain n°: <strong>{ficheInfo.formatted}</strong></span>
+                <div className="cerfa-fiche-info" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <span style={{ opacity: 0.7, fontSize: '0.85rem' }}>N° fiche :</span>
+                    <input
+                        type="text"
+                        value={customNumero}
+                        onChange={(e) => setCustomNumero(e.target.value)}
+                        placeholder={`CERFA-1301-${ficheInfo.year}-${String(ficheInfo.nextNumber).padStart(4, '0')}`}
+                        style={{
+                            background: 'rgba(33,150,243,0.15)',
+                            border: '1px solid rgba(33,150,243,0.4)',
+                            borderRadius: '0.4rem',
+                            color: 'inherit',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            padding: '0.3rem 0.6rem',
+                            width: '18ch',
+                            textAlign: 'center',
+                        }}
+                    />
                 </div>
             </div>
 

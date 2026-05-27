@@ -672,3 +672,119 @@
 .dark-theme .cerfa-manager {
   /* Overrides spécifiques si nécessaires */
 }
+/* ── Compteurs CERFA ── */
+.cerfa-counters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.counter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    flex-wrap: wrap;
+}
+
+.counter-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+}
+
+.counter-type {
+    font-weight: 700;
+    color: #1e40af;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    white-space: nowrap;
+}
+
+.counter-year {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.counter-count {
+    color: #475569;
+}
+
+.counter-next {
+    color: #0f172a;
+    font-size: 0.8rem;
+}
+
+.counter-next strong {
+    color: #059669;
+    font-family: monospace;
+}
+
+.counter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.counter-reset-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.btn-confirm {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-confirm:hover { background: #059669; }
+
+.btn-cancel-small {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.btn-cancel-small:hover { background: #dc2626; }
+
+.btn-text {
+    background: transparent;
+    border: none;
+    color: #2563eb;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+    .counter-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .counter-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

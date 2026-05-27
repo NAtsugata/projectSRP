@@ -6,6 +6,7 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
 import { safeStorage } from './safeStorage';
+import { supabase } from '../lib/supabase';
 
 // Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
@@ -41,117 +42,119 @@ const STORAGE_KEY_COUNTERS = 'cerfa_fiche_counters'; // Compteurs multiples par 
 // NUMÉROTATION DES FICHES
 // =============================
 
-/**
- * Récupère le prochain numéro de fiche CERFA
- * Format: CERFA-{type}-YYYY-NNNN (ex: CERFA-15497-2026-0001)
- * Chaque type de CERFA a son propre compteur
- * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
- * @returns {string} Numéro de fiche formaté
- */
-export const getNextFicheNumber = (cerfaType = '15497') => {
-    try {
-        const currentYear = new Date().getFullYear();
-        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
-
-        // Initialiser le compteur pour ce type s'il n'existe pas
-        if (!allCounters[cerfaType]) {
-            allCounters[cerfaType] = { year: currentYear, count: 0 };
-        }
-
-        const typeCounter = allCounters[cerfaType];
-
-        // Réinitialiser le compteur si on change d'année
-        if (typeCounter.year !== currentYear) {
-            typeCounter.year = currentYear;
-            typeCounter.count = 0;
-        }
-
-        // Incrémenter le compteur pour ce type spécifique
-        typeCounter.count = (typeCounter.count || 0) + 1;
-        allCounters[cerfaType] = typeCounter;
-        safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
-
-        // Formater le numéro (CERFA-15497-2026-0001)
-        const paddedCount = String(typeCounter.count).padStart(4, '0');
-        return `CERFA-${cerfaType}-${currentYear}-${paddedCount}`;
-    } catch (e) {
-        logger.error('Erreur génération numéro fiche:', e);
-        return `CERFA-${cerfaType || 'UNKN'}-${Date.now()}`;
-    }
-};
-
-/**
- * Récupère le numéro actuel sans incrémenter
- * @param {string} cerfaType - Type de CERFA (15497, 15498, 1301, etc.)
- * @returns {Object} { year, count, formatted, nextNumber }
- */
-export const getCurrentFicheInfo = (cerfaType = '15497') => {
+// Helpers localStorage (fallback hors-ligne)
+function _localNext(cerfaType) {
+    const currentYear = new Date().getFullYear();
     const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
-    const typeCounter = allCounters[cerfaType] || {};
-    const year = typeCounter.year || new Date().getFullYear();
-    const count = typeCounter.count || 0;
-    const paddedCount = String(count).padStart(4, '0');
+    if (!allCounters[cerfaType]) allCounters[cerfaType] = { year: currentYear, count: 0 };
+    const c = allCounters[cerfaType];
+    if (c.year !== currentYear) { c.year = currentYear; c.count = 0; }
+    c.count = (c.count || 0) + 1;
+    allCounters[cerfaType] = c;
+    safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+    return `CERFA-${cerfaType}-${currentYear}-${String(c.count).padStart(4, '0')}`;
+}
+
+function _localInfo(cerfaType) {
+    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+    const c = allCounters[cerfaType] || {};
+    const year = c.year || new Date().getFullYear();
+    const count = c.count || 0;
     return {
-        year,
-        count,
-        formatted: `CERFA-${cerfaType}-${year}-${paddedCount}`,
+        cerfaType, year, count,
+        formatted:      `CERFA-${cerfaType}-${year}-${String(count).padStart(4, '0')}`,
+        next_formatted: `CERFA-${cerfaType}-${year}-${String(count + 1).padStart(4, '0')}`,
         nextNumber: count + 1,
-        cerfaType
     };
-};
+}
 
 /**
- * Récupère les informations de tous les compteurs CERFA
- * @returns {Object} Tous les compteurs par type
+ * Récupère le prochain numéro CERFA (Supabase d'abord, localStorage en fallback).
+ * @param {string} cerfaType - Type CERFA ('15497', '15498', '1301', …)
+ * @returns {Promise<string>} Numéro formaté CERFA-{type}-{year}-{nnnn}
  */
-export const getAllCountersInfo = () => {
-    const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
-    const result = {};
-
-    for (const [type, data] of Object.entries(allCounters)) {
-        const year = data.year || new Date().getFullYear();
-        const count = data.count || 0;
-        const paddedCount = String(count).padStart(4, '0');
-        result[type] = {
-            year,
-            count,
-            formatted: `CERFA-${type}-${year}-${paddedCount}`,
-            nextNumber: count + 1
-        };
-    }
-
-    return result;
-};
-
-/**
- * Réinitialise le compteur d'un type de CERFA (admin uniquement)
- * @param {string} cerfaType - Type de CERFA à réinitialiser (ou 'all' pour tous)
- * @param {number} startNumber - Numéro de départ (défaut: 0)
- * @returns {boolean} Succès
- */
-export const resetFicheCounter = (cerfaType = '15497', startNumber = 0) => {
+export const getNextFicheNumber = async (cerfaType = '15497') => {
     try {
-        const currentYear = new Date().getFullYear();
-        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
-
-        if (cerfaType === 'all') {
-            // Réinitialiser tous les compteurs
-            Object.keys(allCounters).forEach(type => {
-                allCounters[type] = { year: currentYear, count: startNumber };
-            });
-        } else {
-            // Réinitialiser un type spécifique
-            allCounters[cerfaType] = { year: currentYear, count: startNumber };
+        const { data, error } = await supabase.rpc('get_next_cerfa_numero', { p_type: cerfaType });
+        if (error) throw error;
+        // Synchroniser le localStorage avec le compteur Supabase
+        const year = new Date().getFullYear();
+        const match = data.match(/-(\d+)$/);
+        if (match) {
+            const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+            allCounters[cerfaType] = { year, count: parseInt(match[1], 10) };
+            safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
         }
-
-        const success = safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
-        if (!success) {
-            logger.error('Erreur réinitialisation compteur');
-        }
-        return success;
+        return data;
     } catch (e) {
-        logger.error('Erreur réinitialisation compteur:', e);
-        return false;
+        logger.warn('[CERFA] Supabase counter unavailable, using localStorage:', e.message);
+        return _localNext(cerfaType);
+    }
+};
+
+/**
+ * Lit le compteur actuel sans incrémenter (Supabase d'abord, localStorage en fallback).
+ * @param {string} cerfaType
+ * @returns {Promise<{year, count, formatted, next_formatted, nextNumber, cerfaType}>}
+ */
+export const getCurrentFicheInfo = async (cerfaType = '15497') => {
+    try {
+        const { data, error } = await supabase.rpc('get_current_cerfa_info', { p_type: cerfaType });
+        if (error) throw error;
+        return { ...data, nextNumber: data.next_number };
+    } catch (e) {
+        logger.warn('[CERFA] Supabase counter read unavailable:', e.message);
+        return _localInfo(cerfaType);
+    }
+};
+
+/**
+ * Récupère les informations de tous les compteurs CERFA (Supabase).
+ * @returns {Promise<Array>}
+ */
+export const getAllCountersInfo = async () => {
+    try {
+        const { data, error } = await supabase.rpc('get_all_cerfa_counters');
+        if (error) throw error;
+        return data || [];
+    } catch (e) {
+        logger.warn('[CERFA] getAllCounters unavailable:', e.message);
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+        return Object.entries(allCounters).map(([type, c]) => ({
+            cerfa_type: type,
+            year: c.year || new Date().getFullYear(),
+            count: c.count || 0,
+            next_formatted: `CERFA-${type}-${c.year || new Date().getFullYear()}-${String((c.count || 0) + 1).padStart(4, '0')}`,
+        }));
+    }
+};
+
+/**
+ * Réinitialise le compteur d'un type CERFA (admin).
+ * @param {string} cerfaType - Type à réinitialiser
+ * @param {number} startNumber - Valeur de départ (défaut 0)
+ * @returns {Promise<boolean>}
+ */
+export const resetFicheCounter = async (cerfaType = '15497', startNumber = 0) => {
+    try {
+        const { error } = await supabase.rpc('reset_cerfa_counter', {
+            p_type: cerfaType,
+            p_start: startNumber,
+        });
+        if (error) throw error;
+        // Synchroniser localStorage
+        const year = new Date().getFullYear();
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+        allCounters[cerfaType] = { year, count: startNumber };
+        safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+        return true;
+    } catch (e) {
+        logger.warn('[CERFA] resetCounter Supabase failed, local only:', e.message);
+        const year = new Date().getFullYear();
+        const allCounters = safeStorage.getJSON(STORAGE_KEY_COUNTERS, {});
+        allCounters[cerfaType] = { year, count: startNumber };
+        safeStorage.setJSON(STORAGE_KEY_COUNTERS, allCounters);
+        return true;
     }
 };
 
