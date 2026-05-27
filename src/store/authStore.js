@@ -3,6 +3,20 @@ import { authService, profileService } from '../lib/supabase';
 import { organizationService } from '../services/organizationService';
 import logger from '../utils/logger';
 import { authRateLimiter } from '../utils/rateLimiter';
+import { safeStorage } from '../utils/safeStorage';
+
+function syncOrgToCerfaStorage(org) {
+    if (!org) return;
+    const existing = safeStorage.getJSON('cerfa_company_info', {});
+    safeStorage.setJSON('cerfa_company_info', {
+        ...existing,
+        companyName: org.name || existing.companyName || '',
+        siret:       org.siret   || existing.siret   || '',
+        address:     org.address || existing.address || '',
+        phone:       org.phone   || existing.phone   || '',
+        email:       org.email   || existing.email   || '',
+    });
+}
 
 // Store Zustand pour l'authentification
 export const useAuthStore = create((set, get) => ({
@@ -35,6 +49,7 @@ export const useAuthStore = create((set, get) => ({
                 organization: orgResult.data,
                 orgRole: roleResult.data?.role || (profile.is_admin ? 'admin' : 'technician'),
             });
+            syncOrgToCerfaStorage(orgResult.data);
         } catch (error) {
             logger.error('Error loading organization:', error);
         }

@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
+import { safeStorage } from '../utils/safeStorage';
 import './OrganizationSettingsPage.css';
 
 const DEFAULT_INVOICE_SETTINGS = {
@@ -196,6 +197,17 @@ function OrganizationSettingsPage() {
 
       await saveMutation.mutateAsync(updates);
       setLogoFile(null);
+
+      // Synchroniser vers le localStorage CERFA pour que les formulaires lisent les bonnes infos
+      const existing = safeStorage.getJSON('cerfa_company_info', {});
+      safeStorage.setJSON('cerfa_company_info', {
+        ...existing,
+        companyName: updates.name || existing.companyName || '',
+        siret:       updates.siret   || existing.siret   || '',
+        address:     updates.address || existing.address || '',
+        phone:       updates.phone   || existing.phone   || '',
+        email:       updates.email   || existing.email   || '',
+      });
     } catch (error) {
       console.error('Save error:', error);
     }

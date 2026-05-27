@@ -11,7 +11,7 @@ export const organizationService = {
     if (!orgId) return { data: null, error: null };
     const { data, error } = await supabase
       .from('organizations')
-      .select('id, name, slug, logo_url, plan, max_users, is_active, settings')
+      .select('id, name, slug, logo_url, plan, max_users, is_active, settings, siret, address, phone, email, vat_number, ape_code')
       .eq('id', orgId)
       .single();
     return { data, error };
