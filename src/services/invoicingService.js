@@ -529,7 +529,8 @@ export const invoicingService = {
       const quantity = parseFloat(item.quantity) || 1;
       const unitPrice = parseFloat(item.unit_price) || 0;
       const discountPercent = parseFloat(item.discount_percent) || 0;
-      const taxRate = parseFloat(item.tax_rate) ?? defaultTaxRate;
+      const _taxRate = parseFloat(item.tax_rate);
+      const taxRate = Number.isFinite(_taxRate) ? _taxRate : defaultTaxRate;
 
       const lineSubtotal = quantity * unitPrice * (1 - discountPercent / 100);
       const lineTax = lineSubtotal * (taxRate / 100);

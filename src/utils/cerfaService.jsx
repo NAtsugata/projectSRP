@@ -569,18 +569,18 @@ export const fillCerfa15497 = async (data) => {
         // Quantités de fluide (section 11) - Manipulation du fluide frigorigène
         // Quantité chargée totale (A+B+C)
         fillTextField('11_Quantite', data.quantiteChargeeTotal || data.quantiteFluide || '');
-        // A - Fluide vierge
-        fillTextField('11_QA', data.fluideVierge || data.quantiteRecuperee || data.fluideQuantiteRecuperee || '');
+        // A - Fluide vierge (ne pas mélanger avec quantités récupérées)
+        fillTextField('11_QA', data.fluideVierge || '');
         // B - Fluide recyclé (récupéré et réintroduit)
-        fillTextField('11_QB', data.fluideRecycle || data.quantiteChargee || '');
+        fillTextField('11_QB', data.fluideRecycle || '');
         // C - Fluide régénéré
-        fillTextField('11_QC', data.fluideRegenere || data.quantiteAjoutee || data.fluideQuantiteAjoutee || '');
+        fillTextField('11_QC', data.fluideRegenere || '');
         // D - Fluide destiné au traitement
-        fillTextField('11_QD', data.fluideTraitement || data.quantiteD || '');
+        fillTextField('11_QD', data.fluideTraitement || '');
         // D+E total (quantité récupérée totale)
-        fillTextField('11_QDE', data.quantiteRecupereeTotal || data.quantiteDE || data.fluideQuantiteReintroduite || '');
+        fillTextField('11_QDE', data.quantiteRecupereeTotal || '');
         // E - Fluide conservé pour réutilisation
-        fillTextField('11_QE', data.fluideConserve || data.quantiteE || '');
+        fillTextField('11_QE', data.fluideConserve || '');
         // Dénomination du fluide si changement
         fillTextField('11_Denom', data.denominationChangement || data.denominationFluide || data.fluide || data.fluideDesignation || '');
         // N° BSFF (Trackdéchets)

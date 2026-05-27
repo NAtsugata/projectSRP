@@ -491,6 +491,12 @@ class FacturXGenerator {
       breakdown[rate].vatAmount += vatAmount;
     });
 
+    // Arrondir par taux pour respecter EN 16931 BR-CO-14
+    Object.keys(breakdown).forEach(rate => {
+      breakdown[rate].baseAmount = Math.round(breakdown[rate].baseAmount * 100) / 100;
+      breakdown[rate].vatAmount  = Math.round(breakdown[rate].vatAmount  * 100) / 100;
+    });
+
     return breakdown;
   }
 

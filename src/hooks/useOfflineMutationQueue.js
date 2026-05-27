@@ -83,10 +83,12 @@ async function removeMutation(id) {
     });
 }
 
+const MAX_RETRIES = 3;
+
 /**
- * Marque une mutation en échec
+ * Incrémente retryCount. Passe en 'failed' seulement après MAX_RETRIES tentatives.
  */
-async function markMutationFailed(id, error) {
+async function markMutationRetryOrFailed(id, error) {
     const db = await openMutationDB();
     return new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -95,9 +97,15 @@ async function markMutationFailed(id, error) {
         getReq.onsuccess = () => {
             const entry = getReq.result;
             if (entry) {
-                entry.status = 'failed';
-                entry.error = String(error);
-                entry.failedAt = Date.now();
+                const retryCount = (entry.retryCount || 0) + 1;
+                entry.retryCount = retryCount;
+                entry.lastError = String(error);
+                entry.lastFailedAt = Date.now();
+                if (retryCount >= MAX_RETRIES) {
+                    entry.status = 'failed';
+                    entry.failedAt = Date.now();
+                }
+                // Sinon on garde status = 'pending' pour rejouer au prochain online
                 store.put(entry);
             }
             resolve();
@@ -199,7 +207,7 @@ export function useOfflineMutationQueue() {
                     logger.log(`✅ Mutation rejouée: ${mutation.type}`);
                 } catch (err) {
                     logger.error(`❌ Échec replay mutation ${mutation.type}:`, err);
-                    await markMutationFailed(mutation.id, err.message || err);
+                    await markMutationRetryOrFailed(mutation.id, err.message || err);
                 }
             }
         } catch (err) {

@@ -857,6 +857,7 @@ export default function PlanViewer3D({ plan, onChange, onClose, onBackTo2D }) {
       cancelAnimationFrame(animId);
       controls.dispose();
       window.removeEventListener('resize', handleResize);
+      renderer.forceContextLoss();
       renderer.dispose();
       scene.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();

@@ -336,12 +336,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       // PNG pour qualité sans perte
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
-        setCurrentDoc(prev => ({
-          ...prev,
-          url,
-          blob,
-          enhanceMode: filterId
-        }));
+        setCurrentDoc(prev => {
+          if (prev?.url && prev.url.startsWith('blob:')) URL.revokeObjectURL(prev.url);
+          return { ...prev, url, blob, enhanceMode: filterId };
+        });
         setEnhanceMode(filterId);
         setIsProcessing(false);
       }, 'image/png');
@@ -408,6 +406,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       const url = URL.createObjectURL(transformedBlob);
 
+      // Révoquer l'ancienne URL avant de remplacer
+      if (currentDoc?.url && currentDoc.url.startsWith('blob:')) URL.revokeObjectURL(currentDoc.url);
+
       setCurrentDoc({
         id: Date.now(),
         url,
@@ -471,12 +472,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       // PNG pour qualité sans perte
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
-        setCurrentDoc(prev => ({
-          ...prev,
-          url,
-          blob,
-          rotation: newRotation
-        }));
+        setCurrentDoc(prev => {
+          if (prev?.url && prev.url.startsWith('blob:')) URL.revokeObjectURL(prev.url);
+          return { ...prev, url, blob, rotation: newRotation };
+        });
         setIsProcessing(false);
       }, 'image/png');
     };

@@ -3,6 +3,11 @@
 
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
+
+// Échappe les caractères spéciaux PostgREST pour éviter l'injection de filtre .or()
+function escapePostgrestFilter(term) {
+  return term.replace(/[,()%]/g, '');
+}
 import { withOrgId, getOrgId } from '../utils/orgHelper';
 
 export const clientService = {
@@ -53,7 +58,8 @@ export const clientService = {
       }
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        const s = escapePostgrestFilter(searchTerm);
+        query = query.or(`name.ilike.%${s}%,company_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`);
       }
 
       const { data, error } = await query;
@@ -437,7 +443,7 @@ export const clientService = {
         .from('clients')
         .select('id, name, company_name, email, phone, mobile, address, address_complement, postal_code, city')
         .eq('is_active', true)
-        .or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`)
+        .or(`name.ilike.%${escapePostgrestFilter(searchTerm)}%,company_name.ilike.%${escapePostgrestFilter(searchTerm)}%,address.ilike.%${escapePostgrestFilter(searchTerm)}%`)
         .order('name')
         .limit(limit);
 

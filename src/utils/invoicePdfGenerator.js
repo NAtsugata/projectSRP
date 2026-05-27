@@ -883,7 +883,8 @@ function calculateTaxBreakdown(items) {
     const qty = parseFloat(item.quantity) || 1;
     const price = parseFloat(item.unit_price) || 0;
     const discount = parseFloat(item.discount_percent) || 0;
-    const rate = parseFloat(item.tax_rate) ?? 20;
+    const _r = parseFloat(item.tax_rate);
+    const rate = Number.isFinite(_r) ? _r : 20;
 
     const lineBase = qty * price * (1 - discount / 100);
     const lineAmount = lineBase * (rate / 100);

@@ -213,7 +213,7 @@ export const useResilientUpload = () => {
   };
 };
 
-// ✅ HOOK POUR STOCKAGE HORS LIGNE
+// ✅ HOOK POUR STOCKAGE HORS LIGNE (via IndexedDB — binary-safe)
 export const useOfflineUpload = () => {
   const [pendingUploads, setPendingUploads] = useState([]);
   const [isOnline, setIsOnline] = useState(
@@ -237,75 +237,71 @@ export const useOfflineUpload = () => {
     };
   }, []);
 
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const { getPendingUploads } = await import('../utils/indexedDBCache.jsx');
+      const items = await getPendingUploads('pending');
+      setPendingUploads(items || []);
+    } catch (err) {
+      logger.error('Erreur lecture uploads IndexedDB:', err);
+    }
+  }, []);
+
+  useEffect(() => { refreshPendingCount(); }, [refreshPendingCount]);
+
   const storeForLaterUpload = useCallback(async (file, metadata) => {
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const uploadItem = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file: arrayBuffer,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        metadata,
-        timestamp: Date.now(),
-        status: 'pending'
-      };
-
-      // Stockage en localStorage pour simplicité (en production, utilisez IndexedDB)
-      const existing = safeStorage.getJSON('pendingUploads', []);
-      const updated = [...existing, uploadItem];
-      safeStorage.setJSON('pendingUploads', updated);
-
-      setPendingUploads(updated);
-      return uploadItem.id;
+      const { storeFileForUpload } = await import('../utils/indexedDBCache.jsx');
+      const id = await storeFileForUpload(file, metadata);
+      await refreshPendingCount();
+      return id;
     } catch (err) {
       logger.error('Failed to store file for later upload:', err);
       throw err;
     }
-  }, []);
+  }, [refreshPendingCount]);
 
   const processPendingUploads = useCallback(async () => {
     if (!isOnline) return;
+    try {
+      const { getPendingUploads, updateUploadStatus, arrayBufferToFile } = await import('../utils/indexedDBCache.jsx');
+      const pending = await getPendingUploads('pending');
 
-    const pending = safeStorage.getJSON('pendingUploads', []);
-    const stillPending = [];
-
-    for (const item of pending) {
-      if (item.status !== 'pending') continue;
-
-      try {
-        const file = new File([item.file], item.fileName, {
-          type: item.fileType
-        });
-
-        const result = await storageService.uploadInterventionFile(
-          file,
-          item.metadata.interventionId,
-          item.metadata.folder
-        );
-
-        if (!result.error) {
-          // Upload réussi, supprimer de la liste
-          continue;
+      for (const item of pending) {
+        try {
+          await updateUploadStatus(item.id, 'uploading');
+          const file = arrayBufferToFile(item);
+          const result = await storageService.uploadInterventionFile(
+            file,
+            item.metadata.interventionId,
+            item.metadata.folder
+          );
+          if (!result.error) {
+            await updateUploadStatus(item.id, 'completed');
+          } else {
+            await updateUploadStatus(item.id, 'pending');
+          }
+        } catch (err) {
+          logger.error('Failed to upload pending file:', err);
+          await updateUploadStatus(item.id, 'pending');
         }
-      } catch (err) {
-        logger.error('Failed to upload pending file:', err);
       }
-
-      // Conserver en cas d'échec
-      stillPending.push(item);
+    } catch (err) {
+      logger.error('Erreur processPendingUploads:', err);
     }
+    await refreshPendingCount();
+  }, [isOnline, refreshPendingCount]);
 
-    safeStorage.setJSON('pendingUploads', stillPending);
-    setPendingUploads(stillPending);
-  }, [isOnline]);
-
-  const clearPendingUploads = useCallback(() => {
-    safeStorage.removeItem('pendingUploads');
-    setPendingUploads([]);
+  const clearPendingUploads = useCallback(async () => {
+    try {
+      const { clearAllUploads } = await import('../utils/indexedDBCache.jsx');
+      await clearAllUploads();
+      setPendingUploads([]);
+    } catch (err) {
+      logger.error('Erreur clearPendingUploads:', err);
+    }
   }, []);
 
-  // Auto-traitement quand on revient en ligne
   useEffect(() => {
     if (isOnline && pendingUploads.length > 0) {
       processPendingUploads();

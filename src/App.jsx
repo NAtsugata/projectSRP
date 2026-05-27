@@ -106,7 +106,8 @@ function App() {
           profileService.getProfile(session.user.id)
             .then(({ data: userProfile, error }) => {
               if (!error && userProfile) setProfile(userProfile);
-            });
+            })
+            .catch(err => logger.error('[App] Erreur profil reconnexion:', err));
         }
       }
     });
@@ -223,7 +224,7 @@ function App() {
       const invalidateDebounced = debounce(
         (keys) => {
           logger.log('Invalidation React Query:', keys);
-          queryClient.invalidateQueries(keys);
+          queryClient.invalidateQueries({ queryKey: keys });
         },
         1000,
         { leading: true, trailing: true }
