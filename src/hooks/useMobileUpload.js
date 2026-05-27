@@ -213,6 +213,8 @@ export const useResilientUpload = () => {
   };
 };
 
+const MAX_UPLOAD_RETRIES = 5;
+
 // ✅ HOOK POUR STOCKAGE HORS LIGNE (via IndexedDB — binary-safe)
 export const useOfflineUpload = () => {
   const [pendingUploads, setPendingUploads] = useState([]);
@@ -268,6 +270,7 @@ export const useOfflineUpload = () => {
       const pending = await getPendingUploads('pending');
 
       for (const item of pending) {
+        const retryCount = (item.retryCount || 0);
         try {
           await updateUploadStatus(item.id, 'uploading');
           const file = arrayBufferToFile(item);
@@ -279,11 +282,19 @@ export const useOfflineUpload = () => {
           if (!result.error) {
             await updateUploadStatus(item.id, 'completed');
           } else {
-            await updateUploadStatus(item.id, 'pending');
+            const next = retryCount + 1;
+            await updateUploadStatus(item.id, next >= MAX_UPLOAD_RETRIES ? 'failed' : 'pending', {
+              retryCount: next,
+              lastError: result.error.message || String(result.error)
+            });
           }
         } catch (err) {
           logger.error('Failed to upload pending file:', err);
-          await updateUploadStatus(item.id, 'pending');
+          const next = retryCount + 1;
+          await updateUploadStatus(item.id, next >= MAX_UPLOAD_RETRIES ? 'failed' : 'pending', {
+            retryCount: next,
+            lastError: err.message || String(err)
+          });
         }
       }
     } catch (err) {

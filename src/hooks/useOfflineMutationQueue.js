@@ -86,6 +86,30 @@ async function removeMutation(id) {
 const MAX_RETRIES = 3;
 
 /**
+ * Marque une mutation en échec définitif (cas non récupérables : pas de handler)
+ */
+async function markMutationFailed(id, error) {
+    const db = await openMutationDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const getReq = store.get(id);
+        getReq.onsuccess = () => {
+            const entry = getReq.result;
+            if (entry) {
+                entry.status = 'failed';
+                entry.lastError = String(error);
+                entry.failedAt = Date.now();
+                store.put(entry);
+            }
+            resolve();
+        };
+        getReq.onerror = () => reject(getReq.error);
+        tx.oncomplete = () => db.close();
+    });
+}
+
+/**
  * Incrémente retryCount. Passe en 'failed' seulement après MAX_RETRIES tentatives.
  */
 async function markMutationRetryOrFailed(id, error) {
