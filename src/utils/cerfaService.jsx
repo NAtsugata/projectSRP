@@ -7,6 +7,7 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import logger from './logger';
 import { safeStorage } from './safeStorage';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 
 // Importer les PDF comme assets (Webpack les gère automatiquement)
 import cerfaPdfAsset from '../assets/cerfa_15497-04.pdf';
@@ -175,14 +176,67 @@ export const getCompanyInfo = () => {
 };
 
 /**
- * Sauvegarde les informations entreprise
+ * Sauvegarde les informations entreprise.
+ * Écrit en localStorage (immédiat, hors-ligne) ET dans Supabase (table
+ * organizations) pour que les infos se synchronisent entre PC et mobile.
  * @param {Object} info - Informations à sauvegarder
+ * @returns {Promise<boolean>} Succès de l'écriture locale
  */
-export const saveCompanyInfo = (info) => {
-    const success = safeStorage.setJSON(STORAGE_KEY_COMPANY, info);
+export const saveCompanyInfo = async (info) => {
+    // 1. localStorage — fusionner avec l'existant pour ne perdre aucun champ
+    const existing = safeStorage.getJSON(STORAGE_KEY_COMPANY, {});
+    const merged = { ...existing, ...info };
+    const success = safeStorage.setJSON(STORAGE_KEY_COMPANY, merged);
     if (!success) {
-        logger.error('Erreur sauvegarde company info');
+        logger.error('Erreur sauvegarde company info (local)');
     }
+
+    // 2. Supabase — synchronisation multi-appareils
+    try {
+        const { profile } = useAuthStore.getState();
+        const orgId = profile?.organization_id;
+        if (orgId) {
+            // Ne mettre à jour que les colonnes fournies (ne pas écraser avec du vide)
+            const updates = {};
+            if (info.companyName != null) updates.name = info.companyName;
+            if (info.siret != null) updates.siret = info.siret;
+            if (info.address != null) updates.address = info.address;
+            if (info.phone != null) updates.phone = info.phone;
+            if (info.email != null) updates.email = info.email;
+
+            // Champs spécifiques CERFA (qualification, attestation) dans settings.cerfa
+            if (info.qualification != null || info.attestationNumber != null) {
+                const { data: org } = await supabase
+                    .from('organizations')
+                    .select('settings')
+                    .eq('id', orgId)
+                    .single();
+                const settings = org?.settings || {};
+                settings.cerfa = {
+                    ...(settings.cerfa || {}),
+                    ...(info.qualification != null ? { qualification: info.qualification } : {}),
+                    ...(info.attestationNumber != null ? { attestationNumber: info.attestationNumber } : {}),
+                };
+                updates.settings = settings;
+            }
+
+            if (Object.keys(updates).length > 0) {
+                updates.updated_at = new Date().toISOString();
+                const { error } = await supabase
+                    .from('organizations')
+                    .update(updates)
+                    .eq('id', orgId);
+                if (error) throw error;
+                logger.log('[CERFA] Infos entreprise synchronisées sur Supabase');
+
+                // Mettre à jour l'organisation dans le store
+                useAuthStore.getState().refreshProfile?.();
+            }
+        }
+    } catch (e) {
+        logger.warn('[CERFA] Sync Supabase company info échouée (local OK):', e.message);
+    }
+
     return success;
 };
 

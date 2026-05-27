@@ -174,7 +174,7 @@ function CerfaPage15498() {
     }, []);
 
     // Sauvegarder les infos entreprise
-    const saveCompanyData = useCallback(() => {
+    const saveCompanyData = useCallback(async () => {
         const companyData = {
             companyName:       formData.inst_raison,
             address:           [formData.inst_num, formData.inst_voie, formData.inst_commune].filter(Boolean).join(', '),
@@ -183,9 +183,8 @@ function CerfaPage15498() {
             siret:             formData.inst_siret,
             attestationNumber: formData.inst_attestation,
         };
-        if (saveCompanyInfo(companyData)) {
-            showToast('Informations installateur sauvegardées', 'success');
-        }
+        await saveCompanyInfo(companyData);
+        showToast('Informations installateur sauvegardées (synchronisées)', 'success');
     }, [formData, showToast]);
 
     // Validation des champs obligatoires

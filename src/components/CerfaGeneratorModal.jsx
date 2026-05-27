@@ -63,7 +63,7 @@ function CerfaGeneratorModal({
     }, []);
 
     // Sauvegarder les infos entreprise
-    const handleSaveCompanyInfo = useCallback(() => {
+    const handleSaveCompanyInfo = useCallback(async () => {
         const companyData = {
             companyName: formData.companyName,
             siret: formData.siret,
@@ -71,10 +71,9 @@ function CerfaGeneratorModal({
             qualification: formData.qualification,
             attestationNumber: formData.attestationNumber
         };
-        if (saveCompanyInfo(companyData)) {
-            showToast?.('Informations entreprise sauvegardées', 'success');
-            setShowCompanySettings(false);
-        }
+        await saveCompanyInfo(companyData);
+        showToast?.('Informations entreprise sauvegardées (synchronisées)', 'success');
+        setShowCompanySettings(false);
     }, [formData, showToast]);
 
     // Générer le CERFA

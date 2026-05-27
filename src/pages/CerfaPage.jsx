@@ -320,7 +320,7 @@ function CerfaPage() {
     }, []);
 
     // Sauvegarder les infos intervenant (tous les champs)
-    const handleSaveIntervenant = useCallback(() => {
+    const handleSaveIntervenant = useCallback(async () => {
         const companyData = {
             companyName:       formData.intervenantNom,
             address:           formData.intervenantAdresse,
@@ -329,9 +329,8 @@ function CerfaPage() {
             attestationNumber: formData.intervenantAttestation,
             qualification:     formData.intervenantQualite || '',
         };
-        if (saveCompanyInfo(companyData)) {
-            showToast('Informations intervenant sauvegardées', 'success');
-        }
+        await saveCompanyInfo(companyData);
+        showToast('Informations intervenant sauvegardées (synchronisées)', 'success');
     }, [formData, showToast]);
 
     // Générer le CERFA

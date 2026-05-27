@@ -8,13 +8,16 @@ import { safeStorage } from '../utils/safeStorage';
 function syncOrgToCerfaStorage(org) {
     if (!org) return;
     const existing = safeStorage.getJSON('cerfa_company_info', {});
+    const cerfa = org.settings?.cerfa || {};
     safeStorage.setJSON('cerfa_company_info', {
         ...existing,
-        companyName: org.name || existing.companyName || '',
-        siret:       org.siret   || existing.siret   || '',
-        address:     org.address || existing.address || '',
-        phone:       org.phone   || existing.phone   || '',
-        email:       org.email   || existing.email   || '',
+        companyName:       org.name  || existing.companyName || '',
+        siret:             org.siret   || existing.siret   || '',
+        address:           org.address || existing.address || '',
+        phone:             org.phone   || existing.phone   || '',
+        email:             org.email   || existing.email   || '',
+        qualification:     cerfa.qualification     || existing.qualification     || '',
+        attestationNumber: cerfa.attestationNumber || existing.attestationNumber || '',
     });
 }
 
