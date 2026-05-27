@@ -225,9 +225,10 @@ function CerfaPage() {
             const draft = sessionStorage.getItem(DRAFT_KEY);
             if (draft) {
                 const parsed = JSON.parse(draft);
-                // Ne restaurer que si le brouillon a du contenu significatif
+                // Restaurer si n'importe quel champ significatif est rempli (intervenant OU détenteur)
                 const hasContent = parsed.detenteurNom || parsed.fluideDesignation ||
-                    parsed.observations || parsed.signatureOperateur;
+                    parsed.observations || parsed.signatureOperateur ||
+                    parsed.intervenantNom || parsed.intervenantSiret || parsed.intervenantAttestation;
                 if (hasContent) {
                     setFormData(prev => ({ ...prev, ...parsed }));
                     logger.log('[CERFA] Brouillon restauré');
@@ -287,14 +288,17 @@ function CerfaPage() {
             }
         }
 
-        // Charger les infos entreprise sauvegardées
+        // Charger les infos entreprise sauvegardées — ne remplir que les champs vides
         const companyInfo = getCompanyInfo();
         if (companyInfo) {
             setFormData(prev => ({
                 ...prev,
-                intervenantNom: companyInfo.companyName || prev.intervenantNom,
-                intervenantAdresse: companyInfo.address || prev.intervenantAdresse,
-                intervenantSiret: companyInfo.siret || prev.intervenantSiret,
+                intervenantNom:        prev.intervenantNom        || companyInfo.companyName      || '',
+                intervenantAdresse:    prev.intervenantAdresse    || companyInfo.address          || '',
+                intervenantSiret:      prev.intervenantSiret      || companyInfo.siret            || '',
+                intervenantTel:        prev.intervenantTel        || companyInfo.phone            || '',
+                intervenantAttestation:prev.intervenantAttestation|| companyInfo.attestationNumber|| '',
+                intervenantQualite:    prev.intervenantQualite    || companyInfo.qualification    || '',
             }));
         }
     }, [searchParams]);
@@ -315,12 +319,15 @@ function CerfaPage() {
         setTimeout(() => setToast(null), 3000);
     }, []);
 
-    // Sauvegarder les infos intervenant
+    // Sauvegarder les infos intervenant (tous les champs)
     const handleSaveIntervenant = useCallback(() => {
         const companyData = {
-            companyName: formData.intervenantNom,
-            address: formData.intervenantAdresse,
-            siret: formData.intervenantSiret,
+            companyName:       formData.intervenantNom,
+            address:           formData.intervenantAdresse,
+            siret:             formData.intervenantSiret,
+            phone:             formData.intervenantTel,
+            attestationNumber: formData.intervenantAttestation,
+            qualification:     formData.intervenantQualite || '',
         };
         if (saveCompanyInfo(companyData)) {
             showToast('Informations intervenant sauvegardées', 'success');

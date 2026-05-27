@@ -34,12 +34,20 @@ function CerfaGeneratorModal({
     const [saveEquipment, setSaveEquipment] = useState(true);
     const [activeTab, setActiveTab] = useState('general');
 
-    // Charger les données initiales
+    // Charger les données initiales + compléter avec infos entreprise sauvegardées
     useEffect(() => {
-        if (isOpen && initialData) {
+        if (isOpen) {
+            const companyInfo = getCompanyInfo();
+            const base = initialData || {};
             setFormData({
-                ...initialData,
-                fuiteDetectee: initialData.fuiteDetectee || 'non'
+                ...base,
+                // Champs entreprise : données initiales en priorité, localStorage en fallback
+                companyName:       base.companyName       || companyInfo.companyName       || '',
+                siret:             base.siret             || companyInfo.siret             || '',
+                companyAddress:    base.companyAddress    || companyInfo.address           || '',
+                qualification:     base.qualification     || companyInfo.qualification     || '',
+                attestationNumber: base.attestationNumber || companyInfo.attestationNumber || '',
+                fuiteDetectee:     base.fuiteDetectee     || 'non',
             });
         }
     }, [isOpen, initialData]);

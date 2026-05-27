@@ -121,7 +121,8 @@ function CerfaPage15498() {
             if (draft) {
                 const parsed = JSON.parse(draft);
                 const hasContent = parsed.acq_nom || parsed.details ||
-                    parsed.signatureAcquereur || parsed.inst_raison;
+                    parsed.signatureAcquereur || parsed.inst_raison ||
+                    parsed.inst_siret || parsed.inst_attestation;
                 if (hasContent) {
                     setFormData(prev => ({ ...prev, ...parsed }));
                     logger.log('[CERFA 15498] Brouillon restauré');
@@ -143,18 +144,20 @@ function CerfaPage15498() {
             }
         }
 
-        // Charger les infos entreprise sauvegardées
+        // Charger les infos entreprise — ne remplir que les champs vides
         const companyInfo = getCompanyInfo();
         if (companyInfo) {
+            const addrParts = (companyInfo.address || '').split(',');
             setFormData(prev => ({
                 ...prev,
-                inst_raison: companyInfo.name || prev.inst_raison,
-                inst_num: companyInfo.address?.split(',')[0] || prev.inst_num,
-                inst_voie: companyInfo.address?.split(',')[0] || prev.inst_voie,
-                inst_commune: companyInfo.address?.split(',')[1]?.trim() || prev.inst_commune,
-                inst_siret: companyInfo.siret || prev.inst_siret,
-                inst_tel: companyInfo.phone || prev.inst_tel,
-                inst_attestation: companyInfo.attestationNumber || prev.inst_attestation,
+                inst_raison:      prev.inst_raison      || companyInfo.companyName        || '',
+                inst_num:         prev.inst_num         || addrParts[0]?.trim()           || '',
+                inst_voie:        prev.inst_voie        || addrParts[1]?.trim()           || '',
+                inst_commune:     prev.inst_commune     || addrParts[2]?.trim()           || '',
+                inst_siret:       prev.inst_siret       || companyInfo.siret              || '',
+                inst_tel:         prev.inst_tel         || companyInfo.phone              || '',
+                inst_email:       prev.inst_email       || companyInfo.email              || '',
+                inst_attestation: prev.inst_attestation || companyInfo.attestationNumber  || '',
             }));
         }
     }, [searchParams]);
@@ -173,10 +176,11 @@ function CerfaPage15498() {
     // Sauvegarder les infos entreprise
     const saveCompanyData = useCallback(() => {
         const companyData = {
-            name: formData.inst_raison,
-            address: `${formData.inst_num} ${formData.inst_voie}, ${formData.inst_commune}`,
-            phone: formData.inst_tel,
-            siret: formData.inst_siret,
+            companyName:       formData.inst_raison,
+            address:           [formData.inst_num, formData.inst_voie, formData.inst_commune].filter(Boolean).join(', '),
+            phone:             formData.inst_tel,
+            email:             formData.inst_email,
+            siret:             formData.inst_siret,
             attestationNumber: formData.inst_attestation,
         };
         if (saveCompanyInfo(companyData)) {

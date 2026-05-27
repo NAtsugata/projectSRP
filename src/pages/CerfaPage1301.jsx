@@ -104,15 +104,15 @@ function CerfaPage1301() {
 
     useEffect(() => { refreshFicheInfo(); }, [refreshFicheInfo]);
 
-    // Charger les informations entreprise par défaut
+    // Charger les informations entreprise — ne remplir que les champs vides
     useEffect(() => {
         const companyInfo = getCompanyInfo();
         setFormData(prev => ({
             ...prev,
-            entrepriseNom: companyInfo.companyName || 'SRP - Services Réparation Plomberie',
-            entrepriseAdresse: companyInfo.address || 'Champtercier, 04660',
-            entrepriseSiret: companyInfo.siret || '',
-            lieu: 'Champtercier'
+            entrepriseNom:     prev.entrepriseNom     || companyInfo.companyName || '',
+            entrepriseAdresse: prev.entrepriseAdresse || companyInfo.address     || '',
+            entrepriseSiret:   prev.entrepriseSiret   || companyInfo.siret       || '',
+            lieu:              prev.lieu              || 'Champtercier',
         }));
     }, []);
 
