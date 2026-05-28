@@ -337,7 +337,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => {
-          if (prev?.url && prev.url.startsWith('blob:')) URL.revokeObjectURL(prev.url);
+          // Révoquer l'ancienne URL filtrée, mais JAMAIS originalUrl
+          // (relue à chaque application de filtre — doit rester valide)
+          if (prev?.url && prev.url.startsWith('blob:') && prev.url !== prev.originalUrl) {
+            URL.revokeObjectURL(prev.url);
+          }
           return { ...prev, url, blob, enhanceMode: filterId };
         });
         setEnhanceMode(filterId);
@@ -406,8 +410,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       const url = URL.createObjectURL(transformedBlob);
 
-      // Révoquer l'ancienne URL avant de remplacer
+      // Nouveau document : révoquer l'ancien url ET son originalUrl
       if (currentDoc?.url && currentDoc.url.startsWith('blob:')) URL.revokeObjectURL(currentDoc.url);
+      if (currentDoc?.originalUrl && currentDoc.originalUrl.startsWith('blob:') && currentDoc.originalUrl !== currentDoc.url) {
+        URL.revokeObjectURL(currentDoc.originalUrl);
+      }
 
       setCurrentDoc({
         id: Date.now(),
@@ -473,7 +480,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         setCurrentDoc(prev => {
-          if (prev?.url && prev.url.startsWith('blob:')) URL.revokeObjectURL(prev.url);
+          // Révoquer l'ancienne URL pivotée, mais JAMAIS originalUrl
+          if (prev?.url && prev.url.startsWith('blob:') && prev.url !== prev.originalUrl) {
+            URL.revokeObjectURL(prev.url);
+          }
           return { ...prev, url, blob, rotation: newRotation };
         });
         setIsProcessing(false);
