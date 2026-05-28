@@ -521,7 +521,17 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Retirer un document
   const removeDocument = useCallback((docId) => {
-    setScannedDocs(prev => prev.filter(doc => doc.id !== docId));
+    setScannedDocs(prev => {
+      // Le document retiré ne sera ni exporté ni sauvegardé : libérer ses blob URLs
+      const target = prev.find(doc => doc.id === docId);
+      if (target) {
+        if (target.url && target.url.startsWith('blob:')) URL.revokeObjectURL(target.url);
+        if (target.originalUrl && target.originalUrl.startsWith('blob:') && target.originalUrl !== target.url) {
+          URL.revokeObjectURL(target.originalUrl);
+        }
+      }
+      return prev.filter(doc => doc.id !== docId);
+    });
   }, []);
 
   // Upload depuis fichier

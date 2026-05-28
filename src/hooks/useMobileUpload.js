@@ -1,7 +1,6 @@
 // src/hooks/useMobileUpload.js - Hook central pour l'upload mobile avec détection sécurisée
 import { useState, useCallback, useEffect } from 'react';
 import { storageService } from '../lib/supabase';
-import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
 
 // ✅ HOOK POUR DÉTECTER LES CAPACITÉS DU DEVICE

@@ -4,11 +4,13 @@
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
 
-// Échappe les caractères spéciaux PostgREST pour éviter l'injection de filtre .or()
-function escapePostgrestFilter(term) {
-  return term.replace(/[,()%]/g, '');
-}
 import { withOrgId, getOrgId } from '../utils/orgHelper';
+
+// Échappe les caractères spéciaux PostgREST pour éviter l'injection de filtre .or()
+// (`,` sépare les conditions, `()` groupe, `%` est un wildcard ilike)
+function escapePostgrestFilter(term) {
+  return String(term ?? '').replace(/[,()%]/g, '');
+}
 
 export const clientService = {
   /**
@@ -170,7 +172,7 @@ export const clientService = {
         }
       }
 
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('clients')
         .update({
           ...cleanedUpdates,
@@ -386,15 +388,10 @@ export const clientService = {
    * @param {string} clientId - ID du client
    * @returns {Promise<{data: Array, error: Object}>}
    */
-  async getClientContracts(clientId) {
-    try {
-      // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
-      // TODO: Ajouter client_id a maintenance_contracts si necessaire
-      return { data: [], error: null };
-    } catch (error) {
-      logger.error('❌ Erreur getClientContracts:', error);
-      return { data: null, error };
-    }
+  async getClientContracts(_clientId) {
+    // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
+    // TODO: Ajouter client_id a maintenance_contracts si necessaire
+    return { data: [], error: null };
   },
 
   /**

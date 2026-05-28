@@ -196,16 +196,17 @@ export const saveCompanyInfo = async (info) => {
         const { profile } = useAuthStore.getState();
         const orgId = profile?.organization_id;
         if (orgId) {
-            // Ne mettre à jour que les colonnes fournies (ne pas écraser avec du vide)
+            // Ne mettre à jour que les colonnes fournies (ni null ni undefined)
+            const provided = (v) => v !== null && v !== undefined;
             const updates = {};
-            if (info.companyName != null) updates.name = info.companyName;
-            if (info.siret != null) updates.siret = info.siret;
-            if (info.address != null) updates.address = info.address;
-            if (info.phone != null) updates.phone = info.phone;
-            if (info.email != null) updates.email = info.email;
+            if (provided(info.companyName)) updates.name = info.companyName;
+            if (provided(info.siret)) updates.siret = info.siret;
+            if (provided(info.address)) updates.address = info.address;
+            if (provided(info.phone)) updates.phone = info.phone;
+            if (provided(info.email)) updates.email = info.email;
 
             // Champs spécifiques CERFA (qualification, attestation) dans settings.cerfa
-            if (info.qualification != null || info.attestationNumber != null) {
+            if (provided(info.qualification) || provided(info.attestationNumber)) {
                 const { data: org } = await supabase
                     .from('organizations')
                     .select('settings')
@@ -214,8 +215,8 @@ export const saveCompanyInfo = async (info) => {
                 const settings = org?.settings || {};
                 settings.cerfa = {
                     ...(settings.cerfa || {}),
-                    ...(info.qualification != null ? { qualification: info.qualification } : {}),
-                    ...(info.attestationNumber != null ? { attestationNumber: info.attestationNumber } : {}),
+                    ...(provided(info.qualification) ? { qualification: info.qualification } : {}),
+                    ...(provided(info.attestationNumber) ? { attestationNumber: info.attestationNumber } : {}),
                 };
                 updates.settings = settings;
             }
