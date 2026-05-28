@@ -1122,3 +1122,185 @@ export function enhanceColor(imageData) {
 export function detectBestMode(imageData) {
   return 'bw';
 }
+
+// ─── ClearScan ───────────────────────────────────────────────────────────────
+
+/**
+ * Filtre ClearScan : binarisation adaptative locale + netteté
+ * Résiste aux ombres et aux éclairages inégaux (Bradley + unsharp).
+ * Utilise OpenCV si disponible, sinon fallback JS pur (intégrale d'image).
+ */
+export function enhanceClearScan(imageData) {
+  if (isOpenCvReady()) {
+    return _clearScanCV(imageData);
+  }
+  return _clearScanJS(imageData);
+}
+
+function _clearScanCV(imageData) {
+  const cv = window.cv;
+  const mats = [];
+  const t = (m) => { mats.push(m); return m; };
+
+  try {
+    const src = t(cv.matFromImageData(imageData));
+    const gray = t(new cv.Mat());
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    // Normaliser l'éclairage avant seuillage (CLAHE doux)
+    const clahe = new cv.CLAHE(1.5, new cv.Size(16, 16));
+    const equalized = t(new cv.Mat());
+    clahe.apply(gray, equalized);
+    clahe.delete();
+
+    // Léger flou pour réduire le bruit
+    const blurred = t(new cv.Mat());
+    cv.GaussianBlur(equalized, blurred, new cv.Size(3, 3), 0);
+
+    // Seuillage adaptatif local — blockSize large = résiste aux ombres
+    const thresh = t(new cv.Mat());
+    cv.adaptiveThreshold(blurred, thresh, 255,
+      cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY,
+      51,  // fenêtre locale large
+      18   // C élevé = fond plus blanc
+    );
+
+    // Unsharp masking pour renforcer les bords du texte
+    const blurredThresh = t(new cv.Mat());
+    cv.GaussianBlur(thresh, blurredThresh, new cv.Size(0, 0), 0.8);
+    const sharp = t(new cv.Mat());
+    cv.addWeighted(thresh, 1.5, blurredThresh, -0.5, 0, sharp);
+
+    // Ouverture morphologique : supprime les pixels isolés parasites
+    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2));
+    cv.morphologyEx(sharp, sharp, cv.MORPH_OPEN, kernel);
+    kernel.delete();
+
+    const rgba = t(new cv.Mat());
+    cv.cvtColor(sharp, rgba, cv.COLOR_GRAY2RGBA);
+
+    return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
+  } catch (err) {
+    console.error('ClearScan CV error:', err);
+    return imageData;
+  } finally {
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* mat déjà libéré */ } });
+  }
+}
+
+function _clearScanJS(imageData) {
+  // Algorithme de Bradley (seuil local par intégrale d'image)
+  const { data, width, height } = imageData;
+  const output = new ImageData(width, height);
+
+  // Niveau de gris
+  const gray = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    gray[i] = Math.round(0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]);
+  }
+
+  // Image intégrale (SAT) pour le calcul de moyenne locale en O(1)
+  const sat = new Float64Array((width + 1) * (height + 1));
+  for (let y = 1; y <= height; y++) {
+    for (let x = 1; x <= width; x++) {
+      sat[y * (width + 1) + x] = gray[(y - 1) * width + (x - 1)]
+        + sat[(y - 1) * (width + 1) + x]
+        + sat[y * (width + 1) + (x - 1)]
+        - sat[(y - 1) * (width + 1) + (x - 1)];
+    }
+  }
+
+  const S = Math.round(Math.max(width, height) / 16);
+  const T = 0.15; // pixel < (1-T)*localMean → noir
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(0, x - S);
+      const y1 = Math.max(0, y - S);
+      const x2 = Math.min(width - 1, x + S);
+      const y2 = Math.min(height - 1, y + S);
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum = sat[(y2 + 1) * (width + 1) + (x2 + 1)]
+                - sat[y1 * (width + 1) + (x2 + 1)]
+                - sat[(y2 + 1) * (width + 1) + x1]
+                + sat[y1 * (width + 1) + x1];
+      const value = (gray[y * width + x] * count <= sum * (1 - T)) ? 0 : 255;
+      const idx = (y * width + x) * 4;
+      output.data[idx] = value;
+      output.data[idx + 1] = value;
+      output.data[idx + 2] = value;
+      output.data[idx + 3] = 255;
+    }
+  }
+  return output;
+}
+
+// ─── Magic Color ─────────────────────────────────────────────────────────────
+
+/**
+ * Filtre Magic Color : suppression des ombres + couleurs préservées
+ * Divise chaque pixel par l'estimation du fond (flou très large) pour
+ * normaliser l'éclairage non-uniforme tout en gardant les teintes.
+ */
+export function enhanceMagicColor(imageData) {
+  if (!isOpenCvReady()) return enhanceColor(imageData);
+
+  const cv = window.cv;
+  const mats = [];
+  const t = (m) => { mats.push(m); return m; };
+
+  try {
+    const src = t(cv.matFromImageData(imageData));
+    const rgb = t(new cv.Mat());
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
+
+    // Float32 pour la division
+    const f32 = t(new cv.Mat());
+    rgb.convertTo(f32, cv.CV_32F);
+
+    // Estimation du fond par flou très large
+    const sigma = Math.max(src.cols, src.rows) / 20;
+    const bg = t(new cv.Mat());
+    cv.GaussianBlur(f32, bg, new cv.Size(0, 0), sigma);
+
+    // Normalisation : image / fond × 200 (recentrer à blanc)
+    const normalized = t(new cv.Mat());
+    cv.divide(f32, bg, normalized, 200.0);
+
+    // Clipper [0, 255]
+    cv.threshold(normalized, normalized, 255, 255, cv.THRESH_TRUNC);
+    cv.threshold(normalized, normalized, 0, 0, cv.THRESH_TOZERO);
+
+    const u8 = t(new cv.Mat());
+    normalized.convertTo(u8, cv.CV_8U);
+
+    // Léger sharpening
+    const blurSharp = t(new cv.Mat());
+    cv.GaussianBlur(u8, blurSharp, new cv.Size(0, 0), 1.0);
+    const sharp = t(new cv.Mat());
+    cv.addWeighted(u8, 1.3, blurSharp, -0.3, 0, sharp);
+
+    // Saturation légère via LAB
+    const lab = t(new cv.Mat());
+    cv.cvtColor(sharp, lab, cv.COLOR_RGB2Lab);
+    const channels = t(new cv.MatVector());
+    cv.split(lab, channels);
+    const a = channels.get(1);
+    const b = channels.get(2);
+    a.convertTo(a, -1, 1.1, 128 * (1 - 1.1));
+    b.convertTo(b, -1, 1.1, 128 * (1 - 1.1));
+    cv.merge(channels, lab);
+    const colorResult = t(new cv.Mat());
+    cv.cvtColor(lab, colorResult, cv.COLOR_Lab2RGB);
+
+    const rgba = t(new cv.Mat());
+    cv.cvtColor(colorResult, rgba, cv.COLOR_RGB2RGBA);
+
+    return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
+  } catch (err) {
+    console.error('MagicColor error:', err);
+    return imageData;
+  } finally {
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* mat déjà libéré */ } });
+  }
+}

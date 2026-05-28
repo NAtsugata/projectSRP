@@ -69,6 +69,26 @@ export async function createPdfFromDocuments(documents, options = {}) {
       // Ajouter l'image au PDF - NONE = pas de compression, qualité maximale
       pdf.addImage(imageDataUrl, 'PNG', x, y, width, height, undefined, 'NONE');
 
+      // Couche de texte OCR invisible (PDF consultable / Ctrl+F)
+      if (doc.ocrText && doc.ocrText.trim()) {
+        pdf.saveGraphicsState();
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(6);
+        const lines = doc.ocrText.split('\n').filter(l => l.trim());
+        const lineH = 7 * (height / Math.max(lines.length, 1));
+        lines.forEach((line, li) => {
+          if (!line.trim()) return;
+          try {
+            pdf.text(line, x, y + li * lineH + lineH, {
+              maxWidth: width,
+              baseline: 'top',
+            });
+          } catch (_e) { /* ligne OCR non rendu, ignoré */ }
+        });
+        pdf.restoreGraphicsState();
+        logger.log(`[PDF] Couche OCR ajoutée page ${i + 1}`);
+      }
+
       logger.log(`[PDF] Page ${i + 1}/${documents.length} ajoutée`);
     } catch (err) {
       logger.error(`[PDF] Erreur page ${i + 1}:`, err);

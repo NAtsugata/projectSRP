@@ -14,21 +14,25 @@ import {
   enhanceBlackAndWhite,
   enhanceColor,
   enhanceGrayscale,
+  enhanceClearScan,
+  enhanceMagicColor,
   isOpenCvReady,
   applyPerspectiveTransform
 } from '../utils/documentScanner';
 import { preloadOpenCV } from '../utils/jscanifyDetector';
 import { useDocumentDetection } from '../hooks/useDocumentDetection';
 import { useCornerDrag } from '../hooks/useCornerDrag';
+import { useOCR } from '../hooks/useOCR';
 import logger from '../utils/logger';
 import '../components/scanner/ScannerStyles.css';
 
 // Filtres disponibles
 const FILTERS = [
-  { id: 'bw', label: 'Document', icon: '📄', desc: 'Noir & Blanc optimisé' },
+  { id: 'clearscan', label: 'ClearScan', icon: '📋', desc: 'Texte net, fond blanc (adaptatif)' },
   { id: 'original', label: 'Original', icon: '🖼️', desc: 'Sans modification' },
+  { id: 'magic', label: 'Magic Color', icon: '✨', desc: 'Couleurs + suppression ombres' },
   { id: 'gray', label: 'Gris', icon: '⬜', desc: 'Niveaux de gris' },
-  { id: 'color', label: 'Couleur+', icon: '🎨', desc: 'Couleurs améliorées' }
+  { id: 'bw', label: 'N&B pur', icon: '📄', desc: 'Noir & Blanc global' },
 ];
 
 export default function DocumentScannerView({ onSave, onClose }) {
@@ -43,6 +47,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [stream, setStream] = useState(null);
   const [cvReady, setCvReady] = useState(false);
   const [exportFormat, setExportFormat] = useState('pdf');
+  const [autoCapturing, setAutoCapturing] = useState(false); // compteur de capture auto
+  const [autoProgress, setAutoProgress] = useState(0);      // 0–100 pour l'animation
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -51,6 +57,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
   const isStartingCameraRef = useRef(false);
+  const autoCaptureTimerRef = useRef(null);
+  const autoProgressTimerRef = useRef(null);
+  const capturePhotoRef = useRef(null); // ref vers capturePhoto pour l'auto-capture
+
+  const { runOCR, isProcessingOCR, ocrProgress, terminateWorker } = useOCR();
 
   // Hooks personnalisés
   const {
@@ -110,15 +121,18 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [originalImage]);
 
-  // Cleanup du stream au démontage du composant
+  // Cleanup du stream et du worker OCR au démontage du composant
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      terminateWorker();
+      clearTimeout(autoCaptureTimerRef.current);
+      clearInterval(autoProgressTimerRef.current);
     };
-  }, []);
+  }, [terminateWorker]);
 
   // Charger OpenCV
   useEffect(() => {
@@ -168,6 +182,46 @@ export default function DocumentScannerView({ onSave, onClose }) {
       stopLiveDetection();
     };
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
+
+  // Auto-capture : déclenche la photo après 2s de détection stable (confidence=90)
+  useEffect(() => {
+    const clear = () => {
+      clearTimeout(autoCaptureTimerRef.current);
+      clearInterval(autoProgressTimerRef.current);
+      autoCaptureTimerRef.current = null;
+      autoProgressTimerRef.current = null;
+      setAutoCapturing(false);
+      setAutoProgress(0);
+    };
+
+    if (mode !== 'capture' || detectionConfidence < 90 || !liveCorners) {
+      clear();
+      return;
+    }
+
+    if (autoCaptureTimerRef.current) return; // déjà en cours
+
+    const DURATION = 2000;
+    const start = Date.now();
+    setAutoCapturing(true);
+    setAutoProgress(0);
+
+    autoProgressTimerRef.current = setInterval(() => {
+      const pct = Math.min(100, ((Date.now() - start) / DURATION) * 100);
+      setAutoProgress(pct);
+    }, 50);
+
+    autoCaptureTimerRef.current = setTimeout(() => {
+      clearInterval(autoProgressTimerRef.current);
+      setAutoCapturing(false);
+      setAutoProgress(0);
+      autoCaptureTimerRef.current = null;
+      logger.log('[Auto-capture] Document stable — déclenchement automatique');
+      if (capturePhotoRef.current) capturePhotoRef.current();
+    }, DURATION);
+
+    return clear;
+  }, [mode, detectionConfidence, liveCorners]);
 
   // Démarrer la caméra avec protection contre les appels multiples
   const startCamera = useCallback(async () => {
@@ -301,6 +355,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
     }
   }, [stopCamera, detectDocument]);
 
+  // Maintenir le ref à jour pour l'auto-capture
+  useEffect(() => { capturePhotoRef.current = capturePhoto; }, [capturePhoto]);
+
   // Appliquer un filtre
   const applyFilter = useCallback((filterId) => {
     if (!currentDoc || !canvasRef.current) return;
@@ -318,6 +375,12 @@ export default function DocumentScannerView({ onSave, onClose }) {
       let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       switch (filterId) {
+        case 'clearscan':
+          imageData = enhanceClearScan(imageData);
+          break;
+        case 'magic':
+          imageData = enhanceMagicColor(imageData);
+          break;
         case 'bw':
           imageData = enhanceBlackAndWhite(imageData);
           break;
@@ -416,7 +479,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
         URL.revokeObjectURL(currentDoc.originalUrl);
       }
 
-      setCurrentDoc({
+      const newDoc = {
         id: Date.now(),
         url,
         originalUrl: url,
@@ -424,12 +487,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
         timestamp: new Date().toISOString(),
         enhanceMode: 'original',
         rotation: 0,
-        wasDetected: true
-      });
+        wasDetected: true,
+        ocrText: '',
+      };
+      setCurrentDoc(newDoc);
       setEnhanceMode('original');
       setMode('preview');
       setCorners(null);
       setOriginalImage(null);
+
+      // Lancer l'OCR en arrière-plan (non bloquant)
+      runOCR(transformedBlob).then(text => {
+        if (text) {
+          setCurrentDoc(prev => prev ? { ...prev, ocrText: text } : prev);
+          logger.log('[OCR] Texte intégré au document');
+        }
+      });
 
     } catch (error) {
       logger.error('Erreur transformation:', error);
@@ -437,7 +510,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [corners, originalImage]);
+  }, [corners, originalImage, runOCR]);
 
   // Annuler l'ajustement
   const cancelAdjustment = useCallback(() => {
@@ -894,7 +967,23 @@ export default function DocumentScannerView({ onSave, onClose }) {
               Terminer ({scannedDocs.length})
             </button>
           )}
-          <button className="capture-button" onClick={capturePhoto} disabled={isProcessing} />
+          {/* Bouton de capture avec anneau de progression auto-capture */}
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {autoCapturing && (
+              <svg style={{ position: 'absolute', width: 80, height: 80, transform: 'rotate(-90deg)', pointerEvents: 'none' }} viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="#b87333" strokeWidth="4" strokeOpacity="0.3" />
+                <circle
+                  cx="40" cy="40" r="36" fill="none" stroke="#b87333" strokeWidth="4"
+                  strokeDasharray={`${2 * Math.PI * 36}`}
+                  strokeDashoffset={`${2 * Math.PI * 36 * (1 - autoProgress / 100)}`}
+                  style={{ transition: 'stroke-dashoffset 0.05s linear' }}
+                />
+              </svg>
+            )}
+            <button className="capture-button" onClick={capturePhoto} disabled={isProcessing}
+              title={autoCapturing ? 'Capture auto dans 2s — cliquez pour forcer' : 'Capturer'}
+            />
+          </div>
         </div>
       )}
 
@@ -913,6 +1002,18 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
       {mode === 'preview' && currentDoc && (
         <>
+          {/* Badge OCR */}
+          {isProcessingOCR && (
+            <div style={{ fontSize: 12, color: '#b87333', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+              OCR {ocrProgress}%
+            </div>
+          )}
+          {!isProcessingOCR && currentDoc.ocrText && (
+            <div style={{ fontSize: 12, color: '#10b981' }} title={`${currentDoc.ocrText.length} caractères reconnus`}>
+              ✓ Texte reconnu
+            </div>
+          )}
           <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
             <RotateCwIcon style={{ width: 18, height: 18 }} />
           </button>
