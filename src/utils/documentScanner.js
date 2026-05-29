@@ -1285,10 +1285,12 @@ export function enhanceMagicColor(imageData) {
     cv.cvtColor(sharp, lab, cv.COLOR_RGB2Lab);
     const channels = t(new cv.MatVector());
     cv.split(lab, channels);
-    const a = channels.get(1);
-    const b = channels.get(2);
+    const a = t(channels.get(1));
+    const b = t(channels.get(2));
     a.convertTo(a, -1, 1.1, 128 * (1 - 1.1));
     b.convertTo(b, -1, 1.1, 128 * (1 - 1.1));
+    channels.set(1, a);
+    channels.set(2, b);
     cv.merge(channels, lab);
     const colorResult = t(new cv.Mat());
     cv.cvtColor(lab, colorResult, cv.COLOR_Lab2RGB);

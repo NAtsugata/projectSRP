@@ -49,12 +49,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [exportFormat, setExportFormat] = useState('pdf');
   const [autoCapturing, setAutoCapturing] = useState(false); // compteur de capture auto
   const [autoProgress, setAutoProgress] = useState(0);      // 0–100 pour l'animation
+  const [stageDims, setStageDims] = useState(null);          // taille px réelle de l'image en mode ajustement
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const adjustContainerRef = useRef(null);
   const streamRef = useRef(null);
   const isStartingCameraRef = useRef(false);
   const capturePhotoRef = useRef(null);
@@ -238,6 +240,37 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setAutoProgress(0);
     };
   }, [mode]);
+
+  // Calcule la taille "contain" réelle de l'image dans le conteneur d'ajustement.
+  // Le stage prend exactement cette taille → overlay/poignées/drag/transform
+  // partagent le même repère (le repère de l'image, pas du conteneur letterboxé).
+  const recomputeStage = useCallback(() => {
+    const cont = adjustContainerRef.current;
+    const imgEl = previewCanvasRef.current;
+    if (!cont || !imgEl || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
+    const cw = cont.clientWidth;
+    const ch = cont.clientHeight;
+    if (cw === 0 || ch === 0) return;
+    const scale = Math.min(cw / imgEl.naturalWidth, ch / imgEl.naturalHeight);
+    setStageDims({
+      w: Math.round(imgEl.naturalWidth * scale),
+      h: Math.round(imgEl.naturalHeight * scale),
+    });
+  }, []);
+
+  // Recalculer la taille du stage en mode ajustement (au montage + au resize)
+  useEffect(() => {
+    if (mode !== 'adjust') {
+      setStageDims(null);
+      return;
+    }
+    const cont = adjustContainerRef.current;
+    if (!cont) return;
+    const ro = new ResizeObserver(() => recomputeStage());
+    ro.observe(cont);
+    recomputeStage();
+    return () => ro.disconnect();
+  }, [mode, originalImage, recomputeStage]);
 
   // Démarrer la caméra avec protection contre les appels multiples
   const startCamera = useCallback(async () => {
@@ -512,13 +545,16 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setCorners(null);
       setOriginalImage(null);
 
-      // Lancer l'OCR en arrière-plan (non bloquant)
-      runOCR(transformedBlob).then(text => {
-        if (text) {
-          setCurrentDoc(prev => prev ? { ...prev, ocrText: text } : prev);
-          logger.log('[OCR] Texte intégré au document');
-        }
-      });
+      // Lancer l'OCR en arrière-plan (non bloquant), avec retour explicite
+      runOCR(transformedBlob)
+        .then(text => {
+          setCurrentDoc(prev => prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev);
+          logger.log(text ? '[OCR] Texte intégré au document' : '[OCR] Aucun texte détecté');
+        })
+        .catch(err => {
+          logger.error('[OCR] Échec:', err);
+          setCurrentDoc(prev => prev ? { ...prev, ocrText: '', ocrAttempted: true, ocrError: true } : prev);
+        });
 
     } catch (error) {
       logger.error('Erreur transformation:', error);
@@ -628,20 +664,25 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setOriginalImage(event.target.result);
-        setCorners([
-          { x: 5, y: 5 },
-          { x: 95, y: 5 },
-          { x: 95, y: 95 },
-          { x: 5, y: 95 }
-        ]);
-        setMode('adjust');
-      };
-      reader.readAsDataURL(file);
-    });
+    // Le flux d'ajustement traite une image à la fois : on prend la première.
+    // (un setOriginalImage par fichier ne garderait que le dernier de toute façon)
+    if (files.length > 1) {
+      logger.log(`[Upload] ${files.length} fichiers sélectionnés — traitement du premier`);
+    }
+
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setOriginalImage(event.target.result);
+      setCorners([
+        { x: 5, y: 5 },
+        { x: 95, y: 5 },
+        { x: 95, y: 95 },
+        { x: 5, y: 95 }
+      ]);
+      setMode('adjust');
+    };
+    reader.readAsDataURL(file);
 
     // Reset input
     e.target.value = '';
@@ -733,7 +774,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        multiple
         onChange={handleFileUpload}
         className="scanner-file-input"
       />
@@ -773,7 +813,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   const renderScanningView = () => (
     <div className="scanning-view">
-      <canvas ref={canvasRef} className="scanning-canvas" />
       <div className="scan-line" style={{ top: `${scanProgress}%` }} />
       <div className="scanning-text">Analyse en cours...</div>
     </div>
@@ -781,6 +820,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   const renderAdjustView = () => (
     <div
+      ref={adjustContainerRef}
       className="adjust-container"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -788,38 +828,47 @@ export default function DocumentScannerView({ onSave, onClose }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleMouseUp}
     >
-      <img
-        ref={previewCanvasRef}
-        src={originalImage}
-        alt="Document"
-        className="adjust-image"
-      />
-      <svg className="adjust-overlay" preserveAspectRatio="none" viewBox="0 0 100 100">
-        <defs>
-          <mask id="docMask">
-            <rect x="0" y="0" width="100" height="100" fill="white" />
-            <polygon points={corners.map(c => `${c.x},${c.y}`).join(' ')} fill="black" />
-          </mask>
-        </defs>
-        <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.6)" mask="url(#docMask)" />
-        <polygon
-          points={corners.map(c => `${c.x},${c.y}`).join(' ')}
-          fill="none"
-          stroke="#b87333"
-          strokeWidth="0.5"
-          strokeLinejoin="round"
+      {/* Le "stage" épouse exactement la taille affichée de l'image (calculée en
+          JS) : overlay, poignées et calcul du drag partagent ainsi le MÊME repère
+          (sinon les coins se décalent à cause du letterbox object-fit). */}
+      <div
+        className="adjust-stage"
+        style={stageDims ? { width: stageDims.w, height: stageDims.h } : { maxWidth: '100%', maxHeight: '100%' }}
+      >
+        <img
+          ref={previewCanvasRef}
+          src={originalImage}
+          alt="Document"
+          className="adjust-image"
+          onLoad={recomputeStage}
         />
-      </svg>
+        <svg className="adjust-overlay" preserveAspectRatio="none" viewBox="0 0 100 100">
+          <defs>
+            <mask id="docMask">
+              <rect x="0" y="0" width="100" height="100" fill="white" />
+              <polygon points={corners.map(c => `${c.x},${c.y}`).join(' ')} fill="black" />
+            </mask>
+          </defs>
+          <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.6)" mask="url(#docMask)" />
+          <polygon
+            points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+            fill="none"
+            stroke="#b87333"
+            strokeWidth="0.5"
+            strokeLinejoin="round"
+          />
+        </svg>
 
-      {corners.map((corner, index) => (
-        <div
-          key={index}
-          className="corner-handle"
-          style={{ left: `${corner.x}%`, top: `${corner.y}%` }}
-          onMouseDown={(e) => handleCornerMouseDown(index, e)}
-          onTouchStart={(e) => handleCornerTouchStart(index, e)}
-        />
-      ))}
+        {corners.map((corner, index) => (
+          <div
+            key={index}
+            className="corner-handle"
+            style={{ left: `${corner.x}%`, top: `${corner.y}%` }}
+            onMouseDown={(e) => handleCornerMouseDown(index, e)}
+            onTouchStart={(e) => handleCornerTouchStart(index, e)}
+          />
+        ))}
+      </div>
 
       {/* Loupe lors du drag */}
       {draggedCorner !== null && corners && originalImage && (
@@ -1028,6 +1077,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
           {!isProcessingOCR && currentDoc.ocrText && (
             <div style={{ fontSize: 12, color: '#10b981' }} title={`${currentDoc.ocrText.length} caractères reconnus`}>
               ✓ Texte reconnu
+            </div>
+          )}
+          {!isProcessingOCR && currentDoc.ocrAttempted && !currentDoc.ocrText && (
+            <div style={{ fontSize: 12, color: '#9ca3af' }} title={currentDoc.ocrError ? 'OCR indisponible (réseau ?)' : 'Aucun texte détecté'}>
+              {currentDoc.ocrError ? 'OCR indisponible' : 'Aucun texte'}
             </div>
           )}
           <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
