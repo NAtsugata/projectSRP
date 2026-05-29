@@ -1,68 +1,91 @@
 // src/hooks/useDocumentDetection.js
-// Hook de détection de documents - Support OpenCV + YOLO ONNX Segmentation
-// V4: YOLO Segmentation pour obtenir les vrais coins du document
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { detectDocumentEdges, isOpenCvReady } from '../utils/documentScanner';
-import { loadYoloModel, isYoloReady, detectDocumentYolo, isSegmentation } from '../utils/yoloDocumentDetector';
+// Détection de documents légère et fluide (style ClearScanner).
+// V5 : OpenCV uniquement, détection sur image réduite (~480px), boucle rAF
+//      throttlée. Plus de modèle YOLO/ONNX (19 Mo) → chargement instantané,
+//      zéro lag en temps réel.
+import { useState, useCallback, useRef } from 'react';
+import { detectDocumentFast, detectDocumentEdges, isOpenCvReady } from '../utils/documentScanner';
 import logger from '../utils/logger';
 
-export const useDocumentDetection = (options = {}) => {
-  const { initialDetector = 'yolo' } = options; // YOLO par défaut
-
+export const useDocumentDetection = () => {
   const [liveCorners, setLiveCorners] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [detectorType, setDetectorType] = useState(initialDetector);
-  const [yoloModelLoaded, setYoloModelLoaded] = useState(false);
-  const [yoloModelLoading, setYoloModelLoading] = useState(false);
-  const [yoloIsSegmentation, setYoloIsSegmentation] = useState(false);
 
   // État de lissage (EMA) et stabilité
-  const detectionHistoryRef = useRef([]); // conservé pour compat (resets)
-  const stableCornerRef = useRef(null);   // dernier état lissé
-  const stableFramesRef = useRef(0);      // frames consécutives considérées stables
-  const outlierCountRef = useRef(0);       // sauts brutaux consécutifs (aberrations)
+  const stableCornerRef = useRef(null);   // dernier état lissé (coins en %)
+  const stableFramesRef = useRef(0);      // frames consécutives stables
+  const outlierCountRef = useRef(0);      // sauts brutaux consécutifs
   const noDetectionCountRef = useRef(0);
-  const detectionIntervalRef = useRef(null);
-  const isDetectingRef = useRef(false);
+  const rafRef = useRef(null);
+  const lastRunRef = useRef(0);
+  const runningRef = useRef(false);
 
-  // Configuration de stabilité
-  const STABILITY_THRESHOLD = 1.8;  // mouvement moyen (%) sous lequel on est "stable"
-  const NO_DETECTION_LIMIT = 5;
-  const OUTLIER_THRESHOLD = 22;     // saut d'un coin (%) -> probable fausse détection
-  const OUTLIER_MAX = 3;            // après N sauts consécutifs, on accepte (vrai déplacement)
-  const ALPHA_MIN = 0.12;           // lissage fort quand le document est immobile
-  const ALPHA_MAX = 0.7;            // suivi rapide quand le document bouge
-  const MOVE_FAST = 8;              // mouvement (%) au-delà duquel alpha = ALPHA_MAX
+  // Canvas de travail réutilisé (évite de réallouer à chaque frame)
+  const workCanvasRef = useRef(null);
 
-  // Charger le modèle YOLO au montage (toujours)
-  useEffect(() => {
-    let cancelled = false;
+  // Configuration
+  const DETECT_WIDTH = 480;       // largeur de l'image de détection (rapide)
+  const THROTTLE_MS = 90;         // ~11 fps de détection (fluide, peu coûteux)
+  const STABILITY_THRESHOLD = 2.0;
+  const NO_DETECTION_LIMIT = 4;
+  const OUTLIER_THRESHOLD = 22;
+  const OUTLIER_MAX = 3;
+  const ALPHA_MIN = 0.18;         // lissage fort quand immobile
+  const ALPHA_MAX = 0.75;         // suivi rapide quand ça bouge
+  const MOVE_FAST = 8;
 
-    // Toujours charger YOLO
-    if (!isYoloReady()) {
-      setYoloModelLoading(true);
-      loadYoloModel().then((loaded) => {
-        if (cancelled) return;
-        setYoloModelLoaded(loaded);
-        setYoloModelLoading(false);
-        if (loaded) {
-          const isSeg = isSegmentation();
-          setYoloIsSegmentation(isSeg);
-          logger.log(`[Detection] YOLO chargé - ${isSeg ? 'SEGMENTATION' : 'DETECTION'}`);
-        } else {
-          logger.warn('[Detection] YOLO non disponible, fallback OpenCV');
-        }
-      });
-    } else {
-      setYoloModelLoaded(true);
+  // Distance moyenne entre deux jeux de coins
+  const calcMovement = (a, b) => {
+    if (!a || !b) return Infinity;
+    let total = 0;
+    for (let i = 0; i < 4; i++) {
+      total += Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y);
     }
+    return total / 4;
+  };
 
-    return () => { cancelled = true; };
-  }, []);
+  // Dessine l'overlay sur le canvas (coins en % du flux vidéo)
+  const drawOverlay = (overlayCanvas, vw, vh, corners, stable) => {
+    if (overlayCanvas.width !== vw) overlayCanvas.width = vw;
+    if (overlayCanvas.height !== vh) overlayCanvas.height = vh;
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, vw, vh);
+    if (!corners) return;
 
-  // Détection sur un fichier (capture finale) - OpenCV prioritaire, YOLO en fallback
+    const pts = corners.map(p => ({ x: (p.x / 100) * vw, y: (p.y / 100) * vh }));
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = stable ? 'rgba(184, 115, 51, 0.18)' : 'rgba(255, 255, 255, 0.06)';
+    ctx.fill();
+    ctx.strokeStyle = stable ? '#b87333' : 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = stable ? 5 : 3;
+    ctx.stroke();
+
+    const r1 = stable ? 16 : 11;
+    const r2 = stable ? 8 : 5;
+    pts.forEach(p => {
+      ctx.beginPath();
+      ctx.fillStyle = stable ? '#b87333' : 'rgba(255,255,255,0.85)';
+      ctx.arc(p.x, p.y, r1, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = '#ffffff';
+      ctx.arc(p.x, p.y, r2, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  };
+
+  const clearOverlay = (overlayCanvas) => {
+    if (!overlayCanvas) return;
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  };
+
+  // Détection statique (capture finale) — qualité maximale, 7 méthodes
   const detectDocument = useCallback(async (file) => {
-    // Charger l'image
     const objectUrl = URL.createObjectURL(file);
     const img = await new Promise((resolve, reject) => {
       const image = new Image();
@@ -75,277 +98,141 @@ export const useDocumentDetection = (options = {}) => {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      canvas.getContext('2d').drawImage(img, 0, 0);
 
-      // OpenCV en premier: 7 méthodes robustes, pas de modèle requis
       if (isOpenCvReady()) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
         const corners = detectDocumentEdges(imageData);
         if (corners) {
-          logger.log('[Detection] OpenCV (primaire) - coins trouvés');
-          return {
-            detected: true,
-            corners,
-            contour: corners,
-            confidence: 90,
-            method: 'opencv'
-          };
+          return { detected: true, corners, contour: corners, confidence: 90, method: 'opencv' };
         }
       }
-
-      // Fallback YOLO si OpenCV n'a rien trouvé
-      if (isYoloReady()) {
-        const yoloResult = await detectDocumentYolo(img, { confThreshold: 0.15 });
-        if (yoloResult?.corners) {
-          logger.log(`[Detection] YOLO fallback: ${yoloResult.method} - confiance ${yoloResult.confidence}%`);
-          return {
-            detected: true,
-            corners: yoloResult.corners,
-            contour: yoloResult.corners,
-            confidence: yoloResult.confidence,
-            method: yoloResult.method
-          };
-        }
-      }
-
-      return {
-        detected: false,
-        contour: null,
-        corners: null,
-        confidence: 0,
-        method: 'none'
-      };
+      return { detected: false, contour: null, corners: null, confidence: 0, method: 'none' };
     } catch (e) {
       logger.error('[Detection] Erreur:', e);
       return { detected: false, contour: null, corners: null };
     }
   }, []);
 
-  // Détection live sur flux vidéo
-  const startLiveDetection = useCallback((videoRef, overlayCanvasRef, interval = 150) => {
-    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-    detectionHistoryRef.current = [];
+  // Boucle de détection live via requestAnimationFrame (throttlée)
+  const startLiveDetection = useCallback((videoRef, overlayCanvasRef) => {
+    // Reset état
     stableCornerRef.current = null;
     stableFramesRef.current = 0;
     outlierCountRef.current = 0;
     noDetectionCountRef.current = 0;
+    runningRef.current = true;
 
-    // OpenCV est primaire: 150ms toujours
-    const actualInterval = Math.max(interval, 150);
+    if (!workCanvasRef.current) {
+      workCanvasRef.current = document.createElement('canvas');
+    }
 
-    const detectLive = async () => {
-      if (isDetectingRef.current) return;
+    const tick = (ts) => {
+      if (!runningRef.current) return;
+      rafRef.current = requestAnimationFrame(tick);
+
+      // Throttle : ne traiter qu'une frame toutes les THROTTLE_MS
+      if (ts - lastRunRef.current < THROTTLE_MS) return;
+      lastRunRef.current = ts;
+
       const video = videoRef.current;
-      const overlayCanvas = overlayCanvasRef.current;
+      const overlay = overlayCanvasRef.current;
+      if (!video || !overlay || video.readyState < 2 || !isOpenCvReady()) return;
 
-      if (!video || !overlayCanvas || video.readyState < 2) return;
-
-      if (!isOpenCvReady() && !isYoloReady()) return;
-
-      isDetectingRef.current = true;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) return;
 
       try {
-        // Résolution maximale pour meilleure détection (Full HD)
-        const processWidth = Math.min(1920, video.videoWidth);
-        const scale = video.videoWidth / processWidth;
-        const processHeight = Math.round(video.videoHeight / scale);
+        // Réduire à DETECT_WIDTH px de large pour une détection rapide
+        const scale = DETECT_WIDTH / vw;
+        const dw = DETECT_WIDTH;
+        const dh = Math.round(vh * scale);
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = processWidth;
-        tempCanvas.height = processHeight;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, processWidth, processHeight);
+        const work = workCanvasRef.current;
+        work.width = dw;
+        work.height = dh;
+        const wctx = work.getContext('2d', { willReadFrequently: true });
+        wctx.drawImage(video, 0, 0, dw, dh);
+        const imageData = wctx.getImageData(0, 0, dw, dh);
 
-        let rawCorners = null;
+        const raw = detectDocumentFast(imageData);
 
-        // OpenCV en premier: 7 méthodes robustes, résultat immédiat
-        if (isOpenCvReady()) {
-          const imageData = ctx.getImageData(0, 0, processWidth, processHeight);
-          rawCorners = detectDocumentEdges(imageData);
-        }
-
-        // YOLO en fallback uniquement si OpenCV n'a rien trouvé
-        if (!rawCorners && isYoloReady()) {
-          const yoloResult = await detectDocumentYolo(tempCanvas, { confThreshold: 0.15 });
-          if (yoloResult?.corners) {
-            rawCorners = yoloResult.corners;
-            logger.log(`[Detection Live] YOLO fallback: ${yoloResult.method}`);
-          }
-        }
-
-        // Gestion absence de détection
-        if (!rawCorners || rawCorners.length !== 4) {
+        // --- Absence de détection ---
+        if (!raw || raw.length !== 4) {
           noDetectionCountRef.current++;
-
           if (noDetectionCountRef.current < NO_DETECTION_LIMIT && stableCornerRef.current) {
-            setLiveCorners(stableCornerRef.current);
-            drawOverlay(overlayCanvas, video, stableCornerRef.current, stableFramesRef.current >= 2);
-            isDetectingRef.current = false;
+            drawOverlay(overlay, vw, vh, stableCornerRef.current, stableFramesRef.current >= 2);
             return;
           }
-
-          setLiveCorners(null);
-          setDetectionConfidence(0);
           stableCornerRef.current = null;
           stableFramesRef.current = 0;
           outlierCountRef.current = 0;
-          detectionHistoryRef.current = [];
-          overlayCanvas.getContext('2d').clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-          isDetectingRef.current = false;
+          clearOverlay(overlay);
+          setLiveCorners(null);
+          setDetectionConfidence(0);
           return;
         }
-
         noDetectionCountRef.current = 0;
 
-        // Normalisation des coins (en pourcentage 0-100)
-        const detected = rawCorners.map(p => ({
-          x: (p.x / processWidth) * 100,
-          y: (p.y / processHeight) * 100
-        }));
-
+        // Normaliser en pourcentage (0-100)
+        const detected = raw.map(p => ({ x: (p.x / dw) * 100, y: (p.y / dh) * 100 }));
         const prev = stableCornerRef.current;
 
-        // Premier verrou: pas encore d'état lissé -> initialisation directe
+        // Initialisation
         if (!prev) {
           stableCornerRef.current = detected;
           stableFramesRef.current = 0;
           outlierCountRef.current = 0;
+          drawOverlay(overlay, vw, vh, detected, false);
           setLiveCorners(detected);
           setDetectionConfidence(80);
-          drawOverlay(overlayCanvas, video, detected, false);
-          isDetectingRef.current = false;
           return;
         }
 
-        // Rejet d'aberration: un coin qui saute brutalement = fausse détection isolée.
-        // On l'ignore... sauf si ça persiste (le document a vraiment bougé d'un coup).
-        const maxJump = Math.max(...detected.map((p, i) => {
-          const dx = p.x - prev[i].x;
-          const dy = p.y - prev[i].y;
-          return Math.sqrt(dx * dx + dy * dy);
-        }));
-
+        // Rejet d'aberration (saut isolé d'un coin)
+        const maxJump = Math.max(...detected.map((p, i) =>
+          Math.hypot(p.x - prev[i].x, p.y - prev[i].y)
+        ));
         if (maxJump > OUTLIER_THRESHOLD && outlierCountRef.current < OUTLIER_MAX) {
-          outlierCountRef.current += 1;
-          setLiveCorners(prev);
-          drawOverlay(overlayCanvas, video, prev, stableFramesRef.current >= 2);
-          isDetectingRef.current = false;
+          outlierCountRef.current++;
+          drawOverlay(overlay, vw, vh, prev, stableFramesRef.current >= 2);
           return;
         }
         outlierCountRef.current = 0;
 
-        // Mouvement moyen pour piloter le facteur de lissage
-        const movement = calculateMovement(detected, prev);
-
-        // Alpha adaptatif: lissage fort si immobile, suivi rapide si grand mouvement
+        // Lissage EMA adaptatif
+        const movement = calcMovement(detected, prev);
         const t = Math.min(1, movement / MOVE_FAST);
         const alpha = ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * t;
-
-        // Lissage exponentiel (EMA) coin par coin
         const smoothed = detected.map((p, i) => ({
           x: prev[i].x + alpha * (p.x - prev[i].x),
-          y: prev[i].y + alpha * (p.y - prev[i].y)
+          y: prev[i].y + alpha * (p.y - prev[i].y),
         }));
 
-        // Stabilité mesurée sur le cadre lissé affiché (pas sur le bruit brut),
-        // pour que la confiance reste fiable quand le document est immobile.
-        const displayMovement = calculateMovement(smoothed, prev);
+        const displayMove = calcMovement(smoothed, prev);
         stableCornerRef.current = smoothed;
+        if (displayMove < STABILITY_THRESHOLD) stableFramesRef.current++;
+        else stableFramesRef.current = 0;
 
-        if (displayMovement < STABILITY_THRESHOLD) {
-          stableFramesRef.current += 1;
-        } else {
-          stableFramesRef.current = 0;
-        }
-        const confidence = stableFramesRef.current >= 2 ? 90 : 82;
-
+        const stable = stableFramesRef.current >= 2;
+        drawOverlay(overlay, vw, vh, smoothed, stable);
         setLiveCorners(smoothed);
-        setDetectionConfidence(confidence);
-        drawOverlay(overlayCanvas, video, smoothed, stableFramesRef.current >= 2);
-
+        setDetectionConfidence(stable ? 90 : 82);
       } catch (err) {
-        logger.error("Erreur détection live:", err);
-      } finally {
-        isDetectingRef.current = false;
+        logger.error('[Detection live] Erreur:', err);
       }
     };
 
-    // Fonction pour dessiner l'overlay
-    const drawOverlay = (overlayCanvas, video, corners, stable) => {
-      overlayCanvas.width = video.videoWidth;
-      overlayCanvas.height = video.videoHeight;
-      const ctx = overlayCanvas.getContext('2d');
-      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-      const pts = corners.map(p => ({
-        x: (p.x / 100) * overlayCanvas.width,
-        y: (p.y / 100) * overlayCanvas.height
-      }));
-
-      // Zone document : remplissage semi-transparent
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.closePath();
-      ctx.fillStyle = stable
-        ? 'rgba(184, 115, 51, 0.20)'
-        : 'rgba(255, 255, 255, 0.07)';
-      ctx.fill();
-
-      // Contour principal
-      ctx.strokeStyle = stable ? '#b87333' : 'rgba(255, 255, 255, 0.75)';
-      ctx.lineWidth = stable ? 5 : 3;
-      ctx.shadowColor = stable ? '#b87333' : 'rgba(255, 255, 255, 0.4)';
-      ctx.shadowBlur = stable ? 28 : 10;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Poignées de coins
-      const r1 = stable ? 18 : 13;
-      const r2 = stable ? 9  : 6;
-      pts.forEach(p => {
-        ctx.beginPath();
-        ctx.fillStyle = stable ? '#b87333' : 'rgba(255, 255, 255, 0.85)';
-        ctx.arc(p.x, p.y, r1, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.fillStyle = '#ffffff';
-        ctx.arc(p.x, p.y, r2, 0, 2 * Math.PI);
-        ctx.fill();
-      });
-    };
-
-    detectionIntervalRef.current = setInterval(detectLive, actualInterval);
-
-    return () => {
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-        detectionIntervalRef.current = null;
-      }
-      setLiveCorners(null);
-    };
+    rafRef.current = requestAnimationFrame(tick);
   }, []);
 
-  // Calcule la distance moyenne entre deux sets de coins
-  const calculateMovement = (corners1, corners2) => {
-    if (!corners1 || !corners2) return Infinity;
-    let totalDist = 0;
-    for (let i = 0; i < 4; i++) {
-      const dx = corners1[i].x - corners2[i].x;
-      const dy = corners1[i].y - corners2[i].y;
-      totalDist += Math.sqrt(dx * dx + dy * dy);
-    }
-    return totalDist / 4;
-  };
-
   const stopLiveDetection = useCallback(() => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
+    runningRef.current = false;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
-    isDetectingRef.current = false;
-    detectionHistoryRef.current = [];
     stableCornerRef.current = null;
     stableFramesRef.current = 0;
     outlierCountRef.current = 0;
@@ -355,16 +242,11 @@ export const useDocumentDetection = (options = {}) => {
   }, []);
 
   return {
-    detectorType,
-    yoloModelLoaded,
-    yoloModelLoading,
-    yoloIsSegmentation,
     liveCorners,
     detectionConfidence,
-    setDetectorType,
     detectDocument,
     startLiveDetection,
-    stopLiveDetection
+    stopLiveDetection,
   };
 };
 

@@ -71,11 +71,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     detectionConfidence,
     detectDocument,
     startLiveDetection,
-    stopLiveDetection,
-    yoloModelLoaded,
-    yoloModelLoading,
-    yoloIsSegmentation
-  } = useDocumentDetection({ initialDetector: 'yolo' });
+    stopLiveDetection
+  } = useDocumentDetection();
 
   const {
     draggedCorner,
@@ -170,7 +167,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           overlayCanvasRef.current.width = video.videoWidth;
           overlayCanvasRef.current.height = video.videoHeight;
         }
-        startLiveDetection(videoRef, overlayCanvasRef, 150);
+        startLiveDetection(videoRef, overlayCanvasRef);
       }
     };
 
@@ -917,11 +914,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
           height: videoDims.h,
         } : undefined} />
       {!liveCorners && <div className="guide-frame" />}
-
-      {yoloModelLoading && <div className="detector-badge loading">Chargement YOLO...</div>}
-      {yoloModelLoaded && yoloIsSegmentation && <div className="detector-badge yolo-seg">YOLO-SEG</div>}
-      {yoloModelLoaded && !yoloIsSegmentation && <div className="detector-badge yolo">YOLO</div>}
-      {!yoloModelLoaded && !yoloModelLoading && <div className="detector-badge opencv">OpenCV</div>}
 
       {scannedDocs.length > 0 && (
         <div className="mini-gallery">

@@ -152,6 +152,72 @@ export function detectDocumentEdges(imageData) {
 }
 
 /**
+ * Détection RAPIDE pour le temps réel (style ClearScanner).
+ * Une seule méthode (Canny adaptatif + plus grand quadrilatère) sur une
+ * image DÉJÀ réduite par l'appelant (~480px). Pas de CLAHE, pas de 7 méthodes :
+ * conçu pour tourner à ~15 fps sans bloquer le thread principal.
+ *
+ * @param {ImageData} imageData - image réduite (le coin retourné est en px de CETTE image)
+ * @returns {Array<{x,y}>|null} 4 coins triés (TL, TR, BR, BL) ou null
+ */
+export function detectDocumentFast(imageData) {
+  if (!isOpenCvReady()) return null;
+
+  const cv = window.cv;
+  let src = null, gray = null, blurred = null, edges = null, morphed = null, kernel = null;
+  let contours = null, hierarchy = null;
+
+  try {
+    src = cv.matFromImageData(imageData);
+    const w = src.cols;
+    const h = src.rows;
+    const area = w * h;
+    const minArea = area * 0.04; // doc doit faire ≥4% de l'image réduite
+
+    gray = new cv.Mat();
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    blurred = new cv.Mat();
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+
+    // Seuils Canny adaptatifs basés sur la médiane
+    const median = estimateMedian(blurred);
+    const low = Math.max(0, 0.55 * median);
+    const high = Math.min(255, 1.3 * median);
+
+    edges = new cv.Mat();
+    cv.Canny(blurred, edges, low, high);
+
+    // Connecter les bords (dilate + close) — petits noyaux car image réduite
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+    morphed = new cv.Mat();
+    cv.dilate(edges, morphed, kernel);
+    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
+
+    contours = new cv.MatVector();
+    hierarchy = new cv.Mat();
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+    // scale=1 : les coins sont déjà dans le repère de l'image réduite
+    const best = findBestQuadContour(cv, contours, minArea, 1, w, h);
+    if (!best) return null;
+
+    return sortCorners(best.points);
+  } catch (err) {
+    return null;
+  } finally {
+    if (src) src.delete();
+    if (gray) gray.delete();
+    if (blurred) blurred.delete();
+    if (edges) edges.delete();
+    if (morphed) morphed.delete();
+    if (kernel) kernel.delete();
+    if (contours) contours.delete();
+    if (hierarchy) hierarchy.delete();
+  }
+}
+
+/**
  * Détection avec seuillage adaptatif (meilleur pour éclairage inégal)
  */
 function detectWithAdaptiveThreshold(cv, gray, minArea, scale, imgWidth, imgHeight) {
