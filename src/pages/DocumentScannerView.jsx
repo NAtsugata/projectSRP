@@ -329,6 +329,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
+    // Snapshotter les coins détectés en live AU MOMENT du déclencheur,
+    // avant toute transition d'état (ils disparaissent après stopCamera).
+    const snapshotCorners = liveCornersRef.current;
+
     setMode('scanning');
     setScanProgress(0);
     stopCamera();
@@ -357,7 +361,58 @@ export default function DocumentScannerView({ onSave, onClose }) {
         await new Promise(r => setTimeout(r, 500));
       }
 
-      // Détection sur image Full HD pour précision maximale
+      // ── Chemin 1 : coins détectés en live → aplanissement automatique ──
+      // Les liveCorners sont en % du flux vidéo (même résolution que canvas).
+      if (snapshotCorners && snapshotCorners.length === 4 && isOpenCvReady()) {
+        const absoluteCorners = snapshotCorners.map(c => ({
+          x: (c.x / 100) * canvas.width,
+          y: (c.y / 100) * canvas.height
+        }));
+
+        const outputCanvas = applyPerspectiveTransform(canvas, absoluteCorners);
+
+        if (outputCanvas && outputCanvas.width > 0) {
+          // Garder les coins en % pour permettre un ré-ajustement manuel
+          setCorners(snapshotCorners);
+
+          const transformedBlob = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
+            outputCanvas.toBlob(
+              blob => { clearTimeout(timeout); blob ? resolve(blob) : reject(new Error('Blob échoué')); },
+              'image/png'
+            );
+          });
+
+          const url = URL.createObjectURL(transformedBlob);
+          setCurrentDoc({
+            id: Date.now(),
+            url,
+            originalUrl: url,
+            blob: transformedBlob,
+            timestamp: new Date().toISOString(),
+            enhanceMode: 'original',
+            rotation: 0,
+            wasDetected: true,
+            ocrText: '',
+          });
+          setEnhanceMode('original');
+          setMode('preview');
+          // originalImage et corners sont gardés → "Re-ajuster" reste possible
+
+          runOCR(transformedBlob)
+            .then(text => {
+              setCurrentDoc(prev => prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev);
+            })
+            .catch(err => {
+              logger.error('[OCR] Échec:', err);
+              setCurrentDoc(prev => prev ? { ...prev, ocrText: '', ocrAttempted: true, ocrError: true } : prev);
+            });
+
+          return; // ← on ne passe PAS par l'étape d'ajustement
+        }
+      }
+
+      // ── Chemin 2 : pas de coins live → détection statique + ajustement manuel ──
       const detectionWidth = Math.min(1920, canvas.width);
       const scaleFactor = canvas.width / detectionWidth;
       const detectionHeight = Math.round(canvas.height / scaleFactor);
@@ -367,7 +422,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
       detectionCanvas.height = detectionHeight;
       detectionCanvas.getContext('2d').drawImage(canvas, 0, 0, detectionWidth, detectionHeight);
 
-      // PNG pour la détection aussi (meilleure précision des bords)
       const blob = await new Promise(r => detectionCanvas.toBlob(r, 'image/png'));
       const file = new File([blob], 'capture.png', { type: 'image/png' });
 
@@ -402,7 +456,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocument]);
+  }, [stopCamera, detectDocument, runOCR]);
 
   // Maintenir le ref à jour pour l'auto-capture
   useEffect(() => { capturePhotoRef.current = capturePhoto; }, [capturePhoto]);
@@ -542,8 +596,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setCurrentDoc(newDoc);
       setEnhanceMode('original');
       setMode('preview');
-      setCorners(null);
-      setOriginalImage(null);
+      // originalImage et corners sont gardés intentionnellement :
+      // le bouton "Re-ajuster" dans la preview permet de revenir ici.
 
       // Lancer l'OCR en arrière-plan (non bloquant), avec retour explicite
       runOCR(transformedBlob)
@@ -629,6 +683,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
     setEnhanceMode('original');
+    setCorners(null);
+    setOriginalImage(null);
     setIsProcessing(false);
     setMode('capture');
     startCamera();
@@ -640,6 +696,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     setScannedDocs(prev => [...prev, currentDoc]);
     setCurrentDoc(null);
     setEnhanceMode('original');
+    setCorners(null);
+    setOriginalImage(null);
     setIsProcessing(false);
     setMode('capture');
   }, [currentDoc]);
@@ -814,7 +872,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const renderScanningView = () => (
     <div className="scanning-view">
       <div className="scan-line" style={{ top: `${scanProgress}%` }} />
-      <div className="scanning-text">Analyse en cours...</div>
+      <div className="scanning-text">
+        {liveCornersRef.current ? 'Aplanissement...' : 'Analyse en cours...'}
+      </div>
     </div>
   );
 
@@ -1087,11 +1147,24 @@ export default function DocumentScannerView({ onSave, onClose }) {
           <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
             <RotateCwIcon style={{ width: 18, height: 18 }} />
           </button>
+          {/* Visible uniquement si on a l'image originale pour re-recadrer */}
+          {originalImage && corners && (
+            <button
+              className="scanner-btn"
+              onClick={() => setMode('adjust')}
+              disabled={isProcessing}
+              title="Réajuster les coins manuellement"
+            >
+              Réajuster
+            </button>
+          )}
           <button
             className="scanner-btn danger"
             onClick={() => {
               stopLiveDetection();
               setCurrentDoc(null);
+              setCorners(null);
+              setOriginalImage(null);
               setIsProcessing(false);
               setMode('capture');
               startCamera();

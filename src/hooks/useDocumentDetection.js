@@ -180,7 +180,7 @@ export const useDocumentDetection = (options = {}) => {
 
           if (noDetectionCountRef.current < NO_DETECTION_LIMIT && stableCornerRef.current) {
             setLiveCorners(stableCornerRef.current);
-            drawOverlay(overlayCanvas, video, stableCornerRef.current);
+            drawOverlay(overlayCanvas, video, stableCornerRef.current, stableFramesRef.current >= 2);
             isDetectingRef.current = false;
             return;
           }
@@ -213,7 +213,7 @@ export const useDocumentDetection = (options = {}) => {
           outlierCountRef.current = 0;
           setLiveCorners(detected);
           setDetectionConfidence(80);
-          drawOverlay(overlayCanvas, video, detected);
+          drawOverlay(overlayCanvas, video, detected, false);
           isDetectingRef.current = false;
           return;
         }
@@ -229,7 +229,7 @@ export const useDocumentDetection = (options = {}) => {
         if (maxJump > OUTLIER_THRESHOLD && outlierCountRef.current < OUTLIER_MAX) {
           outlierCountRef.current += 1;
           setLiveCorners(prev);
-          drawOverlay(overlayCanvas, video, prev);
+          drawOverlay(overlayCanvas, video, prev, stableFramesRef.current >= 2);
           isDetectingRef.current = false;
           return;
         }
@@ -262,7 +262,7 @@ export const useDocumentDetection = (options = {}) => {
 
         setLiveCorners(smoothed);
         setDetectionConfidence(confidence);
-        drawOverlay(overlayCanvas, video, smoothed);
+        drawOverlay(overlayCanvas, video, smoothed, stableFramesRef.current >= 2);
 
       } catch (err) {
         logger.error("Erreur détection live:", err);
@@ -272,39 +272,47 @@ export const useDocumentDetection = (options = {}) => {
     };
 
     // Fonction pour dessiner l'overlay
-    const drawOverlay = (overlayCanvas, video, corners) => {
+    const drawOverlay = (overlayCanvas, video, corners, stable) => {
       overlayCanvas.width = video.videoWidth;
       overlayCanvas.height = video.videoHeight;
-      const overlayCtx = overlayCanvas.getContext('2d');
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      const ctx = overlayCanvas.getContext('2d');
+      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-      const displayCorners = corners.map(p => ({
+      const pts = corners.map(p => ({
         x: (p.x / 100) * overlayCanvas.width,
         y: (p.y / 100) * overlayCanvas.height
       }));
 
-      overlayCtx.beginPath();
-      overlayCtx.strokeStyle = '#b87333';
-      overlayCtx.lineWidth = 4;
-      overlayCtx.shadowColor = '#b87333';
-      overlayCtx.shadowBlur = 20;
-      overlayCtx.moveTo(displayCorners[0].x, displayCorners[0].y);
-      for (let i = 1; i < 4; i++) {
-        overlayCtx.lineTo(displayCorners[i].x, displayCorners[i].y);
-      }
-      overlayCtx.closePath();
-      overlayCtx.stroke();
+      // Zone document : remplissage semi-transparent
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = stable
+        ? 'rgba(184, 115, 51, 0.20)'
+        : 'rgba(255, 255, 255, 0.07)';
+      ctx.fill();
 
-      overlayCtx.shadowBlur = 0;
-      displayCorners.forEach(p => {
-        overlayCtx.beginPath();
-        overlayCtx.fillStyle = '#b87333';
-        overlayCtx.arc(p.x, p.y, 14, 0, 2 * Math.PI);
-        overlayCtx.fill();
-        overlayCtx.beginPath();
-        overlayCtx.fillStyle = '#ffffff';
-        overlayCtx.arc(p.x, p.y, 7, 0, 2 * Math.PI);
-        overlayCtx.fill();
+      // Contour principal
+      ctx.strokeStyle = stable ? '#b87333' : 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = stable ? 5 : 3;
+      ctx.shadowColor = stable ? '#b87333' : 'rgba(255, 255, 255, 0.4)';
+      ctx.shadowBlur = stable ? 28 : 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Poignées de coins
+      const r1 = stable ? 18 : 13;
+      const r2 = stable ? 9  : 6;
+      pts.forEach(p => {
+        ctx.beginPath();
+        ctx.fillStyle = stable ? '#b87333' : 'rgba(255, 255, 255, 0.85)';
+        ctx.arc(p.x, p.y, r1, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = '#ffffff';
+        ctx.arc(p.x, p.y, r2, 0, 2 * Math.PI);
+        ctx.fill();
       });
     };
 
