@@ -50,6 +50,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const [autoCapturing, setAutoCapturing] = useState(false); // compteur de capture auto
   const [autoProgress, setAutoProgress] = useState(0);      // 0–100 pour l'animation
   const [stageDims, setStageDims] = useState(null);          // taille px réelle de l'image en mode ajustement
+  const [videoDims, setVideoDims] = useState(null);          // rect px du contenu vidéo dans le conteneur (object-fit: contain)
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -241,6 +242,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode]);
 
+  // Calcule le rect px du contenu vidéo dans la camera-view (object-fit: contain).
+  // Permet de superposer l'overlay canvas exactement sur la zone vidéo visible.
+  const recomputeVideoDims = useCallback(() => {
+    const vid = videoRef.current;
+    if (!vid || !vid.videoWidth || !vid.videoHeight) return;
+    const cont = vid.parentElement;
+    if (!cont) return;
+    const cw = cont.clientWidth;
+    const ch = cont.clientHeight;
+    if (!cw || !ch) return;
+    const scale = Math.min(cw / vid.videoWidth, ch / vid.videoHeight);
+    const w = Math.round(vid.videoWidth * scale);
+    const h = Math.round(vid.videoHeight * scale);
+    setVideoDims({ w, h, left: Math.round((cw - w) / 2), top: Math.round((ch - h) / 2) });
+  }, []);
+
   // Calcule la position et la taille exactes de l'image dans le conteneur.
   // Overlay et poignées utilisent ce rect → même repère que le drag (image, pas conteneur).
   const recomputeStage = useCallback(() => {
@@ -260,6 +277,33 @@ export default function DocumentScannerView({ onSave, onClose }) {
       top:  Math.round((ch - h) / 2),
     });
   }, []);
+
+  // Maintenir videoDims synchronisé avec la zone vidéo rendue (object-fit: contain)
+  useEffect(() => {
+    if (mode !== 'capture' || !stream) {
+      setVideoDims(null);
+      return;
+    }
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    vid.addEventListener('loadedmetadata', recomputeVideoDims);
+    vid.addEventListener('resize', recomputeVideoDims);
+    if (vid.videoWidth) recomputeVideoDims();
+
+    const cont = vid.parentElement;
+    if (!cont) return () => {
+      vid.removeEventListener('loadedmetadata', recomputeVideoDims);
+      vid.removeEventListener('resize', recomputeVideoDims);
+    };
+    const ro = new ResizeObserver(recomputeVideoDims);
+    ro.observe(cont);
+    return () => {
+      vid.removeEventListener('loadedmetadata', recomputeVideoDims);
+      vid.removeEventListener('resize', recomputeVideoDims);
+      ro.disconnect();
+    };
+  }, [mode, stream, recomputeVideoDims]);
 
   // Recalculer la taille du stage en mode ajustement (au montage + au resize)
   useEffect(() => {
@@ -326,16 +370,34 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    // Snapshotter les coins détectés en live AU MOMENT du déclencheur,
-    // avant toute transition d'état (ils disparaissent après stopCamera).
-    // On n'aplani automatiquement que si la détection est stable (≥90% de confidence).
+    // Snapshot coins AVANT tout arrêt de la caméra (ils disparaissent après stopCamera)
     const snapshotCorners = detectionConfidenceRef.current >= 90 ? liveCornersRef.current : null;
+
+    // ImageCapture API : photo à la résolution native du capteur, pas une frame vidéo
+    // compressée H.264. Doit être appelé AVANT stopCamera() (track encore active).
+    let capturedViaImageCapture = false;
+    if (streamRef.current && typeof window.ImageCapture !== 'undefined') {
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        const ic = new window.ImageCapture(track);
+        const blob = await ic.takePhoto();
+        const bmp = await createImageBitmap(blob);
+        canvas.width = bmp.width;
+        canvas.height = bmp.height;
+        canvas.getContext('2d').drawImage(bmp, 0, 0);
+        bmp.close();
+        capturedViaImageCapture = true;
+        logger.log(`[Capture] ImageCapture ${canvas.width}×${canvas.height}`);
+      } catch (err) {
+        logger.warn('[Capture] ImageCapture non disponible, fallback vidéo:', err.message);
+      }
+    }
+    if (!capturedViaImageCapture) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+    }
 
     setMode('scanning');
     setScanProgress(0);
@@ -844,8 +906,16 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   const renderCameraView = () => (
     <>
-      <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
-      <canvas ref={overlayCanvasRef} className="camera-overlay-canvas" />
+      <video ref={videoRef} autoPlay playsInline muted className="camera-video"
+        onLoadedMetadata={recomputeVideoDims} />
+      <canvas ref={overlayCanvasRef} className="camera-overlay-canvas"
+        style={videoDims ? {
+          position: 'absolute',
+          left: videoDims.left,
+          top: videoDims.top,
+          width: videoDims.w,
+          height: videoDims.h,
+        } : undefined} />
       {!liveCorners && <div className="guide-frame" />}
 
       {yoloModelLoading && <div className="detector-badge loading">Chargement YOLO...</div>}
