@@ -241,9 +241,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode]);
 
-  // Calcule la taille "contain" réelle de l'image dans le conteneur d'ajustement.
-  // Le stage prend exactement cette taille → overlay/poignées/drag/transform
-  // partagent le même repère (le repère de l'image, pas du conteneur letterboxé).
+  // Calcule la position et la taille exactes de l'image dans le conteneur.
+  // Overlay et poignées utilisent ce rect → même repère que le drag (image, pas conteneur).
   const recomputeStage = useCallback(() => {
     const cont = adjustContainerRef.current;
     const imgEl = previewCanvasRef.current;
@@ -252,9 +251,13 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const ch = cont.clientHeight;
     if (cw === 0 || ch === 0) return;
     const scale = Math.min(cw / imgEl.naturalWidth, ch / imgEl.naturalHeight);
+    const w = Math.round(imgEl.naturalWidth * scale);
+    const h = Math.round(imgEl.naturalHeight * scale);
     setStageDims({
-      w: Math.round(imgEl.naturalWidth * scale),
-      h: Math.round(imgEl.naturalHeight * scale),
+      w,
+      h,
+      left: Math.round((cw - w) / 2),
+      top:  Math.round((ch - h) / 2),
     });
   }, []);
 
@@ -331,7 +334,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
     // Snapshotter les coins détectés en live AU MOMENT du déclencheur,
     // avant toute transition d'état (ils disparaissent après stopCamera).
-    const snapshotCorners = liveCornersRef.current;
+    // On n'aplani automatiquement que si la détection est stable (≥90% de confidence).
+    const snapshotCorners = detectionConfidenceRef.current >= 90 ? liveCornersRef.current : null;
 
     setMode('scanning');
     setScanProgress(0);
@@ -878,23 +882,29 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </div>
   );
 
-  const renderAdjustView = () => (
-    <div
-      ref={adjustContainerRef}
-      className="adjust-container"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleMouseUp}
-    >
-      {/* Le "stage" épouse exactement la taille affichée de l'image (calculée en
-          JS) : overlay, poignées et calcul du drag partagent ainsi le MÊME repère
-          (sinon les coins se décalent à cause du letterbox object-fit). */}
+  const renderAdjustView = () => {
+    // Dimensions pixel de l'image rendu (recalculées par recomputeStage).
+    // Overlay SVG et handles sont positionnés en px absolus sur adjust-container
+    // → même repère que getBoundingClientRect() utilisé dans useCornerDrag.
+    const hasStage = !!stageDims;
+    const ol = stageDims ? {
+      left:   stageDims.left,
+      top:    stageDims.top,
+      width:  stageDims.w,
+      height: stageDims.h,
+    } : null;
+
+    return (
       <div
-        className="adjust-stage"
-        style={stageDims ? { width: stageDims.w, height: stageDims.h } : { maxWidth: '100%', maxHeight: '100%' }}
+        ref={adjustContainerRef}
+        className="adjust-container"
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
       >
+        {/* Image au centre — max-width/max-height sans déformation */}
         <img
           ref={previewCanvasRef}
           src={originalImage}
@@ -902,80 +912,82 @@ export default function DocumentScannerView({ onSave, onClose }) {
           className="adjust-image"
           onLoad={recomputeStage}
         />
-        <svg className="adjust-overlay" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <defs>
-            <mask id="docMask">
-              <rect x="0" y="0" width="100" height="100" fill="white" />
-              <polygon points={corners.map(c => `${c.x},${c.y}`).join(' ')} fill="black" />
-            </mask>
-          </defs>
-          <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.6)" mask="url(#docMask)" />
-          <polygon
-            points={corners.map(c => `${c.x},${c.y}`).join(' ')}
-            fill="none"
-            stroke="#b87333"
-            strokeWidth="0.5"
-            strokeLinejoin="round"
-          />
-        </svg>
 
-        {corners.map((corner, index) => (
-          <div
-            key={index}
-            className="corner-handle"
-            style={{ left: `${corner.x}%`, top: `${corner.y}%` }}
-            onMouseDown={(e) => handleCornerMouseDown(index, e)}
-            onTouchStart={(e) => handleCornerTouchStart(index, e)}
-          />
-        ))}
-      </div>
+        {/* Overlay et poignées uniquement quand le rect image est connu */}
+        {hasStage && (
+          <>
+            <svg
+              className="adjust-overlay"
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+              style={ol}
+            >
+              <defs>
+                <mask id="docMask">
+                  <rect x="0" y="0" width="100" height="100" fill="white" />
+                  <polygon points={corners.map(c => `${c.x},${c.y}`).join(' ')} fill="black" />
+                </mask>
+              </defs>
+              <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.55)" mask="url(#docMask)" />
+              <polygon
+                points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+                fill="none"
+                stroke="#b87333"
+                strokeWidth="0.6"
+                strokeLinejoin="round"
+              />
+            </svg>
 
-      {/* Loupe lors du drag */}
-      {draggedCorner !== null && corners && originalImage && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100px',
-          height: '100px',
-          borderRadius: '50%',
-          border: '4px solid #b87333',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-          overflow: 'hidden',
-          zIndex: 100,
-          backgroundColor: '#000',
-          pointerEvents: 'none'
-        }}>
-          <img
-            src={originalImage}
-            alt=""
-            style={{
-              position: 'absolute',
-              width: '300%',
-              height: '300%',
-              left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
-              top: `calc(50% - ${corners[draggedCorner].y * 3}%)`,
-              objectFit: 'cover',
-              pointerEvents: 'none'
-            }}
-          />
+            {corners.map((corner, index) => (
+              <div
+                key={index}
+                className="corner-handle"
+                style={{
+                  left: stageDims.left + (corner.x / 100) * stageDims.w,
+                  top:  stageDims.top  + (corner.y / 100) * stageDims.h,
+                }}
+                onMouseDown={(e) => handleCornerMouseDown(index, e)}
+                onTouchStart={(e) => handleCornerTouchStart(index, e)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Loupe lors du drag */}
+        {draggedCorner !== null && corners && originalImage && (
           <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '16px',
-            height: '16px',
-            border: '2px solid #b87333',
-            borderRadius: '50%'
-          }} />
-        </div>
-      )}
+            position: 'absolute', top: '20px', left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100px', height: '100px',
+            borderRadius: '50%', border: '4px solid #b87333',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            overflow: 'hidden', zIndex: 100,
+            backgroundColor: '#000', pointerEvents: 'none',
+          }}>
+            <img
+              src={originalImage}
+              alt=""
+              style={{
+                position: 'absolute',
+                width: '300%', height: '300%',
+                left: `calc(50% - ${corners[draggedCorner].x * 3}%)`,
+                top:  `calc(50% - ${corners[draggedCorner].y * 3}%)`,
+                objectFit: 'cover', pointerEvents: 'none',
+              }}
+            />
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '16px', height: '16px',
+              border: '2px solid #b87333', borderRadius: '50%',
+            }} />
+          </div>
+        )}
 
-      <div className="adjust-hint">Ajustez les coins du document</div>
-    </div>
-  );
+        <div className="adjust-hint">Ajustez les coins du document</div>
+      </div>
+    );
+  };
 
   const renderPreviewView = () => (
     <img src={currentDoc.url} alt="Document scanné" className="document-preview" />

@@ -422,18 +422,12 @@
   background: var(--scanner-black);
 }
 
-/* Dimensionné au pixel près en JS (= taille réelle de l'image affichée) pour
-   servir de repère commun à l'overlay et aux poignées : sinon les coins se
-   décalent à cause du letterbox object-fit. */
-.adjust-stage {
-  position: relative;
-  line-height: 0;
-}
-
+/* L'image s'inscrit dans le conteneur sans distorsion.
+   On supprime adjust-stage : l'overlay et les handles sont
+   maintenant positionnés en px absolus (calculés par JS) sur
+   adjust-container, ce qui élimine tous les décalages letterbox. */
 .adjust-image {
   display: block;
-  width: 100%;
-  height: 100%;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -443,19 +437,16 @@
 
 .adjust-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
+  /* left / top / width / height injectés en inline style depuis JS */
 }
 
 .corner-handle {
   position: absolute;
   width: 56px;
   height: 56px;
-  margin-left: -28px;
-  margin-top: -28px;
+  /* translate(-50%, -50%) centre le handle sur le coin (left/top = coords du coin) */
+  transform: translate(-50%, -50%);
   cursor: grab;
   pointer-events: all;
   z-index: 10;
