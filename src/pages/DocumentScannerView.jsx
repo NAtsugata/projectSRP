@@ -57,10 +57,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
   const isStartingCameraRef = useRef(false);
-  const autoCaptureTimerRef = useRef(null);
-  const autoProgressTimerRef = useRef(null);
   const capturePhotoRef = useRef(null);
-  const stableFrameCountRef = useRef(0); // compte les frames YOLO stables consécutives
+  const stableFrameCountRef = useRef(0); // compte les sondages YOLO stables consécutifs
 
   const { runOCR, isProcessingOCR, ocrProgress, terminateWorker } = useOCR();
 
@@ -130,8 +128,6 @@ export default function DocumentScannerView({ onSave, onClose }) {
         streamRef.current = null;
       }
       terminateWorker();
-      clearTimeout(autoCaptureTimerRef.current);
-      clearInterval(autoProgressTimerRef.current);
     };
   }, [terminateWorker]);
 
@@ -184,72 +180,64 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
-  // Auto-capture : surveille la stabilité frame par frame (YOLO génère un nouvel objet
-  // liveCorners à chaque cycle — on ne peut pas dépendre de la référence dans useEffect)
+  // Refs tenant les dernières valeurs de détection (mises à jour à chaque render).
+  // Indispensable : YOLO change liveCorners à chaque cycle et la confidence reste
+  // figée à 90 tant que c'est stable — un useEffect sur ces valeurs ne suffit pas.
+  const detectionConfidenceRef = useRef(0);
+  const liveCornersRef = useRef(null);
+  detectionConfidenceRef.current = detectionConfidence;
+  liveCornersRef.current = liveCorners;
+
+  // Auto-capture : un unique timer de polling sonde la stabilité toutes les 200ms.
+  // Après STABLE_TARGET sondages stables consécutifs (~2s) → capture automatique.
   useEffect(() => {
-    // Réinitialiser quand on quitte le mode capture
     if (mode !== 'capture') {
       stableFrameCountRef.current = 0;
-      clearTimeout(autoCaptureTimerRef.current);
-      clearInterval(autoProgressTimerRef.current);
-      autoCaptureTimerRef.current = null;
-      autoProgressTimerRef.current = null;
       setAutoCapturing(false);
       setAutoProgress(0);
-    }
-  }, [mode]);
-
-  // Appelé à chaque frame de détection pour gérer le compte à rebours
-  const handleDetectionFrame = useCallback((isStable) => {
-    if (mode !== 'capture') return;
-
-    if (!isStable) {
-      // Document bougé ou perdu → réinitialiser
-      stableFrameCountRef.current = 0;
-      if (autoCaptureTimerRef.current) {
-        clearTimeout(autoCaptureTimerRef.current);
-        clearInterval(autoProgressTimerRef.current);
-        autoCaptureTimerRef.current = null;
-        autoProgressTimerRef.current = null;
-        setAutoCapturing(false);
-        setAutoProgress(0);
-      }
       return;
     }
 
-    stableFrameCountRef.current += 1;
+    const POLL_MS = 200;
+    const STABLE_TARGET = 10; // 10 × 200ms = 2s de stabilité
 
-    // Démarrer le compte à rebours à la 2e frame stable consécutive
-    if (stableFrameCountRef.current === 2 && !autoCaptureTimerRef.current) {
-      const DURATION = 2000;
-      const start = Date.now();
-      setAutoCapturing(true);
-      setAutoProgress(0);
+    const poll = setInterval(() => {
+      const isStable =
+        detectionConfidenceRef.current >= 90 && liveCornersRef.current !== null;
 
-      autoProgressTimerRef.current = setInterval(() => {
-        const pct = Math.min(100, ((Date.now() - start) / DURATION) * 100);
-        setAutoProgress(pct);
-      }, 50);
+      if (!isStable) {
+        // Document bougé / perdu → on repart de zéro
+        if (stableFrameCountRef.current !== 0) {
+          stableFrameCountRef.current = 0;
+          setAutoCapturing(false);
+          setAutoProgress(0);
+        }
+        return;
+      }
 
-      autoCaptureTimerRef.current = setTimeout(() => {
-        clearInterval(autoProgressTimerRef.current);
-        autoProgressTimerRef.current = null;
-        autoCaptureTimerRef.current = null;
+      stableFrameCountRef.current += 1;
+      const count = stableFrameCountRef.current;
+
+      if (count === 1) setAutoCapturing(true);
+      setAutoProgress(Math.min(100, (count / STABLE_TARGET) * 100));
+
+      if (count >= STABLE_TARGET) {
+        clearInterval(poll);
+        stableFrameCountRef.current = 0;
         setAutoCapturing(false);
         setAutoProgress(0);
         logger.log('[Auto-capture] Document stable 2s — déclenchement');
         if (capturePhotoRef.current) capturePhotoRef.current();
-      }, DURATION);
-    }
-  }, [mode]);
+      }
+    }, POLL_MS);
 
-  // Pont entre la détection YOLO (scalaire) et handleDetectionFrame
-  // detectionConfidence est un nombre : pas de problème de référence
-  useEffect(() => {
-    const isStable = mode === 'capture' && detectionConfidence >= 90 && liveCorners !== null;
-    handleDetectionFrame(isStable);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detectionConfidence]); // liveCorners intentionnellement absent : on teste sa présence via la condition
+    return () => {
+      clearInterval(poll);
+      stableFrameCountRef.current = 0;
+      setAutoCapturing(false);
+      setAutoProgress(0);
+    };
+  }, [mode]);
 
   // Démarrer la caméra avec protection contre les appels multiples
   const startCamera = useCallback(async () => {
