@@ -59,7 +59,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const isStartingCameraRef = useRef(false);
   const autoCaptureTimerRef = useRef(null);
   const autoProgressTimerRef = useRef(null);
-  const capturePhotoRef = useRef(null); // ref vers capturePhoto pour l'auto-capture
+  const capturePhotoRef = useRef(null);
+  const stableFrameCountRef = useRef(0); // compte les frames YOLO stables consécutives
 
   const { runOCR, isProcessingOCR, ocrProgress, terminateWorker } = useOCR();
 
@@ -183,45 +184,72 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
-  // Auto-capture : déclenche la photo après 2s de détection stable (confidence=90)
+  // Auto-capture : surveille la stabilité frame par frame (YOLO génère un nouvel objet
+  // liveCorners à chaque cycle — on ne peut pas dépendre de la référence dans useEffect)
   useEffect(() => {
-    const clear = () => {
+    // Réinitialiser quand on quitte le mode capture
+    if (mode !== 'capture') {
+      stableFrameCountRef.current = 0;
       clearTimeout(autoCaptureTimerRef.current);
       clearInterval(autoProgressTimerRef.current);
       autoCaptureTimerRef.current = null;
       autoProgressTimerRef.current = null;
       setAutoCapturing(false);
       setAutoProgress(0);
-    };
+    }
+  }, [mode]);
 
-    if (mode !== 'capture' || detectionConfidence < 90 || !liveCorners) {
-      clear();
+  // Appelé à chaque frame de détection pour gérer le compte à rebours
+  const handleDetectionFrame = useCallback((isStable) => {
+    if (mode !== 'capture') return;
+
+    if (!isStable) {
+      // Document bougé ou perdu → réinitialiser
+      stableFrameCountRef.current = 0;
+      if (autoCaptureTimerRef.current) {
+        clearTimeout(autoCaptureTimerRef.current);
+        clearInterval(autoProgressTimerRef.current);
+        autoCaptureTimerRef.current = null;
+        autoProgressTimerRef.current = null;
+        setAutoCapturing(false);
+        setAutoProgress(0);
+      }
       return;
     }
 
-    if (autoCaptureTimerRef.current) return; // déjà en cours
+    stableFrameCountRef.current += 1;
 
-    const DURATION = 2000;
-    const start = Date.now();
-    setAutoCapturing(true);
-    setAutoProgress(0);
-
-    autoProgressTimerRef.current = setInterval(() => {
-      const pct = Math.min(100, ((Date.now() - start) / DURATION) * 100);
-      setAutoProgress(pct);
-    }, 50);
-
-    autoCaptureTimerRef.current = setTimeout(() => {
-      clearInterval(autoProgressTimerRef.current);
-      setAutoCapturing(false);
+    // Démarrer le compte à rebours à la 2e frame stable consécutive
+    if (stableFrameCountRef.current === 2 && !autoCaptureTimerRef.current) {
+      const DURATION = 2000;
+      const start = Date.now();
+      setAutoCapturing(true);
       setAutoProgress(0);
-      autoCaptureTimerRef.current = null;
-      logger.log('[Auto-capture] Document stable — déclenchement automatique');
-      if (capturePhotoRef.current) capturePhotoRef.current();
-    }, DURATION);
 
-    return clear;
-  }, [mode, detectionConfidence, liveCorners]);
+      autoProgressTimerRef.current = setInterval(() => {
+        const pct = Math.min(100, ((Date.now() - start) / DURATION) * 100);
+        setAutoProgress(pct);
+      }, 50);
+
+      autoCaptureTimerRef.current = setTimeout(() => {
+        clearInterval(autoProgressTimerRef.current);
+        autoProgressTimerRef.current = null;
+        autoCaptureTimerRef.current = null;
+        setAutoCapturing(false);
+        setAutoProgress(0);
+        logger.log('[Auto-capture] Document stable 2s — déclenchement');
+        if (capturePhotoRef.current) capturePhotoRef.current();
+      }, DURATION);
+    }
+  }, [mode]);
+
+  // Pont entre la détection YOLO (scalaire) et handleDetectionFrame
+  // detectionConfidence est un nombre : pas de problème de référence
+  useEffect(() => {
+    const isStable = mode === 'capture' && detectionConfidence >= 90 && liveCorners !== null;
+    handleDetectionFrame(isStable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectionConfidence]); // liveCorners intentionnellement absent : on teste sa présence via la condition
 
   // Démarrer la caméra avec protection contre les appels multiples
   const startCamera = useCallback(async () => {
