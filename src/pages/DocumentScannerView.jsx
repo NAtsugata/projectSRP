@@ -22,7 +22,6 @@ import {
 } from '../utils/documentScanner';
 import { preloadOpenCV } from '../utils/jscanifyDetector';
 import { useDocumentDetection } from '../hooks/useDocumentDetection';
-import { useCornerDrag } from '../hooks/useCornerDrag';
 import { useOCR } from '../hooks/useOCR';
 import logger from '../utils/logger';
 import '../components/scanner/ScannerStyles.css';
@@ -131,6 +130,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const isStartingCamRef   = useRef(false);
   const capturePhotoRef    = useRef(null);
   const stableCountRef     = useRef(0);
+  const draggedCornerRef   = useRef(null);
+  const [draggedCorner, setDraggedCorner] = useState(null);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { runOCR, isProcessingOCR, ocrProgress, terminateWorker } = useOCR();
@@ -145,14 +146,61 @@ export default function DocumentScannerView({ onSave, onClose }) {
     stopLiveDetection,
   } = useDocumentDetection();
 
-  const {
-    draggedCorner,
-    handleCornerMouseDown,
-    handleCornerTouchStart,
-    handleMouseMove,
-    handleTouchMove,
-    handleMouseUp,
-  } = useCornerDrag(previewCanvasRef, setCorners);
+  // ── Drag des coins (mode adjust) ──────────────────────────────────────────
+  // On calcule la position RELATIVE AU CONTENU IMAGE (stageDims) et non à
+  // l'élément <img> entier, qui avec object-fit:contain est plus grand que
+  // l'image visible → décalage des poignées.
+  const getImageCoords = useCallback((clientX, clientY) => {
+    if (!adjustContainerRef.current || !stageDims) return null;
+    const rect = adjustContainerRef.current.getBoundingClientRect();
+    const x = ((clientX - rect.left - stageDims.left) / stageDims.w) * 100;
+    const y = ((clientY - rect.top  - stageDims.top)  / stageDims.h) * 100;
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    };
+  }, [stageDims]);
+
+  const handleCornerMouseDown = useCallback((idx, e) => {
+    e.preventDefault(); e.stopPropagation();
+    draggedCornerRef.current = idx;
+    setDraggedCorner(idx);
+  }, []);
+
+  const handleCornerTouchStart = useCallback((idx, e) => {
+    e.preventDefault(); e.stopPropagation();
+    draggedCornerRef.current = idx;
+    setDraggedCorner(idx);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (draggedCornerRef.current === null) return;
+    const pos = getImageCoords(e.clientX, e.clientY);
+    if (!pos) return;
+    setCorners((prev) => {
+      const next = [...prev];
+      next[draggedCornerRef.current] = pos;
+      return next;
+    });
+  }, [getImageCoords]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (draggedCornerRef.current === null) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const pos = getImageCoords(touch.clientX, touch.clientY);
+    if (!pos) return;
+    setCorners((prev) => {
+      const next = [...prev];
+      next[draggedCornerRef.current] = pos;
+      return next;
+    });
+  }, [getImageCoords]);
+
+  const handleMouseUp = useCallback(() => {
+    draggedCornerRef.current = null;
+    setDraggedCorner(null);
+  }, []);
 
   // ── Cleanup au démontage ───────────────────────────────────────────────────
   useEffect(() => {
