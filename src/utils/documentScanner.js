@@ -1,6 +1,6 @@
 // src/utils/documentScanner.js
 // Utilitaires pour scanner et traiter des documents avec OpenCV.js
-// Détection single-function, robuste, style ClearScanner.
+// Détection single-function robuste, style ClearScanner.
 
 /**
  * Vérifie si OpenCV est chargé et prêt
@@ -33,7 +33,7 @@ function matToPoints(mat) {
   for (let i = 0; i < mat.rows; i++) {
     points.push({
       x: mat.data32S[i * 2],
-      y: mat.data32S[i * 2 + 1]
+      y: mat.data32S[i * 2 + 1],
     });
   }
   return points;
@@ -49,7 +49,8 @@ function isConvexQuad(points) {
     const p1 = points[i];
     const p2 = points[(i + 1) % 4];
     const p3 = points[(i + 2) % 4];
-    const cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
+    const cross =
+      (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
     if (cross !== 0) {
       if (sign === 0) sign = cross > 0 ? 1 : -1;
       else if ((cross > 0 ? 1 : -1) !== sign) return false;
@@ -68,7 +69,10 @@ function calcAngle(p1, p2, p3) {
   const mag1 = Math.hypot(v1.x, v1.y);
   const mag2 = Math.hypot(v2.x, v2.y);
   if (mag1 === 0 || mag2 === 0) return 180;
-  return Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI);
+  return (
+    Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) *
+    (180 / Math.PI)
+  );
 }
 
 /**
@@ -76,22 +80,27 @@ function calcAngle(p1, p2, p3) {
  */
 function isValidDocumentShape(points, imgWidth, imgHeight) {
   if (points.length !== 4) return false;
-  const xs = points.map(p => p.x);
-  const ys = points.map(p => p.y);
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
   const bboxW = Math.max(...xs) - Math.min(...xs);
   const bboxH = Math.max(...ys) - Math.min(...ys);
   if (bboxW < imgWidth * 0.05 || bboxH < imgHeight * 0.05) return false;
   const aspect = bboxW / bboxH;
   if (aspect < 0.1 || aspect > 10.0) return false;
   for (let i = 0; i < 4; i++) {
-    const angle = calcAngle(points[(i + 3) % 4], points[i], points[(i + 1) % 4]);
+    const angle = calcAngle(
+      points[(i + 3) % 4],
+      points[i],
+      points[(i + 1) % 4]
+    );
     if (angle < 10 || angle > 170) return false;
   }
-  // Aire quadrilatère vs bounding box ≥ 40%
+  // Aire quadrilatère vs bounding box >= 40%
   let area = 0;
   for (let i = 0; i < 4; i++) {
     const j = (i + 1) % 4;
-    area += points[i].x * points[j].y - points[j].x * points[i].y;
+    area +=
+      points[i].x * points[j].y - points[j].x * points[i].y;
   }
   area = Math.abs(area) / 2;
   if (area / (bboxW * bboxH) < 0.4) return false;
@@ -108,8 +117,8 @@ function extremeCorners(pts) {
   for (const p of pts) {
     const sum = p.x + p.y;
     const diff = p.x - p.y;
-    if (sum < tlV) { tlV = sum; tl = p; }
-    if (sum > brV) { brV = sum; br = p; }
+    if (sum < tlV)  { tlV = sum;  tl = p; }
+    if (sum > brV)  { brV = sum;  br = p; }
     if (diff > trV) { trV = diff; tr = p; }
     if (diff < blV) { blV = diff; bl = p; }
   }
@@ -117,12 +126,8 @@ function extremeCorners(pts) {
 }
 
 /**
- * Tente d'extraire un quadrilatère d'un contour avec convexHull + approxPolyDP
+ * Tente d'extraire un quadrilatère d'un contour avec convexHull + approxPolyDP.
  * Returns null si échec.
- * @param {*} cv
- * @param {*} contour
- * @param {number} imgWidth
- * @param {number} imgHeight
  */
 function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
   const hull = new cv.Mat();
@@ -139,7 +144,7 @@ function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
       if (n === 4) {
         const pts = matToPoints(approx);
         if (isConvexQuad(pts) && isValidDocumentShape(pts, imgWidth, imgHeight)) {
-          return pts.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+          return pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
         }
         return null;
       }
@@ -148,7 +153,7 @@ function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
         const pts = matToPoints(approx);
         const corners = extremeCorners(pts);
         if (isConvexQuad(corners) && isValidDocumentShape(corners, imgWidth, imgHeight)) {
-          return corners.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+          return corners.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
         }
         return null;
       }
@@ -163,18 +168,16 @@ function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
 }
 
 /**
- * Cherche les meilleurs 4 coins dans un ensemble de contours.
+ * Cherche les meilleurs 4 coins dans un ensemble de contours (RETR_LIST).
  * Trie par aire décroissante, essaie les 5 plus grands > minArea.
  */
 function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
-  // Collecter (area, index)
   const candidates = [];
   for (let i = 0; i < contours.size(); i++) {
     const c = contours.get(i);
     const a = cv.contourArea(c);
     if (a >= minArea) candidates.push({ idx: i, area: a });
   }
-  // Trier par aire décroissante
   candidates.sort((a, b) => b.area - a.area);
 
   for (let k = 0; k < Math.min(5, candidates.length); k++) {
@@ -189,7 +192,7 @@ function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
 
 /**
  * Détecte le contour d'un document dans une ImageData.
- * Stratégie unique (remplace les 7 méthodes de l'ancienne version) :
+ * Stratégie unique (style ClearScanner) :
  *   1. Grayscale → GaussianBlur(5,5)
  *   2. Canny adaptatif (sigma=0.33 sur médiane) → dilate 5×5
  *   3. findContours RETR_LIST → 5 plus grands > 8% de l'image
@@ -197,7 +200,7 @@ function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
  *      • 4 pts  → validation → retourne
  *      • >4 pts → 4 coins extrêmes → validation → retourne
  *   5. Fallback : adaptiveThreshold → même pipeline
- *   6. Last resort : coins complets (5% de marge)
+ *   6. Last resort : coins pleine image (5% de marge)
  *
  * @param {ImageData} imageData
  * @returns {Array<{x,y}>|null} 4 coins triés TL, TR, BR, BL
@@ -207,7 +210,7 @@ export function detectDocumentContour(imageData) {
 
   const cv = window.cv;
   const mats = [];
-  const t = m => { mats.push(m); return m; };
+  const t = (m) => { mats.push(m); return m; };
 
   try {
     const src = t(cv.matFromImageData(imageData));
@@ -238,8 +241,9 @@ export function detectDocumentContour(imageData) {
     const morphed = t(new cv.Mat());
     cv.dilate(edges, morphed, kernel5);
 
-    let contours  = t(new cv.MatVector());
-    let hierarchy = t(new cv.Mat());
+    // RETR_LIST : récupère TOUS les contours, y compris les internes
+    const contours  = t(new cv.MatVector());
+    const hierarchy = t(new cv.Mat());
     cv.findContours(morphed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
     let quad = findQuadInContours(cv, contours, minArea, w, h);
@@ -247,9 +251,11 @@ export function detectDocumentContour(imageData) {
 
     // ── Tentative 2 : adaptiveThreshold ────────────────────────────────────
     const thresh = t(new cv.Mat());
-    cv.adaptiveThreshold(blurred, thresh, 255,
-      cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 7);
-    // Inverser si fond clair (texte sombre → bords sur fond clair)
+    cv.adaptiveThreshold(
+      blurred, thresh, 255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 7
+    );
+    // Inverser si fond clair
     if (cv.mean(thresh)[0] > 127) cv.bitwise_not(thresh, thresh);
 
     const morphed2  = t(new cv.Mat());
@@ -275,7 +281,7 @@ export function detectDocumentContour(imageData) {
   } catch (err) {
     return null;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_) { /* déjà libéré */ } });
+    mats.forEach((m) => { try { m.delete(); } catch (_) { /* déjà libéré */ } });
   }
 }
 
@@ -286,16 +292,18 @@ export const detectDocumentFast  = detectDocumentContour;
 // ─── sortCorners ──────────────────────────────────────────────────────────────
 
 /**
- * Trie les 4 coins en ordre TL, TR, BR, BL
+ * Trie les 4 coins en ordre TL, TR, BR, BL (sens horaire depuis TL)
  */
 function sortCorners(points) {
   const cx = points.reduce((s, p) => s + p.x, 0) / 4;
   const cy = points.reduce((s, p) => s + p.y, 0) / 4;
 
-  const sorted = points.map(p => ({
-    ...p,
-    angle: Math.atan2(p.y - cy, p.x - cx)
-  })).sort((a, b) => a.angle - b.angle);
+  const sorted = points
+    .map((p) => ({
+      ...p,
+      angle: Math.atan2(p.y - cy, p.x - cx),
+    }))
+    .sort((a, b) => a.angle - b.angle);
 
   let tlIndex = 0;
   let minSum = Infinity;
@@ -317,7 +325,12 @@ function sortCorners(points) {
 /**
  * Applique une transformation de perspective et retourne un nouveau canvas
  */
-export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = null, outputHeight = null) {
+export function applyPerspectiveTransform(
+  canvas,
+  sourceCorners,
+  outputWidth = null,
+  outputHeight = null
+) {
   if (!isOpenCvReady()) {
     console.error('OpenCV not ready');
     return canvas;
@@ -332,10 +345,22 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
     src = cv.matFromImageData(imageData);
 
     if (!outputWidth || !outputHeight) {
-      const widthTop    = Math.hypot(sourceCorners[1].x - sourceCorners[0].x, sourceCorners[1].y - sourceCorners[0].y);
-      const widthBottom = Math.hypot(sourceCorners[2].x - sourceCorners[3].x, sourceCorners[2].y - sourceCorners[3].y);
-      const heightLeft  = Math.hypot(sourceCorners[3].x - sourceCorners[0].x, sourceCorners[3].y - sourceCorners[0].y);
-      const heightRight = Math.hypot(sourceCorners[2].x - sourceCorners[1].x, sourceCorners[2].y - sourceCorners[1].y);
+      const widthTop    = Math.hypot(
+        sourceCorners[1].x - sourceCorners[0].x,
+        sourceCorners[1].y - sourceCorners[0].y
+      );
+      const widthBottom = Math.hypot(
+        sourceCorners[2].x - sourceCorners[3].x,
+        sourceCorners[2].y - sourceCorners[3].y
+      );
+      const heightLeft  = Math.hypot(
+        sourceCorners[3].x - sourceCorners[0].x,
+        sourceCorners[3].y - sourceCorners[0].y
+      );
+      const heightRight = Math.hypot(
+        sourceCorners[2].x - sourceCorners[1].x,
+        sourceCorners[2].y - sourceCorners[1].y
+      );
       outputWidth  = Math.round(Math.max(widthTop,  widthBottom));
       outputHeight = Math.round(Math.max(heightLeft, heightRight));
     }
@@ -349,10 +374,10 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
       sourceCorners[3].x, sourceCorners[3].y,
     ]);
     dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-      0, 0,
+      0,           0,
       outputWidth, 0,
       outputWidth, outputHeight,
-      0, outputHeight,
+      0,           outputHeight,
     ]);
 
     M   = cv.getPerspectiveTransform(srcTri, dstTri);
@@ -386,14 +411,16 @@ export function enhanceBlackAndWhite(imageData) {
   const data = imageData.data;
   const grayValues = [];
   for (let i = 0; i < data.length; i += 4) {
-    grayValues.push(Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]));
+    grayValues.push(
+      Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])
+    );
   }
   const sorted = [...grayValues].sort((a, b) => a - b);
   const threshold = sorted[Math.floor(sorted.length * 0.85)];
   let idx = 0;
   for (let i = 0; i < data.length; i += 4) {
     const value = grayValues[idx++] > threshold ? 255 : 0;
-    data[i] = value;
+    data[i]     = value;
     data[i + 1] = value;
     data[i + 2] = value;
   }
@@ -407,7 +434,7 @@ export function enhanceGrayscale(imageData) {
   if (!isOpenCvReady()) return imageData;
   const cv = window.cv;
   const mats = [];
-  const track = m => { mats.push(m); return m; };
+  const track = (m) => { mats.push(m); return m; };
   try {
     const src      = track(cv.matFromImageData(imageData));
     const gray     = track(new cv.Mat());
@@ -424,12 +451,16 @@ export function enhanceGrayscale(imageData) {
     cv.normalize(sharp, normalized, 0, 255, cv.NORM_MINMAX);
     const rgbaDst  = track(new cv.Mat());
     cv.cvtColor(normalized, rgbaDst, cv.COLOR_GRAY2RGBA);
-    return new ImageData(new Uint8ClampedArray(rgbaDst.data), rgbaDst.cols, rgbaDst.rows);
+    return new ImageData(
+      new Uint8ClampedArray(rgbaDst.data),
+      rgbaDst.cols,
+      rgbaDst.rows
+    );
   } catch (err) {
     console.error('Enhance Gray error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
+    mats.forEach((m) => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
@@ -440,7 +471,7 @@ export function enhanceColor(imageData) {
   if (!isOpenCvReady()) return imageData;
   const cv = window.cv;
   const mats = [];
-  const track = m => { mats.push(m); return m; };
+  const track = (m) => { mats.push(m); return m; };
   try {
     const src      = track(cv.matFromImageData(imageData));
     const rgb      = track(new cv.Mat());
@@ -467,12 +498,16 @@ export function enhanceColor(imageData) {
     cv.addWeighted(enhanced, 1.4, blurred, -0.4, 0, sharp);
     const rgbaDst  = track(new cv.Mat());
     cv.cvtColor(sharp, rgbaDst, cv.COLOR_RGB2RGBA);
-    return new ImageData(new Uint8ClampedArray(rgbaDst.data), rgbaDst.cols, rgbaDst.rows);
+    return new ImageData(
+      new Uint8ClampedArray(rgbaDst.data),
+      rgbaDst.cols,
+      rgbaDst.rows
+    );
   } catch (err) {
     console.error('Enhance Color error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
+    mats.forEach((m) => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
@@ -496,7 +531,7 @@ export function enhanceClearScan(imageData) {
 function _clearScanCV(imageData) {
   const cv = window.cv;
   const mats = [];
-  const t = m => { mats.push(m); return m; };
+  const t = (m) => { mats.push(m); return m; };
   try {
     const src       = t(cv.matFromImageData(imageData));
     const gray      = t(new cv.Mat());
@@ -508,8 +543,10 @@ function _clearScanCV(imageData) {
     const blurred   = t(new cv.Mat());
     cv.GaussianBlur(equalized, blurred, new cv.Size(3, 3), 0);
     const thresh    = t(new cv.Mat());
-    cv.adaptiveThreshold(blurred, thresh, 255,
-      cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 51, 18);
+    cv.adaptiveThreshold(
+      blurred, thresh, 255,
+      cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 51, 18
+    );
     const blurredThresh = t(new cv.Mat());
     cv.GaussianBlur(thresh, blurredThresh, new cv.Size(0, 0), 0.8);
     const sharp     = t(new cv.Mat());
@@ -519,12 +556,16 @@ function _clearScanCV(imageData) {
     kernel.delete();
     const rgba      = t(new cv.Mat());
     cv.cvtColor(sharp, rgba, cv.COLOR_GRAY2RGBA);
-    return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
+    return new ImageData(
+      new Uint8ClampedArray(rgba.data),
+      rgba.cols,
+      rgba.rows
+    );
   } catch (err) {
     console.error('ClearScan CV error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
+    mats.forEach((m) => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
@@ -533,15 +574,20 @@ function _clearScanJS(imageData) {
   const output = new ImageData(width, height);
   const gray = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
-    gray[i] = Math.round(0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]);
+    gray[i] = Math.round(
+      0.299 * data[i * 4] +
+      0.587 * data[i * 4 + 1] +
+      0.114 * data[i * 4 + 2]
+    );
   }
   const sat = new Float64Array((width + 1) * (height + 1));
   for (let y = 1; y <= height; y++) {
     for (let x = 1; x <= width; x++) {
-      sat[y * (width + 1) + x] = gray[(y - 1) * width + (x - 1)]
-        + sat[(y - 1) * (width + 1) + x]
-        + sat[y * (width + 1) + (x - 1)]
-        - sat[(y - 1) * (width + 1) + (x - 1)];
+      sat[y * (width + 1) + x] =
+        gray[(y - 1) * width + (x - 1)] +
+        sat[(y - 1) * (width + 1) + x] +
+        sat[y * (width + 1) + (x - 1)] -
+        sat[(y - 1) * (width + 1) + (x - 1)];
     }
   }
   const S = Math.round(Math.max(width, height) / 16);
@@ -553,12 +599,14 @@ function _clearScanJS(imageData) {
       const x2 = Math.min(width  - 1, x + S);
       const y2 = Math.min(height - 1, y + S);
       const count = (x2 - x1 + 1) * (y2 - y1 + 1);
-      const sum = sat[(y2 + 1) * (width + 1) + (x2 + 1)]
-                - sat[y1 * (width + 1) + (x2 + 1)]
-                - sat[(y2 + 1) * (width + 1) + x1]
-                + sat[y1 * (width + 1) + x1];
-      const value = (gray[y * width + x] * count <= sum * (1 - T)) ? 0 : 255;
-      const idx   = (y * width + x) * 4;
+      const sum =
+        sat[(y2 + 1) * (width + 1) + (x2 + 1)] -
+        sat[y1 * (width + 1) + (x2 + 1)] -
+        sat[(y2 + 1) * (width + 1) + x1] +
+        sat[y1 * (width + 1) + x1];
+      const value =
+        gray[y * width + x] * count <= sum * (1 - T) ? 0 : 255;
+      const idx = (y * width + x) * 4;
       output.data[idx]     = value;
       output.data[idx + 1] = value;
       output.data[idx + 2] = value;
@@ -577,7 +625,7 @@ export function enhanceMagicColor(imageData) {
   if (!isOpenCvReady()) return enhanceColor(imageData);
   const cv = window.cv;
   const mats = [];
-  const t = m => { mats.push(m); return m; };
+  const t = (m) => { mats.push(m); return m; };
   try {
     const src        = t(cv.matFromImageData(imageData));
     const rgb        = t(new cv.Mat());
@@ -612,11 +660,15 @@ export function enhanceMagicColor(imageData) {
     cv.cvtColor(lab, colorResult, cv.COLOR_Lab2RGB);
     const rgba        = t(new cv.Mat());
     cv.cvtColor(colorResult, rgba, cv.COLOR_RGB2RGBA);
-    return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
+    return new ImageData(
+      new Uint8ClampedArray(rgba.data),
+      rgba.cols,
+      rgba.rows
+    );
   } catch (err) {
     console.error('MagicColor error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
+    mats.forEach((m) => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
