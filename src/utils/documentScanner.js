@@ -205,7 +205,7 @@ function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
  * @param {ImageData} imageData
  * @returns {Array<{x,y}>|null} 4 coins triés TL, TR, BR, BL
  */
-export function detectDocumentContour(imageData) {
+export function detectDocumentContour(imageData, allowFullFrameFallback = true) {
   if (!isOpenCvReady()) return null;
 
   const cv = window.cv;
@@ -269,6 +269,10 @@ export function detectDocumentContour(imageData) {
     if (quad) return sortCorners(quad);
 
     // ── Last resort : coins pleine image avec 5% de marge ──────────────────
+    // UNIQUEMENT pour la détection statique (photo unique). En détection LIVE
+    // (allowFullFrameFallback=false) on retourne null : sinon le scanner croit
+    // toujours "voir" un document (le cadre entier) et auto-capture dans le vide.
+    if (!allowFullFrameFallback) return null;
     const mx = Math.round(w * 0.05);
     const my = Math.round(h * 0.05);
     return sortCorners([

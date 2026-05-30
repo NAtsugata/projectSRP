@@ -403,6 +403,24 @@ export default function DocumentScannerView({ onSave, onClose }) {
       canvas.getContext('2d').drawImage(video, 0, 0);
     }
 
+    // IMPORTANT : sur mobile, ImageCapture renvoie la pleine résolution du capteur
+    // (jusqu'à 12 Mpx). warpPerspective + filtres OpenCV sur une image aussi grosse
+    // font saturer le heap WASM → crash silencieux, écran bloqué sur "Aplanissement…".
+    // On plafonne le bord long à 2200px : qualité largement suffisante, traitement fiable.
+    const MAX_EDGE = 2200;
+    const longEdge = Math.max(canvas.width, canvas.height);
+    if (longEdge > MAX_EDGE) {
+      const s = MAX_EDGE / longEdge;
+      const tmp = document.createElement('canvas');
+      tmp.width  = Math.round(canvas.width * s);
+      tmp.height = Math.round(canvas.height * s);
+      tmp.getContext('2d').drawImage(canvas, 0, 0, tmp.width, tmp.height);
+      canvas.width  = tmp.width;
+      canvas.height = tmp.height;
+      canvas.getContext('2d').drawImage(tmp, 0, 0);
+      logger.log(`[Capture] Réduit à ${canvas.width}×${canvas.height}`);
+    }
+
     setMode('processing');
     setScanProgress(0);
     stopCamera();
