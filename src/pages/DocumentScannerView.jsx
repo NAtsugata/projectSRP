@@ -404,8 +404,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    // Snapshot coins AVANT tout arrêt de la caméra (ils disparaissent après stopCamera)
-    const snapshotCorners = confidenceRef.current >= 90 ? liveCornersRef.current : null;
+    // Snapshot coins AVANT tout arrêt de la caméra (ils disparaissent après stopCamera).
+    // On prend TOUS les coins détectés (confidence >= 80) — même non stables —
+    // pour garantir l'aplanissement automatique dès qu'un document est visible.
+    const snapshotCorners = liveCornersRef.current;
 
     // ImageCapture API : photo à la résolution native du capteur, pas une frame vidéo
     // compressée H.264. Doit être appelé AVANT stopCamera() (track encore active).
@@ -967,9 +969,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const renderScanningView = () => (
     <div className="scanning-view">
       <div className="scan-line" style={{ top: `${scanProgress}%` }} />
-      <div className="scanning-text">
-        {liveCornersRef.current ? 'Aplanissement...' : 'Analyse en cours...'}
-      </div>
+      <div className="scanning-text">Aplanissement...</div>
     </div>
   );
 
