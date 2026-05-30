@@ -67,8 +67,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Hooks personnalisés
   const {
-    liveCorners,
-    detectionConfidence,
+    detectionActive,
+    detectionStable,
+    liveCornersRef,
+    confidenceRef,
     detectDocument,
     startLiveDetection,
     stopLiveDetection
@@ -180,12 +182,8 @@ export default function DocumentScannerView({ onSave, onClose }) {
     };
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
-  // Refs tenant les dernières valeurs de détection (mises à jour à chaque render).
-  // Refs pour lire les dernières valeurs dans les setInterval sans re-créer les closures.
-  const detectionConfidenceRef = useRef(0);
-  const liveCornersRef = useRef(null);
-  detectionConfidenceRef.current = detectionConfidence;
-  liveCornersRef.current = liveCorners;
+  // liveCornersRef et confidenceRef proviennent du hook : mis à jour à chaque
+  // frame SANS re-render. Lus directement par l'auto-capture et la capture.
 
   // Auto-capture : un unique timer de polling sonde la stabilité toutes les 200ms.
   // Après STABLE_TARGET sondages stables consécutifs (~2s) → capture automatique.
@@ -202,7 +200,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
     const poll = setInterval(() => {
       const isStable =
-        detectionConfidenceRef.current >= 90 && liveCornersRef.current !== null;
+        confidenceRef.current >= 90 && liveCornersRef.current !== null;
 
       if (!isStable) {
         // Document bougé / perdu → on repart de zéro
@@ -368,7 +366,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const canvas = canvasRef.current;
 
     // Snapshot coins AVANT tout arrêt de la caméra (ils disparaissent après stopCamera)
-    const snapshotCorners = detectionConfidenceRef.current >= 90 ? liveCornersRef.current : null;
+    const snapshotCorners = confidenceRef.current >= 90 ? liveCornersRef.current : null;
 
     // ImageCapture API : photo à la résolution native du capteur, pas une frame vidéo
     // compressée H.264. Doit être appelé AVANT stopCamera() (track encore active).
@@ -912,7 +910,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
           width: videoDims.w,
           height: videoDims.h,
         } : undefined} />
-      {!liveCorners && <div className="guide-frame" />}
+      {!detectionActive && <div className="guide-frame" />}
 
       {scannedDocs.length > 0 && (
         <div className="mini-gallery">
@@ -925,10 +923,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
         </div>
       )}
 
-      {liveCorners && detectionConfidence > 0 && (
+      {detectionActive && (
         <div className="detection-indicator">
           <CheckCircleIcon style={{ width: 18, height: 18 }} />
-          Document détecté
+          {detectionStable ? 'Document prêt' : 'Document détecté'}
         </div>
       )}
     </>
