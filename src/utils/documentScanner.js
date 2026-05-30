@@ -198,8 +198,13 @@ export function detectDocumentFast(imageData) {
     hierarchy = new cv.Mat();
     cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    // scale=1 : les coins sont déjà dans le repère de l'image réduite
-    let best = findBestQuadContour(cv, contours, minArea, 1, w, h);
+    // Méthode jscanify : plus grand contour → 4 coins extrêmes.
+    // Capture TOUTE la page (pas un bloc de texte interne) même si les bords
+    // sont brisés. C'est l'approche open-source la plus robuste pour le cadrage.
+    let best = largestContourCorners(cv, contours, minArea, w, h);
+
+    // Repli : ancienne méthode approxPolyDP si aucun grand contour exploitable
+    if (!best) best = findBestQuadContour(cv, contours, minArea, 1, w, h);
 
     // Fallback léger : seuillage adaptatif si Canny n'a rien trouvé.
     // Utile sur fond peu contrasté (papier blanc sur table claire).
@@ -212,7 +217,8 @@ export function detectDocumentFast(imageData) {
       contours = new cv.MatVector();
       hierarchy = new cv.Mat();
       cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-      best = findBestQuadContour(cv, contours, minArea, 1, w, h);
+      best = largestContourCorners(cv, contours, minArea, w, h)
+          || findBestQuadContour(cv, contours, minArea, 1, w, h);
       thresh.delete();
     }
 
@@ -630,6 +636,49 @@ function estimateMedian(gray) {
 /**
  * Trouve le meilleur contour quadrilatéral parmi une liste
  */
+/**
+ * Détection façon jscanify (open-source) : on retient le plus grand contour,
+ * puis on en extrait les 4 coins EXTRÊMES (min/max de x±y). Contrairement à
+ * approxPolyDP qui peut se caler sur un bord interne ou un bloc de texte, cette
+ * méthode épouse toujours la limite extérieure de la page → la page entière est
+ * cadrée même si certains bords sont brisés ou flous.
+ */
+function largestContourCorners(cv, contours, minArea, imgWidth, imgHeight) {
+  let maxArea = 0;
+  let biggest = null;
+  for (let i = 0; i < contours.size(); i++) {
+    const c = contours.get(i);
+    const a = cv.contourArea(c);
+    if (a > maxArea) { maxArea = a; biggest = c; }
+  }
+  if (!biggest || maxArea < minArea) return null;
+
+  // Travailler sur l'enveloppe convexe → on ignore les renfoncements parasites
+  const hull = new cv.Mat();
+  cv.convexHull(biggest, hull);
+  const pts = matToPoints(hull);
+  hull.delete();
+  if (pts.length < 4) return null;
+
+  // Coins extrêmes : TL=min(x+y), BR=max(x+y), TR=max(x−y), BL=min(x−y)
+  let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+  let tlV = Infinity, brV = -Infinity, trV = -Infinity, blV = Infinity;
+  for (const p of pts) {
+    const sum = p.x + p.y;
+    const diff = p.x - p.y;
+    if (sum < tlV) { tlV = sum; tl = p; }
+    if (sum > brV) { brV = sum; br = p; }
+    if (diff > trV) { trV = diff; tr = p; }
+    if (diff < blV) { blV = diff; bl = p; }
+  }
+
+  const corners = [tl, tr, br, bl];
+  if (!isConvexQuad(corners)) return null;
+  if (!isValidDocumentShape(corners, imgWidth, imgHeight)) return null;
+
+  return { area: maxArea, points: corners.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })) };
+}
+
 function findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight) {
   let bestResult = null;
   let bestScore = 0;
