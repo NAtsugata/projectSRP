@@ -61,7 +61,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   const streamRef = useRef(null);
   const isStartingCameraRef = useRef(false);
   const capturePhotoRef = useRef(null);
-  const stableFrameCountRef = useRef(0); // compte les sondages YOLO stables consécutifs
+  const stableFrameCountRef = useRef(0); // compte les sondages stables consécutifs (auto-capture)
 
   const { runOCR, isProcessingOCR, ocrProgress, terminateWorker } = useOCR();
 
@@ -181,8 +181,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
   }, [mode, stream, cvReady, startLiveDetection, stopLiveDetection]);
 
   // Refs tenant les dernières valeurs de détection (mises à jour à chaque render).
-  // Indispensable : YOLO change liveCorners à chaque cycle et la confidence reste
-  // figée à 90 tant que c'est stable — un useEffect sur ces valeurs ne suffit pas.
+  // Refs pour lire les dernières valeurs dans les setInterval sans re-créer les closures.
   const detectionConfidenceRef = useRef(0);
   const liveCornersRef = useRef(null);
   detectionConfidenceRef.current = detectionConfidence;

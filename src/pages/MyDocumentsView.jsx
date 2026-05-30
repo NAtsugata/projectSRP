@@ -29,6 +29,89 @@ const CATEGORIES = [
   { value: 'autre', label: '📄 Autre', color: '#6b7280' }
 ];
 
+// Modal de sauvegarde — remplace prompt()/alert() par une vraie UI
+function SaveDocumentsModal({ count, onConfirm, onCancel, saving }) {
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('autre');
+
+  return (
+    <div className="docs-modal-overlay" onClick={saving ? undefined : onCancel}>
+      <div className="docs-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="docs-modal-title">
+          Enregistrer {count} document{count > 1 ? 's' : ''}
+        </h3>
+
+        <label className="docs-modal-label">Titre</label>
+        <input
+          className="docs-modal-input"
+          type="text"
+          autoFocus
+          placeholder="Document scanné"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={saving}
+        />
+
+        <label className="docs-modal-label">Catégorie</label>
+        <div className="docs-modal-cats">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.value}
+              type="button"
+              className={`docs-modal-cat ${category === cat.value ? 'active' : ''}`}
+              style={category === cat.value ? { background: cat.color, borderColor: cat.color, color: '#fff' } : undefined}
+              onClick={() => setCategory(cat.value)}
+              disabled={saving}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="docs-modal-actions">
+          <button className="docs-modal-btn cancel" onClick={onCancel} disabled={saving}>
+            Annuler
+          </button>
+          <button
+            className="docs-modal-btn confirm"
+            onClick={() => onConfirm({ title: title.trim() || 'Document scanné', category })}
+            disabled={saving}
+          >
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal de confirmation de suppression
+function DeleteConfirmModal({ doc, onConfirm, onCancel, deleting }) {
+  return (
+    <div className="docs-modal-overlay" onClick={deleting ? undefined : onCancel}>
+      <div className="docs-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="docs-modal-title">Supprimer ce document ?</h3>
+        <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          «&nbsp;{doc.title}&nbsp;» sera supprimé définitivement.
+        </p>
+        <div className="docs-modal-actions">
+          <button className="docs-modal-btn cancel" onClick={onCancel} disabled={deleting}>
+            Annuler
+          </button>
+          <button
+            className="docs-modal-btn"
+            style={{ background: '#ef4444', color: '#fff' }}
+            onClick={onConfirm}
+            disabled={deleting}
+          >
+            {deleting ? 'Suppression…' : 'Supprimer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MyDocumentsView({
   scannedDocuments = [],
   profile,
@@ -41,6 +124,16 @@ export default function MyDocumentsView({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
+  const [pendingDocs, setPendingDocs] = useState(null);   // docs en attente de sauvegarde (modal)
+  const [savingDocs, setSavingDocs] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // doc en attente de suppression
+  const [deletingDoc, setDeletingDoc] = useState(false);
+  const [toast, setToast] = useState(null); // { msg, type }
+
+  const showToast = useCallback((msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   const isAdmin = profile?.is_admin === true;
 
@@ -77,7 +170,7 @@ export default function MyDocumentsView({
 
   // Stats
   const stats = useMemo(() => {
-    const myDocs = isAdmin ? scannedDocuments : scannedDocuments.filter(d => d.user_id === profile.id);
+    const myDocs = isAdmin ? scannedDocuments : scannedDocuments.filter(d => d.user_id === profile?.id);
     const totalSize = myDocs.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
 
     return {
@@ -91,44 +184,47 @@ export default function MyDocumentsView({
     };
   }, [scannedDocuments, profile, isAdmin]);
 
-  const handleSaveScannedDocs = useCallback(async (docs) => {
+  // Le scanner remonte les docs → on ouvre le modal de métadonnées
+  const handleSaveScannedDocs = useCallback((docs) => {
     if (!docs || docs.length === 0) return;
+    setShowScanner(false);
+    setPendingDocs(docs);
+  }, []);
 
+  // Confirmation du modal → sauvegarde réelle vers Supabase
+  const handleConfirmSave = useCallback(async ({ title, category }) => {
+    if (!pendingDocs) return;
+    setSavingDocs(true);
     try {
-      // Demander les infos pour les documents
-      const title = prompt('Titre du document(s):') || 'Document scanné';
-      const categoryInput = prompt(
-        'Catégorie:\n' + CATEGORIES.map((c, i) => `${i + 1}. ${c.label}`).join('\n')
-      );
-      const categoryIndex = parseInt(categoryInput) - 1;
-      const category = CATEGORIES[categoryIndex]?.value || 'autre';
-
-      await onSaveDocuments(docs, {
-        title,
-        category,
-        user_id: profile.id
-      });
-
-      setShowScanner(false);
-      alert(`✅ ${docs.length} document(s) sauvegardé(s)`);
+      await onSaveDocuments(pendingDocs, { title, category, user_id: profile?.id });
+      setPendingDocs(null);
     } catch (error) {
       logger.error('Erreur sauvegarde:', error);
       alert('❌ Erreur lors de la sauvegarde');
+    } finally {
+      setSavingDocs(false);
     }
-  }, [onSaveDocuments, profile]);
+  }, [pendingDocs, onSaveDocuments, profile]);
 
-  // Supprimer un document
-  const handleDelete = useCallback(async (doc) => {
-    if (!window.confirm(`Supprimer "${doc.title}" ?`)) return;
+  // Supprimer un document — ouvre le modal de confirmation
+  const handleDelete = useCallback((doc) => {
+    setDeleteTarget(doc);
+  }, []);
 
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeletingDoc(true);
     try {
-      await onDeleteDocument(doc.id);
-      alert('✅ Document supprimé');
+      await onDeleteDocument(deleteTarget.id);
+      setDeleteTarget(null);
+      showToast('Document supprimé');
     } catch (error) {
       logger.error('Erreur suppression:', error);
-      alert('❌ Erreur lors de la suppression');
+      showToast('Erreur lors de la suppression', 'error');
+    } finally {
+      setDeletingDoc(false);
     }
-  }, [onDeleteDocument]);
+  }, [deleteTarget, onDeleteDocument, showToast]);
 
   const { downloadFile } = useDownload();
 
@@ -460,6 +556,146 @@ export default function MyDocumentsView({
           transform: scale(0.95);
         }
 
+        .doc-thumbnail-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #9ca3af;
+        }
+
+        /* Modal de sauvegarde */
+        .docs-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 1rem;
+        }
+
+        .docs-modal {
+          background: var(--bg-primary, #fff);
+          color: var(--text-primary, #1f2937);
+          border-radius: 1rem;
+          padding: 1.5rem;
+          width: 100%;
+          max-width: 420px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .docs-modal-title {
+          font-size: 1.2rem;
+          font-weight: 700;
+          margin: 0 0 1.25rem;
+        }
+
+        .docs-modal-label {
+          display: block;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #6b7280;
+          margin-bottom: 0.4rem;
+        }
+
+        .docs-modal-input {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border: 2px solid var(--border-color, #e5e7eb);
+          border-radius: 0.5rem;
+          font-size: 0.9rem;
+          margin-bottom: 1.25rem;
+          background: var(--bg-primary, #fff);
+          color: var(--text-primary, #1f2937);
+          box-sizing: border-box;
+        }
+
+        .docs-modal-input:focus {
+          outline: none;
+          border-color: #667eea;
+        }
+
+        .docs-modal-cats {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .docs-modal-cat {
+          padding: 0.6rem 0.5rem;
+          border: 2px solid var(--border-color, #e5e7eb);
+          border-radius: 0.5rem;
+          background: var(--bg-primary, #fff);
+          color: var(--text-primary, #1f2937);
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .docs-modal-cat:hover {
+          border-color: #667eea;
+        }
+
+        .docs-modal-actions {
+          display: flex;
+          gap: 0.75rem;
+        }
+
+        .docs-modal-btn {
+          flex: 1;
+          padding: 0.8rem;
+          border-radius: 0.5rem;
+          font-weight: 600;
+          font-size: 0.9rem;
+          cursor: pointer;
+          border: 2px solid transparent;
+          transition: all 0.15s;
+        }
+
+        .docs-modal-btn.cancel {
+          background: var(--bg-secondary, #f3f4f6);
+          color: var(--text-primary, #4b5563);
+          border-color: var(--border-color, #e5e7eb);
+        }
+
+        .docs-modal-btn.confirm {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #fff;
+        }
+
+        .docs-modal-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Toast */
+        .docs-toast {
+          position: fixed;
+          bottom: 5.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 0.75rem 1.5rem;
+          border-radius: 2rem;
+          font-weight: 600;
+          font-size: 0.875rem;
+          color: #fff;
+          z-index: 3000;
+          pointer-events: none;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+          animation: toastIn 0.2s ease;
+        }
+
+        .docs-toast.success { background: #10b981; }
+        .docs-toast.error   { background: #ef4444; }
+
+        @keyframes toastIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
         @media (max-width: 768px) {
           .docs-grid {
             grid-template-columns: 1fr;
@@ -570,12 +806,18 @@ export default function MyDocumentsView({
         <div className="docs-grid">
           {filteredDocuments.map(doc => (
             <div key={doc.id} className="doc-card">
-              {doc.thumbnail_url && (
+              {doc.thumbnail_url ? (
                 <img
                   src={doc.thumbnail_url}
                   alt={doc.title}
                   className="doc-thumbnail"
+                  loading="lazy"
+                  decoding="async"
                 />
+              ) : (
+                <div className="doc-thumbnail doc-thumbnail-placeholder">
+                  <FolderIcon size={32} />
+                </div>
               )}
 
               <div className="doc-content">
@@ -662,6 +904,31 @@ export default function MyDocumentsView({
         >
           <CameraIcon style={{ width: '32px', height: '32px' }} />
         </button>
+      )}
+
+      {/* Modal de sauvegarde des documents scannés */}
+      {pendingDocs && (
+        <SaveDocumentsModal
+          count={pendingDocs.length}
+          saving={savingDocs}
+          onConfirm={handleConfirmSave}
+          onCancel={() => { if (!savingDocs) setPendingDocs(null); }}
+        />
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          doc={deleteTarget}
+          deleting={deletingDoc}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => { if (!deletingDoc) setDeleteTarget(null); }}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`docs-toast ${toast.type}`}>{toast.msg}</div>
       )}
     </div>
   );
