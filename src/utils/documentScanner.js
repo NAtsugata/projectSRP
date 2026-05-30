@@ -1,6 +1,6 @@
 // src/utils/documentScanner.js
 // Utilitaires pour scanner et traiter des documents avec OpenCV.js
-// Version améliorée - Détection robuste multi-méthodes
+// Détection single-function, robuste, style ClearScanner.
 
 /**
  * Vérifie si OpenCV est chargé et prêt
@@ -9,618 +9,10 @@ export const isOpenCvReady = () => {
   return !!(window.cv && window.cv.Mat && typeof window.cv.Mat === 'function');
 };
 
-/**
- * Détecte les bords d'un document dans une image avec OpenCV
- * Version V9 - Détection améliorée avec meilleure résolution et paramètres optimisés
- */
-export function detectDocumentEdges(imageData) {
-  if (!isOpenCvReady()) {
-    console.warn('[DETECT] OpenCV not ready');
-    return null;
-  }
-
-  const cv = window.cv;
-  let src = null;
-  let resized = null;
-  let enhanced = null;
-  let gray = null;
-  let blurred = null;
-
-  try {
-    // 1. Conversion ImageData -> cv.Mat
-    src = cv.matFromImageData(imageData);
-
-    // 2. Résolution maximale pour meilleure détection (Full HD)
-    const maxDim = Math.max(src.cols, src.rows);
-    const targetSize = 1920;
-    const scale = maxDim > targetSize ? targetSize / maxDim : 1;
-
-    resized = new cv.Mat();
-    if (scale < 1) {
-      cv.resize(src, resized, new cv.Size(0, 0), scale, scale, cv.INTER_LINEAR);
-    } else {
-      src.copyTo(resized);
-    }
-
-    const imgWidth = resized.cols;
-    const imgHeight = resized.rows;
-    const imgArea = imgWidth * imgHeight;
-    const minAreaThreshold = imgArea * 0.02; // 2% minimum (plus sensible)
-
-    // 3. Conversion en niveaux de gris
-    gray = new cv.Mat();
-    cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
-
-    // 4. Amélioration du contraste (CLAHE plus fort)
-    enhanced = new cv.Mat();
-    const clahe = new cv.CLAHE(4.0, new cv.Size(8, 8));
-    clahe.apply(gray, enhanced);
-    clahe.delete();
-
-    // 5. Flou gaussien pour réduire le bruit
-    blurred = new cv.Mat();
-    cv.GaussianBlur(enhanced, blurred, new cv.Size(5, 5), 0);
-
-    // Collecter tous les candidats de toutes les méthodes
-    const candidates = [];
-
-    // ===== MÉTHODE 1: Adaptive Threshold =====
-    const adaptiveResult = detectWithAdaptiveThreshold(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (adaptiveResult) {
-      adaptiveResult.method = 'adaptive';
-      candidates.push(adaptiveResult);
-    }
-
-    // ===== MÉTHODE 2: Multi-Canny (plusieurs seuils) =====
-    const cannyResults = detectWithMultiCanny(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
-    cannyResults.forEach(r => {
-      r.method = 'canny';
-      candidates.push(r);
-    });
-
-    // ===== MÉTHODE 3: Otsu amélioré =====
-    const otsuResult = detectWithOtsuEnhanced(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (otsuResult) {
-      otsuResult.method = 'otsu';
-      candidates.push(otsuResult);
-    }
-
-    // ===== MÉTHODE 4: Détection basée sur les gradients (Sobel) =====
-    const sobelResult = detectWithSobel(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (sobelResult) {
-      sobelResult.method = 'sobel';
-      candidates.push(sobelResult);
-    }
-
-    // ===== MÉTHODE 5: Détection zones claires (papier blanc/beige) =====
-    const lightResult = detectLightRegion(cv, resized, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (lightResult) {
-      lightResult.method = 'light';
-      candidates.push(lightResult);
-    }
-
-    // ===== MÉTHODE 6: Détection par contraste de couleur =====
-    const colorResult = detectByColorContrast(cv, resized, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (colorResult) {
-      colorResult.method = 'color';
-      candidates.push(colorResult);
-    }
-
-    // ===== MÉTHODE 7: Laplacien pour bords fins =====
-    const laplacianResult = detectWithLaplacian(cv, blurred, minAreaThreshold, scale, imgWidth, imgHeight);
-    if (laplacianResult) {
-      laplacianResult.method = 'laplacian';
-      candidates.push(laplacianResult);
-    }
-
-    if (candidates.length === 0) {
-      console.log('[DETECT] Aucun candidat trouvé');
-      return null;
-    }
-
-    // Calculer le score pour chaque candidat
-    candidates.forEach(c => {
-      c.score = calculateDocumentScore(c.points, c.area, imgArea, imgWidth, imgHeight);
-    });
-
-    // Trier par score décroissant
-    candidates.sort((a, b) => b.score - a.score);
-
-    console.log('[DETECT] Candidats:', candidates.map(c => `${c.method}:${c.score.toFixed(2)}`).join(', '));
-
-    const best = candidates[0];
-
-    // Seuil très bas pour accepter plus de détections
-    if (best.score > 0.10) {
-      console.log('[DETECT] Meilleur:', best.method, 'score:', best.score.toFixed(2));
-      return sortCorners(best.points);
-    }
-
-    console.log('[DETECT] Score trop bas:', best.score.toFixed(2));
-    return null;
-
-  } catch (err) {
-    console.error('[DETECT] OpenCV error:', err);
-    return null;
-  } finally {
-    if (src) src.delete();
-    if (resized) resized.delete();
-    if (enhanced) enhanced.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
-  }
-}
+// ─── Helpers internes ────────────────────────────────────────────────────────
 
 /**
- * Détection RAPIDE pour le temps réel (style ClearScanner).
- * Une seule méthode (Canny adaptatif + plus grand quadrilatère) sur une
- * image DÉJÀ réduite par l'appelant (~480px). Pas de CLAHE, pas de 7 méthodes :
- * conçu pour tourner à ~15 fps sans bloquer le thread principal.
- *
- * @param {ImageData} imageData - image réduite (le coin retourné est en px de CETTE image)
- * @returns {Array<{x,y}>|null} 4 coins triés (TL, TR, BR, BL) ou null
- */
-export function detectDocumentFast(imageData) {
-  if (!isOpenCvReady()) return null;
-
-  const cv = window.cv;
-  let src = null, gray = null, blurred = null, edges = null, morphed = null, kernel = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    src = cv.matFromImageData(imageData);
-    const w = src.cols;
-    const h = src.rows;
-    const area = w * h;
-    const minArea = area * 0.04; // doc doit faire ≥4% de l'image réduite
-
-    gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-    blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-
-    // Seuils Canny adaptatifs basés sur la médiane
-    const median = estimateMedian(blurred);
-    const low = Math.max(0, 0.55 * median);
-    const high = Math.min(255, 1.3 * median);
-
-    edges = new cv.Mat();
-    cv.Canny(blurred, edges, low, high);
-
-    // Connecter les bords (dilate + close) — petits noyaux car image réduite
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-    morphed = new cv.Mat();
-    cv.dilate(edges, morphed, kernel);
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    // Méthode jscanify : plus grand contour → 4 coins extrêmes.
-    // Capture TOUTE la page (pas un bloc de texte interne) même si les bords
-    // sont brisés. C'est l'approche open-source la plus robuste pour le cadrage.
-    let best = largestContourCorners(cv, contours, minArea, w, h);
-
-    // Repli : ancienne méthode approxPolyDP si aucun grand contour exploitable
-    if (!best) best = findBestQuadContour(cv, contours, minArea, 1, w, h);
-
-    // Fallback léger : seuillage adaptatif si Canny n'a rien trouvé.
-    // Utile sur fond peu contrasté (papier blanc sur table claire).
-    if (!best) {
-      contours.delete(); hierarchy.delete();
-      const thresh = new cv.Mat();
-      cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 7);
-      if (cv.mean(thresh)[0] > 127) cv.bitwise_not(thresh, thresh);
-      cv.morphologyEx(thresh, thresh, cv.MORPH_CLOSE, kernel);
-      contours = new cv.MatVector();
-      hierarchy = new cv.Mat();
-      cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-      best = largestContourCorners(cv, contours, minArea, w, h)
-          || findBestQuadContour(cv, contours, minArea, 1, w, h);
-      thresh.delete();
-    }
-
-    if (!best) return null;
-    return sortCorners(best.points);
-  } catch (err) {
-    return null;
-  } finally {
-    if (src) src.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
-    if (edges) edges.delete();
-    if (morphed) morphed.delete();
-    if (kernel) kernel.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Détection avec seuillage adaptatif (meilleur pour éclairage inégal)
- */
-function detectWithAdaptiveThreshold(cv, gray, minArea, scale, imgWidth, imgHeight) {
-  let thresh = null, morphed = null, kernel = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    thresh = new cv.Mat();
-    // Seuillage adaptatif avec bloc plus grand pour meilleure détection
-    cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 3);
-
-    // Inverser si nécessaire (document clair sur fond sombre)
-    const mean = cv.mean(thresh);
-    if (mean[0] > 127) {
-      cv.bitwise_not(thresh, thresh);
-    }
-
-    // Morphologie très agressive pour connecter les bords
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-    morphed = new cv.Mat();
-    cv.morphologyEx(thresh, morphed, cv.MORPH_CLOSE, kernel);
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-
-  } finally {
-    if (thresh) thresh.delete();
-    if (morphed) morphed.delete();
-    if (kernel) kernel.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Détection Canny avec plusieurs configurations de seuils
- */
-function detectWithMultiCanny(cv, gray, minArea, scale, imgWidth, imgHeight) {
-  const results = [];
-
-  // Calculer la médiane pour les seuils adaptatifs
-  const median = estimateMedian(gray);
-
-  // Plusieurs configurations de seuils
-  const configs = [
-    { low: Math.max(0, median * 0.3), high: Math.min(255, median * 1.0) },
-    { low: Math.max(0, median * 0.5), high: Math.min(255, median * 1.5) },
-    { low: 30, high: 100 },
-    { low: 50, high: 150 },
-    { low: 75, high: 200 }
-  ];
-
-  for (const config of configs) {
-    let edges = null, morphed = null, kernel = null;
-    let contours = null, hierarchy = null;
-
-    try {
-      edges = new cv.Mat();
-      cv.Canny(gray, edges, config.low, config.high);
-
-      kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-      morphed = new cv.Mat();
-      cv.dilate(edges, morphed, kernel);
-      cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
-
-      const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-      cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-      bigKernel.delete();
-
-      contours = new cv.MatVector();
-      hierarchy = new cv.Mat();
-      cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-      const result = findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-      if (result) {
-        results.push(result);
-      }
-
-    } finally {
-      if (edges) edges.delete();
-      if (morphed) morphed.delete();
-      if (kernel) kernel.delete();
-      if (contours) contours.delete();
-      if (hierarchy) hierarchy.delete();
-    }
-  }
-
-  return results;
-}
-
-/**
- * Détection Otsu améliorée avec morphologie
- */
-function detectWithOtsuEnhanced(cv, gray, minArea, scale, imgWidth, imgHeight) {
-  let thresh = null, morphed = null, kernel = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    thresh = new cv.Mat();
-    cv.threshold(gray, thresh, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
-
-    // Essayer les deux polarités
-    const results = [];
-
-    for (let invert = 0; invert <= 1; invert++) {
-      const workImg = new cv.Mat();
-      if (invert) {
-        cv.bitwise_not(thresh, workImg);
-      } else {
-        thresh.copyTo(workImg);
-      }
-
-      kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-      morphed = new cv.Mat();
-      cv.morphologyEx(workImg, morphed, cv.MORPH_CLOSE, kernel);
-
-      const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(11, 11));
-      cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-      bigKernel.delete();
-
-      contours = new cv.MatVector();
-      hierarchy = new cv.Mat();
-      cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-      const result = findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-      if (result) {
-        results.push(result);
-      }
-
-      workImg.delete();
-      if (morphed) morphed.delete();
-      if (kernel) kernel.delete();
-      if (contours) contours.delete();
-      if (hierarchy) hierarchy.delete();
-    }
-
-    // Retourner le meilleur résultat
-    if (results.length > 0) {
-      results.sort((a, b) => b.area - a.area);
-      return results[0];
-    }
-    return null;
-
-  } finally {
-    if (thresh) thresh.delete();
-  }
-}
-
-/**
- * Détection basée sur les gradients (Sobel)
- */
-function detectWithSobel(cv, gray, minArea, scale, imgWidth, imgHeight) {
-  let gradX = null, gradY = null, absX = null, absY = null;
-  let grad = null, thresh = null, morphed = null, kernel = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    gradX = new cv.Mat();
-    gradY = new cv.Mat();
-    cv.Sobel(gray, gradX, cv.CV_16S, 1, 0);
-    cv.Sobel(gray, gradY, cv.CV_16S, 0, 1);
-
-    absX = new cv.Mat();
-    absY = new cv.Mat();
-    cv.convertScaleAbs(gradX, absX);
-    cv.convertScaleAbs(gradY, absY);
-
-    grad = new cv.Mat();
-    cv.addWeighted(absX, 0.5, absY, 0.5, 0, grad);
-
-    // Seuillage
-    thresh = new cv.Mat();
-    cv.threshold(grad, thresh, 30, 255, cv.THRESH_BINARY);
-
-    // Morphologie pour connecter
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-    morphed = new cv.Mat();
-    cv.morphologyEx(thresh, morphed, cv.MORPH_CLOSE, kernel);
-    cv.dilate(morphed, morphed, kernel);
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-
-  } finally {
-    if (gradX) gradX.delete();
-    if (gradY) gradY.delete();
-    if (absX) absX.delete();
-    if (absY) absY.delete();
-    if (grad) grad.delete();
-    if (thresh) thresh.delete();
-    if (morphed) morphed.delete();
-    if (kernel) kernel.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Détection des zones claires (papier blanc, beige, jaune clair)
- */
-function detectLightRegion(cv, img, minArea, scale, imgWidth, imgHeight) {
-  let lab = null, mask = null, kernel = null, morphed = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    // Convertir en LAB
-    const rgb = new cv.Mat();
-    cv.cvtColor(img, rgb, cv.COLOR_RGBA2RGB);
-
-    lab = new cv.Mat();
-    cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
-    rgb.delete();
-
-    // Extraire le canal L (luminosité)
-    const labChannels = new cv.MatVector();
-    cv.split(lab, labChannels);
-    const L = labChannels.get(0);
-    const a = labChannels.get(1);
-    const b = labChannels.get(2);
-
-    // Créer un masque pour les zones claires (L > 150)
-    mask = new cv.Mat();
-    cv.threshold(L, mask, 140, 255, cv.THRESH_BINARY);
-
-    // Nettoyer
-    a.delete();
-    b.delete();
-    L.delete();
-    labChannels.delete();
-
-    // Morphologie
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-    morphed = new cv.Mat();
-    cv.morphologyEx(mask, morphed, cv.MORPH_OPEN, kernel);
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-
-  } finally {
-    if (lab) lab.delete();
-    if (mask) mask.delete();
-    if (kernel) kernel.delete();
-    if (morphed) morphed.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Détection par contraste de couleur (document vs fond)
- */
-function detectByColorContrast(cv, img, minArea, scale, imgWidth, imgHeight) {
-  let hsv = null, mask = null, kernel = null, morphed = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    // Convertir en HSV
-    const rgb = new cv.Mat();
-    cv.cvtColor(img, rgb, cv.COLOR_RGBA2RGB);
-
-    hsv = new cv.Mat();
-    cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
-    rgb.delete();
-
-    // Extraire les canaux
-    const hsvChannels = new cv.MatVector();
-    cv.split(hsv, hsvChannels);
-    const S = hsvChannels.get(1);
-    const V = hsvChannels.get(2);
-
-    // Masque pour les zones peu saturées et claires (papier typique)
-    const lowSat = new cv.Mat();
-    const highVal = new cv.Mat();
-    cv.threshold(S, lowSat, 50, 255, cv.THRESH_BINARY_INV);
-    cv.threshold(V, highVal, 120, 255, cv.THRESH_BINARY);
-
-    mask = new cv.Mat();
-    cv.bitwise_and(lowSat, highVal, mask);
-
-    hsvChannels.get(0).delete();
-    S.delete();
-    V.delete();
-    hsvChannels.delete();
-    lowSat.delete();
-    highVal.delete();
-
-    // Morphologie
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-    morphed = new cv.Mat();
-    cv.morphologyEx(mask, morphed, cv.MORPH_OPEN, kernel);
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, kernel);
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(13, 13));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-
-  } finally {
-    if (hsv) hsv.delete();
-    if (mask) mask.delete();
-    if (kernel) kernel.delete();
-    if (morphed) morphed.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Détection avec Laplacien (bords fins et détaillés)
- */
-function detectWithLaplacian(cv, gray, minArea, scale, imgWidth, imgHeight) {
-  let laplacian = null, absLaplacian = null, thresh = null, morphed = null, kernel = null;
-  let contours = null, hierarchy = null;
-
-  try {
-    // Laplacien pour détecter les bords
-    laplacian = new cv.Mat();
-    cv.Laplacian(gray, laplacian, cv.CV_16S, 3);
-
-    // Valeur absolue
-    absLaplacian = new cv.Mat();
-    cv.convertScaleAbs(laplacian, absLaplacian);
-
-    // Seuillage
-    thresh = new cv.Mat();
-    cv.threshold(absLaplacian, thresh, 25, 255, cv.THRESH_BINARY);
-
-    // Morphologie pour connecter les bords
-    kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-    morphed = new cv.Mat();
-    cv.dilate(thresh, morphed, kernel);
-
-    const bigKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(11, 11));
-    cv.morphologyEx(morphed, morphed, cv.MORPH_CLOSE, bigKernel);
-    bigKernel.delete();
-
-    contours = new cv.MatVector();
-    hierarchy = new cv.Mat();
-    cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    return findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight);
-
-  } finally {
-    if (laplacian) laplacian.delete();
-    if (absLaplacian) absLaplacian.delete();
-    if (thresh) thresh.delete();
-    if (morphed) morphed.delete();
-    if (kernel) kernel.delete();
-    if (contours) contours.delete();
-    if (hierarchy) hierarchy.delete();
-  }
-}
-
-/**
- * Estime la médiane d'une image grayscale
+ * Estime la médiane des valeurs d'une image grayscale (échantillonnage rapide)
  */
 function estimateMedian(gray) {
   const data = gray.data;
@@ -634,216 +26,7 @@ function estimateMedian(gray) {
 }
 
 /**
- * Trouve le meilleur contour quadrilatéral parmi une liste
- */
-/**
- * Détection façon jscanify (open-source) : on retient le plus grand contour,
- * puis on en extrait les 4 coins EXTRÊMES (min/max de x±y). Contrairement à
- * approxPolyDP qui peut se caler sur un bord interne ou un bloc de texte, cette
- * méthode épouse toujours la limite extérieure de la page → la page entière est
- * cadrée même si certains bords sont brisés ou flous.
- */
-function largestContourCorners(cv, contours, minArea, imgWidth, imgHeight) {
-  let maxArea = 0;
-  let biggest = null;
-  for (let i = 0; i < contours.size(); i++) {
-    const c = contours.get(i);
-    const a = cv.contourArea(c);
-    if (a > maxArea) { maxArea = a; biggest = c; }
-  }
-  if (!biggest || maxArea < minArea) return null;
-
-  // Travailler sur l'enveloppe convexe → on ignore les renfoncements parasites
-  const hull = new cv.Mat();
-  cv.convexHull(biggest, hull);
-  const pts = matToPoints(hull);
-  hull.delete();
-  if (pts.length < 4) return null;
-
-  // Coins extrêmes : TL=min(x+y), BR=max(x+y), TR=max(x−y), BL=min(x−y)
-  let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
-  let tlV = Infinity, brV = -Infinity, trV = -Infinity, blV = Infinity;
-  for (const p of pts) {
-    const sum = p.x + p.y;
-    const diff = p.x - p.y;
-    if (sum < tlV) { tlV = sum; tl = p; }
-    if (sum > brV) { brV = sum; br = p; }
-    if (diff > trV) { trV = diff; tr = p; }
-    if (diff < blV) { blV = diff; bl = p; }
-  }
-
-  const corners = [tl, tr, br, bl];
-  if (!isConvexQuad(corners)) return null;
-  if (!isValidDocumentShape(corners, imgWidth, imgHeight)) return null;
-
-  return { area: maxArea, points: corners.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })) };
-}
-
-function findBestQuadContour(cv, contours, minArea, scale, imgWidth, imgHeight) {
-  let bestResult = null;
-  let bestScore = 0;
-
-  for (let i = 0; i < contours.size(); i++) {
-    const contour = contours.get(i);
-    const area = cv.contourArea(contour);
-
-    if (area < minArea) continue;
-
-    const points = extractQuadrilateral(cv, contour);
-    if (!points) continue;
-
-    // Validation plus souple
-    if (!isValidDocumentShape(points, imgWidth, imgHeight)) continue;
-
-    const score = calculateQuickScore(points, area, imgWidth * imgHeight);
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestResult = {
-        area: area,
-        points: points.map(p => ({
-          x: Math.round(p.x / scale),
-          y: Math.round(p.y / scale)
-        }))
-      };
-    }
-  }
-
-  return bestResult;
-}
-
-/**
- * Score rapide pour comparer les contours
- */
-function calculateQuickScore(points, area, totalArea) {
-  const areaRatio = area / totalArea;
-  // Plus permissif: accepter de 3% à 98%
-  if (areaRatio < 0.03 || areaRatio > 0.98) return 0;
-  // Favoriser les documents qui prennent une bonne partie de l'image
-  return Math.sqrt(areaRatio);
-}
-
-/**
- * Score de qualité complet pour un candidat document
- */
-function calculateDocumentScore(points, area, totalArea, imgWidth, imgHeight) {
-  if (!points || points.length !== 4) return 0;
-
-  let score = 0;
-
-  // 1. Score de taille (5-95% de l'image) - 30%
-  const areaRatio = area / totalArea;
-  if (areaRatio >= 0.05 && areaRatio <= 0.95) {
-    // Favoriser les tailles moyennes à grandes
-    const sizeScore = areaRatio < 0.5 ? areaRatio * 2 : 1;
-    score += 0.30 * sizeScore;
-  }
-
-  // 2. Score de rectangularité (côtés opposés similaires) - 25%
-  const sides = [];
-  for (let i = 0; i < 4; i++) {
-    const p1 = points[i];
-    const p2 = points[(i + 1) % 4];
-    sides.push(Math.hypot(p2.x - p1.x, p2.y - p1.y));
-  }
-  const ratio1 = Math.min(sides[0], sides[2]) / Math.max(sides[0], sides[2]);
-  const ratio2 = Math.min(sides[1], sides[3]) / Math.max(sides[1], sides[3]);
-  score += 0.25 * ((ratio1 + ratio2) / 2);
-
-  // 3. Score d'angles (proches de 90°) - 25%
-  let angleScore = 0;
-  for (let i = 0; i < 4; i++) {
-    const p1 = points[(i + 3) % 4];
-    const p2 = points[i];
-    const p3 = points[(i + 1) % 4];
-    const angle = calculateAngle(p1, p2, p3);
-    const deviation = Math.abs(90 - angle);
-    // Plus tolérant: jusqu'à 45° de déviation
-    angleScore += Math.max(0, 1 - deviation / 45);
-  }
-  score += 0.25 * (angleScore / 4);
-
-  // 4. Score de position (pas collé aux bords) - 20%
-  const margin = Math.min(imgWidth, imgHeight) * 0.02;
-  let edgeCount = 0;
-  for (const p of points) {
-    if (p.x < margin || p.x > imgWidth - margin ||
-        p.y < margin || p.y > imgHeight - margin) {
-      edgeCount++;
-    }
-  }
-  score += 0.20 * (1 - edgeCount / 4);
-
-  return Math.max(0, Math.min(1, score));
-}
-
-/**
- * Extrait un quadrilatère d'un contour
- */
-function extractQuadrilateral(cv, contour) {
-  const peri = cv.arcLength(contour, true);
-
-  // Stratégie 1: approxPolyDP avec epsilon progressif
-  const epsilonFactors = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1];
-
-  for (const epsFactor of epsilonFactors) {
-    const approx = new cv.Mat();
-    cv.approxPolyDP(contour, approx, epsFactor * peri, true);
-
-    if (approx.rows === 4) {
-      const points = matToPoints(approx);
-      approx.delete();
-      if (isConvexQuad(points)) {
-        return points;
-      }
-    } else if (approx.rows > 4 && approx.rows <= 10) {
-      const allPoints = matToPoints(approx);
-      approx.delete();
-      const best4 = findBest4Corners(allPoints);
-      if (best4 && isConvexQuad(best4)) {
-        return best4;
-      }
-    } else {
-      approx.delete();
-    }
-  }
-
-  // Stratégie 2: Convex Hull
-  const hull = new cv.Mat();
-  cv.convexHull(contour, hull);
-
-  if (hull.rows >= 4) {
-    const hullPoints = matToPoints(hull);
-    hull.delete();
-
-    if (hullPoints.length === 4) {
-      return hullPoints;
-    } else if (hullPoints.length > 4) {
-      const best4 = findBest4Corners(hullPoints);
-      if (best4 && isConvexQuad(best4)) {
-        return best4;
-      }
-    }
-  } else {
-    hull.delete();
-  }
-
-  // Stratégie 3: Min Area Rect
-  const rect = cv.minAreaRect(contour);
-  const vertices = cv.RotatedRect.points(rect);
-
-  if (vertices && vertices.length === 4) {
-    const rectPoints = vertices.map(v => ({ x: v.x, y: v.y }));
-    if (isConvexQuad(rectPoints)) {
-      return rectPoints;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Convertit un cv.Mat en tableau de points
+ * Convertit un cv.Mat en tableau de points {x, y}
  */
 function matToPoints(mat) {
   const points = [];
@@ -857,173 +40,282 @@ function matToPoints(mat) {
 }
 
 /**
- * Vérifie si 4 points forment un quadrilatère convexe
+ * Vérifie qu'un quadrilatère est convexe
  */
 function isConvexQuad(points) {
   if (points.length !== 4) return false;
-
   let sign = 0;
   for (let i = 0; i < 4; i++) {
     const p1 = points[i];
     const p2 = points[(i + 1) % 4];
     const p3 = points[(i + 2) % 4];
-
     const cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
-
     if (cross !== 0) {
-      if (sign === 0) {
-        sign = cross > 0 ? 1 : -1;
-      } else if ((cross > 0 ? 1 : -1) !== sign) {
-        return false;
-      }
+      if (sign === 0) sign = cross > 0 ? 1 : -1;
+      else if ((cross > 0 ? 1 : -1) !== sign) return false;
     }
   }
   return true;
 }
 
 /**
- * Trouve les 4 meilleurs coins parmi N points
+ * Calcule l'angle au sommet p2
  */
-function findBest4Corners(points) {
-  if (points.length < 4) return null;
-  if (points.length === 4) return points;
-
-  const n = points.length;
-  const angles = [];
-
-  for (let i = 0; i < n; i++) {
-    const prev = points[(i - 1 + n) % n];
-    const curr = points[i];
-    const next = points[(i + 1) % n];
-    const angle = calculateAngle(prev, curr, next);
-    angles.push({ index: i, angle: angle, point: curr });
-  }
-
-  // Les coins les plus marqués ont les angles les plus aigus
-  angles.sort((a, b) => a.angle - b.angle);
-  const best4Indices = angles.slice(0, 4).map(a => a.index).sort((a, b) => a - b);
-
-  return best4Indices.map(i => points[i]);
-}
-
-/**
- * Calcule l'angle au point p2
- */
-function calculateAngle(p1, p2, p3) {
+function calcAngle(p1, p2, p3) {
   const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
   const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-
   const dot = v1.x * v2.x + v1.y * v2.y;
   const mag1 = Math.hypot(v1.x, v1.y);
   const mag2 = Math.hypot(v2.x, v2.y);
-
   if (mag1 === 0 || mag2 === 0) return 180;
-
-  const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
-  return Math.acos(cosAngle) * (180 / Math.PI);
+  return Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI);
 }
 
 /**
- * Valide qu'une forme est bien un document
+ * Valide qu'une forme ressemble à un document
  */
 function isValidDocumentShape(points, imgWidth, imgHeight) {
   if (points.length !== 4) return false;
-
-  // Bounding box
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  const bboxWidth = maxX - minX;
-  const bboxHeight = maxY - minY;
-
-  // Taille minimum plus permissive (5% au lieu de 10%)
-  if (bboxWidth < imgWidth * 0.05 || bboxHeight < imgHeight * 0.05) {
-    return false;
-  }
-
-  // Ratio d'aspect très permissif (0.1 à 10.0)
-  const aspectRatio = bboxWidth / bboxHeight;
-  if (aspectRatio < 0.1 || aspectRatio > 10.0) {
-    return false;
-  }
-
-  // Vérifier les angles (10° à 170° - plus permissif)
+  const bboxW = Math.max(...xs) - Math.min(...xs);
+  const bboxH = Math.max(...ys) - Math.min(...ys);
+  if (bboxW < imgWidth * 0.05 || bboxH < imgHeight * 0.05) return false;
+  const aspect = bboxW / bboxH;
+  if (aspect < 0.1 || aspect > 10.0) return false;
   for (let i = 0; i < 4; i++) {
-    const p1 = points[(i + 3) % 4];
-    const p2 = points[i];
-    const p3 = points[(i + 1) % 4];
-    const angle = calculateAngle(p1, p2, p3);
-
-    if (angle < 10 || angle > 170) {
-      return false;
-    }
+    const angle = calcAngle(points[(i + 3) % 4], points[i], points[(i + 1) % 4]);
+    if (angle < 10 || angle > 170) return false;
   }
-
-  // Aire vs bounding box (au moins 40%)
-  const quadArea = calculateQuadArea(points);
-  const bboxArea = bboxWidth * bboxHeight;
-  if (quadArea / bboxArea < 0.4) {
-    return false;
+  // Aire quadrilatère vs bounding box ≥ 40%
+  let area = 0;
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    area += points[i].x * points[j].y - points[j].x * points[i].y;
   }
-
+  area = Math.abs(area) / 2;
+  if (area / (bboxW * bboxH) < 0.4) return false;
   return true;
 }
 
 /**
- * Calcule l'aire d'un quadrilatère
+ * Extrait les 4 coins extrêmes (méthode jscanify) depuis un ensemble de points.
+ * TL = min(x+y), BR = max(x+y), TR = max(x-y), BL = min(x-y)
  */
-function calculateQuadArea(points) {
-  let area = 0;
-  const n = points.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    area += points[i].x * points[j].y;
-    area -= points[j].x * points[i].y;
+function extremeCorners(pts) {
+  let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+  let tlV = Infinity, brV = -Infinity, trV = -Infinity, blV = Infinity;
+  for (const p of pts) {
+    const sum = p.x + p.y;
+    const diff = p.x - p.y;
+    if (sum < tlV) { tlV = sum; tl = p; }
+    if (sum > brV) { brV = sum; br = p; }
+    if (diff > trV) { trV = diff; tr = p; }
+    if (diff < blV) { blV = diff; bl = p; }
   }
-  return Math.abs(area) / 2;
+  return [tl, tr, br, bl];
 }
 
 /**
- * Trie les coins: TL, TR, BR, BL
+ * Tente d'extraire un quadrilatère d'un contour avec convexHull + approxPolyDP
+ * Returns null si échec.
+ * @param {*} cv
+ * @param {*} contour
+ * @param {number} imgWidth
+ * @param {number} imgHeight
+ */
+function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
+  const hull = new cv.Mat();
+  try {
+    cv.convexHull(contour, hull);
+    if (hull.rows < 4) return null;
+
+    const peri = cv.arcLength(hull, true);
+    const approx = new cv.Mat();
+    try {
+      cv.approxPolyDP(hull, approx, 0.02 * peri, true);
+      const n = approx.rows;
+
+      if (n === 4) {
+        const pts = matToPoints(approx);
+        if (isConvexQuad(pts) && isValidDocumentShape(pts, imgWidth, imgHeight)) {
+          return pts.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+        }
+        return null;
+      }
+
+      if (n > 4) {
+        const pts = matToPoints(approx);
+        const corners = extremeCorners(pts);
+        if (isConvexQuad(corners) && isValidDocumentShape(corners, imgWidth, imgHeight)) {
+          return corners.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+        }
+        return null;
+      }
+
+      return null;
+    } finally {
+      approx.delete();
+    }
+  } finally {
+    hull.delete();
+  }
+}
+
+/**
+ * Cherche les meilleurs 4 coins dans un ensemble de contours.
+ * Trie par aire décroissante, essaie les 5 plus grands > minArea.
+ */
+function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
+  // Collecter (area, index)
+  const candidates = [];
+  for (let i = 0; i < contours.size(); i++) {
+    const c = contours.get(i);
+    const a = cv.contourArea(c);
+    if (a >= minArea) candidates.push({ idx: i, area: a });
+  }
+  // Trier par aire décroissante
+  candidates.sort((a, b) => b.area - a.area);
+
+  for (let k = 0; k < Math.min(5, candidates.length); k++) {
+    const contour = contours.get(candidates[k].idx);
+    const quad = extractQuadFromContour(cv, contour, imgWidth, imgHeight);
+    if (quad) return quad;
+  }
+  return null;
+}
+
+// ─── Export principal ─────────────────────────────────────────────────────────
+
+/**
+ * Détecte le contour d'un document dans une ImageData.
+ * Stratégie unique (remplace les 7 méthodes de l'ancienne version) :
+ *   1. Grayscale → GaussianBlur(5,5)
+ *   2. Canny adaptatif (sigma=0.33 sur médiane) → dilate 5×5
+ *   3. findContours RETR_LIST → 5 plus grands > 8% de l'image
+ *   4. convexHull → approxPolyDP (ε=0.02*périmètre)
+ *      • 4 pts  → validation → retourne
+ *      • >4 pts → 4 coins extrêmes → validation → retourne
+ *   5. Fallback : adaptiveThreshold → même pipeline
+ *   6. Last resort : coins complets (5% de marge)
+ *
+ * @param {ImageData} imageData
+ * @returns {Array<{x,y}>|null} 4 coins triés TL, TR, BR, BL
+ */
+export function detectDocumentContour(imageData) {
+  if (!isOpenCvReady()) return null;
+
+  const cv = window.cv;
+  const mats = [];
+  const t = m => { mats.push(m); return m; };
+
+  try {
+    const src = t(cv.matFromImageData(imageData));
+    const w = src.cols;
+    const h = src.rows;
+    const imgArea = w * h;
+    const minArea = imgArea * 0.08; // 8% minimum
+
+    // 1. Grayscale
+    const gray = t(new cv.Mat());
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    // 2. Blur
+    const blurred = t(new cv.Mat());
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+
+    // ── Tentative 1 : Canny adaptatif ──────────────────────────────────────
+    const median = estimateMedian(blurred);
+    const sigma = 0.33;
+    const low  = Math.max(0,   (1.0 - sigma) * median);
+    const high = Math.min(255, (1.0 + sigma) * median);
+
+    const edges = t(new cv.Mat());
+    cv.Canny(blurred, edges, low, high);
+
+    // Dilate 5×5 pour fermer les brèches
+    const kernel5 = t(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5)));
+    const morphed = t(new cv.Mat());
+    cv.dilate(edges, morphed, kernel5);
+
+    let contours  = t(new cv.MatVector());
+    let hierarchy = t(new cv.Mat());
+    cv.findContours(morphed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+    let quad = findQuadInContours(cv, contours, minArea, w, h);
+    if (quad) return sortCorners(quad);
+
+    // ── Tentative 2 : adaptiveThreshold ────────────────────────────────────
+    const thresh = t(new cv.Mat());
+    cv.adaptiveThreshold(blurred, thresh, 255,
+      cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 7);
+    // Inverser si fond clair (texte sombre → bords sur fond clair)
+    if (cv.mean(thresh)[0] > 127) cv.bitwise_not(thresh, thresh);
+
+    const morphed2  = t(new cv.Mat());
+    cv.dilate(thresh, morphed2, kernel5);
+
+    const contours2  = t(new cv.MatVector());
+    const hierarchy2 = t(new cv.Mat());
+    cv.findContours(morphed2, contours2, hierarchy2, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+    quad = findQuadInContours(cv, contours2, minArea, w, h);
+    if (quad) return sortCorners(quad);
+
+    // ── Last resort : coins pleine image avec 5% de marge ──────────────────
+    const mx = Math.round(w * 0.05);
+    const my = Math.round(h * 0.05);
+    return sortCorners([
+      { x: mx,     y: my },
+      { x: w - mx, y: my },
+      { x: w - mx, y: h - my },
+      { x: mx,     y: h - my },
+    ]);
+
+  } catch (err) {
+    return null;
+  } finally {
+    mats.forEach(m => { try { m.delete(); } catch (_) { /* déjà libéré */ } });
+  }
+}
+
+// Alias de compatibilité ascendante
+export const detectDocumentEdges = detectDocumentContour;
+export const detectDocumentFast  = detectDocumentContour;
+
+// ─── sortCorners ──────────────────────────────────────────────────────────────
+
+/**
+ * Trie les 4 coins en ordre TL, TR, BR, BL
  */
 function sortCorners(points) {
-  // Calculer le centre
   const cx = points.reduce((s, p) => s + p.x, 0) / 4;
   const cy = points.reduce((s, p) => s + p.y, 0) / 4;
 
-  // Trier par angle depuis le centre
   const sorted = points.map(p => ({
     ...p,
     angle: Math.atan2(p.y - cy, p.x - cx)
   })).sort((a, b) => a.angle - b.angle);
 
-  // Trouver le coin top-left (le plus en haut à gauche)
   let tlIndex = 0;
   let minSum = Infinity;
   for (let i = 0; i < 4; i++) {
     const sum = sorted[i].x + sorted[i].y;
-    if (sum < minSum) {
-      minSum = sum;
-      tlIndex = i;
-    }
+    if (sum < minSum) { minSum = sum; tlIndex = i; }
   }
 
-  // Réordonner pour que TL soit en premier
   const result = [];
   for (let i = 0; i < 4; i++) {
     const p = sorted[(tlIndex + i) % 4];
     result.push({ x: p.x, y: p.y });
   }
-
   return result;
 }
 
+// ─── Perspective transform ────────────────────────────────────────────────────
+
 /**
- * Applique une transformation de perspective
+ * Applique une transformation de perspective et retourne un nouveau canvas
  */
 export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = null, outputHeight = null) {
   if (!isOpenCvReady()) {
@@ -1040,86 +332,71 @@ export function applyPerspectiveTransform(canvas, sourceCorners, outputWidth = n
     src = cv.matFromImageData(imageData);
 
     if (!outputWidth || !outputHeight) {
-      const widthTop = Math.hypot(sourceCorners[1].x - sourceCorners[0].x, sourceCorners[1].y - sourceCorners[0].y);
+      const widthTop    = Math.hypot(sourceCorners[1].x - sourceCorners[0].x, sourceCorners[1].y - sourceCorners[0].y);
       const widthBottom = Math.hypot(sourceCorners[2].x - sourceCorners[3].x, sourceCorners[2].y - sourceCorners[3].y);
-      const heightLeft = Math.hypot(sourceCorners[3].x - sourceCorners[0].x, sourceCorners[3].y - sourceCorners[0].y);
+      const heightLeft  = Math.hypot(sourceCorners[3].x - sourceCorners[0].x, sourceCorners[3].y - sourceCorners[0].y);
       const heightRight = Math.hypot(sourceCorners[2].x - sourceCorners[1].x, sourceCorners[2].y - sourceCorners[1].y);
-
-      outputWidth = Math.round(Math.max(widthTop, widthBottom));
+      outputWidth  = Math.round(Math.max(widthTop,  widthBottom));
       outputHeight = Math.round(Math.max(heightLeft, heightRight));
     }
 
-    if (outputWidth <= 0 || outputHeight <= 0) {
-      return canvas;
-    }
+    if (outputWidth <= 0 || outputHeight <= 0) return canvas;
 
     srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
       sourceCorners[0].x, sourceCorners[0].y,
       sourceCorners[1].x, sourceCorners[1].y,
       sourceCorners[2].x, sourceCorners[2].y,
-      sourceCorners[3].x, sourceCorners[3].y
+      sourceCorners[3].x, sourceCorners[3].y,
     ]);
-
     dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
       0, 0,
       outputWidth, 0,
       outputWidth, outputHeight,
-      0, outputHeight
+      0, outputHeight,
     ]);
 
-    M = cv.getPerspectiveTransform(srcTri, dstTri);
+    M   = cv.getPerspectiveTransform(srcTri, dstTri);
     dst = new cv.Mat();
     cv.warpPerspective(src, dst, M, new cv.Size(outputWidth, outputHeight));
 
     const outputCanvas = document.createElement('canvas');
-    outputCanvas.width = outputWidth;
+    outputCanvas.width  = outputWidth;
     outputCanvas.height = outputHeight;
     cv.imshow(outputCanvas, dst);
-
     return outputCanvas;
 
   } catch (err) {
     console.error('Perspective transform error:', err);
     return canvas;
   } finally {
-    if (src) src.delete();
-    if (dst) dst.delete();
-    if (M) M.delete();
+    if (src)    src.delete();
+    if (dst)    dst.delete();
+    if (M)      M.delete();
     if (srcTri) srcTri.delete();
     if (dstTri) dstTri.delete();
   }
 }
+
+// ─── Filtres d'amélioration ───────────────────────────────────────────────────
 
 /**
  * Filtre Noir & Blanc - Binaire pur (aucun gris)
  */
 export function enhanceBlackAndWhite(imageData) {
   const data = imageData.data;
-
-  // Convertir en niveaux de gris
   const grayValues = [];
   for (let i = 0; i < data.length; i += 4) {
-    const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-    grayValues.push(gray);
+    grayValues.push(Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]));
   }
-
-  // Trouver le seuil optimal (méthode Otsu simplifiée)
   const sorted = [...grayValues].sort((a, b) => a - b);
-  const threshold = sorted[Math.floor(sorted.length * 0.85)]; // 85% = fond blanc
-
-  // Appliquer seuil binaire
+  const threshold = sorted[Math.floor(sorted.length * 0.85)];
   let idx = 0;
   for (let i = 0; i < data.length; i += 4) {
-    const gray = grayValues[idx++];
-
-    // Binaire pur: soit 0 soit 255
-    const value = gray > threshold ? 255 : 0;
-
+    const value = grayValues[idx++] > threshold ? 255 : 0;
     data[i] = value;
     data[i + 1] = value;
     data[i + 2] = value;
   }
-
   return imageData;
 }
 
@@ -1128,51 +405,31 @@ export function enhanceBlackAndWhite(imageData) {
  */
 export function enhanceGrayscale(imageData) {
   if (!isOpenCvReady()) return imageData;
-
   const cv = window.cv;
   const mats = [];
-  const track = (mat) => { mats.push(mat); return mat; };
-
+  const track = m => { mats.push(m); return m; };
   try {
-    const src = track(cv.matFromImageData(imageData));
-    const gray = track(new cv.Mat());
+    const src      = track(cv.matFromImageData(imageData));
+    const gray     = track(new cv.Mat());
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-    // CLAHE pour améliorer le contraste local
-    const clahe = new cv.CLAHE(3.0, new cv.Size(8, 8));
+    const clahe    = new cv.CLAHE(3.0, new cv.Size(8, 8));
     const enhanced = track(new cv.Mat());
     clahe.apply(gray, enhanced);
     clahe.delete();
-
-    // Unsharp masking pour la netteté
-    const blurred = track(new cv.Mat());
+    const blurred  = track(new cv.Mat());
     cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 1.5);
-
-    const sharp = track(new cv.Mat());
+    const sharp    = track(new cv.Mat());
     cv.addWeighted(enhanced, 1.5, blurred, -0.5, 0, sharp);
-
-    // Étirement des niveaux pour utiliser toute la plage dynamique
     const normalized = track(new cv.Mat());
     cv.normalize(sharp, normalized, 0, 255, cv.NORM_MINMAX);
-
-    const rgbaDst = track(new cv.Mat());
+    const rgbaDst  = track(new cv.Mat());
     cv.cvtColor(normalized, rgbaDst, cv.COLOR_GRAY2RGBA);
-
-    const imgData = new ImageData(
-      new Uint8ClampedArray(rgbaDst.data),
-      rgbaDst.cols,
-      rgbaDst.rows
-    );
-
-    return imgData;
-
+    return new ImageData(new Uint8ClampedArray(rgbaDst.data), rgbaDst.cols, rgbaDst.rows);
   } catch (err) {
     console.error('Enhance Gray error:', err);
     return imageData;
   } finally {
-    mats.forEach(mat => {
-      try { mat.delete(); } catch (e) { /* ignore */ }
-    });
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
@@ -1181,75 +438,48 @@ export function enhanceGrayscale(imageData) {
  */
 export function enhanceColor(imageData) {
   if (!isOpenCvReady()) return imageData;
-
   const cv = window.cv;
   const mats = [];
-  const track = (mat) => { mats.push(mat); return mat; };
-
+  const track = m => { mats.push(m); return m; };
   try {
-    const src = track(cv.matFromImageData(imageData));
-    const rgb = track(new cv.Mat());
+    const src      = track(cv.matFromImageData(imageData));
+    const rgb      = track(new cv.Mat());
     cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
-
-    // Convertir en LAB pour traiter luminosité et couleurs séparément
-    const lab = track(new cv.Mat());
+    const lab      = track(new cv.Mat());
     cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
-
-    // Séparer les canaux
     const channels = track(new cv.MatVector());
     cv.split(lab, channels);
     const L = channels.get(0);
     const a = channels.get(1);
     const b = channels.get(2);
-
-    // CLAHE sur le canal L (luminosité)
     const clahe = new cv.CLAHE(2.5, new cv.Size(8, 8));
     clahe.apply(L, L);
     clahe.delete();
-
-    // Saturation boost sur a et b
     const boostFactor = 1.15;
     a.convertTo(a, -1, boostFactor, 128 * (1 - boostFactor));
     b.convertTo(b, -1, boostFactor, 128 * (1 - boostFactor));
-
-    // Reconstruire l'image
     cv.merge(channels, lab);
     const enhanced = track(new cv.Mat());
     cv.cvtColor(lab, enhanced, cv.COLOR_Lab2RGB);
-
-    // Sharpening avec kernel Unsharp
-    const blurred = track(new cv.Mat());
+    const blurred  = track(new cv.Mat());
     cv.GaussianBlur(enhanced, blurred, new cv.Size(0, 0), 1.5);
-
-    const sharp = track(new cv.Mat());
+    const sharp    = track(new cv.Mat());
     cv.addWeighted(enhanced, 1.4, blurred, -0.4, 0, sharp);
-
-    // Convertir en RGBA
-    const rgbaDst = track(new cv.Mat());
+    const rgbaDst  = track(new cv.Mat());
     cv.cvtColor(sharp, rgbaDst, cv.COLOR_RGB2RGBA);
-
-    const imgData = new ImageData(
-      new Uint8ClampedArray(rgbaDst.data),
-      rgbaDst.cols,
-      rgbaDst.rows
-    );
-
-    return imgData;
-
+    return new ImageData(new Uint8ClampedArray(rgbaDst.data), rgbaDst.cols, rgbaDst.rows);
   } catch (err) {
     console.error('Enhance Color error:', err);
     return imageData;
   } finally {
-    mats.forEach(mat => {
-      try { mat.delete(); } catch (e) { /* ignore */ }
-    });
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
 /**
- * Détecte le meilleur mode
+ * Détecte le meilleur mode (stub)
  */
-export function detectBestMode(imageData) {
+export function detectBestMode(_imageData) {
   return 'bw';
 }
 
@@ -1257,79 +487,54 @@ export function detectBestMode(imageData) {
 
 /**
  * Filtre ClearScan : binarisation adaptative locale + netteté
- * Résiste aux ombres et aux éclairages inégaux (Bradley + unsharp).
- * Utilise OpenCV si disponible, sinon fallback JS pur (intégrale d'image).
  */
 export function enhanceClearScan(imageData) {
-  if (isOpenCvReady()) {
-    return _clearScanCV(imageData);
-  }
+  if (isOpenCvReady()) return _clearScanCV(imageData);
   return _clearScanJS(imageData);
 }
 
 function _clearScanCV(imageData) {
   const cv = window.cv;
   const mats = [];
-  const t = (m) => { mats.push(m); return m; };
-
+  const t = m => { mats.push(m); return m; };
   try {
-    const src = t(cv.matFromImageData(imageData));
-    const gray = t(new cv.Mat());
+    const src       = t(cv.matFromImageData(imageData));
+    const gray      = t(new cv.Mat());
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-    // Normaliser l'éclairage avant seuillage (CLAHE doux)
-    const clahe = new cv.CLAHE(1.5, new cv.Size(16, 16));
+    const clahe     = new cv.CLAHE(1.5, new cv.Size(16, 16));
     const equalized = t(new cv.Mat());
     clahe.apply(gray, equalized);
     clahe.delete();
-
-    // Léger flou pour réduire le bruit
-    const blurred = t(new cv.Mat());
+    const blurred   = t(new cv.Mat());
     cv.GaussianBlur(equalized, blurred, new cv.Size(3, 3), 0);
-
-    // Seuillage adaptatif local — blockSize large = résiste aux ombres
-    const thresh = t(new cv.Mat());
+    const thresh    = t(new cv.Mat());
     cv.adaptiveThreshold(blurred, thresh, 255,
-      cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY,
-      51,  // fenêtre locale large
-      18   // C élevé = fond plus blanc
-    );
-
-    // Unsharp masking pour renforcer les bords du texte
+      cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 51, 18);
     const blurredThresh = t(new cv.Mat());
     cv.GaussianBlur(thresh, blurredThresh, new cv.Size(0, 0), 0.8);
-    const sharp = t(new cv.Mat());
+    const sharp     = t(new cv.Mat());
     cv.addWeighted(thresh, 1.5, blurredThresh, -0.5, 0, sharp);
-
-    // Ouverture morphologique : supprime les pixels isolés parasites
-    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2));
+    const kernel    = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2));
     cv.morphologyEx(sharp, sharp, cv.MORPH_OPEN, kernel);
     kernel.delete();
-
-    const rgba = t(new cv.Mat());
+    const rgba      = t(new cv.Mat());
     cv.cvtColor(sharp, rgba, cv.COLOR_GRAY2RGBA);
-
     return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
   } catch (err) {
     console.error('ClearScan CV error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* mat déjà libéré */ } });
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
 
 function _clearScanJS(imageData) {
-  // Algorithme de Bradley (seuil local par intégrale d'image)
   const { data, width, height } = imageData;
   const output = new ImageData(width, height);
-
-  // Niveau de gris
   const gray = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
     gray[i] = Math.round(0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]);
   }
-
-  // Image intégrale (SAT) pour le calcul de moyenne locale en O(1)
   const sat = new Float64Array((width + 1) * (height + 1));
   for (let y = 1; y <= height; y++) {
     for (let x = 1; x <= width; x++) {
@@ -1339,15 +544,13 @@ function _clearScanJS(imageData) {
         - sat[(y - 1) * (width + 1) + (x - 1)];
     }
   }
-
   const S = Math.round(Math.max(width, height) / 16);
-  const T = 0.15; // pixel < (1-T)*localMean → noir
-
+  const T = 0.15;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const x1 = Math.max(0, x - S);
       const y1 = Math.max(0, y - S);
-      const x2 = Math.min(width - 1, x + S);
+      const x2 = Math.min(width  - 1, x + S);
       const y2 = Math.min(height - 1, y + S);
       const count = (x2 - x1 + 1) * (y2 - y1 + 1);
       const sum = sat[(y2 + 1) * (width + 1) + (x2 + 1)]
@@ -1355,8 +558,8 @@ function _clearScanJS(imageData) {
                 - sat[(y2 + 1) * (width + 1) + x1]
                 + sat[y1 * (width + 1) + x1];
       const value = (gray[y * width + x] * count <= sum * (1 - T)) ? 0 : 255;
-      const idx = (y * width + x) * 4;
-      output.data[idx] = value;
+      const idx   = (y * width + x) * 4;
+      output.data[idx]     = value;
       output.data[idx + 1] = value;
       output.data[idx + 2] = value;
       output.data[idx + 3] = 255;
@@ -1365,58 +568,41 @@ function _clearScanJS(imageData) {
   return output;
 }
 
-// ─── Magic Color ─────────────────────────────────────────────────────────────
+// ─── Magic Color ──────────────────────────────────────────────────────────────
 
 /**
  * Filtre Magic Color : suppression des ombres + couleurs préservées
- * Divise chaque pixel par l'estimation du fond (flou très large) pour
- * normaliser l'éclairage non-uniforme tout en gardant les teintes.
  */
 export function enhanceMagicColor(imageData) {
   if (!isOpenCvReady()) return enhanceColor(imageData);
-
   const cv = window.cv;
   const mats = [];
-  const t = (m) => { mats.push(m); return m; };
-
+  const t = m => { mats.push(m); return m; };
   try {
-    const src = t(cv.matFromImageData(imageData));
-    const rgb = t(new cv.Mat());
+    const src        = t(cv.matFromImageData(imageData));
+    const rgb        = t(new cv.Mat());
     cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
-
-    // Float32 pour la division
-    const f32 = t(new cv.Mat());
+    const f32        = t(new cv.Mat());
     rgb.convertTo(f32, cv.CV_32F);
-
-    // Estimation du fond par flou très large
-    const sigma = Math.max(src.cols, src.rows) / 20;
-    const bg = t(new cv.Mat());
+    const sigma      = Math.max(src.cols, src.rows) / 20;
+    const bg         = t(new cv.Mat());
     cv.GaussianBlur(f32, bg, new cv.Size(0, 0), sigma);
-
-    // Normalisation : image / fond × 200 (recentrer à blanc)
     const normalized = t(new cv.Mat());
     cv.divide(f32, bg, normalized, 200.0);
-
-    // Clipper [0, 255]
     cv.threshold(normalized, normalized, 255, 255, cv.THRESH_TRUNC);
-    cv.threshold(normalized, normalized, 0, 0, cv.THRESH_TOZERO);
-
-    const u8 = t(new cv.Mat());
+    cv.threshold(normalized, normalized, 0,   0,   cv.THRESH_TOZERO);
+    const u8         = t(new cv.Mat());
     normalized.convertTo(u8, cv.CV_8U);
-
-    // Léger sharpening
-    const blurSharp = t(new cv.Mat());
+    const blurSharp  = t(new cv.Mat());
     cv.GaussianBlur(u8, blurSharp, new cv.Size(0, 0), 1.0);
-    const sharp = t(new cv.Mat());
+    const sharp      = t(new cv.Mat());
     cv.addWeighted(u8, 1.3, blurSharp, -0.3, 0, sharp);
-
-    // Saturation légère via LAB
-    const lab = t(new cv.Mat());
+    const lab        = t(new cv.Mat());
     cv.cvtColor(sharp, lab, cv.COLOR_RGB2Lab);
-    const channels = t(new cv.MatVector());
+    const channels   = t(new cv.MatVector());
     cv.split(lab, channels);
-    const a = t(channels.get(1));
-    const b = t(channels.get(2));
+    const a          = t(channels.get(1));
+    const b          = t(channels.get(2));
     a.convertTo(a, -1, 1.1, 128 * (1 - 1.1));
     b.convertTo(b, -1, 1.1, 128 * (1 - 1.1));
     channels.set(1, a);
@@ -1424,15 +610,13 @@ export function enhanceMagicColor(imageData) {
     cv.merge(channels, lab);
     const colorResult = t(new cv.Mat());
     cv.cvtColor(lab, colorResult, cv.COLOR_Lab2RGB);
-
-    const rgba = t(new cv.Mat());
+    const rgba        = t(new cv.Mat());
     cv.cvtColor(colorResult, rgba, cv.COLOR_RGB2RGBA);
-
     return new ImageData(new Uint8ClampedArray(rgba.data), rgba.cols, rgba.rows);
   } catch (err) {
     console.error('MagicColor error:', err);
     return imageData;
   } finally {
-    mats.forEach(m => { try { m.delete(); } catch (_e) { /* mat déjà libéré */ } });
+    mats.forEach(m => { try { m.delete(); } catch (_e) { /* ignore */ } });
   }
 }
