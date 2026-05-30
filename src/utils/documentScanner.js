@@ -199,9 +199,24 @@ export function detectDocumentFast(imageData) {
     cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
     // scale=1 : les coins sont déjà dans le repère de l'image réduite
-    const best = findBestQuadContour(cv, contours, minArea, 1, w, h);
-    if (!best) return null;
+    let best = findBestQuadContour(cv, contours, minArea, 1, w, h);
 
+    // Fallback léger : seuillage adaptatif si Canny n'a rien trouvé.
+    // Utile sur fond peu contrasté (papier blanc sur table claire).
+    if (!best) {
+      contours.delete(); hierarchy.delete();
+      const thresh = new cv.Mat();
+      cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 7);
+      if (cv.mean(thresh)[0] > 127) cv.bitwise_not(thresh, thresh);
+      cv.morphologyEx(thresh, thresh, cv.MORPH_CLOSE, kernel);
+      contours = new cv.MatVector();
+      hierarchy = new cv.Mat();
+      cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      best = findBestQuadContour(cv, contours, minArea, 1, w, h);
+      thresh.delete();
+    }
+
+    if (!best) return null;
     return sortCorners(best.points);
   } catch (err) {
     return null;

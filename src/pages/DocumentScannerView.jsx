@@ -28,12 +28,51 @@ import '../components/scanner/ScannerStyles.css';
 
 // Filtres disponibles
 const FILTERS = [
-  { id: 'clearscan', label: 'ClearScan', icon: '📋', desc: 'Texte net, fond blanc (adaptatif)' },
-  { id: 'original', label: 'Original', icon: '🖼️', desc: 'Sans modification' },
-  { id: 'magic', label: 'Magic Color', icon: '✨', desc: 'Couleurs + suppression ombres' },
+  { id: 'magic', label: 'Auto', icon: '✨', desc: 'Fond blanc, couleurs nettes (auto)' },
+  { id: 'clearscan', label: 'Net N&B', icon: '📋', desc: 'Texte noir, fond blanc' },
   { id: 'gray', label: 'Gris', icon: '⬜', desc: 'Niveaux de gris' },
   { id: 'bw', label: 'N&B pur', icon: '📄', desc: 'Noir & Blanc global' },
+  { id: 'original', label: 'Original', icon: '🖼️', desc: 'Sans modification' },
 ];
+
+// Filtre appliqué AUTOMATIQUEMENT après capture (signature ClearScanner :
+// le scan ressort net, fond blanc, sans intervention).
+const DEFAULT_FILTER = 'magic';
+
+// Applique un filtre d'amélioration à un canvas et renvoie un NOUVEAU canvas.
+function enhanceCanvas(sourceCanvas, filterId) {
+  if (!filterId || filterId === 'original') return sourceCanvas;
+  try {
+    const ctx = sourceCanvas.getContext('2d');
+    let imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    switch (filterId) {
+      case 'clearscan': imageData = enhanceClearScan(imageData); break;
+      case 'magic':     imageData = enhanceMagicColor(imageData); break;
+      case 'bw':        imageData = enhanceBlackAndWhite(imageData); break;
+      case 'gray':      imageData = enhanceGrayscale(imageData); break;
+      default: return sourceCanvas;
+    }
+    const out = document.createElement('canvas');
+    out.width = sourceCanvas.width;
+    out.height = sourceCanvas.height;
+    out.getContext('2d').putImageData(imageData, 0, 0);
+    return out;
+  } catch (err) {
+    logger.error('[Enhance] Échec filtre auto:', err);
+    return sourceCanvas;
+  }
+}
+
+// canvas → blob PNG (avec timeout de sécurité)
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
+    canvas.toBlob(
+      blob => { clearTimeout(timeout); blob ? resolve(blob) : reject(new Error('Blob échoué')); },
+      'image/png'
+    );
+  });
+}
 
 export default function DocumentScannerView({ onSave, onClose }) {
   const [scannedDocs, setScannedDocs] = useState([]);
@@ -435,31 +474,31 @@ export default function DocumentScannerView({ onSave, onClose }) {
           // Garder les coins en % pour permettre un ré-ajustement manuel
           setCorners(snapshotCorners);
 
-          const transformedBlob = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
-            outputCanvas.toBlob(
-              blob => { clearTimeout(timeout); blob ? resolve(blob) : reject(new Error('Blob échoué')); },
-              'image/png'
-            );
-          });
+          // originalUrl = image aplanie NON filtrée (source pour changer de filtre)
+          const flatBlob = await canvasToBlob(outputCanvas);
+          const originalUrl = URL.createObjectURL(flatBlob);
 
-          const url = URL.createObjectURL(transformedBlob);
+          // url = image aplanie + filtre AUTO (rendu net type ClearScanner)
+          const enhancedCanvas = enhanceCanvas(outputCanvas, DEFAULT_FILTER);
+          const enhancedBlob = await canvasToBlob(enhancedCanvas);
+          const url = URL.createObjectURL(enhancedBlob);
+
           setCurrentDoc({
             id: Date.now(),
             url,
-            originalUrl: url,
-            blob: transformedBlob,
+            originalUrl,
+            blob: enhancedBlob,
             timestamp: new Date().toISOString(),
-            enhanceMode: 'original',
+            enhanceMode: DEFAULT_FILTER,
             rotation: 0,
             wasDetected: true,
             ocrText: '',
           });
-          setEnhanceMode('original');
+          setEnhanceMode(DEFAULT_FILTER);
           setMode('preview');
           // originalImage et corners sont gardés → "Re-ajuster" reste possible
 
-          runOCR(transformedBlob)
+          runOCR(enhancedBlob)
             .then(text => {
               setCurrentDoc(prev => prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev);
             })
@@ -621,20 +660,13 @@ export default function DocumentScannerView({ onSave, onClose }) {
         throw new Error('Transformation échouée');
       }
 
-      // Pas de filtre - garder l'image originale en couleur
-      // PNG pour qualité sans perte
-      const transformedBlob = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout blob')), 10000);
-        outputCanvas.toBlob(
-          (blob) => {
-            clearTimeout(timeout);
-            blob ? resolve(blob) : reject(new Error('Blob échoué'));
-          },
-          'image/png'
-        );
-      });
+      // originalUrl = aplani NON filtré ; url = aplani + filtre AUTO (ClearScanner-like)
+      const flatBlob = await canvasToBlob(outputCanvas);
+      const originalUrl = URL.createObjectURL(flatBlob);
 
-      const url = URL.createObjectURL(transformedBlob);
+      const enhancedCanvas = enhanceCanvas(outputCanvas, DEFAULT_FILTER);
+      const enhancedBlob = await canvasToBlob(enhancedCanvas);
+      const url = URL.createObjectURL(enhancedBlob);
 
       // Nouveau document : révoquer l'ancien url ET son originalUrl
       if (currentDoc?.url && currentDoc.url.startsWith('blob:')) URL.revokeObjectURL(currentDoc.url);
@@ -645,22 +677,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
       const newDoc = {
         id: Date.now(),
         url,
-        originalUrl: url,
-        blob: transformedBlob,
+        originalUrl,
+        blob: enhancedBlob,
         timestamp: new Date().toISOString(),
-        enhanceMode: 'original',
+        enhanceMode: DEFAULT_FILTER,
         rotation: 0,
         wasDetected: true,
         ocrText: '',
       };
       setCurrentDoc(newDoc);
-      setEnhanceMode('original');
+      setEnhanceMode(DEFAULT_FILTER);
       setMode('preview');
       // originalImage et corners sont gardés intentionnellement :
       // le bouton "Re-ajuster" dans la preview permet de revenir ici.
 
       // Lancer l'OCR en arrière-plan (non bloquant), avec retour explicite
-      runOCR(transformedBlob)
+      runOCR(enhancedBlob)
         .then(text => {
           setCurrentDoc(prev => prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev);
           logger.log(text ? '[OCR] Texte intégré au document' : '[OCR] Aucun texte détecté');
