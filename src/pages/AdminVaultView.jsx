@@ -285,15 +285,6 @@ export default function AdminVaultView({
 
   const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
 
-  const STATUS_LABELS = {
-    actif: null,                       // pas de badge pour actif (défaut)
-    inactif:        { label: 'Inactif',          color: '#6b7280' },
-    'licencié':     { label: 'Licencié',         color: '#ef4444' },
-    'retraité':     { label: 'Retraité',         color: '#8b5cf6' },
-    'démissionnaire':{ label: 'Démissionnaire',  color: '#f59e0b' },
-    'congé':        { label: 'Congé',            color: '#3b82f6' },
-  };
-
   const documentsByUser = useMemo(() => {
     return vaultDocuments.reduce((acc, doc) => {
       const userId = doc.user_id;
