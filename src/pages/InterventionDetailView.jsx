@@ -30,6 +30,7 @@ import {
   PVReception,
 } from '../components/intervention';
 import { Tabs, Tab } from '../components/ui';
+import InterventionLots from '../components/intervention/InterventionLots';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
 import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import ReceptionForm from '../components/ReceptionForm';
@@ -791,6 +792,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </div>
         )}
+
+        {/* LOTS PAR MÉTIER (Phase 2) — additif, masqué si aucun lot pour l'ouvrier */}
+        <InterventionLots
+          interventionId={intervention.id}
+          isAdmin={isAdmin}
+          profile={profile}
+          users={users}
+        />
 
         {/* CONTENU ORGANISÉ EN TABS */}
         <div id="intervention-tabs">
