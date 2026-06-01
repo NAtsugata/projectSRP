@@ -63,6 +63,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Utilisateurs', href: '/users', icon: UsersIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
         { name: 'Suivi Employés', href: '/employee-tracking', icon: LayoutDashboardIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
         { name: 'Suivi Chantiers', href: '/suivi-chantiers', icon: BriefcaseIcon, color: 'text-orange-600', bg: 'bg-orange-50' },
+        { name: 'Sous-traitants', href: '/sous-traitants', icon: BuildingIcon, color: 'text-violet-600', bg: 'bg-violet-50' },
         { name: 'Coffre-fort', href: '/vault', icon: FolderIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
         { name: 'Mes Documents', href: '/documents', icon: FileTextIcon, color: 'text-teal-500', bg: 'bg-teal-50' },
         { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' },
@@ -109,6 +110,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         {
             permission: 'view_all_interventions',
             page: { name: 'Suivi Chantiers', href: '/suivi-chantiers', icon: BriefcaseIcon, color: 'text-orange-600', bg: 'bg-orange-50' }
+        },
+        {
+            permission: 'manage_chantiers',
+            page: { name: 'Sous-traitants', href: '/sous-traitants', icon: BuildingIcon, color: 'text-violet-600', bg: 'bg-violet-50' }
         },
         {
             permission: 'view_all_interventions',

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useUsers } from '../hooks/useUsers';
+import { useSubcontractors } from '../hooks/useSubcontractors';
 import { tradeLabel, tradeColor, tradesByCategory } from '../constants/buildingTrades';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -68,12 +69,13 @@ function ProgressBar({ value, color }) {
 
 // ─── Ligne de lot ─────────────────────────────────────────────────────────────
 
-function LotRow({ lot, userById }) {
+function LotRow({ lot, userById, subById }) {
   const [showPhotos, setShowPhotos] = useState(false);
   const color = tradeColor(lot.trade_code);
   const sm = LOT_STATUS[lot.status] || LOT_STATUS.a_venir;
   const photos = Array.isArray(lot.photos) ? lot.photos : [];
   const assignee = lot.assigned_user_id ? userById[lot.assigned_user_id] : null;
+  const sub = lot.subcontractor_id ? subById[lot.subcontractor_id] : null;
 
   return (
     <div style={{ padding: '0.6rem 0.75rem', borderLeft: `3px solid ${color}`, marginBottom: '0.4rem', background: '#f9fafb', borderRadius: '0 6px 6px 0' }}>
@@ -99,8 +101,8 @@ function LotRow({ lot, userById }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.74rem', color: '#374151' }}>
-          {assignee ? `👷 ${assignee.full_name || assignee.email}` : '👷 Non assigné'}
+        <span style={{ fontSize: '0.74rem', color: sub ? '#7c3aed' : '#374151', fontWeight: sub ? 600 : 400 }}>
+          {sub ? `🏢 ${sub.company_name}` : (assignee ? `👷 ${assignee.full_name || assignee.email}` : '👷 Non assigné')}
         </span>
         {lot.updated_at && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>🕑 {timeAgo(lot.updated_at)}</span>}
       </div>
@@ -123,7 +125,7 @@ function LotRow({ lot, userById }) {
 
 // ─── Card chantier ────────────────────────────────────────────────────────────
 
-function ChantierCard({ intervention, lots, userById, defaultExpanded }) {
+function ChantierCard({ intervention, lots, userById, subById, defaultExpanded }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(!!defaultExpanded);
 
@@ -183,7 +185,7 @@ function ChantierCard({ intervention, lots, userById, defaultExpanded }) {
           {lots.length === 0 ? (
             <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.85rem' }}>Aucun lot pour ce chantier.</p>
           ) : (
-            lots.map(lot => <LotRow key={lot.id} lot={lot} userById={userById} />)
+            lots.map(lot => <LotRow key={lot.id} lot={lot} userById={userById} subById={subById} />)
           )}
           <button
             onClick={() => navigate(`/planning/${intervention.id}`)}
@@ -251,12 +253,19 @@ export default function SuiviChantiersView() {
   const [sortBy, setSortBy] = useState('attention');
   const [onlyAttention, setOnlyAttention] = useState(false);
 
+  const navigate = useNavigate();
   const { users } = useUsers();
+  const { subcontractors } = useSubcontractors();
   const userById = useMemo(() => {
     const m = {};
     (users || []).forEach(u => { m[u.id] = u; });
     return m;
   }, [users]);
+  const subById = useMemo(() => {
+    const m = {};
+    (subcontractors || []).forEach(s => { m[s.id] = s; });
+    return m;
+  }, [subcontractors]);
 
   // Interventions actives
   const { data: interventions = [], isLoading: loadingInt } = useQuery({
@@ -352,11 +361,16 @@ export default function SuiviChantiersView() {
 
   return (
     <div style={{ padding: '1rem', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.3rem' }}>🏗️ Suivi des Chantiers</h2>
-        <p style={{ margin: 0, color: '#6b7280', fontSize: '0.88rem' }}>
-          Avancement par corps de métier — toutes les interventions actives
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.3rem' }}>🏗️ Suivi des Chantiers</h2>
+          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.88rem' }}>
+            Avancement par corps de métier — toutes les interventions actives
+          </p>
+        </div>
+        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/sous-traitants')} style={{ whiteSpace: 'nowrap' }}>
+          🏢 Sous-traitants
+        </button>
       </div>
 
       {/* Compteurs */}
@@ -423,6 +437,7 @@ export default function SuiviChantiersView() {
             intervention={c.intervention}
             lots={c.lots}
             userById={userById}
+            subById={subById}
             defaultExpanded={onlyAttention || !!tradeFilter}
           />
         ))

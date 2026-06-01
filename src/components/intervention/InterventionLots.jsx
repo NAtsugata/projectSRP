@@ -8,6 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useInterventionLots } from '../../hooks/useInterventionLots';
+import { useSubcontractors } from '../../hooks/useSubcontractors';
 import { usePermissions } from '../../hooks/usePermissions';
 import { lotService } from '../../services/lotService';
 import { tradesByCategory, tradeLabel, tradeColor } from '../../constants/buildingTrades';
@@ -40,12 +41,39 @@ function ProgressBar({ value }) {
   );
 }
 
-// Formulaire de création d'un lot (admin)
-function NewLotForm({ users, onCreate, onCancel, busy }) {
+// Sélecteur d'assignation : employé interne OU sous-traitant (ou non assigné)
+function AssignmentSelect({ users, subcontractors = [], assignedUserId, subcontractorId, onChange }) {
+  const value = subcontractorId ? `sub:${subcontractorId}` : (assignedUserId ? `user:${assignedUserId}` : '');
+  const handle = (v) => {
+    if (!v) onChange({ assigned_user_id: null, subcontractor_id: null });
+    else if (v.startsWith('user:')) onChange({ assigned_user_id: v.slice(5), subcontractor_id: null });
+    else if (v.startsWith('sub:')) onChange({ assigned_user_id: null, subcontractor_id: Number(v.slice(4)) });
+  };
+  return (
+    <select value={value} onChange={(e) => handle(e.target.value)} className="form-control">
+      <option value="">— Non assigné —</option>
+      <optgroup label="Employés">
+        {users.filter(u => !u.is_admin).map(u => (
+          <option key={u.id} value={`user:${u.id}`}>{u.full_name || u.email}</option>
+        ))}
+      </optgroup>
+      {subcontractors.filter(s => s.is_active !== false).length > 0 && (
+        <optgroup label="Sous-traitants">
+          {subcontractors.filter(s => s.is_active !== false).map(s => (
+            <option key={s.id} value={`sub:${s.id}`}>🏢 {s.company_name}</option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  );
+}
+
+// Formulaire de création d'un lot (admin / MOE)
+function NewLotForm({ users, subcontractors, onCreate, onCancel, busy }) {
   const [tradeCode, setTradeCode] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assignedUserId, setAssignedUserId] = useState('');
+  const [assign, setAssign] = useState({ assigned_user_id: null, subcontractor_id: null });
   const groups = tradesByCategory();
 
   const submit = (e) => {
@@ -55,7 +83,8 @@ function NewLotForm({ users, onCreate, onCancel, busy }) {
       trade_code: tradeCode,
       title: title.trim(),
       description: description.trim() || null,
-      assigned_user_id: assignedUserId || null,
+      assigned_user_id: assign.assigned_user_id,
+      subcontractor_id: assign.subcontractor_id,
     });
   };
 
@@ -81,13 +110,14 @@ function NewLotForm({ users, onCreate, onCancel, busy }) {
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="form-control" rows={2} />
       </div>
       <div>
-        <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Ouvrier assigné (optionnel)</label>
-        <select value={assignedUserId} onChange={(e) => setAssignedUserId(e.target.value)} className="form-control">
-          <option value="">— Non assigné —</option>
-          {users.filter(u => !u.is_admin).map((u) => (
-            <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
-          ))}
-        </select>
+        <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Réalisé par (optionnel)</label>
+        <AssignmentSelect
+          users={users}
+          subcontractors={subcontractors}
+          assignedUserId={assign.assigned_user_id}
+          subcontractorId={assign.subcontractor_id}
+          onChange={setAssign}
+        />
       </div>
       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
         <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>Annuler</button>
@@ -168,7 +198,7 @@ function TemplatePicker({ onCreateMany, onCancel, busy }) {
 }
 
 // Carte d'un lot
-function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onDelete }) {
+function LotCard({ lot, canEdit, canManage, users, subcontractors = [], interventionId, onUpdate, onDelete }) {
   const [busy, setBusy] = useState(false);
   const [noteDraft, setNoteDraft] = useState(lot.notes || '');
   const [editing, setEditing] = useState(false);
@@ -176,10 +206,12 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
     trade_code: lot.trade_code,
     title: lot.title,
     description: lot.description || '',
-    assigned_user_id: lot.assigned_user_id || '',
+    assigned_user_id: lot.assigned_user_id || null,
+    subcontractor_id: lot.subcontractor_id || null,
   });
   const color = tradeColor(lot.trade_code);
   const assignee = users.find(u => u.id === lot.assigned_user_id);
+  const subcontractor = subcontractors.find(s => s.id === lot.subcontractor_id);
   const photos = Array.isArray(lot.photos) ? lot.photos : [];
   const editGroups = tradesByCategory();
 
@@ -190,6 +222,7 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
       title: edit.title.trim(),
       description: edit.description.trim() || null,
       assigned_user_id: edit.assigned_user_id || null,
+      subcontractor_id: edit.subcontractor_id || null,
     });
     setEditing(false);
   };
@@ -247,16 +280,17 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
             <textarea value={edit.description} onChange={(e) => setEdit(s => ({ ...s, description: e.target.value }))} className="form-control" rows={2} />
           </div>
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Ouvrier assigné</label>
-            <select value={edit.assigned_user_id} onChange={(e) => setEdit(s => ({ ...s, assigned_user_id: e.target.value }))} className="form-control">
-              <option value="">— Non assigné —</option>
-              {users.filter(u => !u.is_admin).map((u) => (
-                <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
-              ))}
-            </select>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Réalisé par</label>
+            <AssignmentSelect
+              users={users}
+              subcontractors={subcontractors}
+              assignedUserId={edit.assigned_user_id}
+              subcontractorId={edit.subcontractor_id}
+              onChange={(a) => setEdit(s => ({ ...s, ...a }))}
+            />
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setEdit({ trade_code: lot.trade_code, title: lot.title, description: lot.description || '', assigned_user_id: lot.assigned_user_id || '' }); }}>Annuler</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setEdit({ trade_code: lot.trade_code, title: lot.title, description: lot.description || '', assigned_user_id: lot.assigned_user_id || null, subcontractor_id: lot.subcontractor_id || null }); }}>Annuler</button>
             <button className="btn btn-primary btn-sm" onClick={saveEdit}>Enregistrer</button>
           </div>
         </div>
@@ -272,6 +306,11 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
           <p style={{ margin: '0.4rem 0 0', fontWeight: 600 }}>{lot.title}</p>
           {lot.description && <p style={{ margin: '0.15rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>{lot.description}</p>}
           {assignee && <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#374151' }}>👷 {assignee.full_name || assignee.email}</p>}
+          {subcontractor && (
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
+              🏢 Sous-traitant : {subcontractor.company_name}
+            </p>
+          )}
         </div>
         {canManage && (
           <div style={{ display: 'flex', gap: '0.3rem' }}>
@@ -352,6 +391,7 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
 
 export default function InterventionLots({ interventionId, isAdmin, profile, users = [] }) {
   const { lots, isLoading, createLot, updateLot, deleteLot, isMutating } = useInterventionLots(interventionId);
+  const { subcontractors } = useSubcontractors();
   const { hasPermission } = usePermissions();
   const [showForm, setShowForm] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -436,7 +476,7 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
         )}
 
         {canManageLots && showForm && (
-          <NewLotForm users={users} onCreate={handleCreate} onCancel={() => setShowForm(false)} busy={isMutating} />
+          <NewLotForm users={users} subcontractors={subcontractors} onCreate={handleCreate} onCancel={() => setShowForm(false)} busy={isMutating} />
         )}
 
         {isLoading ? (
@@ -453,6 +493,7 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
               canEdit={canEditLot(lot)}
               canManage={canManageLots}
               users={users}
+              subcontractors={subcontractors}
               interventionId={interventionId}
               onUpdate={handleUpdate}
               onDelete={handleDelete}

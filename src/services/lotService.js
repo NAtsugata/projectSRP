@@ -29,6 +29,7 @@ export const lotService = {
       title: lot.title,
       description: lot.description || null,
       assigned_user_id: lot.assigned_user_id || null,
+      subcontractor_id: lot.subcontractor_id || null,
       created_by: userData?.user?.id || null,
     };
     return await supabase

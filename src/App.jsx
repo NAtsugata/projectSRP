@@ -61,6 +61,7 @@ const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewConta
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
 const MobileMenu = lazy(() => import('./pages/MobileMenu'));
 const SuiviChantiersView = lazy(() => import('./pages/SuiviChantiersView'));
+const SousTraitantsView = lazy(() => import('./pages/SousTraitantsView'));
 const CerfaManager = lazy(() => import('./pages/CerfaManager'));
 const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 const CerfaPage15498 = lazy(() => import('./pages/CerfaPage15498'));
@@ -387,6 +388,11 @@ function App() {
                   <Route path="suivi-chantiers" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <SuiviChantiersView />
+                    </Suspense>
+                  } />
+                  <Route path="sous-traitants" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <SousTraitantsView />
                     </Suspense>
                   } />
                   <Route path="documents" element={
@@ -718,6 +724,13 @@ function App() {
                     <PermissionRoute permission="view_all_interventions">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                         <SuiviChantiersView />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="sous-traitants" element={
+                    <PermissionRoute permission="manage_chantiers">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <SousTraitantsView />
                       </Suspense>
                     </PermissionRoute>
                   } />
