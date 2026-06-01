@@ -68,6 +68,10 @@ const CalculateurAidesView = lazy(() => import('./pages/CalculateurAidesView'));
 
 
 
+// Statuts RH qui restreignent l'employé à son coffre-fort uniquement.
+// 'actif' et 'congé' conservent l'accès complet à l'application.
+const VAULT_ONLY_STATUSES = ['inactif', 'licencié', 'retraité', 'démissionnaire'];
+
 // --- Application principale ---
 function App() {
   const [session, setSession] = useState(null);
@@ -512,6 +516,18 @@ function App() {
                     </SectionErrorBoundary>
                   } />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </>
+              ) : VAULT_ONLY_STATUSES.includes(profile.employee_status) ? (
+                /* Employé licencié / inactif / retraité / démissionnaire :
+                   accès limité à son coffre-fort uniquement. */
+                <>
+                  <Route index element={<Navigate to="/vault" replace />} />
+                  <Route path="vault" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <CoffreNumeriqueViewContainer />
+                    </Suspense>
+                  } />
+                  <Route path="*" element={<Navigate to="/vault" replace />} />
                 </>
               ) : (
                 <>

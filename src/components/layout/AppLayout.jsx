@@ -123,10 +123,20 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         },
     ];
 
+    // Statuts RH qui restreignent l'employé à son coffre-fort uniquement
+    const VAULT_ONLY_STATUSES = ['inactif', 'licencié', 'retraité', 'démissionnaire'];
+    const isVaultOnly = !isAdmin && VAULT_ONLY_STATUSES.includes(profile?.employee_status);
+
     // Construire la navigation finale
     const navigation = useMemo(() => {
         if (isAdmin) {
             return adminNavigation;
+        }
+
+        // Employé licencié / inactif / retraité / démissionnaire :
+        // seul le coffre-fort reste accessible.
+        if (isVaultOnly) {
+            return baseNavigation.filter(n => n.href === '/vault');
         }
 
         // Commencer avec la nav de base
@@ -143,7 +153,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         });
 
         return nav;
-    }, [isAdmin, hasPermission]);
+    }, [isAdmin, hasPermission, isVaultOnly]);
 
     const handleMenuNavigation = (href) => {
         navigate(href);
