@@ -147,6 +147,11 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
     }
   };
 
+  const removePhoto = async (idx) => {
+    const next = photos.filter((_, i) => i !== idx);
+    await onUpdate(lot.id, { photos: next });
+  };
+
   return (
     <div style={{ border: `1px solid ${color}44`, borderLeft: `4px solid ${color}`, borderRadius: '8px', padding: '0.75rem', marginBottom: '0.6rem', background: 'white' }}>
       {editing ? (
@@ -252,12 +257,21 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
         </>
       )}
 
-      {photos.length > 0 && (
+      {photos.length > 0 && !editing && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.6rem' }}>
           {photos.map((ph, idx) => (
-            <a key={idx} href={ph.url} target="_blank" rel="noopener noreferrer">
-              <img src={ph.url} alt={ph.name || 'photo'} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
-            </a>
+            <div key={idx} style={{ position: 'relative' }}>
+              <a href={ph.url} target="_blank" rel="noopener noreferrer">
+                <img src={ph.url} alt={ph.name || 'photo'} loading="lazy" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb', display: 'block' }} />
+              </a>
+              {canEdit && (
+                <button
+                  onClick={() => removePhoto(idx)}
+                  title="Supprimer la photo"
+                  style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px', borderRadius: '999px', border: 'none', background: '#ef4444', color: 'white', fontSize: '0.7rem', lineHeight: '20px', cursor: 'pointer', padding: 0 }}
+                >×</button>
+              )}
+            </div>
           ))}
         </div>
       )}
