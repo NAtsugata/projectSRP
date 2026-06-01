@@ -384,6 +384,11 @@ function App() {
                       </Suspense>
                     }
                   />
+                  <Route path="suivi-chantiers" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <SuiviChantiersView />
+                    </Suspense>
+                  } />
                   <Route path="documents" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <MyDocumentsViewContainer />
