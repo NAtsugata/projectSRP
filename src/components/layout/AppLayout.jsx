@@ -107,6 +107,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         },
         {
             permission: 'view_all_interventions',
+            page: { name: 'Suivi Chantiers', href: '/suivi-chantiers', icon: BriefcaseIcon, color: 'text-orange-600', bg: 'bg-orange-50' }
+        },
+        {
+            permission: 'view_all_interventions',
             page: { name: 'Archives', href: '/archives', icon: ArchiveIcon, color: 'text-yellow-600', bg: 'bg-yellow-50' }
         },
         {

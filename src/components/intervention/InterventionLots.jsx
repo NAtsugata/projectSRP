@@ -8,6 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useInterventionLots } from '../../hooks/useInterventionLots';
+import { usePermissions } from '../../hooks/usePermissions';
 import { lotService } from '../../services/lotService';
 import { tradesByCategory, tradeLabel, tradeColor } from '../../constants/buildingTrades';
 
@@ -205,17 +206,21 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
 
 export default function InterventionLots({ interventionId, isAdmin, profile, users = [] }) {
   const { lots, isLoading, createLot, updateLot, deleteLot, isMutating } = useInterventionLots(interventionId);
+  const { hasPermission } = usePermissions();
   const [showForm, setShowForm] = useState(false);
+
+  // Peut gérer les lots : admin OU utilisateur avec la permission manage_chantiers
+  const canManageLots = isAdmin || hasPermission('manage_chantiers');
 
   const myTrades = Array.isArray(profile?.trades) ? profile.trades : [];
 
-  // Filtrage : l'admin voit tout ; l'ouvrier voit ses métiers + lots assignés.
+  // Filtrage : admin / MOE voit tout ; l'ouvrier voit ses métiers + lots assignés.
   const visibleLots = useMemo(() => {
-    if (isAdmin) return lots;
+    if (canManageLots) return lots;
     return lots.filter(l =>
       myTrades.includes(l.trade_code) || l.assigned_user_id === profile?.id
     );
-  }, [lots, isAdmin, myTrades, profile?.id]);
+  }, [lots, canManageLots, myTrades, profile?.id]);
 
   // Avancement global (sur les lots visibles)
   const overall = useMemo(() => {
@@ -236,19 +241,19 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
   };
 
   // Un ouvrier peut éditer un lot s'il est de son métier ou qu'il lui est assigné.
-  const canEditLot = (lot) => isAdmin
+  const canEditLot = (lot) => canManageLots
     || myTrades.includes(lot.trade_code)
     || lot.assigned_user_id === profile?.id;
 
   // Ne rien afficher aux ouvriers s'il n'y a aucun lot pour eux (page inchangée).
-  if (!isAdmin && !isLoading && visibleLots.length === 0) return null;
+  if (!canManageLots && !isLoading && visibleLots.length === 0) return null;
 
   return (
     <div className="card-white" style={{ marginBottom: '1rem' }}>
       <div className="section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h3 style={{ margin: 0 }}>🧱 Lots par métier {visibleLots.length > 0 && <span style={{ color: '#6b7280', fontWeight: 400 }}>({overall}%)</span>}</h3>
-          {isAdmin && (
+          {canManageLots && (
             <button className="btn btn-primary btn-sm" onClick={() => setShowForm(v => !v)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
               {showForm ? 'Fermer' : '+ Ajouter un lot'}
             </button>
@@ -259,7 +264,7 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
           <div style={{ marginBottom: '0.75rem' }}><ProgressBar value={overall} /></div>
         )}
 
-        {isAdmin && showForm && (
+        {canManageLots && showForm && (
           <NewLotForm users={users} onCreate={handleCreate} onCancel={() => setShowForm(false)} busy={isMutating} />
         )}
 
@@ -267,7 +272,7 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
           <p className="text-muted" style={{ margin: 0 }}>Chargement des lots…</p>
         ) : visibleLots.length === 0 ? (
           <p className="text-muted" style={{ margin: 0 }}>
-            {isAdmin ? 'Aucun lot. Ajoutez les corps de métier de ce chantier.' : 'Aucun lot pour votre métier.'}
+            {canManageLots ? 'Aucun lot. Ajoutez les corps de métier de ce chantier.' : 'Aucun lot pour votre métier.'}
           </p>
         ) : (
           visibleLots.map((lot) => (
@@ -275,7 +280,7 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
               key={lot.id}
               lot={lot}
               canEdit={canEditLot(lot)}
-              canManage={isAdmin}
+              canManage={canManageLots}
               users={users}
               interventionId={interventionId}
               onUpdate={handleUpdate}

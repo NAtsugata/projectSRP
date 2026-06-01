@@ -60,6 +60,7 @@ const ChecklistViewContainer = lazy(() => import('./pages/ChecklistViewContainer
 const MyDocumentsViewContainer = lazy(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPageContainer = lazy(() => import('./pages/MobileDiagnosticsPageContainer'));
 const MobileMenu = lazy(() => import('./pages/MobileMenu'));
+const SuiviChantiersView = lazy(() => import('./pages/SuiviChantiersView'));
 const CerfaManager = lazy(() => import('./pages/CerfaManager'));
 const CerfaPage = lazy(() => import('./pages/CerfaPage'));
 const CerfaPage15498 = lazy(() => import('./pages/CerfaPage15498'));
@@ -705,6 +706,13 @@ function App() {
                     <PermissionRoute permission="approve_leave_requests">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                         <AdminLeaveViewContainer />
+                      </Suspense>
+                    </PermissionRoute>
+                  } />
+                  <Route path="suivi-chantiers" element={
+                    <PermissionRoute permission="view_all_interventions">
+                      <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                        <SuiviChantiersView />
                       </Suspense>
                     </PermissionRoute>
                   } />
