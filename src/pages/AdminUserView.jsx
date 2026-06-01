@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { EditIcon } from '../components/SharedUI';
 import PermissionsModal from '../components/admin/PermissionsModal';
 import { permissionService } from '../services/permissionService';
+import { tradesByCategory, tradeLabel, tradeColor } from '../constants/buildingTrades';
 import './AdminUserView.css';
 
 // Icone Shield pour les permissions
@@ -39,14 +40,93 @@ const StatusBadge = ({ status }) => {
     );
 };
 
+// Affiche les métiers d'un utilisateur sous forme de pastilles colorées
+const TradeBadges = ({ trades }) => {
+    if (!trades || trades.length === 0) return null;
+    return (
+        <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px' }}>
+            {trades.map((code) => {
+                const color = tradeColor(code);
+                return (
+                    <span key={code} style={{
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        background: color + '22',
+                        color,
+                        border: `1px solid ${color}44`,
+                    }}>
+                        {tradeLabel(code)}
+                    </span>
+                );
+            })}
+        </span>
+    );
+};
+
+// Sélecteur multi-métiers groupé par corps d'état
+const TradesSelector = ({ selected, onToggle }) => {
+    const groups = tradesByCategory();
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '260px', overflowY: 'auto', padding: '4px' }}>
+            {groups.map((group) => (
+                <div key={group.id}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: group.color, marginBottom: '4px' }}>
+                        {group.label}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {group.trades.map((t) => {
+                            const isOn = selected.includes(t.code);
+                            return (
+                                <button
+                                    type="button"
+                                    key={t.code}
+                                    onClick={() => onToggle(t.code)}
+                                    style={{
+                                        padding: '4px 10px',
+                                        borderRadius: '999px',
+                                        fontSize: '0.78rem',
+                                        cursor: 'pointer',
+                                        border: `1px solid ${isOn ? group.color : '#d1d5db'}`,
+                                        background: isOn ? group.color + '22' : 'transparent',
+                                        color: isOn ? group.color : '#374151',
+                                        fontWeight: isOn ? 600 : 400,
+                                    }}
+                                >
+                                    {isOn ? '✓ ' : ''}{t.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const EditUserModal = ({ user, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         employee_status: 'actif',
+        trades: [],
         ...user,
+        // garantir un tableau même si la colonne est null en base
+        ...(user && !Array.isArray(user.trades) ? { trades: [] } : {}),
     });
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const toggleTrade = (code) => {
+        setFormData(prev => {
+            const current = Array.isArray(prev.trades) ? prev.trades : [];
+            const next = current.includes(code)
+                ? current.filter(c => c !== code)
+                : [...current, code];
+            return { ...prev, trades: next };
+        });
     };
 
     const handleSave = async (e) => {
@@ -76,6 +156,18 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                         </select>
                         <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
                             💡 L'employé garde l'accès à son coffre-fort quel que soit son statut.
+                        </p>
+                    </div>
+
+                    {/* Métiers du bâtiment — un utilisateur peut en avoir plusieurs */}
+                    <div className="form-group">
+                        <label>Métiers du bâtiment</label>
+                        <TradesSelector
+                            selected={Array.isArray(formData.trades) ? formData.trades : []}
+                            onToggle={toggleTrade}
+                        />
+                        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                            🔧 Sélectionnez un ou plusieurs métiers. Servira à filtrer le travail par corps de métier.
                         </p>
                     </div>
 
@@ -203,6 +295,11 @@ export default function AdminUserView({ users, onUpdateUser }) {
                                             </span>
                                         )}
                                     </div>
+                                    {u.trades && u.trades.length > 0 && (
+                                        <div className="user-badges" style={{ marginTop: '4px' }}>
+                                            <TradeBadges trades={u.trades} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="user-actions">
