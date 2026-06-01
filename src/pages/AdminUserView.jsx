@@ -11,8 +11,39 @@ const ShieldIcon = () => (
     </svg>
 );
 
+// Statuts disponibles avec leur libellé et couleur badge
+const EMPLOYEE_STATUSES = [
+    { value: 'actif',         label: 'Actif',          color: '#10b981' },
+    { value: 'inactif',       label: 'Inactif',        color: '#6b7280' },
+    { value: 'licencié',      label: 'Licencié',       color: '#ef4444' },
+    { value: 'retraité',      label: 'Retraité',       color: '#8b5cf6' },
+    { value: 'démissionnaire',label: 'Démissionnaire', color: '#f59e0b' },
+    { value: 'congé',         label: 'Congé',          color: '#3b82f6' },
+];
+
+const StatusBadge = ({ status }) => {
+    const s = EMPLOYEE_STATUSES.find(x => x.value === status) || EMPLOYEE_STATUSES[0];
+    return (
+        <span style={{
+            display: 'inline-block',
+            padding: '2px 8px',
+            borderRadius: '999px',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            background: s.color + '22',
+            color: s.color,
+            border: `1px solid ${s.color}44`,
+        }}>
+            {s.label}
+        </span>
+    );
+};
+
 const EditUserModal = ({ user, onSave, onCancel }) => {
-    const [formData, setFormData] = useState(user);
+    const [formData, setFormData] = useState({
+        employee_status: 'actif',
+        ...user,
+    });
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
@@ -34,6 +65,20 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                         <label>Nom complet</label>
                         <input name="full_name" value={formData.full_name || ''} onChange={handleChange} className="form-control"/>
                     </div>
+
+                    {/* Statut RH — ne modifie PAS l'accès au coffre-fort */}
+                    <div className="form-group">
+                        <label>Statut</label>
+                        <select name="employee_status" value={formData.employee_status || 'actif'} onChange={handleChange} className="form-control">
+                            {EMPLOYEE_STATUSES.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                            ))}
+                        </select>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                            💡 L'employé garde l'accès à son coffre-fort quel que soit son statut.
+                        </p>
+                    </div>
+
                     <div className="form-group">
                         <label>
                             <input name="is_admin" type="checkbox" checked={!!formData.is_admin} onChange={handleChange} />
@@ -148,6 +193,9 @@ export default function AdminUserView({ users, onUpdateUser }) {
                                         <span className={`user-badge ${u.is_admin ? 'badge-admin' : 'badge-standard'}`}>
                                             {u.is_admin ? 'Admin' : 'Standard'}
                                         </span>
+                                        {!u.is_admin && (
+                                            <StatusBadge status={u.employee_status || 'actif'} />
+                                        )}
                                         {!u.is_admin && (
                                             <span className="user-badge badge-permissions">
                                                 <ShieldIcon />

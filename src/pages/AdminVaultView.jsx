@@ -38,8 +38,30 @@ const XIcon = () => (
 );
 
 // Composant Accordion pour chaque employe
-const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, onShare, formatDate }) => {
+const STATUS_BADGE_STYLE = (color) => ({
+  display: 'inline-block',
+  padding: '1px 7px',
+  borderRadius: '999px',
+  fontSize: '0.68rem',
+  fontWeight: 600,
+  background: color + '22',
+  color,
+  border: `1px solid ${color}44`,
+  marginLeft: '6px',
+  verticalAlign: 'middle',
+});
+
+const VAULT_STATUS_MAP = {
+  inactif:          { label: 'Inactif',          color: '#6b7280' },
+  'licencié':       { label: 'Licencié',         color: '#ef4444' },
+  'retraité':       { label: 'Retraité',         color: '#8b5cf6' },
+  'démissionnaire': { label: 'Démissionnaire',   color: '#f59e0b' },
+  'congé':          { label: 'Congé',            color: '#3b82f6' },
+};
+
+const UserAccordion = ({ userName, employeeStatus, documents, onDeleteDocument, onDownload, onShare, formatDate }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const statusInfo = employeeStatus && VAULT_STATUS_MAP[employeeStatus];
 
   return (
     <div className="user-accordion">
@@ -47,6 +69,11 @@ const UserAccordion = ({ userName, documents, onDeleteDocument, onDownload, onSh
         <div className="accordion-title">
           <UserIcon />
           <span>{userName}</span>
+          {statusInfo && (
+            <span style={STATUS_BADGE_STYLE(statusInfo.color)} title="Statut RH — n'affecte pas l'accès au coffre">
+              {statusInfo.label}
+            </span>
+          )}
           <span className="document-count">{documents.length} document{documents.length > 1 ? 's' : ''}</span>
         </div>
         <ChevronDownIcon className={`accordion-chevron ${isOpen ? 'open' : ''}`} />
@@ -258,13 +285,24 @@ export default function AdminVaultView({
 
   const employees = useMemo(() => users.filter(u => !u.is_admin), [users]);
 
+  const STATUS_LABELS = {
+    actif: null,                       // pas de badge pour actif (défaut)
+    inactif:        { label: 'Inactif',          color: '#6b7280' },
+    'licencié':     { label: 'Licencié',         color: '#ef4444' },
+    'retraité':     { label: 'Retraité',         color: '#8b5cf6' },
+    'démissionnaire':{ label: 'Démissionnaire',  color: '#f59e0b' },
+    'congé':        { label: 'Congé',            color: '#3b82f6' },
+  };
+
   const documentsByUser = useMemo(() => {
     return vaultDocuments.reduce((acc, doc) => {
       const userId = doc.user_id;
       if (!acc[userId]) {
         const user = users.find(u => u.id === userId);
+        const status = user?.employee_status || 'actif';
         acc[userId] = {
           userName: user ? user.full_name : 'Employé inconnu',
+          employeeStatus: status,
           documents: []
         };
       }
@@ -741,6 +779,7 @@ export default function AdminVaultView({
                 <UserAccordion
                   key={userId}
                   userName={data.userName}
+                  employeeStatus={data.employeeStatus}
                   documents={data.documents}
                   onDeleteDocument={onDeleteDocument}
                   onDownload={handleDownload}
