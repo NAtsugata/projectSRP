@@ -100,9 +100,28 @@ function NewLotForm({ users, onCreate, onCancel, busy }) {
 function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onDelete }) {
   const [busy, setBusy] = useState(false);
   const [noteDraft, setNoteDraft] = useState(lot.notes || '');
+  const [editing, setEditing] = useState(false);
+  const [edit, setEdit] = useState({
+    trade_code: lot.trade_code,
+    title: lot.title,
+    description: lot.description || '',
+    assigned_user_id: lot.assigned_user_id || '',
+  });
   const color = tradeColor(lot.trade_code);
   const assignee = users.find(u => u.id === lot.assigned_user_id);
   const photos = Array.isArray(lot.photos) ? lot.photos : [];
+  const editGroups = tradesByCategory();
+
+  const saveEdit = async () => {
+    if (!edit.trade_code || !edit.title.trim()) return;
+    await onUpdate(lot.id, {
+      trade_code: edit.trade_code,
+      title: edit.title.trim(),
+      description: edit.description.trim() || null,
+      assigned_user_id: edit.assigned_user_id || null,
+    });
+    setEditing(false);
+  };
 
   const setStatus = async (status) => { await onUpdate(lot.id, { status }); };
   const setProgress = async (progress) => {
@@ -130,6 +149,42 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
 
   return (
     <div style={{ border: `1px solid ${color}44`, borderLeft: `4px solid ${color}`, borderRadius: '8px', padding: '0.75rem', marginBottom: '0.6rem', background: 'white' }}>
+      {editing ? (
+        /* Mode édition (admin / MOE) : modifier métier, intitulé, description, ouvrier */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Métier</label>
+            <select value={edit.trade_code} onChange={(e) => setEdit(s => ({ ...s, trade_code: e.target.value }))} className="form-control">
+              {editGroups.map((g) => (
+                <optgroup key={g.id} label={g.label}>
+                  {g.trades.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Intitulé</label>
+            <input value={edit.title} onChange={(e) => setEdit(s => ({ ...s, title: e.target.value }))} className="form-control" />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Description</label>
+            <textarea value={edit.description} onChange={(e) => setEdit(s => ({ ...s, description: e.target.value }))} className="form-control" rows={2} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Ouvrier assigné</label>
+            <select value={edit.assigned_user_id} onChange={(e) => setEdit(s => ({ ...s, assigned_user_id: e.target.value }))} className="form-control">
+              <option value="">— Non assigné —</option>
+              {users.filter(u => !u.is_admin).map((u) => (
+                <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setEdit({ trade_code: lot.trade_code, title: lot.title, description: lot.description || '', assigned_user_id: lot.assigned_user_id || '' }); }}>Annuler</button>
+            <button className="btn btn-primary btn-sm" onClick={saveEdit}>Enregistrer</button>
+          </div>
+        </div>
+      ) : (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -143,18 +198,24 @@ function LotCard({ lot, canEdit, canManage, users, interventionId, onUpdate, onD
           {assignee && <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#374151' }}>👷 {assignee.full_name || assignee.email}</p>}
         </div>
         {canManage && (
-          <button onClick={() => onDelete(lot.id)} className="btn btn-secondary btn-sm" title="Supprimer le lot" style={{ color: '#ef4444' }}>✕</button>
+          <div style={{ display: 'flex', gap: '0.3rem' }}>
+            <button onClick={() => setEditing(true)} className="btn btn-secondary btn-sm" title="Modifier le lot">✏️</button>
+            <button onClick={() => onDelete(lot.id)} className="btn btn-secondary btn-sm" title="Supprimer le lot" style={{ color: '#ef4444' }}>✕</button>
+          </div>
         )}
       </div>
+      )}
 
+      {!editing && (
       <div style={{ marginTop: '0.6rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#6b7280', marginBottom: '2px' }}>
           <span>Avancement</span><span>{lot.progress || 0}%</span>
         </div>
         <ProgressBar value={lot.progress} />
       </div>
+      )}
 
-      {canEdit && (
+      {canEdit && !editing && (
         <>
           <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
             {[0, 25, 50, 75, 100].map((p) => (
