@@ -11,6 +11,7 @@ import { useInterventionLots } from '../../hooks/useInterventionLots';
 import { usePermissions } from '../../hooks/usePermissions';
 import { lotService } from '../../services/lotService';
 import { tradesByCategory, tradeLabel, tradeColor } from '../../constants/buildingTrades';
+import { CHANTIER_TEMPLATES } from '../../constants/chantierTemplates';
 
 const STATUS_META = {
   a_venir: { label: 'À venir', color: '#6b7280' },
@@ -93,6 +94,76 @@ function NewLotForm({ users, onCreate, onCancel, busy }) {
         <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>Ajouter le lot</button>
       </div>
     </form>
+  );
+}
+
+// Sélecteur de modèle de chantier : choisit un modèle, ajuste les lots, crée en bloc
+function TemplatePicker({ onCreateMany, onCancel, busy }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [checked, setChecked] = useState({}); // index -> bool
+
+  const template = CHANTIER_TEMPLATES.find(t => t.id === selectedId);
+
+  const pickTemplate = (t) => {
+    setSelectedId(t.id);
+    const init = {};
+    t.lots.forEach((_, i) => { init[i] = true; });
+    setChecked(init);
+  };
+
+  const toggle = (i) => setChecked(prev => ({ ...prev, [i]: !prev[i] }));
+
+  const create = () => {
+    if (!template) return;
+    const lots = template.lots.filter((_, i) => checked[i]);
+    if (lots.length === 0) return;
+    onCreateMany(lots);
+  };
+
+  return (
+    <div style={{ background: '#f9fafb', padding: '0.75rem', borderRadius: '8px', marginBottom: '0.75rem' }}>
+      {!template ? (
+        <>
+          <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Choisir un modèle de chantier</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
+            {CHANTIER_TEMPLATES.map(t => (
+              <button key={t.id} type="button" onClick={() => pickTemplate(t)}
+                style={{ textAlign: 'left', background: 'white', cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 0.6rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t.icon} {t.label}</div>
+                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.2rem' }}>{t.lots.length} lots</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.6rem' }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>Fermer</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>{template.icon} {template.label}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {template.lots.map((l, i) => {
+              const color = tradeColor(l.trade_code);
+              return (
+                <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!checked[i]} onChange={() => toggle(i)} />
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color, background: color + '22', padding: '1px 6px', borderRadius: '999px' }}>
+                    {tradeLabel(l.trade_code)}
+                  </span>
+                  <span>{l.title}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', marginTop: '0.6rem' }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedId(null)}>← Modèles</button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={create} disabled={busy}>
+              {busy ? 'Création…' : `Créer les lots sélectionnés`}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -283,6 +354,8 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
   const { lots, isLoading, createLot, updateLot, deleteLot, isMutating } = useInterventionLots(interventionId);
   const { hasPermission } = usePermissions();
   const [showForm, setShowForm] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // Peut gérer les lots : admin OU utilisateur avec la permission manage_chantiers
   const canManageLots = isAdmin || hasPermission('manage_chantiers');
@@ -307,6 +380,20 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
   const handleCreate = async (lot) => {
     try { await createLot(lot); setShowForm(false); } catch (e) { /* erreur silencieuse, l'UI reste ouverte */ }
   };
+  // Création groupée depuis un modèle (séquentielle pour rester sûr)
+  const handleCreateMany = async (templateLots) => {
+    setBulkBusy(true);
+    try {
+      for (const l of templateLots) {
+        await createLot({ trade_code: l.trade_code, title: l.title });
+      }
+      setShowTemplates(false);
+    } catch (e) {
+      /* noop : les lots déjà créés restent, l'utilisateur peut réessayer */
+    } finally {
+      setBulkBusy(false);
+    }
+  };
   const handleDelete = async (lotId) => {
     if (!window.confirm('Supprimer ce lot ?')) return;
     try { await deleteLot(lotId); } catch (e) { /* noop */ }
@@ -329,14 +416,23 @@ export default function InterventionLots({ interventionId, isAdmin, profile, use
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h3 style={{ margin: 0 }}>🧱 Lots par métier {visibleLots.length > 0 && <span style={{ color: '#6b7280', fontWeight: 400 }}>({overall}%)</span>}</h3>
           {canManageLots && (
-            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(v => !v)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
-              {showForm ? 'Fermer' : '+ Ajouter un lot'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { setShowTemplates(v => !v); setShowForm(false); }} style={{ fontSize: '0.85rem', padding: '0.4rem 0.6rem' }}>
+                📋 Modèles
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => { setShowForm(v => !v); setShowTemplates(false); }} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
+                {showForm ? 'Fermer' : '+ Ajouter un lot'}
+              </button>
+            </div>
           )}
         </div>
 
         {visibleLots.length > 0 && (
           <div style={{ marginBottom: '0.75rem' }}><ProgressBar value={overall} /></div>
+        )}
+
+        {canManageLots && showTemplates && (
+          <TemplatePicker onCreateMany={handleCreateMany} onCancel={() => setShowTemplates(false)} busy={bulkBusy} />
         )}
 
         {canManageLots && showForm && (
