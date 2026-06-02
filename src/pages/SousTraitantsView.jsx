@@ -22,16 +22,19 @@ function useBreakpoint() {
   return { isMobile: w < 640 };
 }
 
+// Couleurs de texte à fort contraste
+const TXT = { primary: '#1f1410', secondary: '#473a30', muted: '#6d5d4f' };
+
 // ─── Pastilles de métiers ─────────────────────────────────────────────────────
 
 function TradeBadges({ trades }) {
   if (!trades || trades.length === 0) return null;
   return (
-    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px' }}>
+    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '5px' }}>
       {trades.map(code => {
         const color = tradeColor(code);
         return (
-          <span key={code} style={{ fontSize: '0.7rem', fontWeight: 600, color, background: color + '22', padding: '2px 8px', borderRadius: '999px' }}>
+          <span key={code} style={{ fontSize: '0.78rem', fontWeight: 600, color, background: color + '22', padding: '3px 10px', borderRadius: '999px' }}>
             {tradeLabel(code)}
           </span>
         );
@@ -48,36 +51,35 @@ function TradesSelector({ selected, onToggle, isMobile }) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.7rem',
-      maxHeight: '240px',
+      gap: '0.85rem',
+      maxHeight: '260px',
       overflowY: 'auto',
-      padding: '8px',
-      border: '1px solid var(--border-color, #f4e5d9)',
-      borderRadius: 'var(--radius-md, 8px)',
-      background: 'var(--bg-primary, #ffffff)',
+      padding: '10px',
+      border: '1px solid #ecddcf',
+      borderRadius: '12px',
+      background: '#ffffff',
       WebkitOverflowScrolling: 'touch',
     }}>
       {groups.map(group => (
         <div key={group.id}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: group.color, marginBottom: '6px', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: group.color, marginBottom: '8px', letterSpacing: '0.04em' }}>
             {group.label}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
             {group.trades.map(t => {
               const on = selected.includes(t.code);
               return (
                 <button type="button" key={t.code} onClick={() => onToggle(t.code)}
                   style={{
-                    padding: isMobile ? '6px 12px' : '4px 10px',
+                    padding: isMobile ? '8px 14px' : '6px 12px',
                     borderRadius: '999px',
-                    fontSize: '0.78rem',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
-                    border: `1px solid ${on ? group.color : 'var(--border-color-dark, #e8d4c2)'}`,
+                    border: `1px solid ${on ? group.color : '#d8c5b2'}`,
                     background: on ? group.color + '22' : 'transparent',
-                    color: on ? group.color : 'var(--text-secondary, #57473d)',
-                    fontWeight: on ? 600 : 400,
-                    minHeight: isMobile ? '36px' : '30px',
-                    transition: 'all 0.15s',
+                    color: on ? group.color : TXT.secondary,
+                    fontWeight: on ? 700 : 500,
+                    minHeight: isMobile ? '42px' : '34px',
                   }}>
                   {on ? '✓ ' : ''}{t.label}
                 </button>
@@ -110,55 +112,53 @@ function SubForm({ initial, onSave, onCancel, busy, isMobile }) {
     onSave({ ...form, company_name: form.company_name.trim() });
   };
 
-  const inputStyle = {
-    minHeight: isMobile ? '48px' : '40px',
-    fontSize: isMobile ? '1rem' : '0.9rem',
-  };
+  const labelStyle = { fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '5px', color: TXT.secondary };
+  const inputStyle = { minHeight: isMobile ? '48px' : '42px', fontSize: '1rem' };
 
   return (
     <form onSubmit={submit} style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.85rem',
-      background: 'var(--bg-secondary, #ffe8d1)',
+      gap: '1rem',
+      background: '#faf6f1',
       padding: isMobile ? '1rem' : '1.25rem',
-      borderRadius: 'var(--radius-lg, 12px)',
+      borderRadius: '14px',
       marginBottom: '1rem',
-      border: '1px solid var(--border-color, #f4e5d9)',
-      boxShadow: 'var(--shadow-sm, 0 1px 3px 0 rgba(0,0,0,.1))',
+      border: '1px solid #ecddcf',
+      boxShadow: '0 1px 3px rgba(0,0,0,.06)',
     }}>
-      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary, #1f1410)' }}>
+      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: TXT.primary }}>
         {initial?.id ? '✏️ Modifier le sous-traitant' : '+ Nouveau sous-traitant'}
       </h3>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.7rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>Entreprise *</label>
+          <label style={labelStyle}>Entreprise *</label>
           <input value={form.company_name} onChange={e => set('company_name', e.target.value)} className="form-control" placeholder="Nom de l'entreprise" required style={inputStyle} />
         </div>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>Contact</label>
+          <label style={labelStyle}>Contact</label>
           <input value={form.contact_name || ''} onChange={e => set('contact_name', e.target.value)} className="form-control" placeholder="Nom du contact" style={inputStyle} />
         </div>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>Téléphone</label>
+          <label style={labelStyle}>Téléphone</label>
           <input type="tel" value={form.phone || ''} onChange={e => set('phone', e.target.value)} className="form-control" placeholder="06 00 00 00 00" style={inputStyle} />
         </div>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>Email</label>
+          <label style={labelStyle}>Email</label>
           <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} className="form-control" placeholder="email@entreprise.fr" style={inputStyle} />
         </div>
         <div>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>SIRET</label>
+          <label style={labelStyle}>SIRET</label>
           <input value={form.siret || ''} onChange={e => set('siret', e.target.value)} className="form-control" placeholder="000 000 000 00000" style={inputStyle} />
         </div>
       </div>
 
       <div>
-        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '6px', color: 'var(--text-secondary, #57473d)' }}>
+        <label style={labelStyle}>
           Métiers{' '}
           {form.trades.length > 0 && (
-            <span style={{ color: 'var(--text-tertiary, #8b7968)', fontWeight: 400 }}>
+            <span style={{ color: TXT.muted, fontWeight: 400 }}>
               ({form.trades.length} sélectionné{form.trades.length > 1 ? 's' : ''})
             </span>
           )}
@@ -167,18 +167,18 @@ function SubForm({ initial, onSave, onCancel, busy, isMobile }) {
       </div>
 
       <div>
-        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: 'var(--text-secondary, #57473d)' }}>Notes</label>
-        <textarea value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="form-control" rows={2} placeholder="Informations complémentaires…" style={{ fontSize: isMobile ? '1rem' : '0.9rem' }} />
+        <label style={labelStyle}>Notes</label>
+        <textarea value={form.notes || ''} onChange={e => set('notes', e.target.value)} className="form-control" rows={2} placeholder="Informations complémentaires…" style={{ fontSize: '1rem' }} />
       </div>
 
-      <label style={{ fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', minHeight: '36px', color: 'var(--text-primary, #1f1410)' }}>
-        <input type="checkbox" checked={form.is_active !== false} onChange={e => set('is_active', e.target.checked)} style={{ width: '18px', height: '18px' }} />
+      <label style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', minHeight: '44px', color: TXT.primary }}>
+        <input type="checkbox" checked={form.is_active !== false} onChange={e => set('is_active', e.target.checked)} style={{ width: '20px', height: '20px', flexShrink: 0 }} />
         Sous-traitant actif (disponible pour assignation)
       </label>
 
       <div style={{ display: 'flex', gap: '0.6rem', flexDirection: isMobile ? 'column-reverse' : 'row', justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ minHeight: '44px' }}>Annuler</button>
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ minHeight: '44px', flex: isMobile ? 1 : undefined }}>
+        <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ minHeight: '48px' }}>Annuler</button>
+        <button type="submit" className="btn btn-primary" disabled={busy} style={{ minHeight: '48px', flex: isMobile ? 1 : undefined }}>
           {busy ? 'Enregistrement…' : (initial?.id ? 'Enregistrer' : '+ Ajouter')}
         </button>
       </div>
@@ -236,25 +236,25 @@ export default function SousTraitantsView() {
   };
 
   return (
-    <div style={{ padding: isMobile ? '0.75rem' : '1rem', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '0.85rem' : '1rem', maxWidth: '900px', margin: '0 auto' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '1.25rem' }}>
         <button
           onClick={() => navigate('/suivi-chantiers')}
-          style={{ background: 'none', border: 'none', color: '#b87333', cursor: 'pointer', padding: '8px 0', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '44px', fontWeight: 500 }}
+          style={{ background: 'none', border: 'none', color: '#9c5e22', cursor: 'pointer', padding: '8px 0', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '44px', fontWeight: 600 }}
         >
           ← Suivi Chantiers
         </button>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.3rem', color: 'var(--text-primary, #1f1410)', borderLeft: '3px solid #b87333', paddingLeft: '0.6rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+          <h2 style={{ margin: 0, fontSize: isMobile ? '1.3rem' : '1.4rem', color: TXT.primary, borderLeft: '4px solid #b87333', paddingLeft: '0.65rem', lineHeight: 1.2 }}>
             🏢 Sous-traitants
           </h2>
           {!showForm && (
             <button
               className="btn btn-primary"
               onClick={() => { setEditing(null); setShowForm(true); }}
-              style={{ minHeight: '44px', width: isMobile ? '100%' : 'auto', marginTop: isMobile ? '0.4rem' : 0 }}
+              style={{ minHeight: '48px', width: isMobile ? '100%' : 'auto', marginTop: isMobile ? '0.5rem' : 0 }}
             >
               + Ajouter un sous-traitant
             </button>
@@ -277,14 +277,14 @@ export default function SousTraitantsView() {
       {isLoading ? (
         <SkeletonList count={3} variant="card" />
       ) : subcontractors.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary, #8b7968)', background: 'var(--bg-secondary, #ffe8d1)', borderRadius: 'var(--radius-lg, 12px)', border: '1px dashed var(--border-color-dark, #e8d4c2)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🏢</div>
-          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary, #1f1410)' }}>Aucun sous-traitant</p>
-          <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem' }}>Ajoutez vos entreprises partenaires pour les assigner aux lots de chantier.</p>
+        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: TXT.muted, background: '#faf6f1', borderRadius: '14px', border: '1px dashed #e0cdb8' }}>
+          <div style={{ fontSize: '2.75rem', marginBottom: '0.5rem' }}>🏢</div>
+          <p style={{ margin: 0, fontWeight: 700, color: TXT.primary, fontSize: '1rem' }}>Aucun sous-traitant</p>
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem', lineHeight: 1.4 }}>Ajoutez vos entreprises partenaires pour les assigner aux lots de chantier.</p>
         </div>
       ) : (
         <div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #8b7968)', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.85rem', color: TXT.muted, marginBottom: '0.6rem', fontWeight: 500 }}>
             {subcontractors.length} sous-traitant{subcontractors.length > 1 ? 's' : ''}
           </div>
           {subcontractors.map(s => (
@@ -315,84 +315,65 @@ export default function SousTraitantsView() {
   );
 }
 
-// ─── Carte sous-traitant (composant séparé pour limiter les re-renders) ────────
+// ─── Carte sous-traitant ───────────────────────────────────────────────────────
 
 function SubcontractorCard({ s, isMobile, onEdit, onDelete }) {
-  const [hovered, setHovered] = useState(false);
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: '1px solid var(--border-color, #f4e5d9)',
-        borderRadius: 'var(--radius-lg, 12px)',
-        padding: isMobile ? '0.85rem' : '0.85rem 1rem',
-        marginBottom: '0.6rem',
-        background: 'var(--bg-primary, #ffffff)',
-        opacity: s.is_active === false ? 0.65 : 1,
-        boxShadow: hovered ? 'var(--shadow-md, 0 4px 6px -1px rgba(0,0,0,.1))' : 'var(--shadow-sm, 0 1px 3px 0 rgba(0,0,0,.1))',
-        transition: 'box-shadow 0.2s',
-      }}
-    >
+    <div style={{
+      border: '1px solid #ecddcf',
+      borderRadius: '14px',
+      padding: '1rem',
+      marginBottom: '0.75rem',
+      background: '#ffffff',
+      opacity: s.is_active === false ? 0.7 : 1,
+      boxShadow: '0 1px 3px rgba(0,0,0,.08)',
+    }}>
+      {/* Nom + bouton modifier (desktop) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-        {/* Infos */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: '1rem', wordBreak: 'break-word', color: 'var(--text-primary, #1f1410)' }}>{s.company_name}</span>
+            <span style={{ fontWeight: 700, fontSize: '1.1rem', wordBreak: 'break-word', color: TXT.primary }}>{s.company_name}</span>
             {s.is_active === false && (
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary, #8b7968)', background: 'var(--bg-secondary, #ffe8d1)', padding: '2px 8px', borderRadius: '999px', flexShrink: 0 }}>Inactif</span>
+              <span style={{ fontSize: '0.75rem', color: TXT.muted, background: '#f0e7dc', padding: '3px 10px', borderRadius: '999px', flexShrink: 0, fontWeight: 600 }}>Inactif</span>
             )}
           </div>
-          {(s.contact_name || s.phone || s.email) && (
-            <div style={{ margin: '0.3rem 0 0', fontSize: '0.83rem', color: 'var(--text-secondary, #57473d)', display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.75rem' }}>
-              {s.contact_name && <span>👤 {s.contact_name}</span>}
-              {s.phone && <span>📞 {s.phone}</span>}
-              {s.email && <span>✉ {s.email}</span>}
-            </div>
-          )}
-          {s.siret && (
-            <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--text-tertiary, #8b7968)' }}>SIRET : {s.siret}</p>
-          )}
-          {s.trades && s.trades.length > 0 && (
-            <div style={{ marginTop: '0.5rem' }}><TradeBadges trades={s.trades} /></div>
-          )}
-          {s.notes && (
-            <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: 'var(--text-primary, #1f1410)', wordBreak: 'break-word' }}>💬 {s.notes}</p>
-          )}
         </div>
-
-        {/* Boutons desktop */}
         {!isMobile && (
           <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              title="Modifier"
-              onClick={() => onEdit(s)}
-              style={{ minWidth: '40px', minHeight: '40px' }}
-            >✏️</button>
-            <button
-              className="btn btn-secondary btn-sm"
-              title="Supprimer"
-              style={{ color: '#b84c3a', minWidth: '40px', minHeight: '40px' }}
-              onClick={() => onDelete(s.id)}
-            >✕</button>
+            <button className="btn btn-secondary btn-sm" title="Modifier" onClick={() => onEdit(s)} style={{ minWidth: '44px', minHeight: '44px' }}>✏️</button>
+            <button className="btn btn-secondary btn-sm" title="Supprimer" style={{ color: '#a23a29', minWidth: '44px', minHeight: '44px' }} onClick={() => onDelete(s.id)}>✕</button>
           </div>
         )}
       </div>
 
+      {/* Coordonnées — une info par ligne pour la lisibilité */}
+      {(s.contact_name || s.phone || s.email) && (
+        <div style={{ margin: '0.6rem 0 0', fontSize: '0.9rem', color: TXT.secondary, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+          {s.contact_name && <span>👤 {s.contact_name}</span>}
+          {s.phone && <a href={`tel:${s.phone}`} style={{ color: '#9c5e22', textDecoration: 'none', fontWeight: 600 }}>📞 {s.phone}</a>}
+          {s.email && <a href={`mailto:${s.email}`} style={{ color: '#9c5e22', textDecoration: 'none', wordBreak: 'break-all' }}>✉ {s.email}</a>}
+        </div>
+      )}
+
+      {s.siret && (
+        <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: TXT.muted }}>SIRET : {s.siret}</p>
+      )}
+
+      {s.trades && s.trades.length > 0 && (
+        <div style={{ marginTop: '0.6rem' }}><TradeBadges trades={s.trades} /></div>
+      )}
+
+      {s.notes && (
+        <p style={{ margin: '0.6rem 0 0', fontSize: '0.88rem', color: TXT.secondary, wordBreak: 'break-word', background: '#faf6f1', padding: '0.5rem 0.65rem', borderRadius: '8px', lineHeight: 1.4 }}>
+          💬 {s.notes}
+        </p>
+      )}
+
       {/* Boutons mobile — pleine largeur */}
       {isMobile && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', borderTop: '1px solid var(--border-color, #f4e5d9)', paddingTop: '0.75rem' }}>
-          <button
-            className="btn btn-secondary"
-            onClick={() => onEdit(s)}
-            style={{ flex: 1, minHeight: '44px', fontSize: '0.88rem' }}
-          >✏️ Modifier</button>
-          <button
-            className="btn btn-secondary"
-            style={{ flex: 1, color: '#b84c3a', minHeight: '44px', fontSize: '0.88rem' }}
-            onClick={() => onDelete(s.id)}
-          >✕ Supprimer</button>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.85rem', borderTop: '1px solid #f0e7dc', paddingTop: '0.85rem' }}>
+          <button className="btn btn-secondary" onClick={() => onEdit(s)} style={{ flex: 1, minHeight: '48px', fontSize: '0.92rem' }}>✏️ Modifier</button>
+          <button className="btn btn-secondary" style={{ flex: 1, color: '#a23a29', minHeight: '48px', fontSize: '0.92rem' }} onClick={() => onDelete(s.id)}>✕ Supprimer</button>
         </div>
       )}
     </div>
