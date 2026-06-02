@@ -265,6 +265,13 @@ function App() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'contract_visits' }, () => {
           invalidateDebounced(['contracts', 'contractVisits']);
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'intervention_lots' }, () => {
+          invalidateDebounced(['all-lots-moe']);
+          invalidateDebounced(['intervention-lots']);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'subcontractors' }, () => {
+          invalidateDebounced(['subcontractors']);
+        })
         .subscribe();
 
       return () => {
