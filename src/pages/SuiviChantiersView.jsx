@@ -1,15 +1,26 @@
 // src/pages/SuiviChantiersView.jsx
 // Tableau de bord maître d'œuvre / conducteur de travaux.
 // Accessible via la permission view_all_interventions.
-// Fichier autonome — n'altère pas la fiche chantier (qui garde useInterventionLots).
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useUsers } from '../hooks/useUsers';
 import { useSubcontractors } from '../hooks/useSubcontractors';
 import { tradeLabel, tradeColor, tradesByCategory } from '../constants/buildingTrades';
+
+// ─── Responsive ───────────────────────────────────────────────────────────────
+
+function useBreakpoint() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return { isMobile: w < 640, isTablet: w < 900 };
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -27,11 +38,11 @@ const LOT_STATUS = {
 };
 
 const SORT_OPTIONS = [
-  { value: 'attention', label: 'Attention requise d\'abord' },
-  { value: 'recent',    label: 'Activité récente' },
-  { value: 'progress_asc',  label: 'Avancement croissant' },
-  { value: 'progress_desc', label: 'Avancement décroissant' },
-  { value: 'alpha',     label: 'Client (A→Z)' },
+  { value: 'attention',     label: "Attention d'abord" },
+  { value: 'recent',        label: 'Activité récente' },
+  { value: 'progress_asc',  label: 'Avancement ↑' },
+  { value: 'progress_desc', label: 'Avancement ↓' },
+  { value: 'alpha',         label: 'Client A→Z' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -76,45 +87,65 @@ function LotRow({ lot, userById, subById }) {
   const photos = Array.isArray(lot.photos) ? lot.photos : [];
   const assignee = lot.assigned_user_id ? userById[lot.assigned_user_id] : null;
   const sub = lot.subcontractor_id ? subById[lot.subcontractor_id] : null;
+  const isBlocked = lot.status === 'bloque';
 
   return (
-    <div style={{ padding: '0.6rem 0.75rem', borderLeft: `3px solid ${color}`, marginBottom: '0.4rem', background: '#f9fafb', borderRadius: '0 6px 6px 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, color, background: color + '22', padding: '1px 7px', borderRadius: '999px' }}>
+    <div style={{
+      padding: '0.75rem 0.85rem',
+      borderLeft: `3px solid ${isBlocked ? '#ef4444' : color}`,
+      marginBottom: '0.5rem',
+      background: isBlocked ? '#fff5f5' : '#f9fafb',
+      borderRadius: '0 8px 8px 0',
+    }}>
+      {/* Badges + titre */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color, background: color + '22', padding: '2px 8px', borderRadius: '999px', flexShrink: 0 }}>
           {tradeLabel(lot.trade_code)}
         </span>
-        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sm.color, background: sm.color + '22', padding: '1px 7px', borderRadius: '999px' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sm.color, background: sm.color + '22', padding: '2px 8px', borderRadius: '999px', flexShrink: 0 }}>
           {sm.label}
         </span>
-        <span style={{ fontSize: '0.85rem', fontWeight: 500, flex: 1 }}>{lot.title}</span>
-        {photos.length > 0 && (
-          <button onClick={() => setShowPhotos(v => !v)}
-            style={{ fontSize: '0.72rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            📷 {photos.length}
-          </button>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-        <ProgressBar value={lot.progress} color={color} />
-        <span style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{lot.progress || 0}%</span>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.74rem', color: sub ? '#7c3aed' : '#374151', fontWeight: sub ? 600 : 400 }}>
-          {sub ? `🏢 ${sub.company_name}` : (assignee ? `👷 ${assignee.full_name || assignee.email}` : '👷 Non assigné')}
+        <span style={{ fontSize: '0.88rem', fontWeight: 500, flex: 1, wordBreak: 'break-word', minWidth: 0 }}>
+          {lot.title}
         </span>
-        {lot.updated_at && <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>🕑 {timeAgo(lot.updated_at)}</span>}
       </div>
 
-      {lot.notes && <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: '#374151' }}>💬 {lot.notes}</p>}
+      {/* Barre de progression */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <ProgressBar value={lot.progress} color={isBlocked ? '#ef4444' : color} />
+        <span style={{ fontSize: '0.75rem', color: '#6b7280', whiteSpace: 'nowrap', fontWeight: 600, minWidth: '36px', textAlign: 'right' }}>
+          {lot.progress || 0}%
+        </span>
+      </div>
+
+      {/* Assigné + horodatage */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.35rem', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.8rem', color: sub ? '#7c3aed' : '#374151', fontWeight: sub ? 600 : 400 }}>
+          {sub ? `🏢 ${sub.company_name}` : (assignee ? `👷 ${assignee.full_name || assignee.email}` : '—')}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {photos.length > 0 && (
+            <button onClick={() => setShowPhotos(v => !v)}
+              style={{ fontSize: '0.75rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', minHeight: '36px' }}>
+              📷 {photos.length}
+            </button>
+          )}
+          {lot.updated_at && (
+            <span style={{ fontSize: '0.72rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>🕑 {timeAgo(lot.updated_at)}</span>
+          )}
+        </div>
+      </div>
+
+      {lot.notes && (
+        <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#374151', wordBreak: 'break-word' }}>💬 {lot.notes}</p>
+      )}
 
       {showPhotos && photos.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
           {photos.map((ph, i) => (
             <a key={i} href={ph.url} target="_blank" rel="noopener noreferrer">
               <img src={ph.url} alt={ph.name || 'photo'} loading="lazy"
-                style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+                style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
             </a>
           ))}
         </div>
@@ -125,7 +156,7 @@ function LotRow({ lot, userById, subById }) {
 
 // ─── Card chantier ────────────────────────────────────────────────────────────
 
-function ChantierCard({ intervention, lots, userById, subById, defaultExpanded }) {
+function ChantierCard({ intervention, lots, userById, subById, defaultExpanded, isMobile }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(!!defaultExpanded);
 
@@ -139,49 +170,76 @@ function ChantierCard({ intervention, lots, userById, subById, defaultExpanded }
     return c;
   }, [lots]);
 
+  const hasBlocked = counts.bloque > 0;
+
   return (
-    <div style={{ border: counts.bloque > 0 ? '1px solid #fca5a5' : '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden', marginBottom: '0.75rem' }}>
+    <div style={{
+      border: hasBlocked ? '1px solid #fca5a5' : '1px solid #e5e7eb',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      marginBottom: '0.75rem',
+      background: 'white',
+    }}>
+      {/* Header */}
       <div
         onClick={() => setExpanded(v => !v)}
-        style={{ padding: '0.75rem 1rem', background: 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}
+        style={{ padding: isMobile ? '0.9rem' : '0.85rem 1rem', cursor: 'pointer' }}
       >
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{intervention.client}</span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: statusColor, background: statusColor + '22', padding: '1px 7px', borderRadius: '999px' }}>
-              {intervention.status}
-            </span>
-            {counts.bloque > 0 && (
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fef2f2', padding: '1px 7px', borderRadius: '999px' }}>
-                ⚠ {counts.bloque} bloqué{counts.bloque > 1 ? 's' : ''}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.98rem', wordBreak: 'break-word' }}>{intervention.client}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: statusColor, background: statusColor + '22', padding: '2px 8px', borderRadius: '999px', flexShrink: 0 }}>
+                {intervention.status}
               </span>
+              {hasBlocked && (
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fef2f2', padding: '2px 8px', borderRadius: '999px', flexShrink: 0 }}>
+                  ⚠ {counts.bloque} bloqué{counts.bloque > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {intervention.address && (
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#6b7280', wordBreak: 'break-word' }}>
+                {intervention.address}
+              </p>
+            )}
+            {firstDate && (
+              <p style={{ margin: '0.15rem 0 0', fontSize: '0.77rem', color: '#9ca3af' }}>📅 {formatDate(firstDate)}</p>
             )}
           </div>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#6b7280' }}>{intervention.address}</p>
-          {firstDate && <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>📅 {formatDate(firstDate)}</p>}
-        </div>
 
-        <div style={{ textAlign: 'right', minWidth: '80px' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: overall >= 100 ? '#10b981' : '#374151' }}>{overall}%</div>
-          {lots.length > 0 && <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{lots.length} lot{lots.length > 1 ? 's' : ''}</div>}
-          <div style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>{expanded ? '▲' : '▼'}</div>
+          <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: overall >= 100 ? '#10b981' : '#374151', lineHeight: 1 }}>
+              {overall}%
+            </span>
+            {lots.length > 0 && (
+              <span style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px' }}>
+                {lots.length} lot{lots.length > 1 ? 's' : ''}
+              </span>
+            )}
+            <span style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '4px' }}>{expanded ? '▲' : '▼'}</span>
+          </div>
         </div>
       </div>
 
+      {/* Barre globale */}
       {lots.length > 0 && (
-        <div style={{ padding: '0 1rem', background: 'white' }}><ProgressBar value={overall} /></div>
+        <div style={{ padding: '0 1rem 0.5rem' }}><ProgressBar value={overall} /></div>
       )}
 
+      {/* Compteurs */}
       {lots.length > 0 && (
-        <div style={{ padding: '0.4rem 1rem 0.6rem', background: 'white', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div style={{ padding: '0 1rem 0.6rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {counts.en_cours > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#3b82f6', background: '#eff6ff', padding: '2px 8px', borderRadius: '999px' }}>🔨 {counts.en_cours} en cours</span>}
           {counts.termine > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: '999px' }}>✓ {counts.termine} terminé{counts.termine > 1 ? 's' : ''}</span>}
-          {counts.a_venir > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', background: '#f9fafb', padding: '2px 8px', borderRadius: '999px' }}>⏳ {counts.a_venir} à venir</span>}
+          {counts.a_venir > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', background: '#f9fafb', border: '1px solid #e5e7eb', padding: '2px 8px', borderRadius: '999px' }}>⏳ {counts.a_venir} à venir</span>}
+          {counts.bloque > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#ef4444', background: '#fef2f2', padding: '2px 8px', borderRadius: '999px' }}>🚫 {counts.bloque} bloqué{counts.bloque > 1 ? 's' : ''}</span>}
         </div>
       )}
 
+      {/* Lots dépliés */}
       {expanded && (
-        <div style={{ padding: '0.5rem 1rem 0.75rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6' }}>
+        <div style={{ padding: '0.5rem 0.85rem 0.85rem', background: '#f9fafb', borderTop: '1px solid #f3f4f6' }}>
           {lots.length === 0 ? (
             <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.85rem' }}>Aucun lot pour ce chantier.</p>
           ) : (
@@ -189,9 +247,23 @@ function ChantierCard({ intervention, lots, userById, subById, defaultExpanded }
           )}
           <button
             onClick={() => navigate(`/planning/${intervention.id}`)}
-            style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{
+              marginTop: '0.75rem',
+              fontSize: '0.88rem',
+              color: '#3b82f6',
+              background: 'white',
+              border: '1px solid #bfdbfe',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              padding: '0.65rem 1rem',
+              width: '100%',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            → Ouvrir le chantier complet
+            Ouvrir le chantier complet →
           </button>
         </div>
       )}
@@ -199,9 +271,9 @@ function ChantierCard({ intervention, lots, userById, subById, defaultExpanded }
   );
 }
 
-// ─── Synthèse globale par corps de métier ─────────────────────────────────────
+// ─── Synthèse par corps de métier ─────────────────────────────────────────────
 
-function TradeSummary({ lots, activeTrade, onPick }) {
+function TradeSummary({ lots, activeTrade, onPick, isMobile }) {
   const byTrade = useMemo(() => {
     const map = {};
     lots.forEach(l => {
@@ -218,21 +290,28 @@ function TradeSummary({ lots, activeTrade, onPick }) {
 
   return (
     <div style={{ marginBottom: '1.25rem' }}>
-      <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem' }}>Avancement par corps de métier</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '0.5rem' }}>
+      <h3 style={{ margin: '0 0 0.6rem', fontSize: '0.95rem', fontWeight: 700 }}>Avancement par corps de métier</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(190px, 1fr))', gap: '0.5rem' }}>
         {byTrade.map(t => {
           const color = tradeColor(t.code);
           const active = activeTrade === t.code;
           return (
             <button key={t.code} onClick={() => onPick(active ? '' : t.code)}
-              style={{ textAlign: 'left', background: 'white', cursor: 'pointer',
-                border: active ? `2px solid ${color}` : '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 0.7rem' }}>
+              style={{
+                textAlign: 'left',
+                background: active ? color + '11' : 'white',
+                cursor: 'pointer',
+                border: active ? `2px solid ${color}` : '1px solid #e5e7eb',
+                borderRadius: '10px',
+                padding: isMobile ? '0.6rem 0.7rem' : '0.5rem 0.7rem',
+                minHeight: '44px',
+              }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color }}>{tradeLabel(t.code)}</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>{t.progress}%</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color, lineHeight: 1.3 }}>{tradeLabel(t.code)}</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151' }}>{t.progress}%</span>
               </div>
               <ProgressBar value={t.progress} color={color} />
-              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
                 <span style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{t.count} lot{t.count > 1 ? 's' : ''}</span>
                 {t.blocked > 0 && <span style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 600 }}>⚠ {t.blocked} bloqué{t.blocked > 1 ? 's' : ''}</span>}
               </div>
@@ -247,27 +326,30 @@ function TradeSummary({ lots, activeTrade, onPick }) {
 // ─── Vue principale ───────────────────────────────────────────────────────────
 
 export default function SuiviChantiersView() {
+  const { isMobile, isTablet } = useBreakpoint();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [tradeFilter, setTradeFilter] = useState('');
   const [sortBy, setSortBy] = useState('attention');
   const [onlyAttention, setOnlyAttention] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const navigate = useNavigate();
   const { users } = useUsers();
   const { subcontractors } = useSubcontractors();
+
   const userById = useMemo(() => {
     const m = {};
     (users || []).forEach(u => { m[u.id] = u; });
     return m;
   }, [users]);
+
   const subById = useMemo(() => {
     const m = {};
     (subcontractors || []).forEach(s => { m[s.id] = s; });
     return m;
   }, [subcontractors]);
 
-  // Interventions actives
   const { data: interventions = [], isLoading: loadingInt } = useQuery({
     queryKey: ['interventions-moe'],
     queryFn: async () => {
@@ -283,7 +365,6 @@ export default function SuiviChantiersView() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Tous les lots (RLS limite à l'organisation) — une seule requête
   const { data: allLots = [], isLoading: loadingLots } = useQuery({
     queryKey: ['all-lots-moe'],
     queryFn: async () => {
@@ -299,7 +380,6 @@ export default function SuiviChantiersView() {
 
   const isLoading = loadingInt || loadingLots;
 
-  // Lots groupés par intervention (avec filtre métier éventuel)
   const lotsByIntervention = useMemo(() => {
     const map = {};
     allLots.forEach(l => {
@@ -309,13 +389,11 @@ export default function SuiviChantiersView() {
     return map;
   }, [allLots, tradeFilter]);
 
-  // Lots visibles à plat (pour la synthèse globale)
   const visibleLots = useMemo(
     () => (tradeFilter ? allLots.filter(l => l.trade_code === tradeFilter) : allLots),
     [allLots, tradeFilter]
   );
 
-  // Chantiers enrichis + filtres + tri
   const cards = useMemo(() => {
     let list = interventions.map(i => {
       const lots = lotsByIntervention[i.id] || [];
@@ -327,9 +405,7 @@ export default function SuiviChantiersView() {
       return { intervention: i, lots, overall: avg(lots), blocked, lastActivity };
     });
 
-    // Quand on filtre par métier, on ne montre que les chantiers ayant ce métier
     if (tradeFilter) list = list.filter(c => c.lots.length > 0);
-
     if (statusFilter) list = list.filter(c => c.intervention.status === statusFilter);
     if (onlyAttention) list = list.filter(c => c.blocked > 0);
     if (search) {
@@ -340,107 +416,191 @@ export default function SuiviChantiersView() {
     }
 
     const sorters = {
-      attention: (a, b) => (b.blocked - a.blocked) || (b.lastActivity - a.lastActivity),
-      recent: (a, b) => b.lastActivity - a.lastActivity,
+      attention:    (a, b) => (b.blocked - a.blocked) || (b.lastActivity - a.lastActivity),
+      recent:       (a, b) => b.lastActivity - a.lastActivity,
       progress_asc: (a, b) => a.overall - b.overall,
-      progress_desc: (a, b) => b.overall - a.overall,
-      alpha: (a, b) => (a.intervention.client || '').localeCompare(b.intervention.client || ''),
+      progress_desc:(a, b) => b.overall - a.overall,
+      alpha:        (a, b) => (a.intervention.client || '').localeCompare(b.intervention.client || ''),
     };
     return list.sort(sorters[sortBy] || sorters.attention);
   }, [interventions, lotsByIntervention, tradeFilter, statusFilter, onlyAttention, search, sortBy]);
 
   const stats = useMemo(() => ({
-    total: interventions.length,
-    en_cours: interventions.filter(i => i.status === 'En cours').length,
+    total:   interventions.length,
+    en_cours:interventions.filter(i => i.status === 'En cours').length,
     a_venir: interventions.filter(i => i.status === 'À venir').length,
     termine: interventions.filter(i => i.status === 'Terminée').length,
     bloques: allLots.filter(l => l.status === 'bloque').length,
   }), [interventions, allLots]);
 
+  const statsItems = [
+    { label: 'Chantiers',  value: stats.total,    color: '#374151' },
+    { label: 'En cours',   value: stats.en_cours,  color: '#3b82f6' },
+    { label: 'À venir',    value: stats.a_venir,   color: '#6b7280' },
+    { label: 'Terminés',   value: stats.termine,   color: '#10b981' },
+    { label: 'Bloqués',    value: stats.bloques,   color: '#ef4444' },
+  ];
+
+  const activeFiltersCount = [search, statusFilter, tradeFilter, onlyAttention].filter(Boolean).length;
   const tradeGroups = tradesByCategory();
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+    <div style={{ padding: isMobile ? '0.75rem' : '1rem', maxWidth: '900px', margin: '0 auto' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.3rem' }}>🏗️ Suivi des Chantiers</h2>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.88rem' }}>
-            Avancement par corps de métier — toutes les interventions actives
-          </p>
+          <h2 style={{ margin: '0 0 0.2rem', fontSize: isMobile ? '1.2rem' : '1.3rem' }}>🏗️ Suivi des Chantiers</h2>
+          {!isMobile && (
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
+              Avancement par corps de métier — toutes les interventions actives
+            </p>
+          )}
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/sous-traitants')} style={{ whiteSpace: 'nowrap' }}>
+        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/sous-traitants')} style={{ whiteSpace: 'nowrap', minHeight: '40px' }}>
           🏢 Sous-traitants
         </button>
       </div>
 
-      {/* Compteurs */}
-      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        {[
-          { label: 'Total', value: stats.total, color: '#374151' },
-          { label: 'En cours', value: stats.en_cours, color: '#3b82f6' },
-          { label: 'À venir', value: stats.a_venir, color: '#6b7280' },
-          { label: 'Terminés', value: stats.termine, color: '#10b981' },
-          { label: 'Lots bloqués', value: stats.bloques, color: '#ef4444' },
-        ].map(s => (
-          <div key={s.label} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.5rem 0.9rem', textAlign: 'center', minWidth: '78px' }}>
-            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{s.label}</div>
+      {/* Compteurs — défilement horizontal sur mobile */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        overflowX: 'auto',
+        paddingBottom: '4px',
+        marginBottom: '1rem',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}>
+        {statsItems.map(s => (
+          <div key={s.label} style={{
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '10px',
+            padding: isMobile ? '0.6rem 0.85rem' : '0.5rem 0.9rem',
+            textAlign: 'center',
+            flexShrink: 0,
+          }}>
+            <div style={{ fontSize: isMobile ? '1.4rem' : '1.3rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '3px', whiteSpace: 'nowrap' }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Synthèse par métier (cliquable pour filtrer) */}
+      {/* Synthèse par métier */}
       {!isLoading && (
-        <TradeSummary lots={visibleLots} activeTrade={tradeFilter} onPick={setTradeFilter} />
+        <TradeSummary lots={visibleLots} activeTrade={tradeFilter} onPick={setTradeFilter} isMobile={isMobile} />
       )}
 
       {/* Filtres */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un chantier…" className="form-control" style={{ flex: 1, minWidth: '160px' }} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="form-control" style={{ minWidth: '130px' }}>
-          <option value="">Tous les statuts</option>
-          <option value="En cours">En cours</option>
-          <option value="À venir">À venir</option>
-          <option value="Terminée">Terminés</option>
-        </select>
-        <select value={tradeFilter} onChange={e => setTradeFilter(e.target.value)} className="form-control" style={{ minWidth: '160px' }}>
-          <option value="">Tous les métiers</option>
-          {tradeGroups.map(g => (
-            <optgroup key={g.id} label={g.label}>
-              {g.trades.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
-            </optgroup>
-          ))}
-        </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="form-control" style={{ minWidth: '170px' }}>
-          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ fontSize: '0.82rem', color: '#374151', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-          <input type="checkbox" checked={onlyAttention} onChange={e => setOnlyAttention(e.target.checked)} />
-          ⚠ Afficher seulement les chantiers avec lots bloqués
-        </label>
-      </div>
+      {isTablet ? (
+        // Tablette / téléphone : barre de recherche + bouton filtres
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: showFilters ? '0.6rem' : 0 }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un chantier…"
+              className="form-control"
+              style={{ flex: 1, minHeight: '44px' }}
+            />
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ minHeight: '44px', whiteSpace: 'nowrap' }}
+            >
+              ⚙ Filtres{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+            </button>
+          </div>
+          {showFilters && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="form-control" style={{ minHeight: '44px' }}>
+                <option value="">Tous statuts</option>
+                <option value="En cours">En cours</option>
+                <option value="À venir">À venir</option>
+                <option value="Terminée">Terminés</option>
+              </select>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="form-control" style={{ minHeight: '44px' }}>
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <select value={tradeFilter} onChange={e => setTradeFilter(e.target.value)} className="form-control" style={{ minHeight: '44px', gridColumn: '1 / -1' }}>
+                <option value="">Tous les métiers</option>
+                {tradeGroups.map(g => (
+                  <optgroup key={g.id} label={g.label}>
+                    {g.trades.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <label style={{ fontSize: '0.88rem', color: '#374151', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', gridColumn: '1 / -1', minHeight: '44px' }}>
+                <input type="checkbox" checked={onlyAttention} onChange={e => setOnlyAttention(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                ⚠ Chantiers avec lots bloqués seulement
+              </label>
+            </div>
+          )}
+        </div>
+      ) : (
+        // Desktop : filtres en ligne
+        <>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un chantier…" className="form-control" style={{ flex: 1, minWidth: '160px' }} />
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="form-control" style={{ minWidth: '130px' }}>
+              <option value="">Tous les statuts</option>
+              <option value="En cours">En cours</option>
+              <option value="À venir">À venir</option>
+              <option value="Terminée">Terminés</option>
+            </select>
+            <select value={tradeFilter} onChange={e => setTradeFilter(e.target.value)} className="form-control" style={{ minWidth: '160px' }}>
+              <option value="">Tous les métiers</option>
+              {tradeGroups.map(g => (
+                <optgroup key={g.id} label={g.label}>
+                  {g.trades.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="form-control" style={{ minWidth: '170px' }}>
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ fontSize: '0.82rem', color: '#374151', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <input type="checkbox" checked={onlyAttention} onChange={e => setOnlyAttention(e.target.checked)} />
+              ⚠ Afficher seulement les chantiers avec lots bloqués
+            </label>
+          </div>
+        </>
+      )}
 
       {/* Liste */}
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>Chargement des chantiers…</div>
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
+          Chargement des chantiers…
+        </div>
       ) : cards.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
-          {interventions.length === 0 ? 'Aucun chantier actif.' : 'Aucun chantier ne correspond à vos filtres.'}
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', background: '#f9fafb', borderRadius: '12px', border: '1px dashed #e5e7eb' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+          {interventions.length === 0
+            ? 'Aucun chantier actif.'
+            : 'Aucun chantier ne correspond aux filtres.'}
         </div>
       ) : (
-        cards.map(c => (
-          <ChantierCard
-            key={c.intervention.id}
-            intervention={c.intervention}
-            lots={c.lots}
-            userById={userById}
-            subById={subById}
-            defaultExpanded={onlyAttention || !!tradeFilter}
-          />
-        ))
+        <div>
+          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+            {cards.length} chantier{cards.length > 1 ? 's' : ''} affiché{cards.length > 1 ? 's' : ''}
+          </div>
+          {cards.map(c => (
+            <ChantierCard
+              key={c.intervention.id}
+              intervention={c.intervention}
+              lots={c.lots}
+              userById={userById}
+              subById={subById}
+              defaultExpanded={onlyAttention || !!tradeFilter}
+              isMobile={isMobile}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
