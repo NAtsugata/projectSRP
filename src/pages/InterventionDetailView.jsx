@@ -547,30 +547,29 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // Paste handler désactivé (nécessiterait une ré-implémentation avec FileUploader)
 
   // -------- Suppression d'image --------
+  // Normalise l'URL (retire les query params : jeton signé / cache-bust) pour
+  // que le matching reste fiable même après rafraîchissement des URLs signées.
+  const normalizeUrl = (u) => (typeof u === 'string' ? u.split('?')[0] : u);
+
   const handleDeleteImage = useCallback(async (image) => {
+    logger.log('🗑️ Suppression de l\'image:', image?.url);
+    const target = normalizeUrl(image?.url);
+
+    // 1) Retrait OPTIMISTE du rapport (par URL normalisée ou nom) — garantit que
+    //    l'entrée disparaît de la liste, quelle que soit l'issue côté stockage.
+    const updatedFiles = (report.files || []).filter(f => !(target && normalizeUrl(f.url) === target));
+    const updated = { ...report, files: updatedFiles };
+    await persistReport(updated);
+
+    // 2) Suppression du fichier dans le stockage (best-effort, non bloquante)
     try {
-      logger.log('🗑️ Suppression de l\'image:', image.url);
-
-      // Supprimer du stockage Supabase
       const { error: storageError } = await storageService.deleteInterventionFile(image.url);
-
-      if (storageError) {
-        logger.error('Erreur suppression stockage:', storageError);
-        throw new Error('Impossible de supprimer le fichier du stockage');
-      }
-
-      // Supprimer du rapport
-      const updatedFiles = (report.files || []).filter(f => f.url !== image.url);
-      const updated = { ...report, files: updatedFiles };
-
-      // Persister
-      await persistReport(updated);
-
-      logger.log('✅ Image supprimée avec succès');
-    } catch (error) {
-      logger.error('❌ Erreur suppression image:', error);
-      throw error;
+      if (storageError) logger.warn('Suppression stockage non confirmée:', storageError);
+    } catch (e) {
+      logger.warn('Suppression stockage échouée (entrée déjà retirée du rapport):', e);
     }
+
+    logger.log('✅ Image retirée du rapport');
   }, [report, persistReport]);
 
   // -------- Téléchargement de tous les fichiers en ZIP --------
@@ -990,7 +989,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             {[
               intervention.client_phone && { href: `tel:${intervention.client_phone}`, label: '📞 Appeler' },
               intervention.client_phone && { href: `sms:${intervention.client_phone}`, label: '💬 SMS' },
-              intervention.address && { onClick: () => { navigator.clipboard?.writeText(intervention.address); }, label: '🗺️ Adresse' },
+              intervention.address && { onClick: () => { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(intervention.address)}`, '_blank', 'noopener'); }, label: '🗺️ Adresse' },
               (typeof navigator !== 'undefined' && navigator.share) && { onClick: () => navigator.share({ title: intervention.client, text: `${intervention.client} — ${intervention.address || ''}` }).catch(() => {}), label: '↗ Partager' },
             ].filter(Boolean).map((b, i) => {
               const style = {

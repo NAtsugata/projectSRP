@@ -10,11 +10,11 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
 
     if (!report) return alertList;
 
-    // Photos manquantes
+    // Photos manquantes (OBLIGATOIRE → rouge)
     const photoCount = (report.files || []).filter(f => f.type?.startsWith('image/')).length;
     if (photoCount < MIN_PHOTOS) {
       alertList.push({
-        type: 'warning',
+        type: 'error',
         icon: '📸',
         title: 'Photos manquantes',
         message: `${photoCount}/${MIN_PHOTOS} photos minimum requises`,
@@ -22,10 +22,10 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
       });
     }
 
-    // Signature manquante
+    // Signature manquante (OBLIGATOIRE → rouge)
     if (!report.signature) {
       alertList.push({
-        type: 'warning',
+        type: 'error',
         icon: '✍️',
         title: 'Signature requise',
         message: 'Pensez à faire signer le client',
@@ -33,12 +33,12 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
       });
     }
 
-    // Checkpoints incomplets
+    // Checkpoints incomplets (OBLIGATOIRE → rouge)
     const checkpointsDone = (report.quick_checkpoints || []).filter(c => c.done).length;
     const checkpointsTotal = (report.quick_checkpoints || []).length;
     if (checkpointsDone < checkpointsTotal) {
       alertList.push({
-        type: 'info',
+        type: 'error',
         icon: '✅',
         title: 'Checklist incomplète',
         message: `${checkpointsDone}/${checkpointsTotal} points validés`,
