@@ -758,6 +758,26 @@
   /* Overrides spécifiques si nécessaires */
 }
 
+/* ==================== ESPACE BAS (barre d'action fixe) ==================== */
+/* Réserve assez de place pour que la barre "Clôturer" ne masque jamais le
+   dernier bloc — y compris la safe-area (encoche / barre système mobile). */
+.intervention-bottom-spacer {
+  height: calc(110px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 600px) {
+  .intervention-bottom-spacer {
+    /* Sur mobile la barre peut être plus haute (bouton sur sa propre ligne) */
+    height: calc(160px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Bouton Clôturer en pleine largeur sous le statut "À faire" */
+  .intervention-actionbar-inner {
+    flex-wrap: wrap;
+  }
+  .intervention-actionbar-inner > button {
+    flex: 1 1 100%;
+  }
+}
+
 /* ==================== DESKTOP : UTILISER PLUS DE LARGEUR ==================== */
 /* Sur mobile/tablette : 1 colonne (inchangé). Sur PC : le conteneur s'élargit
    selon la fenêtre et les blocs se répartissent sur 2 (puis 3) colonnes. */

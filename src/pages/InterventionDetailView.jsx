@@ -1485,7 +1485,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         ) : null}
 
         {/* Espace pour ne pas masquer le dernier bloc derrière la barre fixe */}
-        {!isDone && <div style={{ height: '92px' }} />}
+        {!isDone && <div className="intervention-bottom-spacer" />}
       </div>
 
       {/* ═══ BARRE D'ACTION FIXE (bas d'écran) ════════════════════════════════ */}
