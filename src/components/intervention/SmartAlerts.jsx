@@ -88,22 +88,17 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
 
   if (alerts.length === 0) return null;
 
-  // tab index: 0=Infos, 1=Photos, 2=Checks, 3=Rapport
-  const actionTabMap = {
-    photos: 1,
-    checklist: 2,
-    signature: 3,
+  // Mappe chaque alerte vers l'id du bloc accordéon à ouvrir
+  const actionBlockMap = {
+    photos: 'photos',
+    checklist: 'checkpoints',
+    signature: 'rapport',
   };
 
   const handleAction = (action) => {
-    const tabIndex = actionTabMap[action];
-    if (tabIndex !== undefined && onNavigate) {
-      onNavigate(tabIndex);
-      // Scroll vers les tabs après le switch (laisse React rendre l'onglet)
-      requestAnimationFrame(() => {
-        const tabsEl = document.getElementById('intervention-tabs');
-        if (tabsEl) tabsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+    const blockId = actionBlockMap[action];
+    if (blockId && onNavigate) {
+      onNavigate(blockId);
     }
   };
 

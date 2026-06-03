@@ -291,15 +291,21 @@ body {
 .form-control {
     width: 100%;
     padding: 1rem; /* Larger padding for touch */
-    border: 2px solid #cbd5e1; /* Thicker border for visibility */
+    border: 2px solid var(--border-color-dark, #cbd5e1); /* Thicker border for visibility */
     border-radius: 0.5rem;
     font-size: 16px; /* Prevents zoom on iOS */
     box-sizing: border-box;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: white;
-    color: #1f2937;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
+    /* Logique clair/sombre : fond clair → texte foncé / fond foncé → texte clair */
+    background-color: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #1f2937);
     -webkit-appearance: none;
     appearance: none;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted, #9ca3af);
+    opacity: 1;
 }
 
 .form-control:focus {

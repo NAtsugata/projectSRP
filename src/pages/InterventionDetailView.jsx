@@ -21,6 +21,7 @@ import {
   SignatureModal,
   FileUploader,
   VoiceRecorder,
+  DictationButton,
   ArrivalDeparture,
 } from '../components/intervention';
 import InterventionLots from '../components/intervention/InterventionLots';
@@ -73,18 +74,18 @@ function InfoRow({ icon, label, children }) {
   if (!children) return null;
   return (
     <div style={{
-      background: '#ffffff',
-      border: '1px solid #ecddcf',
+      background: 'var(--bg-secondary)',
+      border: '1px solid var(--border-color)',
       borderRadius: '10px',
       padding: '0.6rem 0.85rem',
       display: 'flex',
       flexDirection: 'column',
       gap: '0.2rem',
     }}>
-      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8b7968', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {icon} {label}
       </span>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1f1410', lineHeight: 1.35 }}>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35 }}>
         {children}
       </span>
     </div>
@@ -203,33 +204,73 @@ function EditInterventionModal({ intervention, onSave, onClose, isOpen }) {
 }
 
 // ─── Bloc accordéon générique ──────────────────────────────────────────────────
-function AccordionBlock({ icon, title, summary, defaultOpen = false, badge, children, danger = false }) {
+// `required` (rouge vif) : signale un bloc avec une action obligatoire non terminée.
+// `blockId` : permet l'ouverture+scroll déclenchée par les alertes cliquables.
+function AccordionBlock({ icon, title, summary, defaultOpen = false, badge, children, danger = false, required = false, blockId }) {
   const [open, setOpen] = useState(defaultOpen);
+  const ref = useRef(null);
+
+  // Ouverture pilotée à distance (clic sur une alerte → ouvre + scroll)
+  useEffect(() => {
+    if (!blockId) return;
+    const handler = (e) => {
+      if (e.detail?.id === blockId) {
+        setOpen(true);
+        requestAnimationFrame(() => {
+          ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    };
+    window.addEventListener('srp-open-block', handler);
+    return () => window.removeEventListener('srp-open-block', handler);
+  }, [blockId]);
+
+  const accent = required ? 'var(--color-danger)' : danger ? 'var(--color-danger)' : 'var(--color-copper)';
+
   return (
-    <div style={{
-      background: '#fff',
-      border: danger ? '1px solid #f4c7c3' : '1px solid #ecddcf',
-      borderRadius: '14px', marginBottom: '0.6rem',
-      overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.05)',
+    <div ref={ref} style={{
+      background: 'var(--card-bg)',
+      border: required ? '1.5px solid var(--color-danger)' : '1px solid var(--border-color)',
+      borderRadius: '16px', marginBottom: '0.7rem',
+      overflow: 'hidden',
+      boxShadow: required ? '0 2px 10px rgba(184,76,58,.18)' : 'var(--shadow-sm)',
     }}>
       <button onClick={() => setOpen(o => !o)} style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: '0.6rem',
+        width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
         padding: '0.85rem 1rem', background: 'none', border: 'none',
-        cursor: 'pointer', borderLeft: `4px solid ${danger ? '#b84c3a' : '#b87333'}`,
+        cursor: 'pointer', borderLeft: `4px solid ${accent}`,
         textAlign: 'left',
       }}>
-        <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{icon}</span>
-        <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: '#1f1410' }}>{title}</span>
+        {/* Pastille d'icône (look moderne) */}
+        <span style={{
+          width: 34, height: 34, flexShrink: 0, borderRadius: '10px',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.05rem', lineHeight: 1,
+          background: required ? 'rgba(184,76,58,.12)' : 'var(--bg-secondary)',
+        }}>{icon}</span>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {title}
+          {required && (
+            <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#fff', background: 'var(--color-danger)', padding: '2px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Obligatoire
+            </span>
+          )}
+        </span>
         {badge != null && (
-          <span style={{ fontSize: '0.75rem', background: '#f5ede4', color: '#9c5e22', padding: '2px 8px', borderRadius: '20px', fontWeight: 700, marginRight: '0.3rem', flexShrink: 0 }}>
+          <span style={{
+            fontSize: '0.75rem',
+            background: required ? 'var(--color-danger)' : 'var(--bg-secondary)',
+            color: required ? '#fff' : 'var(--color-primary)',
+            padding: '2px 9px', borderRadius: '20px', fontWeight: 700, marginRight: '0.3rem', flexShrink: 0,
+          }}>
             {badge}
           </span>
         )}
-        {summary && <span style={{ fontSize: '0.8rem', color: '#8b7968', marginRight: '0.3rem', flexShrink: 0, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>}
-        <span style={{ color: '#b87333', fontSize: '0.8rem', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>▼</span>
+        {summary && <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginRight: '0.3rem', flexShrink: 0, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>}
+        <span style={{ color: accent, fontSize: '0.8rem', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>▼</span>
       </button>
       {open && (
-        <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid #f4e5d9' }}>
+        <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid var(--border-color)' }}>
           {children}
         </div>
       )}
@@ -848,25 +889,35 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const STATUS_BG    = { 'À venir': '#f0e7dc', 'En cours': '#f9efe4', 'Terminée': '#eef2e4' };
   const teamSummary  = intervention.intervention_assignments?.map(a => a.profiles?.full_name || 'Employé').join(', ') || '';
 
+  // ── Éléments OBLIGATOIRES non terminés (mis en rouge vif) ─────────────────
+  const isDone = currentStatus === 'Terminée';
+  const photosMissing      = !isDone && stats.photoCount < MIN_REQUIRED_PHOTOS;
+  const signatureMissing   = !isDone && !report.signature;
+  const checkpointsTotal   = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.length : 0;
+  const checkpointsDone    = Array.isArray(report.quick_checkpoints) ? report.quick_checkpoints.filter(c => c.done).length : 0;
+  const checkpointsMissing = !isDone && checkpointsTotal > 0 && checkpointsDone < checkpointsTotal;
+  const reportRequired     = signatureMissing; // la signature vit dans le bloc Rapport
+
   return (
     <div className="intervention-detail-modern">
       <div className="intervention-content">
 
         {/* ═══ BLOC HERO ═══════════════════════════════════════════════════════ */}
         <div style={{
-          background: 'linear-gradient(135deg, #faf6f1 0%, #f5ede4 100%)',
-          border: '1px solid #ecddcf', borderRadius: '16px',
-          padding: '1.1rem 1.2rem', marginBottom: '0.6rem',
-          boxShadow: '0 2px 8px rgba(184,115,51,.1)',
+          background: 'linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%)',
+          border: '1px solid var(--border-color)', borderRadius: '18px',
+          padding: '1.1rem 1.2rem', marginBottom: '0.7rem',
+          boxShadow: 'var(--shadow-md)',
         }}>
           {/* Ligne 1 : retour + statut + modifier */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
             <button onClick={() => navigate('/planning')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', padding: '4px 8px', color: '#b87333', lineHeight: 1, marginLeft: '-4px' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', padding: '4px 8px', color: 'var(--color-copper)', lineHeight: 1, marginLeft: '-4px' }}>
               ←
             </button>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: '20px',
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 700, padding: '3px 11px', borderRadius: '20px',
               background: STATUS_BG[currentStatus] || '#f0e7dc', color: STATUS_COLOR[currentStatus] || '#8b7968', flexShrink: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[currentStatus] || '#8b7968', display: 'inline-block' }} />
               {currentStatus}
             </span>
             {urgentCount > 0 && (
@@ -882,10 +933,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             )}
           </div>
           {/* Ligne 2 : nom client + service */}
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1f1410', lineHeight: 1.2, marginBottom: '0.15rem', wordBreak: 'break-word' }}>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '0.15rem', wordBreak: 'break-word' }}>
             {intervention.client}
           </div>
-          <div style={{ fontSize: '0.9rem', color: '#9c5e22', fontWeight: 600, marginBottom: '0.9rem' }}>
+          <div style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '0.9rem' }}>
             {intervention.service}
           </div>
           {/* Ligne 3 : boutons d'action rapide */}
@@ -917,11 +968,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </div>
         </div>
 
-        {/* ═══ ALERTES ════════════════════════════════════════════════════════ */}
+        {/* ═══ ALERTES (cliquables → ouvrent le bloc concerné) ════════════════ */}
         <SmartAlerts
           report={report}
           intervention={intervention}
           MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
+          onNavigate={(blockId) => {
+            window.dispatchEvent(new CustomEvent('srp-open-block', { detail: { id: blockId } }));
+          }}
         />
 
         {/* ═══ SUIVI DU TEMPS ═════════════════════════════════════════════════ */}
@@ -937,8 +991,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </div>
         </AccordionBlock>
 
-        {/* ═══ POINTS DE CONTRÔLE ════════════════════════════════════════════ */}
-        <AccordionBlock icon="✅" title="Points de contrôle" defaultOpen badge={stats.checkpointProgress}>
+        {/* ═══ POINTS DE CONTRÔLE (obligatoire) ══════════════════════════════ */}
+        <AccordionBlock icon="✅" title="Points de contrôle" defaultOpen
+          badge={stats.checkpointProgress} required={checkpointsMissing} blockId="checkpoints">
           {(!report.quick_checkpoints || report.quick_checkpoints.length === 0) && (
             <p className="text-muted">Aucun checkpoint défini pour cette intervention.</p>
           )}
@@ -946,9 +1001,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <label key={index} style={{
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.75rem 1rem',
-              background: checkpoint.done ? '#ecfdf5' : '#f9fafb',
-              border: `2px solid ${checkpoint.done ? '#10b981' : '#e5e7eb'}`,
-              borderRadius: '0.5rem', marginBottom: '0.5rem',
+              // ✅ validé → vert / ❗ non validé → rouge vif (obligatoire)
+              background: checkpoint.done ? 'rgba(16,185,129,.10)' : 'rgba(220,38,38,.06)',
+              border: `2px solid ${checkpoint.done ? '#10b981' : '#dc2626'}`,
+              borderRadius: '0.6rem', marginBottom: '0.5rem',
               cursor: isAdmin ? 'not-allowed' : 'pointer', transition: 'all 0.2s ease',
             }}>
               <input type="checkbox" checked={checkpoint.done || false}
@@ -958,23 +1014,25 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                   updated[index] = { ...updated[index], done: e.target.checked, at: e.target.checked ? new Date().toISOString() : null };
                   persistReport({ ...report, quick_checkpoints: updated });
                 }}
-                disabled={false} style={{ width: '1.25rem', height: '1.25rem', accentColor: '#10b981' }}
+                disabled={false} style={{ width: '1.3rem', height: '1.3rem', accentColor: checkpoint.done ? '#10b981' : '#dc2626' }}
               />
-              <span style={{ fontWeight: 500, color: checkpoint.done ? '#059669' : '#374151', flex: 1 }}>
+              <span style={{ fontWeight: 600, color: checkpoint.done ? '#059669' : '#dc2626', flex: 1 }}>
                 {checkpoint.label}
               </span>
-              {checkpoint.done && checkpoint.at && (
-                <span style={{ fontSize: '0.75rem', color: '#8b7968' }}>
+              {checkpoint.done && checkpoint.at ? (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                   ✓ {new Date(checkpoint.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
+              ) : (
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>À VALIDER</span>
               )}
             </label>
           ))}
 
           {/* Note Admin */}
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f4e5d9' }}>
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#473a30' }}>📝 Note Admin</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>📝 Note Admin</span>
               {!isAdmin && intervention.admin_note && (
                 <button onClick={() => setAdminNoteExpanded(!adminNoteExpanded)}
                   className="btn btn-sm btn-outline-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.78rem' }}>
@@ -993,10 +1051,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <div style={{
                 maxHeight: adminNoteExpanded ? 'none' : '120px',
                 overflow: adminNoteExpanded ? 'visible' : 'auto',
-                background: '#faf6f1', borderRadius: '8px', padding: '0.6rem 0.8rem', border: '1px solid #ecddcf',
+                background: 'var(--bg-secondary)', borderRadius: '8px', padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)',
               }}>
                 {intervention.admin_note
-                  ? <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '0.88rem', color: '#473a30' }}>{intervention.admin_note}</p>
+                  ? <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{intervention.admin_note}</p>
                   : <span className="text-muted" style={{ fontSize: '0.85rem' }}>Aucune note.</span>
                 }
               </div>
@@ -1019,16 +1077,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             {(intervention.client_phone || intervention.secondary_phone) && (
               <InfoRow icon="📞" label="Téléphone">
                 {intervention.client_phone && (
-                  <a href={`tel:${intervention.client_phone}`} style={{ color: '#9c5e22', fontWeight: 600, textDecoration: 'none' }}>{intervention.client_phone}</a>
+                  <a href={`tel:${intervention.client_phone}`} style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>{intervention.client_phone}</a>
                 )}
                 {intervention.secondary_phone && (
-                  <span> · <a href={`tel:${intervention.secondary_phone}`} style={{ color: '#9c5e22', textDecoration: 'none' }}>{intervention.secondary_phone}</a></span>
+                  <span> · <a href={`tel:${intervention.secondary_phone}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>{intervention.secondary_phone}</a></span>
                 )}
               </InfoRow>
             )}
             {intervention.client_email && (
               <InfoRow icon="✉️" label="Email">
-                <a href={`mailto:${intervention.client_email}`} style={{ color: '#9c5e22', textDecoration: 'none', wordBreak: 'break-all' }}>{intervention.client_email}</a>
+                <a href={`mailto:${intervention.client_email}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', wordBreak: 'break-all' }}>{intervention.client_email}</a>
               </InfoRow>
             )}
             {intervention.ticket_number && (
@@ -1055,7 +1113,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         {isAdmin && onUpdateTeam && (
           <AccordionBlock icon="👥" title="Équipe" summary={teamSummary || 'Non assignée'}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.85rem', color: '#8b7968' }}>Membres assignés</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Membres assignés</span>
               <button className="btn btn-primary btn-sm" onClick={() => setShowTeamModal(true)}
                 style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
                 Modifier l'équipe
@@ -1074,8 +1132,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <p className="text-muted" style={{ margin: '0 0 0.75rem' }}>Aucun employé assigné</p>
             )}
             {intervention.daily_assignments && Object.keys(intervention.daily_assignments).length > 0 && (
-              <div style={{ borderTop: '1px solid #f4e5d9', paddingTop: '0.75rem' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8b7968', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                   Équipe par jour
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -1087,8 +1145,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     });
                     return (
                       <div key={date} style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
-                        <span style={{ fontWeight: 600, minWidth: '80px', color: '#473a30' }}>{formattedDate}</span>
-                        <span style={{ color: '#374151' }}>{userNames.join(', ') || 'Aucun'}</span>
+                        <span style={{ fontWeight: 600, minWidth: '80px', color: 'var(--text-secondary)' }}>{formattedDate}</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{userNames.join(', ') || 'Aucun'}</span>
                       </div>
                     );
                   })}
@@ -1108,10 +1166,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         </AccordionBlock>
 
-        {/* ═══ PHOTOS ══════════════════════════════════════════════════════════ */}
-        <AccordionBlock icon="📷" title="Photos et documents" badge={stats.photoCount > 0 ? stats.photoCount : null}>
+        {/* ═══ PHOTOS (minimum requis) ════════════════════════════════════════ */}
+        <AccordionBlock icon="📷" title="Photos et documents"
+          badge={photosMissing ? `${stats.photoCount}/${MIN_REQUIRED_PHOTOS}` : (stats.photoCount > 0 ? stats.photoCount : null)}
+          required={photosMissing} blockId="photos">
+          {photosMissing && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(220,38,38,.07)', border: '1px solid #dc2626', color: '#dc2626', borderRadius: '10px', padding: '0.55rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 600 }}>
+              📸 {MIN_REQUIRED_PHOTOS} photos minimum requises — il en manque {MIN_REQUIRED_PHOTOS - stats.photoCount}
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.85rem', color: '#8b7968' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
               {report.files?.length || 0} fichier{(report.files?.length || 0) > 1 ? 's' : ''}
             </span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1144,27 +1209,44 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         </AccordionBlock>
 
         {/* ═══ RAPPORT DE CHANTIER ═════════════════════════════════════════════ */}
-        <AccordionBlock icon="📝" title="Rapport de chantier">
-          {/* Notes */}
+        <AccordionBlock icon="📝" title="Rapport de chantier" required={reportRequired} blockId="rapport">
+          {/* Notes + dictée vocale */}
           <div style={{ marginBottom: '1rem' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
+              🗒️ Notes de chantier
+            </label>
             <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)}
-              placeholder="Détails, matériel, observations..." rows="5" className="form-control" />
-            <VoiceRecorder
-              interventionId={interventionId}
-              onUploaded={async (uploaded) => {
-                const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-                await persistReport(updated);
-                saveScroll(); pendingRestoreRef.current = true;
-                if (!document.body.dataset.__scrollLocked) lock();
-                try { await refreshData?.(); } finally { unlock(); restoreScroll(); }
+              onBlur={e => persistReport({ ...report, notes: e.target.value })}
+              placeholder="Détails, matériel, observations… ou utilisez la dictée vocale ci-dessous." rows="5" className="form-control" />
+            {/* 🎙️ Dictée : la parole s'écrit toute seule dans la note */}
+            <DictationButton
+              onAppendText={(text) => {
+                if (!text) return;
+                setReport(prev => {
+                  const sep = prev.notes && !/\s$/.test(prev.notes) ? ' ' : '';
+                  return { ...prev, notes: (prev.notes || '') + sep + text };
+                });
               }}
-              onBeginCritical={lock}
-              onEndCritical={unlock}
             />
+            {/* Note vocale (fichier audio joint) */}
+            <div style={{ marginTop: '0.5rem' }}>
+              <VoiceRecorder
+                interventionId={interventionId}
+                onUploaded={async (uploaded) => {
+                  const updated = { ...report, files: [...(report.files || []), ...uploaded] };
+                  await persistReport(updated);
+                  saveScroll(); pendingRestoreRef.current = true;
+                  if (!document.body.dataset.__scrollLocked) lock();
+                  try { await refreshData?.(); } finally { unlock(); restoreScroll(); }
+                }}
+                onBeginCritical={lock}
+                onEndCritical={unlock}
+              />
+            </div>
           </div>
 
           {/* Besoins */}
-          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f4e5d9' }}>
+          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
             <div className="flex items-center justify-between" onClick={() => setNeedsOpen(o => !o)}
               style={{ cursor: 'pointer', userSelect: 'none', marginBottom: needsOpen ? '0.75rem' : 0 }}>
               <h3 className="flex items-center gap-2" style={{ margin: 0, fontSize: '0.9rem' }}>
@@ -1207,25 +1289,41 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             )}
           </div>
 
-          {/* Signature */}
-          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f4e5d9' }} id="signature-section">
-            <h3 style={{ fontSize: '0.9rem', marginTop: 0 }}>✍️ Signature du client</h3>
+          {/* Signature (obligatoire) */}
+          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }} id="signature-section">
+            <h3 style={{ fontSize: '0.9rem', marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              ✍️ Signature du client
+              {signatureMissing && (
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#fff', background: '#dc2626', padding: '2px 7px', borderRadius: '6px', textTransform: 'uppercase' }}>Obligatoire</span>
+              )}
+            </h3>
             {report.signature ? (
               <div>
-                <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid #ecddcf', borderRadius: '0.5rem', background: '#f8f9fa' }} />
+                <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid var(--border-color)', borderRadius: '0.5rem', background: '#fff' }} />
                 <button onClick={async () => { handleReportChange('signature', null); await persistReport({ ...report, signature: null }); }}
                   className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
               </div>
             ) : (
               <div>
-                <canvas width="300" height="150" style={{ border: '2px dashed #cbd5e1', borderRadius: '0.5rem', width: '100%', maxWidth: 300, background: '#f8fafc' }} />
-                <div style={{ marginTop: 8 }}><button onClick={() => setShowSignatureModal(true)} className="btn btn-secondary"><ExpandIcon /> Agrandir</button></div>
+                <button onClick={() => setShowSignatureModal(true)}
+                  style={{
+                    width: '100%', maxWidth: 320, minHeight: 120, cursor: 'pointer',
+                    border: `2px dashed ${signatureMissing ? '#dc2626' : 'var(--border-color-dark)'}`,
+                    borderRadius: '0.6rem',
+                    background: signatureMissing ? 'rgba(220,38,38,.05)' : 'var(--bg-secondary)',
+                    color: signatureMissing ? '#dc2626' : 'var(--text-tertiary)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+                    fontWeight: 600, fontSize: '0.9rem',
+                  }}>
+                  <span style={{ fontSize: '1.6rem' }}>✍️</span>
+                  Appuyez pour faire signer
+                </button>
               </div>
             )}
           </div>
 
           {/* Kilométrage de fin */}
-          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f4e5d9' }}>
+          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
             <h3 style={{ fontSize: '0.9rem', marginTop: 0 }}>🚗 Kilométrage de fin</h3>
             <input type="number" min="0" step="1" value={report.km_end || ''} placeholder="Ex: 45430"
               onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
@@ -1242,7 +1340,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             intervention.type?.toLowerCase()?.includes('chaudière') ||
             intervention.type?.toLowerCase()?.includes('chaudiere') ||
             intervention.service?.toLowerCase()?.includes('entretien')) && (
-            <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f4e5d9' }}>
+            <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
               <h3 style={{ fontSize: '0.9rem', marginTop: 0 }}>📄 Attestation CERFA</h3>
               <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '0.75rem' }}>Attestation d'entretien annuel (CERFA 15497-04).</p>
               <button className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
