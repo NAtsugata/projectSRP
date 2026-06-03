@@ -761,11 +761,14 @@
 /* ==================== DESKTOP : UTILISER PLUS DE LARGEUR ==================== */
 /* Sur mobile/tablette : 1 colonne (inchangé). Sur PC : le conteneur s'élargit
    selon la fenêtre et les blocs se répartissent sur 2 (puis 3) colonnes. */
+/* PC : 2 colonnes maximum (le 3 colonnes déséquilibrait en plein écran).
+   Le conteneur s'élargit avec la fenêtre mais reste plafonné pour garder
+   des colonnes lisibles et équilibrées. */
 @media (min-width: 1100px) {
   .intervention-content {
     max-width: min(1500px, 94vw);
   }
-  /* Hero + alertes restent pleine largeur, les blocs passent en multi-colonnes */
+  /* Hero + alertes restent pleine largeur, les blocs passent sur 2 colonnes */
   .intervention-blocks {
     column-count: 2;
     column-gap: 0.75rem;
@@ -778,18 +781,6 @@
   /* La barre d'action fixe s'aligne sur la largeur du contenu */
   .intervention-actionbar-inner {
     max-width: min(1500px, 94vw) !important;
-  }
-}
-
-@media (min-width: 1700px) {
-  .intervention-content {
-    max-width: 1650px;
-  }
-  .intervention-blocks {
-    column-count: 3;
-  }
-  .intervention-actionbar-inner {
-    max-width: 1650px !important;
   }
 }
 
