@@ -1,6 +1,6 @@
 // src/components/intervention/DictationButton.jsx
 // Dictée vocale → texte (reconnaissance vocale Web Speech API)
-// Transcrit la voix en texte directement dans un champ (notes, etc.)
+// Utilise continuous=false + relance auto pour éviter les doublons
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import logger from '../../utils/logger';
@@ -15,6 +15,9 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState(null);
+
+  // listeningRef = source de vérité pour l'état d'écoute (évite les stale closures)
+  const listeningRef = useRef(false);
   const recognitionRef = useRef(null);
 
   const SpeechRecognition =
@@ -23,74 +26,97 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
 
   const supported = !!SpeechRecognition;
 
-  const stop = useCallback(() => {
-    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-    setListening(false);
-    setInterim('');
-  }, []);
-
-  useEffect(() => () => { try { recognitionRef.current?.abort(); } catch { /* ignore */ } }, []);
-
-  const start = useCallback(() => {
-    if (!supported) {
-      setError("La dictée vocale n'est pas supportée sur ce navigateur. Essayez Chrome ou Safari.");
-      return;
-    }
-    setError(null);
+  // Démarre une session unique (continuous=false) et se relance à la fin
+  const startSession = useCallback(() => {
+    if (!supported || !listeningRef.current) return;
 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.continuous = true;
+    recognition.continuous = false;    // ← clé : une seule utterance par session
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
       let finalText = '';
       let interimText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
+      // On parcourt TOUS les résultats de cette session (jamais de chevauchement
+      // car continuous=false → chaque session ne contient qu'une phrase)
+      for (let i = 0; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalText += transcript;
+          finalText += t;
         } else {
-          interimText += transcript;
+          interimText += t;
         }
       }
-      if (finalText) {
-        // Capitalise la première lettre et ajoute un espace de séparation
+      if (finalText.trim()) {
         const clean = finalText.trim();
-        onAppendText?.(clean ? clean.charAt(0).toUpperCase() + clean.slice(1) + ' ' : '');
+        onAppendText?.(clean.charAt(0).toUpperCase() + clean.slice(1) + ' ');
         setInterim('');
       } else {
         setInterim(interimText);
       }
     };
 
+    recognition.onend = () => {
+      setInterim('');
+      if (listeningRef.current) {
+        // Relance automatique (courte pause pour éviter le flooding)
+        setTimeout(() => startSession(), 80);
+      } else {
+        setListening(false);
+      }
+    };
+
     recognition.onerror = (e) => {
-      logger.error('Erreur dictée vocale:', e.error);
+      logger.warn('SpeechRecognition error:', e.error);
+      if (e.error === 'no-speech') {
+        // Silence : on relance silencieusement si toujours en écoute
+        return; // onend sera appelé, relancera tout seul
+      }
+      if (e.error === 'aborted') return; // arrêt volontaire (stop)
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        setError('Micro refusé. Autorisez l\'accès au microphone.');
-      } else if (e.error === 'no-speech') {
-        // silencieux, on relance pas
+        setError('Micro refusé. Autorisez le microphone dans les paramètres.');
       } else {
         setError('Erreur de reconnaissance vocale.');
       }
+      listeningRef.current = false;
       setListening(false);
       setInterim('');
     };
 
-    recognition.onend = () => {
-      setListening(false);
-      setInterim('');
-    };
-
+    recognitionRef.current = recognition;
     try {
       recognition.start();
-      recognitionRef.current = recognition;
-      setListening(true);
     } catch (err) {
-      logger.error('Impossible de démarrer la dictée:', err);
-      setError('Impossible de démarrer la dictée.');
+      // Si une session est déjà ouverte (InvalidStateError), réessayer
+      if (listeningRef.current) setTimeout(() => startSession(), 200);
     }
   }, [SpeechRecognition, supported, lang, onAppendText]);
+
+  const start = useCallback(() => {
+    if (!supported) {
+      setError("Dictée non supportée sur ce navigateur. Utilisez Chrome ou Safari.");
+      return;
+    }
+    setError(null);
+    listeningRef.current = true;
+    setListening(true);
+    startSession();
+  }, [supported, startSession]);
+
+  const stop = useCallback(() => {
+    listeningRef.current = false;
+    setListening(false);
+    setInterim('');
+    try { recognitionRef.current?.abort(); } catch { /* ignore */ }
+  }, []);
+
+  // Nettoyage au démontage
+  useEffect(() => () => {
+    listeningRef.current = false;
+    try { recognitionRef.current?.abort(); } catch { /* ignore */ }
+  }, []);
 
   if (!supported) return null;
 
@@ -116,7 +142,7 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
           <>
             <span style={{
               width: 10, height: 10, borderRadius: '50%', background: '#fff',
-              animation: 'srpPulse 1s ease-in-out infinite',
+              animation: 'srpPulse 1s ease-in-out infinite', flexShrink: 0,
             }} />
             Arrêter la dictée
           </>
