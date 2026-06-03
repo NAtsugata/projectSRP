@@ -1,7 +1,7 @@
-/* Portail SRP - Service Worker v12
+/* Portail SRP - Service Worker v13
  * Stratégie : Cache First pour assets statiques, Network First pour API
  */
-const SW_VERSION = 'srp-v12';
+const SW_VERSION = 'srp-v13';
 const CACHE_STATIC = `${SW_VERSION}-static`;
 const CACHE_PAGES  = `${SW_VERSION}-pages`;
 

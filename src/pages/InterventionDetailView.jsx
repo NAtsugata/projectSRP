@@ -1078,12 +1078,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               )}
             </div>
             {isAdmin ? (
-              <textarea className="form-control"
-                value={intervention.admin_note || ''}
-                onChange={(e) => setIntervention(prev => ({ ...prev, admin_note: e.target.value }))}
-                onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
-                placeholder="Note pour l'employé..." rows={3}
-              />
+              <>
+                <textarea className="form-control"
+                  value={intervention.admin_note || ''}
+                  onChange={(e) => setIntervention(prev => ({ ...prev, admin_note: e.target.value }))}
+                  onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
+                  placeholder="Note pour l'employé..." rows={3}
+                />
+                <DictationButton
+                  onAppendText={(text) => {
+                    if (!text) return;
+                    setIntervention(prev => {
+                      const cur = prev.admin_note || '';
+                      const sep = cur && !/\s$/.test(cur) ? ' ' : '';
+                      const next = cur + sep + text;
+                      onUpdateAdminNote && onUpdateAdminNote(prev.id, next);
+                      return { ...prev, admin_note: next };
+                    });
+                  }}
+                />
+              </>
             ) : (
               <div style={{
                 maxHeight: adminNoteExpanded ? 'none' : '120px',
@@ -1258,13 +1272,15 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)}
               onBlur={e => persistReport({ ...report, notes: e.target.value })}
               placeholder="Détails, matériel, observations… ou utilisez la dictée vocale ci-dessous." rows="5" className="form-control" />
-            {/* 🎙️ Dictée : la parole s'écrit toute seule dans la note */}
+            {/* 🎙️ Dictée : la parole s'écrit toute seule dans la note (+ autosave) */}
             <DictationButton
               onAppendText={(text) => {
                 if (!text) return;
                 setReport(prev => {
                   const sep = prev.notes && !/\s$/.test(prev.notes) ? ' ' : '';
-                  return { ...prev, notes: (prev.notes || '') + sep + text };
+                  const next = { ...prev, notes: (prev.notes || '') + sep + text };
+                  onSaveSilent?.(intervention.id, next); // sauvegarde silencieuse
+                  return next;
                 });
               }}
             />
@@ -1283,6 +1299,32 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 onEndCritical={unlock}
               />
             </div>
+
+            {/* Liste des notes vocales enregistrées (lecture + suppression) */}
+            {(() => {
+              const audioFiles = (report.files || []).filter(f => f.type?.startsWith('audio/') || /\.(webm|mp4|m4a|mp3|ogg|wav)(\?|$)/i.test(f.url || ''));
+              if (audioFiles.length === 0) return null;
+              return (
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    🎧 Notes vocales ({audioFiles.length})
+                  </div>
+                  {audioFiles.map((f, i) => (
+                    <div key={f.url || i} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.6rem',
+                      background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                      borderRadius: '10px', padding: '0.5rem 0.65rem',
+                    }}>
+                      <audio controls preload="none" src={f.url} style={{ flex: 1, minWidth: 0, height: 38 }} />
+                      <button onClick={async () => { if (window.confirm('Supprimer cette note vocale ?')) await handleDeleteImage(f); }}
+                        title="Supprimer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.05rem', flexShrink: 0 }}>
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Besoins */}
