@@ -75,7 +75,141 @@ const fmtTime = (iso) => {
 
 // InlineUploader et VoiceNoteRecorder remplacés par FileUploader et VoiceRecorder importés
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
+// ─── Ligne d'info structurée ──────────────────────────────────────────────────
+function InfoRow({ icon, label, children }) {
+  if (!children) return null;
+  return (
+    <div style={{
+      background: '#ffffff',
+      border: '1px solid #ecddcf',
+      borderRadius: '10px',
+      padding: '0.6rem 0.85rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.2rem',
+    }}>
+      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8b7968', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {icon} {label}
+      </span>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1f1410', lineHeight: 1.35 }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+// ─── Modal d'édition de l'intervention (admin uniquement) ─────────────────────
+
+function EditInterventionModal({ intervention, onSave, onClose, isOpen }) {
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && intervention) {
+      setForm({
+        client:           intervention.client           || '',
+        address:          intervention.address          || '',
+        service:          intervention.service          || '',
+        date:             intervention.date             || '',
+        time:             intervention.time             || '',
+        client_phone:     intervention.client_phone     || '',
+        secondary_phone:  intervention.secondary_phone  || '',
+        client_email:     intervention.client_email     || '',
+        ticket_number:    intervention.ticket_number    || '',
+        km_start:         intervention.km_start != null ? String(intervention.km_start) : '',
+      });
+    }
+  }, [isOpen, intervention]);
+
+  if (!isOpen) return null;
+
+  const set = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.client.trim() || !form.service.trim() || !form.date) return;
+    setSaving(true);
+    try {
+      await onSave({
+        client:          form.client.trim(),
+        address:         form.address.trim(),
+        service:         form.service.trim(),
+        date:            form.date,
+        time:            form.time,
+        client_phone:    form.client_phone.trim(),
+        secondary_phone: form.secondary_phone.trim(),
+        client_email:    form.client_email.trim(),
+        ticket_number:   form.ticket_number.trim(),
+        km_start:        form.km_start !== '' ? Number(form.km_start) : null,
+      });
+      onClose();
+    } catch { /* erreur gérée par le parent */ } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
+
+  const L = ({ children }) => (
+    <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '4px', color: '#473a30' }}>
+      {children}
+    </label>
+  );
+  const I = (props) => <input {...props} className="form-control" style={{ minHeight: '44px', ...props.style }} />;
+
+  return (
+    <div onClick={handleBackdrop} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 2000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+    }}>
+      <div style={{
+        background: '#ffffff', borderRadius: '16px', padding: '1.5rem',
+        width: '100%', maxWidth: '580px', maxHeight: '92vh', overflowY: 'auto',
+        boxShadow: '0 20px 40px rgba(0,0,0,.25)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f1410', borderLeft: '4px solid #b87333', paddingLeft: '0.65rem' }}>
+            ✏️ Modifier l'intervention
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#6b7280', padding: '4px' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div><L>Client *</L><I value={form.client} onChange={e => set('client', e.target.value)} required placeholder="Nom du client" /></div>
+            <div><L>Service *</L><I value={form.service} onChange={e => set('service', e.target.value)} required placeholder="Type d'intervention" /></div>
+          </div>
+          <div><L>Adresse</L><I value={form.address} onChange={e => set('address', e.target.value)} placeholder="Adresse complète" /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div><L>Date *</L><I type="date" value={form.date} onChange={e => set('date', e.target.value)} required /></div>
+            <div><L>Heure</L><I type="time" value={form.time} onChange={e => set('time', e.target.value)} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div><L>Tél. principal</L><I type="tel" value={form.client_phone} onChange={e => set('client_phone', e.target.value)} placeholder="06 00 00 00 00" /></div>
+            <div><L>Tél. secondaire</L><I type="tel" value={form.secondary_phone} onChange={e => set('secondary_phone', e.target.value)} placeholder="07 00 00 00 00" /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div><L>Email</L><I type="email" value={form.client_email} onChange={e => set('client_email', e.target.value)} placeholder="email@exemple.fr" /></div>
+            <div><L>N° ticket</L><I value={form.ticket_number} onChange={e => set('ticket_number', e.target.value)} placeholder="Ex : TICK-1234" /></div>
+          </div>
+          <div style={{ maxWidth: '180px' }}>
+            <L>Km départ</L>
+            <I type="number" value={form.km_start} onChange={e => set('km_start', e.target.value)} placeholder="0" min="0" />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '0.5rem', borderTop: '1px solid #f4e5d9', paddingTop: '1rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} style={{ minHeight: '44px' }}>Annuler</button>
+            <button type="submit" className="btn btn-primary" disabled={saving} style={{ minHeight: '44px', minWidth: '130px' }}>
+              {saving ? 'Enregistrement…' : '✓ Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateIntervention, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
@@ -86,6 +220,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [uploadQueue, setUploadQueue] = useState([]);
   const [showCerfaModal, setShowCerfaModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -758,7 +893,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     <span
                       key={assignment.user_id || idx}
                       className="badge"
-                      style={{ background: '#3b82f6', color: 'white', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
+                      style={{ background: '#b87333', color: 'white', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
                     >
                       {assignment.profiles?.full_name || 'Employé'}
                     </span>
@@ -807,8 +942,70 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           {/* ONGLET INFOS */}
           <Tab label="Infos" icon="📋">
             <div>
-              <h2 style={{ marginTop: 0 }}>{intervention.client}</h2>
-              <p className="text-muted">{intervention.address}</p>
+              {/* ── Bloc infos détaillé ───────────────────────────────── */}
+              <div style={{
+                background: '#faf6f1',
+                border: '1px solid #ecddcf',
+                borderRadius: '14px',
+                padding: '1.1rem 1.2rem',
+                marginBottom: '1.25rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+              }}>
+                {/* En-tête : client + bouton admin */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1f1410', wordBreak: 'break-word', lineHeight: 1.2 }}>
+                      {intervention.client}
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: '#9c5e22', fontWeight: 600, marginTop: '0.2rem' }}>
+                      {intervention.service}
+                    </div>
+                  </div>
+                  {isAdmin && onUpdateIntervention && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setShowEditModal(true)}
+                      style={{ flexShrink: 0, minHeight: '40px', whiteSpace: 'nowrap' }}
+                    >
+                      ✏️ Modifier
+                    </button>
+                  )}
+                </div>
+
+                {/* Grille infos */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.7rem' }}>
+                  {intervention.address && (
+                    <InfoRow icon="📍" label="Adresse">{intervention.address}</InfoRow>
+                  )}
+                  {intervention.date && (
+                    <InfoRow icon="📅" label="Date">
+                      {new Date(intervention.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      {intervention.time && <span style={{ marginLeft: '0.4rem', fontWeight: 600 }}>à {intervention.time}</span>}
+                    </InfoRow>
+                  )}
+                  {(intervention.client_phone || intervention.secondary_phone) && (
+                    <InfoRow icon="📞" label="Téléphone">
+                      {intervention.client_phone && (
+                        <a href={`tel:${intervention.client_phone}`} style={{ color: '#9c5e22', fontWeight: 600, textDecoration: 'none' }}>{intervention.client_phone}</a>
+                      )}
+                      {intervention.secondary_phone && (
+                        <span> · <a href={`tel:${intervention.secondary_phone}`} style={{ color: '#9c5e22', textDecoration: 'none' }}>{intervention.secondary_phone}</a></span>
+                      )}
+                    </InfoRow>
+                  )}
+                  {intervention.client_email && (
+                    <InfoRow icon="✉" label="Email">
+                      <a href={`mailto:${intervention.client_email}`} style={{ color: '#9c5e22', textDecoration: 'none', wordBreak: 'break-all' }}>{intervention.client_email}</a>
+                    </InfoRow>
+                  )}
+                  {intervention.ticket_number && (
+                    <InfoRow icon="🎫" label="N° ticket">{intervention.ticket_number}</InfoRow>
+                  )}
+                  {intervention.km_start != null && (
+                    <InfoRow icon="🚗" label="Km départ">{intervention.km_start} km</InfoRow>
+                  )}
+                </div>
+              </div>
 
               {/* Statut + badges */}
               <div className="section">
@@ -1226,6 +1423,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         sourceId={intervention?.id}
         showToast={(msg, type) => alert(msg)}
       />
+
+      {/* Modal Édition intervention (Admin) */}
+      {isAdmin && onUpdateIntervention && (
+        <EditInterventionModal
+          isOpen={showEditModal}
+          intervention={intervention}
+          onSave={(updates) => onUpdateIntervention(intervention.id, updates)}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
 
       {/* Modal Équipe (Admin) */}
       {isAdmin && onUpdateTeam && (

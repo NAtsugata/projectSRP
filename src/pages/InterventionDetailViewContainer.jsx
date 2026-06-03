@@ -157,6 +157,19 @@ const InterventionDetailViewContainer = () => {
         }
     };
 
+    const handleUpdateIntervention = async (id, updates) => {
+        try {
+            const { error } = await interventionService.updateIntervention(id, updates);
+            if (error) throw error;
+            toast?.success('Intervention modifiée.');
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        } catch (err) {
+            toast?.error('Erreur : ' + (err.message || 'impossible de modifier.'));
+            throw err;
+        }
+    };
+
     const handleUpdateTeam = async (id, userIds, dailyAssignments) => {
         setIsUpdatingTeam(true);
         try {
@@ -200,6 +213,7 @@ const InterventionDetailViewContainer = () => {
             onAddBriefingDocuments={handleAddBriefingDocuments}
             onUpdateScheduledDates={handleUpdateScheduledDates}
             onUpdateAdminNote={handleUpdateAdminNote}
+            onUpdateIntervention={handleUpdateIntervention}
             onUpdateTeam={handleUpdateTeam}
             isUpdatingTeam={isUpdatingTeam}
             users={users}
