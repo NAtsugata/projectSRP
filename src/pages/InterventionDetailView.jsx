@@ -898,73 +898,111 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const checkpointsMissing = !isDone && checkpointsTotal > 0 && checkpointsDone < checkpointsTotal;
   const reportRequired     = signatureMissing; // la signature vit dans le bloc Rapport
 
+  // ── Progression globale de l'intervention (pour le Hero) ──────────────────
+  const progressSteps = [
+    !!report.arrivalTime,
+    stats.photoCount >= MIN_REQUIRED_PHOTOS,
+    checkpointsTotal === 0 || checkpointsDone === checkpointsTotal,
+    !!report.signature,
+    !!report.notes?.trim(),
+    !!report.departureTime,
+  ];
+  const progressPct = isDone ? 100 : Math.round((progressSteps.filter(Boolean).length / progressSteps.length) * 100);
+
+  // ── Éléments obligatoires restants (barre d'action fixe) ──────────────────
+  const missingRequired = [];
+  if (photosMissing)      missingRequired.push('photos');
+  if (checkpointsMissing) missingRequired.push('points de contrôle');
+  if (signatureMissing)   missingRequired.push('signature');
+
+  // ── Initiales du client (avatar Hero) ─────────────────────────────────────
+  const clientInitials = (intervention.client || '?')
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(w => w[0]?.toUpperCase()).join('') || '?';
+
   return (
     <div className="intervention-detail-modern">
       <div className="intervention-content">
 
         {/* ═══ BLOC HERO ═══════════════════════════════════════════════════════ */}
         <div style={{
-          background: 'linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%)',
-          border: '1px solid var(--border-color)', borderRadius: '18px',
+          position: 'relative', overflow: 'hidden',
+          background: 'linear-gradient(135deg, var(--color-copper) 0%, var(--color-primary-dark) 55%, var(--color-accent-dark) 100%)',
+          border: '1px solid var(--border-color)', borderRadius: '20px',
           padding: '1.1rem 1.2rem', marginBottom: '0.7rem',
-          boxShadow: 'var(--shadow-md)',
+          boxShadow: 'var(--shadow-lg)', color: '#fff',
         }}>
+          {/* halo décoratif */}
+          <div style={{ position: 'absolute', top: -60, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,.10)', pointerEvents: 'none' }} />
           {/* Ligne 1 : retour + statut + modifier */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem' }}>
             <button onClick={() => navigate('/planning')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', padding: '4px 8px', color: 'var(--color-copper)', lineHeight: 1, marginLeft: '-4px' }}>
+              style={{ background: 'rgba(255,255,255,.18)', border: 'none', cursor: 'pointer', fontSize: '1.1rem', width: 34, height: 34, borderRadius: '10px', color: '#fff', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               ←
             </button>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 700, padding: '3px 11px', borderRadius: '20px',
-              background: STATUS_BG[currentStatus] || '#f0e7dc', color: STATUS_COLOR[currentStatus] || '#8b7968', flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 700, padding: '4px 11px', borderRadius: '20px',
+              background: 'rgba(255,255,255,.92)', color: STATUS_COLOR[currentStatus] || '#8b7968', flexShrink: 0 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[currentStatus] || '#8b7968', display: 'inline-block' }} />
               {currentStatus}
             </span>
             {urgentCount > 0 && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#fef3c7', color: '#92400e', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: '#fef3c7', color: '#92400e', flexShrink: 0 }}>
                 ⚠️ {urgentCount} urgent{urgentCount > 1 ? 's' : ''}
               </span>
             )}
             <span style={{ flex: 1 }} />
             {isAdmin && onUpdateIntervention && (
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowEditModal(true)} style={{ minHeight: '36px', flexShrink: 0 }}>
+              <button onClick={() => setShowEditModal(true)}
+                style={{ background: 'rgba(255,255,255,.18)', color: '#fff', border: '1px solid rgba(255,255,255,.3)', borderRadius: '10px', padding: '0.4rem 0.7rem', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', minHeight: '36px', flexShrink: 0 }}>
                 ✏️ Modifier
               </button>
             )}
           </div>
-          {/* Ligne 2 : nom client + service */}
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '0.15rem', wordBreak: 'break-word' }}>
-            {intervention.client}
+          {/* Ligne 2 : avatar + nom client + service */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.9rem' }}>
+            <div style={{
+              width: 52, height: 52, flexShrink: 0, borderRadius: '14px',
+              background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.35)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.2rem', fontWeight: 800, color: '#fff',
+            }}>{clientInitials}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: '0.1rem', wordBreak: 'break-word' }}>
+                {intervention.client}
+              </div>
+              <div style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,.9)', fontWeight: 500 }}>
+                {intervention.service}
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '0.9rem' }}>
-            {intervention.service}
+          {/* Progression globale */}
+          <div style={{ position: 'relative', marginBottom: '0.9rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,.92)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span>Progression</span>
+              <span>{progressPct}%</span>
+            </div>
+            <div style={{ height: 8, borderRadius: '20px', background: 'rgba(255,255,255,.22)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progressPct}%`, borderRadius: '20px', background: progressPct === 100 ? '#86efac' : '#fff', transition: 'width 0.4s ease' }} />
+            </div>
           </div>
-          {/* Ligne 3 : boutons d'action rapide */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {intervention.client_phone && (
-              <a href={`tel:${intervention.client_phone}`} className="btn btn-primary btn-sm"
-                style={{ minHeight: '40px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                📞 Appeler
-              </a>
-            )}
-            {intervention.client_phone && (
-              <a href={`sms:${intervention.client_phone}`} className="btn btn-secondary btn-sm"
-                style={{ minHeight: '40px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                💬 SMS
-              </a>
-            )}
-            {intervention.address && (
-              <button className="btn btn-secondary btn-sm" style={{ minHeight: '40px' }}
-                onClick={() => { navigator.clipboard?.writeText(intervention.address); }}>
-                🗺️ Adresse
-              </button>
-            )}
-            {typeof navigator !== 'undefined' && navigator.share && (
-              <button className="btn btn-secondary btn-sm" style={{ minHeight: '40px' }}
-                onClick={() => navigator.share({ title: intervention.client, text: `${intervention.client} — ${intervention.address || ''}` }).catch(() => {})}>
-                ↗ Partager
-              </button>
-            )}
+          {/* Ligne 3 : boutons d'action rapide (verre dépoli) */}
+          <div style={{ position: 'relative', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {[
+              intervention.client_phone && { href: `tel:${intervention.client_phone}`, label: '📞 Appeler' },
+              intervention.client_phone && { href: `sms:${intervention.client_phone}`, label: '💬 SMS' },
+              intervention.address && { onClick: () => { navigator.clipboard?.writeText(intervention.address); }, label: '🗺️ Adresse' },
+              (typeof navigator !== 'undefined' && navigator.share) && { onClick: () => navigator.share({ title: intervention.client, text: `${intervention.client} — ${intervention.address || ''}` }).catch(() => {}), label: '↗ Partager' },
+            ].filter(Boolean).map((b, i) => {
+              const style = {
+                minHeight: '40px', padding: '0 0.85rem', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                background: 'rgba(255,255,255,.18)', color: '#fff', fontWeight: 600, fontSize: '0.85rem',
+                border: '1px solid rgba(255,255,255,.3)', borderRadius: '10px', cursor: 'pointer',
+              };
+              return b.href
+                ? <a key={i} href={b.href} style={style}>{b.label}</a>
+                : <button key={i} onClick={b.onClick} style={style}>{b.label}</button>;
+            })}
           </div>
         </div>
 
@@ -1195,7 +1233,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
             onDeleteImage={isAdmin ? handleDeleteImage : null}
           />
-          <div style={{ marginTop: '1rem' }}>
+          <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+              ➕ Ajouter des photos / documents
+            </div>
             <FileUploader
               interventionId={interventionId}
               folder="report"
@@ -1360,27 +1401,21 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         </AccordionBlock>
 
-        {/* ═══ CLÔTURE ═════════════════════════════════════════════════════════ */}
+        {/* ═══ CLÔTURE (panneaux d'info ; le bouton est dans la barre fixe) ════ */}
         {isAdmin ? (
           currentStatus !== 'Terminée' ? (
-            <>
-              {(() => {
-                const oublis = getEmployeeOublis();
-                if (oublis.length === 0) return null;
-                return (
-                  <div style={{ padding: '1rem', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca', marginBottom: '0.6rem', marginTop: '0.25rem' }}>
-                    <div style={{ fontWeight: 700, color: '#991b1b', marginBottom: '0.5rem', fontSize: '0.9rem' }}>⚠️ Oublis de l'employé ({oublis.length})</div>
-                    <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
-                      {oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
-                    </ul>
-                  </div>
-                );
-              })()}
-              <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full"
-                style={{ fontSize: '1rem', padding: '1rem', fontWeight: 700, borderRadius: '12px', marginTop: '0.25rem' }}>
-                {isSaving ? (<><LoaderIcon className="animate-spin" /> Clôture...</>) : 'Clôturer l\'intervention (Admin)'}
-              </button>
-            </>
+            (() => {
+              const oublis = getEmployeeOublis();
+              if (oublis.length === 0) return null;
+              return (
+                <div style={{ padding: '1rem', background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca', marginBottom: '0.6rem', marginTop: '0.25rem' }}>
+                  <div style={{ fontWeight: 700, color: '#991b1b', marginBottom: '0.5rem', fontSize: '0.9rem' }}>⚠️ Oublis de l'employé ({oublis.length})</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
+                    {oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
+                  </ul>
+                </div>
+              );
+            })()
           ) : (
             <div>
               {report.admin_oublis?.length > 0 && (
@@ -1401,14 +1436,46 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               </div>
             </div>
           )
-        ) : (
-          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full"
-            style={{ fontSize: '1rem', padding: '1rem', fontWeight: 700, borderRadius: '12px', marginTop: '0.25rem' }}>
-            {isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : 'Sauvegarder et Clôturer'}
-          </button>
-        )}
+        ) : null}
 
+        {/* Espace pour ne pas masquer le dernier bloc derrière la barre fixe */}
+        {!isDone && <div style={{ height: '92px' }} />}
       </div>
+
+      {/* ═══ BARRE D'ACTION FIXE (bas d'écran) ════════════════════════════════ */}
+      {!isDone && (
+        <div style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
+          background: 'var(--card-bg)', borderTop: '1px solid var(--border-color)',
+          boxShadow: '0 -4px 20px rgba(0,0,0,.12)',
+          padding: '0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px))',
+        }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {missingRequired.length > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', fontWeight: 700, fontSize: '0.82rem' }}>
+                  <span style={{ background: '#dc2626', color: '#fff', borderRadius: '50%', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', flexShrink: 0 }}>
+                    {missingRequired.length}
+                  </span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    À faire : {missingRequired.join(', ')}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-success)', fontWeight: 700, fontSize: '0.85rem' }}>
+                  ✓ Tout est prêt
+                </div>
+              )}
+            </div>
+            <button onClick={handleSave} disabled={isSaving} className="btn btn-primary"
+              style={{ fontSize: '0.95rem', padding: '0.8rem 1.4rem', fontWeight: 700, borderRadius: '12px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {isSaving
+                ? (<><LoaderIcon className="animate-spin" /> {isAdmin ? 'Clôture…' : 'Sauvegarde…'}</>)
+                : (isAdmin ? '✓ Clôturer (Admin)' : '✓ Clôturer')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modale signature */}
       {showSignatureModal && <SignatureModal onSave={async (sig) => {

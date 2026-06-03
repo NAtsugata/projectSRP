@@ -757,3 +757,31 @@
 .dark-theme .intervention-detail-modern {
   /* Overrides spécifiques si nécessaires */
 }
+
+/* ==================== PHOTOS : GRANDE GRILLE ==================== */
+/* Vignettes plus grandes dans le détail d'intervention */
+.intervention-detail-modern .image-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.7rem;
+}
+.intervention-detail-modern .image-thumbnail {
+  border-radius: 12px;
+}
+/* Mobile : 2 grandes colonnes plutôt que plein de mini-vignettes */
+@media (max-width: 600px) {
+  .intervention-detail-modern .image-gallery {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+}
+
+/* État vide plus visuel (invite à prendre une photo) */
+.intervention-detail-modern .image-gallery-empty {
+  border: 2px dashed var(--border-color-dark);
+  border-radius: 14px;
+  padding: 1.6rem 1rem;
+  background: var(--bg-secondary);
+}
+.intervention-detail-modern .image-gallery-empty .empty-icon {
+  font-size: 2.4rem;
+}
