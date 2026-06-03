@@ -1015,6 +1015,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           }}
         />
 
+        {/* Conteneur des blocs : 1 colonne sur mobile, 2 colonnes sur grand écran */}
+        <div className="intervention-blocks">
+
         {/* ═══ SUIVI DU TEMPS ═════════════════════════════════════════════════ */}
         <AccordionBlock icon="⏱" title="Suivi du temps" defaultOpen>
           <TimeTrackerEnhanced report={report} onUpdateReport={persistReport} disabled={false} />
@@ -1442,6 +1445,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           />
         </AccordionBlock>
 
+        </div>{/* fin .intervention-blocks */}
+
         {/* ═══ CLÔTURE (panneaux d'info ; le bouton est dans la barre fixe) ════ */}
         {isAdmin ? (
           currentStatus !== 'Terminée' ? (
@@ -1491,7 +1496,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           boxShadow: '0 -4px 20px rgba(0,0,0,.12)',
           padding: '0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px))',
         }}>
-          <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="intervention-actionbar-inner" style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               {missingRequired.length > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', fontWeight: 700, fontSize: '0.82rem' }}>
