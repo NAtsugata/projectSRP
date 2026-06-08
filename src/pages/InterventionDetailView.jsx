@@ -292,6 +292,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showEditModal, setShowEditModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
 
+  // Réfs « toujours à jour » : évitent les closures périmées (dictée vocale +
+  // sauvegarde au blur des notes), qui pouvaient écraser le texte fraîchement
+  // dicté/tapé par une version obsolète de l'état.
+  const reportRef = useRef(report);
+  useEffect(() => { reportRef.current = report; }, [report]);
+  const interventionRef = useRef(intervention);
+  useEffect(() => { interventionRef.current = intervention; }, [intervention]);
+
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
     logger.log('📊 Upload queue mise à jour:', uploadQueue.length, 'items', uploadQueue);
@@ -875,7 +883,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   const stats = {
     duration: calculateDuration(),
-    photoCount: report.files?.filter(f => f.type?.startsWith('image/')).length || 0,
+    photoCount: report.files?.filter(isImageUrl).length || 0,
     checkpointProgress: report.quick_checkpoints?.length > 0
       ? `${report.quick_checkpoints.filter(c => c.done).length}/${report.quick_checkpoints.length}`
       : null,
@@ -1091,13 +1099,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                 <DictationButton
                   onAppendText={(text) => {
                     if (!text) return;
-                    setIntervention(prev => {
-                      const cur = prev.admin_note || '';
-                      const sep = cur && !/\s$/.test(cur) ? ' ' : '';
-                      const next = cur + sep + text;
-                      onUpdateAdminNote && onUpdateAdminNote(prev.id, next);
-                      return { ...prev, admin_note: next };
-                    });
+                    const prev = interventionRef.current || intervention;
+                    const cur = prev.admin_note || '';
+                    const sep = cur && !/\s$/.test(cur) ? ' ' : '';
+                    const next = cur + sep + text;
+                    const updated = { ...prev, admin_note: next };
+                    interventionRef.current = updated;                      // réf synchrone
+                    setIntervention(updated);                               // UI
+                    onUpdateAdminNote && onUpdateAdminNote(prev.id, next);   // effet de bord HORS du setter
                   }}
                 />
               </>
@@ -1244,7 +1253,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </div>
           <ImageGalleryOptimized
-            images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({ url: f.url, name: f.name, type: f.type }))}
+            images={(report.files || []).filter(isImageUrl).map(f => ({ url: f.url, name: f.name, type: f.type }))}
             uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
             onDeleteImage={isAdmin ? handleDeleteImage : null}
@@ -1273,18 +1282,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               🗒️ Notes de chantier
             </label>
             <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)}
-              onBlur={e => persistReport({ ...report, notes: e.target.value })}
+              onBlur={e => {
+                const val = e.target.value;
+                const base = reportRef.current || report;
+                if ((base.notes || '') === val) return; // rien de neuf : ne pas écraser
+                const next = { ...base, notes: val };
+                reportRef.current = next;
+                persistReport(next);
+              }}
               placeholder="Détails, matériel, observations… ou utilisez la dictée vocale ci-dessous." rows="5" className="form-control" />
             {/* 🎙️ Dictée : la parole s'écrit toute seule dans la note (+ autosave) */}
             <DictationButton
               onAppendText={(text) => {
                 if (!text) return;
-                setReport(prev => {
-                  const sep = prev.notes && !/\s$/.test(prev.notes) ? ' ' : '';
-                  const next = { ...prev, notes: (prev.notes || '') + sep + text };
-                  onSaveSilent?.(intervention.id, next); // sauvegarde silencieuse
-                  return next;
-                });
+                // Lit la version la plus fraîche pour ne pas écraser le texte déjà présent
+                const base = reportRef.current || report;
+                const sep = base.notes && !/\s$/.test(base.notes) ? ' ' : '';
+                const next = { ...base, notes: (base.notes || '') + sep + text };
+                reportRef.current = next;               // réf synchrone
+                setReport(next);                         // met à jour l'UI
+                onSaveSilent?.(intervention.id, next);   // effet de bord HORS du setter
               }}
             />
             {/* Note vocale (fichier audio joint) */}

@@ -797,6 +797,10 @@
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
     page-break-inside: avoid;
+    /* Safari respecte mal break-inside avec du contenu riche : inline-block
+       force le moteur à traiter chaque bloc comme un élément atomique. */
+    display: inline-block;
+    width: 100%;
   }
   /* La barre d'action fixe s'aligne sur la largeur du contenu */
   .intervention-actionbar-inner {
@@ -830,4 +834,17 @@
 }
 .intervention-detail-modern .image-gallery-empty .empty-icon {
   font-size: 2.4rem;
+}
+
+/* ==================== NOTES VOCALES : LECTEUR AUDIO ==================== */
+/* Les contrôles natifs <audio> n'héritent pas des variables CSS et restent
+   clairs (fond gris/blanc du navigateur). En mode sombre, on inverse les
+   couleurs pour qu'ils restent lisibles sur fond foncé. */
+.intervention-detail-modern audio {
+  width: 100%;
+  border-radius: 8px;
+}
+[data-theme="dark"] .intervention-detail-modern audio,
+.dark-theme .intervention-detail-modern audio {
+  filter: invert(0.9) hue-rotate(180deg) brightness(1.05);
 }

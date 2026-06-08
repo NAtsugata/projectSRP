@@ -20,6 +20,12 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
   const listeningRef = useRef(false);
   const recognitionRef = useRef(null);
 
+  // onAppendText peut changer entre deux sessions (le parent recrée la fonction
+  // à chaque rendu). On la stocke dans une réf toujours à jour pour que les
+  // relances automatiques (onend → startSession) utilisent la bonne version.
+  const onAppendTextRef = useRef(onAppendText);
+  useEffect(() => { onAppendTextRef.current = onAppendText; }, [onAppendText]);
+
   const SpeechRecognition =
     typeof window !== 'undefined' &&
     (window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -51,7 +57,7 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
       }
       if (finalText.trim()) {
         const clean = finalText.trim();
-        onAppendText?.(clean.charAt(0).toUpperCase() + clean.slice(1) + ' ');
+        onAppendTextRef.current?.(clean.charAt(0).toUpperCase() + clean.slice(1) + ' ');
         setInterim('');
       } else {
         setInterim(interimText);
@@ -92,7 +98,7 @@ const DictationButton = ({ onAppendText, lang = 'fr-FR', size = 'sm' }) => {
       // Si une session est déjà ouverte (InvalidStateError), réessayer
       if (listeningRef.current) setTimeout(() => startSession(), 200);
     }
-  }, [SpeechRecognition, supported, lang, onAppendText]);
+  }, [SpeechRecognition, supported, lang]); // onAppendText lu via réf → startSession reste stable
 
   const start = useCallback(() => {
     if (!supported) {
