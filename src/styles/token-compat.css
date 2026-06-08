@@ -1,0 +1,97 @@
+/* ============================================================
+   TOKENS DE COMPATIBILITÉ
+   ------------------------------------------------------------
+   Plusieurs feuilles (EmployeeAgendaView, AgendaView,
+   EmployeePlanningView, InterventionDetailView_Modern, etc.)
+   référencent des tokens numériques jamais définis dans
+   design-system.css (qui ne fournit que --spacing-xs…3xl et
+   l'échelle --color-primary-NNN). Résultat : var() non résolu →
+   espacements à 0 et badges de statut sans couleur.
+
+   Ce fichier comble ces trous SANS rien retirer. Importé après
+   design-system.css et theme-variables.css.
+   ============================================================ */
+
+:root {
+  /* ---- Échelle d'espacement numérique (pas de 0.25rem) ---- */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-7: 1.75rem;
+  --spacing-8: 2rem;
+  --spacing-9: 2.25rem;
+  --spacing-10: 2.5rem;
+  --spacing-11: 2.75rem;
+  --spacing-12: 3rem;
+  --spacing-14: 3.5rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+
+  /* ---- Échelle succès (vert) ---- */
+  --color-success-50:  #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+
+  /* ---- Échelle danger (rouge) ---- */
+  --color-danger-50:  #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+
+  /* ---- Échelle avertissement (ambre) ---- */
+  --color-warning-50:  #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* ---- Échelle info (bleu) ---- */
+  --color-info-50:  #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* ---- Échelle secondaire : alignée sur le cuivre (cohérence thème) ---- */
+  --color-secondary-50:  var(--color-primary-50);
+  --color-secondary-100: var(--color-primary-100);
+  --color-secondary-200: var(--color-primary-200);
+  --color-secondary-300: var(--color-primary-300);
+  --color-secondary-400: var(--color-primary-400);
+  --color-secondary-500: var(--color-primary-500);
+  --color-secondary-600: var(--color-primary-600);
+  --color-secondary-700: var(--color-primary-700);
+  --color-secondary-800: var(--color-primary-800);
+  --color-secondary-900: var(--color-primary-900);
+
+  /* ---- Ombre de survol référencée mais non définie ---- */
+  --shadow-hover: var(--card-shadow-hover, 0 12px 32px rgba(184, 115, 51, 0.2));
+}

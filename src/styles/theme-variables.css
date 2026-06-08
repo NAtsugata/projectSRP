@@ -248,11 +248,11 @@ body {
   display: none; /* ❌ Caché sur mobile par défaut */
 }
 
-/* ✅ Visible uniquement sur desktop (écrans > 768px) */
+/* Marqueur de debug désactivé (laissé masqué partout) */
 @media (min-width: 769px) {
   .light-theme body::before,
   .dark-theme body::before {
-    display: block;
+    display: none;
   }
 }
 

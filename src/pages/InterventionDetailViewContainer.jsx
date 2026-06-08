@@ -219,7 +219,7 @@ const InterventionDetailViewContainer = () => {
             users={users}
             isAdmin={profile?.is_admin}
             refreshData={refetch}
-            dataVersion={Date.now()}
+            dataVersion={intervention?.updated_at}
         />
     );
 };

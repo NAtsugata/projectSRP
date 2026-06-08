@@ -21,7 +21,17 @@ const UNITS = [
 ];
 
 // Item initial (tax_rate sera écrasé par le default de l'organisation)
+// Identifiant client-side stable pour les lignes (clé React fiable lors des
+// réordonnancements / duplications / suppressions — évite la corruption des
+// valeurs entre lignes liée à key={index}).
+let _lineSeq = 0;
+const newLineId = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `line-${Date.now()}-${_lineSeq++}`;
+
 const getInitialItem = (taxRate = 20) => ({
+  _lineId: newLineId(),
   description: '',
   quantity: 1,
   unit: 'unite',
@@ -110,6 +120,7 @@ function QuoteEditor({
 
       if (editingQuote.quote_items?.length > 0) {
         setItems(editingQuote.quote_items.map(item => ({
+          _lineId: newLineId(),
           description: item.description || '',
           quantity: item.quantity || 1,
           unit: item.unit || 'unite',
@@ -224,6 +235,7 @@ function QuoteEditor({
   // Ajouter article depuis catalogue
   const handleAddFromCatalog = useCallback((catalogItem) => {
     const newItem = {
+      _lineId: newLineId(),
       description: catalogItem.name,
       quantity: 1,
       unit: catalogItem.unit || 'unite',
@@ -279,7 +291,8 @@ function QuoteEditor({
   const handleDuplicateItem = useCallback((index) => {
     setItems(prev => {
       const newItems = [...prev];
-      newItems.splice(index + 1, 0, { ...prev[index] });
+      // La copie reçoit un nouvel identifiant de ligne (clé React unique)
+      newItems.splice(index + 1, 0, { ...prev[index], _lineId: newLineId() });
       return newItems;
     });
   }, []);
@@ -578,7 +591,7 @@ function QuoteEditor({
               const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
 
               return (
-                <div key={index} className="table-row">
+                <div key={item._lineId || index} className="table-row">
                   <div className="col-actions">
                     <button
                       className="action-btn"

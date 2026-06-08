@@ -9,6 +9,10 @@
 /* 1b. Theme Variables - Variables globales qui changent selon le thème */
 @import './styles/theme-variables.css';
 
+/* 1b-bis. Tokens de compatibilité - comble les tokens numériques manquants
+   (--spacing-N, --color-success/danger/warning/info-NNN) référencés ailleurs */
+@import './styles/token-compat.css';
+
 /* 1c. Dark Theme - Global Overrides */
 /* DÉSACTIVÉ - Force thème clair uniquement */
 /* @import './styles/dark-theme.css'; */

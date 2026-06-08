@@ -25,10 +25,24 @@ const LeaveRequestForm = ({
   onCancel,
   isSubmitting = false
 }) => {
+  // useForm = (initialValues, onSubmit, validate). L'ordre était inversé.
+  // validateLeaveRequest renvoie { isValid, errors: [messages] } ; useForm attend
+  // un objet d'erreurs par champ → adaptateur ci-dessous.
+  const validate = (vals) => {
+    const result = validateLeaveRequest(vals);
+    if (result.isValid) return {};
+    const fieldErrors = {};
+    result.errors.forEach((msg) => {
+      if (/motif/i.test(msg)) fieldErrors.reason = msg;
+      else fieldErrors.endDate = msg; // messages liés à la plage de dates
+    });
+    return fieldErrors;
+  };
+
   const { values, errors, handleChange, handleSubmit } = useForm(
     initialValues,
-    validateLeaveRequest,
-    onSubmit
+    onSubmit,
+    validate
   );
 
   return (

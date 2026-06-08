@@ -398,7 +398,7 @@ export default function ChecklistView({
                         {isChecked && <CheckCircleIcon style={{ color: 'white', width: '20px' }} />}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, color: '#1f2937' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
                           {idx + 1}. {item.text}
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', marginTop: '0.25rem' }}>

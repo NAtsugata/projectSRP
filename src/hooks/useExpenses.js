@@ -112,7 +112,12 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };
             }
-            return expenseService.deleteExpense(id);
+            // userId défini → vue employé : suppression de SES notes en attente
+            // (le service filtre sur user_id). userId null → vue admin : suppression
+            // sans filtre utilisateur via deleteExpenseAdmin.
+            return userId
+                ? expenseService.deleteExpense(id, userId)
+                : expenseService.deleteExpenseAdmin(id);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
