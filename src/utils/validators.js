@@ -259,6 +259,37 @@ export const validateFileType = (fileName, allowedTypes = ['jpg', 'jpeg', 'png',
   return { isValid: true, message: '' };
 };
 
+/**
+ * Variante clé-par-champ de validateLeaveRequest, au format attendu par
+ * useForm (comme validateIntervention) : objet vide = valide, sinon chaque
+ * clé = message d'erreur du champ correspondant.
+ * @param {Object} leaveRequest - { startDate, endDate, reason }
+ * @returns {Object} errors — { startDate?, endDate?, reason? }
+ */
+export const validateLeaveRequestFields = (leaveRequest) => {
+  const errors = {};
+
+  if (!isValidDate(leaveRequest.startDate)) {
+    errors.startDate = 'Date de début invalide';
+  }
+  if (!isValidDate(leaveRequest.endDate)) {
+    errors.endDate = 'Date de fin invalide';
+  } else if (
+    isValidDate(leaveRequest.startDate) &&
+    new Date(leaveRequest.startDate) > new Date(leaveRequest.endDate)
+  ) {
+    errors.endDate = 'La date de début doit être avant la date de fin';
+  }
+
+  if (!leaveRequest.reason || leaveRequest.reason.trim().length === 0) {
+    errors.reason = 'Le motif est requis';
+  } else if (leaveRequest.reason.length > 500) {
+    errors.reason = 'Le motif ne peut pas dépasser 500 caractères';
+  }
+
+  return errors;
+};
+
 const validators = {
   isValidEmail,
   validatePassword,
@@ -267,6 +298,7 @@ const validators = {
   validateIntervention,
   validateUser,
   validateLeaveRequest,
+  validateLeaveRequestFields,
   sanitizeString,
   validateFileSize,
   validateFileType

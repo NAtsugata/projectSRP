@@ -580,7 +580,6 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-/* DÉSACTIVÉ pour forcer le thème clair uniquement
 /* DÉSACTIVÉ - Force thème clair uniquement
 @media (prefers-color-scheme: dark) {
   .intervention-detail-modern {
@@ -605,7 +604,6 @@
     border-color: #444;
   }
 }
-*/
 */
 
 /* ============================================

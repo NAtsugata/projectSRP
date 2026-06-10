@@ -2,6 +2,7 @@
 // Alertes intelligentes pour guider l'employé
 
 import React, { useMemo } from 'react';
+import { isImageFile } from '../../utils/reportHelpers';
 import './SmartAlerts.css';
 
 const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
@@ -11,15 +12,9 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
     if (!report) return alertList;
 
     // Photos manquantes (OBLIGATOIRE → rouge)
-    // Compte par type MIME OU par extension d'URL (certaines entrées legacy
-    // n'ont pas de champ `type`) — cohérent avec le compteur de la page détail.
-    const isImg = (f) => {
-      if (f?.type?.startsWith('image/')) return true;
-      const u = typeof f === 'string' ? f : f?.url;
-      if (!u) return false;
-      return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
-    };
-    const photoCount = (report.files || []).filter(isImg).length;
+    // isImageFile = prédicat PARTAGÉ avec le compteur de la page détail et la
+    // validation de clôture (utils/reportHelpers) — impossible de diverger.
+    const photoCount = (report.files || []).filter(isImageFile).length;
     if (photoCount < MIN_PHOTOS) {
       alertList.push({
         type: 'error',

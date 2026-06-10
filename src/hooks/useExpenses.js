@@ -106,18 +106,27 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
 
     // Mutation pour supprimer une note de frais (avec support offline)
     const deleteMutation = useMutation({
-        mutationFn: async (id) => {
+        mutationFn: async (idOrExpense) => {
+            // Certaines vues passent l'objet expense complet, d'autres l'id seul.
+            const id = (idOrExpense && typeof idOrExpense === 'object') ? idOrExpense.id : idOrExpense;
+            if (!id) throw new Error('Identifiant de note de frais manquant');
+
             if (!navigator.onLine && !getConnectionState()) {
                 logger.log('[useExpenses] Offline - suppression en queue');
-                await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
+                // userId mémorisé pour que le replay ré-applique les gardes
+                // propriétaire + statut pending (voir syncService).
+                await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id, userId: userId || undefined });
                 return { data: null };
             }
             // userId défini → vue employé : suppression de SES notes en attente
-            // (le service filtre sur user_id). userId null → vue admin : suppression
-            // sans filtre utilisateur via deleteExpenseAdmin.
-            return userId
-                ? expenseService.deleteExpense(id, userId)
-                : expenseService.deleteExpenseAdmin(id);
+            // (le service filtre sur user_id + status). userId null → vue admin.
+            const res = userId
+                ? await expenseService.deleteExpense(id, userId)
+                : await expenseService.deleteExpenseAdmin(id);
+            // Le service retourne { data, error } sans throw : propager l'erreur
+            // pour que les vues n'affichent pas un toast de succès à tort.
+            if (res?.error) throw res.error;
+            return res;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });

@@ -13,22 +13,24 @@
    ============================================================ */
 
 :root {
-  /* ---- Échelle d'espacement numérique (pas de 0.25rem) ---- */
+  /* ---- Échelle d'espacement numérique (pas de 0.25rem) ----
+     Les pas qui recouvrent l'échelle nommée de design-system.css sont des
+     ALIAS (une seule source de vérité) ; les autres sont des littéraux. */
   --spacing-0: 0;
-  --spacing-1: 0.25rem;
-  --spacing-2: 0.5rem;
+  --spacing-1: var(--spacing-xs);   /* 0.25rem */
+  --spacing-2: var(--spacing-sm);   /* 0.5rem  */
   --spacing-3: 0.75rem;
-  --spacing-4: 1rem;
+  --spacing-4: var(--spacing-md);   /* 1rem    */
   --spacing-5: 1.25rem;
-  --spacing-6: 1.5rem;
+  --spacing-6: var(--spacing-lg);   /* 1.5rem  */
   --spacing-7: 1.75rem;
-  --spacing-8: 2rem;
+  --spacing-8: var(--spacing-xl);   /* 2rem    */
   --spacing-9: 2.25rem;
   --spacing-10: 2.5rem;
   --spacing-11: 2.75rem;
-  --spacing-12: 3rem;
+  --spacing-12: var(--spacing-2xl); /* 3rem    */
   --spacing-14: 3.5rem;
-  --spacing-16: 4rem;
+  --spacing-16: var(--spacing-3xl); /* 4rem    */
   --spacing-20: 5rem;
   --spacing-24: 6rem;
 
@@ -87,3 +89,27 @@
 /* NB : --color-secondary-NNN et --spacing-xs…3xl existent déjà dans
    design-system.css — ne PAS les redéfinir ici (ce fichier ne fait que
    combler les tokens réellement absents). */
+
+/* ---- Mode sombre ----
+   Les fonds pastel (-50/-100) et textes foncés (-700) des badges de statut
+   doivent s'inverser sur fond sombre, comme le font déjà les tokens
+   sémantiques (--color-danger-light etc.) dans design-system.css.
+   html.classe (0,1,1) > :root (0,1,0) et le fichier est importé en dernier. */
+html.dark-theme,
+html[data-theme="dark"] {
+  --color-success-50:  #122f1f;
+  --color-success-100: #1a4d2e;
+  --color-success-700: #86efac;
+
+  --color-danger-50:  #3a1414;
+  --color-danger-100: #4a1a1a;
+  --color-danger-700: #fca5a5;
+
+  --color-warning-50:  #2f2400;
+  --color-warning-100: #3d2f00;
+  --color-warning-700: #fcd34d;
+
+  --color-info-50:  #14233a;
+  --color-info-100: #1e3a5f;
+  --color-info-700: #93c5fd;
+}

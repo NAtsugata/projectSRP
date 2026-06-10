@@ -5,7 +5,7 @@ import React from 'react';
 import { Button } from '../ui';
 import { PlusIcon } from '../SharedUI';
 import { useForm } from '../../hooks';
-import { validateLeaveRequest } from '../../utils/validators';
+import { validateLeaveRequestFields } from '../../utils/validators';
 import './LeaveRequestForm.css';
 
 /**
@@ -25,24 +25,13 @@ const LeaveRequestForm = ({
   onCancel,
   isSubmitting = false
 }) => {
-  // useForm = (initialValues, onSubmit, validate). L'ordre était inversé.
-  // validateLeaveRequest renvoie { isValid, errors: [messages] } ; useForm attend
-  // un objet d'erreurs par champ → adaptateur ci-dessous.
-  const validate = (vals) => {
-    const result = validateLeaveRequest(vals);
-    if (result.isValid) return {};
-    const fieldErrors = {};
-    result.errors.forEach((msg) => {
-      if (/motif/i.test(msg)) fieldErrors.reason = msg;
-      else fieldErrors.endDate = msg; // messages liés à la plage de dates
-    });
-    return fieldErrors;
-  };
-
+  // useForm = (initialValues, onSubmit, validate). Le validateur renvoie un
+  // objet d'erreurs clé-par-champ ({ startDate?, endDate?, reason? }) — chaque
+  // message s'affiche sous son champ, et se nettoie quand on le corrige.
   const { values, errors, handleChange, handleSubmit } = useForm(
     initialValues,
     onSubmit,
-    validate
+    validateLeaveRequestFields
   );
 
   return (

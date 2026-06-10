@@ -373,9 +373,9 @@
     color: #f1f5f9;
   }
 
-  /* La page PDF reste blanche même en dark mode */
+  La page PDF reste blanche même en dark mode :
   .pdf-page {
-    background: var(--bg-primary);
+    background: #ffffff;
   }
 }
 */

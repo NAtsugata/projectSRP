@@ -122,11 +122,13 @@ function QuoteEditor({
         setItems(editingQuote.quote_items.map(item => ({
           _lineId: newLineId(),
           description: item.description || '',
-          quantity: item.quantity || 1,
+          quantity: item.quantity ?? 1,
           unit: item.unit || 'unite',
-          unit_price: item.unit_price || 0,
-          tax_rate: item.tax_rate || 20,
-          discount_percent: item.discount_percent || 0
+          unit_price: item.unit_price ?? 0,
+          // ?? et non || : une TVA à 0 % (autoliquidation, export…) est une
+          // valeur légitime qui ne doit pas retomber sur 20 %.
+          tax_rate: item.tax_rate ?? 20,
+          discount_percent: item.discount_percent ?? 0
         })));
       }
 
@@ -208,7 +210,9 @@ function QuoteEditor({
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       const discount = parseFloat(item.discount_percent) || 0;
-      const tax = parseFloat(item.tax_rate) || 20;
+      // TVA 0 % légitime : ne retomber sur 20 % que si la valeur est absente/invalide
+      const parsedTax = parseFloat(item.tax_rate);
+      const tax = Number.isFinite(parsedTax) ? parsedTax : 20;
 
       const lineSubtotal = qty * price * (1 - discount / 100);
       const lineTax = lineSubtotal * (tax / 100);

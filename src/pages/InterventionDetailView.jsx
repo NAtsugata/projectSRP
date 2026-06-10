@@ -2,7 +2,7 @@
 // FILE: src/pages/InterventionDetailView.js — REFACTORÉ
 // Utilise les composants extraits pour une meilleure maintenabilité
 // =============================
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
@@ -30,21 +30,16 @@ import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
+import { isImageFile, normalizeFileEntry } from '../utils/reportHelpers';
+import { debounce } from '../utils/debounce';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 
 const MIN_REQUIRED_PHOTOS = 2;
 
-const isImageUrl = (f) => {
-  // Check MIME type property first (most reliable for uploaded files)
-  if (typeof f === 'object' && f?.type?.startsWith('image/')) {
-    return true;
-  }
-  // Fall back to URL pattern matching for legacy/string entries
-  const u = typeof f === 'string' ? f : f?.url;
-  if (!u) return false;
-  return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
-};
+// Prédicat image PARTAGÉ (compteur, galerie, SmartAlerts, validation de
+// clôture utilisent la même source — voir utils/reportHelpers).
+const isImageUrl = isImageFile;
 const numberOrNull = (v) => (v === '' || v === undefined || v === null || Number.isNaN(Number(v)) ? null : Number(v));
 
 // -------- Anti-cache pour forcer l'affichage immédiat --------
@@ -292,13 +287,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showEditModal, setShowEditModal] = useState(false);
   const [cerfaData, setCerfaData] = useState(null);
 
-  // Réfs « toujours à jour » : évitent les closures périmées (dictée vocale +
-  // sauvegarde au blur des notes), qui pouvaient écraser le texte fraîchement
-  // dicté/tapé par une version obsolète de l'état.
+  // ── Protocole « single-owner » de l'état du rapport ───────────────────────
+  // reportRef est la source de vérité SYNCHRONE : toute écriture passe par
+  // applyReport, qui met le ref à jour AVANT le setState. Les callbacks
+  // asynchrones (dictée vocale, blur, fin d'upload…) composent donc toujours
+  // sur l'état le plus frais — aucune fenêtre entre un commit React et la
+  // resynchronisation d'un effet.
   const reportRef = useRef(report);
-  useEffect(() => { reportRef.current = report; }, [report]);
+  useEffect(() => { reportRef.current = report; }, [report]); // filet si un setReport direct subsiste
+  const lastSavedReportRef = useRef(null); // dernier snapshot persisté (dirty-check par identité)
   const interventionRef = useRef(intervention);
   useEffect(() => { interventionRef.current = intervention; }, [intervention]);
+
+  // Applique une mise à jour (objet ou fonction updater) sur l'état le plus frais.
+  const applyReport = useCallback((updaterOrNext) => {
+    const base = reportRef.current;
+    const next = typeof updaterOrNext === 'function' ? updaterOrNext(base) : updaterOrNext;
+    reportRef.current = next;
+    setReport(next);
+    return next;
+  }, []);
 
   // Debug: logger les changements de uploadQueue
   useEffect(() => {
@@ -406,7 +414,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const r = base || {};
     return {
       notes: r.notes || '',
-      files: Array.isArray(r.files) ? r.files : [],
+      // Normalise les entrées legacy (chaîne URL) en objets { url } une seule
+      // fois à la frontière — tous les consommateurs supposent ensuite l'objet.
+      files: (Array.isArray(r.files) ? r.files : []).map(normalizeFileEntry),
       arrivalTime: r.arrivalTime || null,
       departureTime: r.departureTime || null,
       signature: r.signature || null,
@@ -453,14 +463,20 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const found = interventions.find(i => String(i.id) === String(interventionId));
     if (found) {
       setIntervention(found);
-      // ✅ Fusionner le report pour obtenir les nouveaux fichiers uploadés
-      setReport(prev => {
+      // ✅ Fusionner le report : fichiers frais depuis la BDD, changements
+      // locaux conservés. (applyReport = updater appliqué UNE fois, de façon
+      // synchrone, sur le ref — un effet de bord interne y est sûr.)
+      applyReport(prev => {
+        const isInitialLoad = !prev;
         const currentReport = prev || ensureReportSchema(found.report);
-        return {
+        const merged = {
           ...currentReport,  // Garde les changements locaux
-          files: found.report?.files || currentReport.files,  // ✅ UPDATE files depuis la BDD
+          files: (found.report?.files || currentReport.files || []).map(normalizeFileEntry),
           updated_at: found.updated_at
         };
+        // Au premier chargement, l'état BDD est par définition déjà sauvegardé
+        if (isInitialLoad) lastSavedReportRef.current = merged;
+        return merged;
       });
       setLoading(false);
     } else {
@@ -470,7 +486,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         setLoading(false);
       }
     }
-  }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema]);
+  }, [interventions, interventionId, navigate, dataVersion, ensureReportSchema, applyReport]);
 
   // ✅ Rafraîchir les URLs signées des images (expirent après 1h)
   useEffect(() => {
@@ -492,7 +508,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         const urlsChanged = refreshedFiles.some((f, i) => f.url !== report.files[i]?.url);
         if (urlsChanged) {
           logger.log('✅ URLs des images rafraîchies');
-          setReport(prev => ({ ...prev, files: refreshedFiles }));
+          applyReport(prev => ({ ...prev, files: refreshedFiles }));
         }
       } catch (error) {
         logger.error('❌ Erreur rafraîchissement URLs:', error);
@@ -502,9 +518,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     refreshFileUrls();
   }, [intervention?.id]); // Rafraîchir quand l'intervention change
 
-  // ✅ Persistance simplifiée du report (le lock/unlock est géré par beginCriticalPicker)
-  const persistReport = useCallback(async (updated) => {
-    setReport(updated);
+  // ✅ Persistance du report. Accepte un objet OU une fonction updater :
+  // l'updater compose sur reportRef (état le plus frais), ce qui élimine les
+  // écrasements croisés entre dictée, uploads, checkpoints et géoloc.
+  const persistReport = useCallback(async (updatedOrUpdater) => {
+    const updated = applyReport(updatedOrUpdater);
+    lastSavedReportRef.current = updated;
     try {
       const res = await onSaveSilent(intervention.id, updated);
       if (res?.error) alert('Échec de la sauvegarde du rapport');
@@ -513,25 +532,54 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       alert('Échec de la sauvegarde du rapport');
     }
     // ✅ Pas de lock/unlock ici, le parent gère la stabilisation du scroll
-  }, [intervention, onSaveSilent]);
+  }, [applyReport, intervention, onSaveSilent]);
 
-  const handleReportChange = (field, value) => setReport(prev => ({ ...prev, [field]: value }));
+  const handleReportChange = (field, value) => applyReport(prev => ({ ...prev, [field]: value }));
+
+  // Persiste l'état courant seulement s'il a changé depuis la dernière
+  // sauvegarde (identité d'objet : chaque modification crée un nouvel objet).
+  // Utilisé au blur des champs texte → l'autosave couvre notes ET km_end.
+  const persistIfDirty = useCallback(() => {
+    const cur = reportRef.current;
+    if (!cur || cur === lastSavedReportRef.current) return;
+    persistReport(cur);
+  }, [persistReport]);
+
+  // Dictée vocale : 1 sauvegarde par pause de parole (débounce), pas une par
+  // phrase — évite des dizaines d'écritures/refetchs pendant une dictée.
+  const persistIfDirtyRef = useRef(persistIfDirty);
+  useEffect(() => { persistIfDirtyRef.current = persistIfDirty; }, [persistIfDirty]);
+  const debouncedDictationSave = useMemo(
+    () => debounce(() => persistIfDirtyRef.current(), 2500),
+    []
+  );
+  useEffect(() => () => debouncedDictationSave.flush(), [debouncedDictationSave]);
+
+  // Note admin (dictée) : même principe — le handler parent affiche un toast
+  // et refetch, donc 1 appel par pause au lieu d'un par phrase.
+  const adminNoteSaveRef = useRef(() => {});
+  useEffect(() => {
+    adminNoteSaveRef.current = () => {
+      const cur = interventionRef.current;
+      if (cur && onUpdateAdminNote) onUpdateAdminNote(cur.id, cur.admin_note || '');
+    };
+  }, [onUpdateAdminNote]);
+  const debouncedAdminNoteSave = useMemo(() => debounce(() => adminNoteSaveRef.current(), 2500), []);
+  useEffect(() => () => debouncedAdminNoteSave.flush(), [debouncedAdminNoteSave]);
 
   // Sauvegarde du PV de réception
   const handlePVSave = useCallback(async (pvData) => {
-    const updated = { ...report, pv_reception: pvData };
-    await persistReport(updated);
+    await persistReport(prev => ({ ...prev, pv_reception: pvData }));
     alert('✓ Procès-Verbal de Réception enregistré');
-  }, [report, persistReport]);
+  }, [persistReport]);
 
   // Reusable upload completion handler
   const handleUploadComplete = useCallback(async (uploaded) => {
     logger.log('✅ Upload terminé, ajout de', uploaded.length, 'fichiers');
 
-    // Ajouter les fichiers au rapport
-    const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-    setReport(updated);
-    await persistReport(updated);
+    // Compose sur l'état le plus frais : un upload qui se termine après une
+    // dictée ou un toggle de checkpoint ne doit pas les écraser.
+    await persistReport(prev => ({ ...prev, files: [...(prev.files || []), ...uploaded] }));
 
     // Vider la queue d'upload - les fichiers sont maintenant dans report.files
     // Libérer aussi les blob URLs pour éviter les fuites mémoire
@@ -550,7 +598,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     } catch (e) {
       logger.error('Erreur refresh:', e);
     }
-  }, [report, persistReport, refreshData]);
+  }, [persistReport, refreshData]);
 
   // Paste handler désactivé (nécessiterait une ré-implémentation avec FileUploader)
 
@@ -563,14 +611,15 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     logger.log('🗑️ Suppression de l\'image:', image?.url);
     const target = normalizeUrl(image?.url);
 
-    // 1) Retrait OPTIMISTE du rapport (par URL normalisée ou nom) — garantit que
+    // 1) Retrait OPTIMISTE du rapport (par URL normalisée) — garantit que
     //    l'entrée disparaît de la liste, quelle que soit l'issue côté stockage.
-    const updatedFiles = (report.files || []).filter(f => {
-      const fUrl = typeof f === 'string' ? f : f?.url; // entrées legacy = chaîne
-      return !(target && normalizeUrl(fUrl) === target);
-    });
-    const updated = { ...report, files: updatedFiles };
-    await persistReport(updated);
+    await persistReport(prev => ({
+      ...prev,
+      files: (prev.files || []).filter(f => {
+        const fUrl = typeof f === 'string' ? f : f?.url; // entrées legacy = chaîne
+        return !(target && normalizeUrl(fUrl) === target);
+      }),
+    }));
 
     // 2) Suppression du fichier dans le stockage (best-effort, non bloquante)
     try {
@@ -581,7 +630,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     }
 
     logger.log('✅ Image retirée du rapport');
-  }, [report, persistReport]);
+  }, [persistReport]);
 
   // -------- Téléchargement de tous les fichiers en ZIP --------
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
@@ -727,13 +776,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const addNeed = async () => {
     if (!needDraft.label.trim()) return;
     const item = { ...needDraft, id: `need-${Date.now()}`, qty: Math.max(1, Number(needDraft.qty) || 1), estimated_price: numberOrNull(needDraft.estimated_price), request_id: null };
-    const updated = { ...report, needs: [...(report.needs || []), item] };
-    await persistReport(updated);
+    await persistReport(prev => ({ ...prev, needs: [...(prev.needs || []), item] }));
     setNeedDraft({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   };
   const removeNeed = async (id) => {
-    const updated = { ...report, needs: (report.needs || []).filter(n => n.id !== id) };
-    await persistReport(updated);
+    await persistReport(prev => ({ ...prev, needs: (prev.needs || []).filter(n => n.id !== id) }));
   };
 
   // -------- Arrivé / Départ (nouveau) --------
@@ -741,10 +788,11 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     const isArrival = kind === 'arrival';
     const nowIso = new Date().toISOString();
 
-    // Early guard UI : départ ne peut pas précéder l'arrivée
-    if (!isArrival && report?.arrivalTime) {
+    // Early guard UI : départ ne peut pas précéder l'arrivée (état le plus frais)
+    const arrivalTime = reportRef.current?.arrivalTime;
+    if (!isArrival && arrivalTime) {
       try {
-        const arr = new Date(report.arrivalTime).getTime();
+        const arr = new Date(arrivalTime).getTime();
         const dep = new Date(nowIso).getTime();
         if (dep < arr) { alert("L'heure de départ ne peut pas précéder l'arrivée."); return; }
       } catch { /* date parse error – ignore */ }
@@ -765,34 +813,26 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       }
     };
 
+    // Updaters : composent sur l'état le plus frais au moment où la géoloc
+    // répond (peut prendre 10s — d'autres écritures ont pu arriver entre-temps).
+    const withMark = (geo) => (prev) => ({
+      ...prev,
+      [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
+      [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
+    });
+
     if (!('geolocation' in navigator)) {
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
-      };
-      await finalize(updated, 'Géolocalisation indisponible. Heure enregistrée.');
+      await finalize(withMark(null), 'Géolocalisation indisponible. Heure enregistrée.');
       return;
     }
 
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude, accuracy } = pos.coords || {};
-      const geo = { lat: latitude, lng: longitude, acc: accuracy };
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
-      };
-      await finalize(updated);
+      await finalize(withMark({ lat: latitude, lng: longitude, acc: accuracy }));
     }, async () => {
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
-      };
-      await finalize(updated, 'Géolocalisation refusée. Heure enregistrée sans position.');
+      await finalize(withMark(null), 'Géolocalisation refusée. Heure enregistrée sans position.');
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report, lock, unlock, saveScroll, restoreScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lock, unlock, saveScroll, restoreScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
@@ -1061,9 +1101,12 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <input type="checkbox" checked={checkpoint.done || false}
                 onChange={(e) => {
                   if (isAdmin) return;
-                  const updated = [...report.quick_checkpoints];
-                  updated[index] = { ...updated[index], done: e.target.checked, at: e.target.checked ? new Date().toISOString() : null };
-                  persistReport({ ...report, quick_checkpoints: updated });
+                  const done = e.target.checked;
+                  persistReport(prev => {
+                    const updated = [...(prev.quick_checkpoints || [])];
+                    updated[index] = { ...updated[index], done, at: done ? new Date().toISOString() : null };
+                    return { ...prev, quick_checkpoints: updated };
+                  });
                 }}
                 disabled={false} style={{ width: '1.3rem', height: '1.3rem', accentColor: checkpoint.done ? '#10b981' : '#dc2626' }}
               />
@@ -1105,11 +1148,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     const prev = interventionRef.current || intervention;
                     const cur = prev.admin_note || '';
                     const sep = cur && !/\s$/.test(cur) ? ' ' : '';
-                    const next = cur + sep + text;
-                    const updated = { ...prev, admin_note: next };
-                    interventionRef.current = updated;                      // réf synchrone
-                    setIntervention(updated);                               // UI
-                    onUpdateAdminNote && onUpdateAdminNote(prev.id, next);   // effet de bord HORS du setter
+                    const updated = { ...prev, admin_note: cur + sep + text };
+                    interventionRef.current = updated; // réf synchrone
+                    setIntervention(updated);          // UI immédiate
+                    debouncedAdminNoteSave();          // 1 sauvegarde (toast) par pause, pas par phrase
                   }}
                 />
               </>
@@ -1287,26 +1329,17 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               🗒️ Notes de chantier
             </label>
             <textarea value={report.notes || ''} onChange={e => handleReportChange('notes', e.target.value)}
-              onBlur={e => {
-                const val = e.target.value;
-                const base = reportRef.current || report;
-                if ((base.notes || '') === val) return; // rien de neuf : ne pas écraser
-                const next = { ...base, notes: val };
-                reportRef.current = next;
-                persistReport(next);
-              }}
+              onBlur={persistIfDirty}
               placeholder="Détails, matériel, observations… ou utilisez la dictée vocale ci-dessous." rows="5" className="form-control" />
-            {/* 🎙️ Dictée : la parole s'écrit toute seule dans la note (+ autosave) */}
+            {/* 🎙️ Dictée : la parole s'écrit toute seule (sauvegarde débouncée) */}
             <DictationButton
               onAppendText={(text) => {
                 if (!text) return;
-                // Lit la version la plus fraîche pour ne pas écraser le texte déjà présent
-                const base = reportRef.current || report;
-                const sep = base.notes && !/\s$/.test(base.notes) ? ' ' : '';
-                const next = { ...base, notes: (base.notes || '') + sep + text };
-                reportRef.current = next;               // réf synchrone
-                setReport(next);                         // met à jour l'UI
-                onSaveSilent?.(intervention.id, next);   // effet de bord HORS du setter
+                applyReport(prev => {
+                  const sep = prev.notes && !/\s$/.test(prev.notes) ? ' ' : '';
+                  return { ...prev, notes: (prev.notes || '') + sep + text };
+                });
+                debouncedDictationSave();
               }}
             />
             {/* Note vocale (fichier audio joint) */}
@@ -1314,8 +1347,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <VoiceRecorder
                 interventionId={interventionId}
                 onUploaded={async (uploaded) => {
-                  const updated = { ...report, files: [...(report.files || []), ...uploaded] };
-                  await persistReport(updated);
+                  await persistReport(prev => ({ ...prev, files: [...(prev.files || []), ...uploaded] }));
                   saveScroll(); pendingRestoreRef.current = true;
                   if (!document.body.dataset.__scrollLocked) lock();
                   try { await refreshData?.(); } finally { unlock(); restoreScroll(); }
@@ -1407,7 +1439,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             {report.signature ? (
               <div>
                 <img src={report.signature} alt="Signature" style={{ width: '100%', maxWidth: 300, border: '2px solid var(--border-color)', borderRadius: '0.5rem', background: '#fff' }} />
-                <button onClick={async () => { handleReportChange('signature', null); await persistReport({ ...report, signature: null }); }}
+                <button onClick={async () => { await persistReport(prev => ({ ...prev, signature: null })); }}
                   className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}>Effacer</button>
               </div>
             ) : (
@@ -1434,6 +1466,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             <h3 style={{ fontSize: '0.9rem', marginTop: 0 }}>🚗 Kilométrage de fin</h3>
             <input type="number" min="0" step="1" value={report.km_end || ''} placeholder="Ex: 45430"
               onChange={(e) => handleReportChange('km_end', e.target.value ? parseInt(e.target.value) : null)}
+              onBlur={persistIfDirty}
               className="form-control" style={{ maxWidth: '200px' }} />
             {intervention.km_start && report.km_end && (
               <small className="form-hint" style={{ display: 'block', marginTop: '0.5rem' }}>
@@ -1547,9 +1580,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
       {/* Modale signature */}
       {showSignatureModal && <SignatureModal onSave={async (sig) => {
-        handleReportChange('signature', sig);
-        const updated = { ...report, signature: sig };
-        await persistReport(updated);
+        await persistReport(prev => ({ ...prev, signature: sig }));
         setShowSignatureModal(false);
       }} onCancel={() => setShowSignatureModal(false)} existingSignature={report.signature} />}
 

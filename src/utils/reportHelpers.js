@@ -71,9 +71,37 @@ export const validateReport = (report) => {
   };
 };
 
+/**
+ * Normalise une entrée de report.files : les anciennes données stockent
+ * parfois une simple chaîne URL au lieu d'un objet { url, name, type }.
+ * @param {Object|string} f - Entrée de fichier brute
+ * @returns {Object} Entrée objet { url, ... }
+ */
+export const normalizeFileEntry = (f) => (typeof f === 'string' ? { url: f } : f);
+
+/**
+ * Détecte si une entrée de report.files est une image.
+ * Source unique partagée entre le compteur de la page détail, les alertes
+ * (SmartAlerts) et la validation de clôture — pour qu'ils ne divergent jamais.
+ * Accepte un objet { url, type } OU une chaîne URL (entrées legacy).
+ * @param {Object|string} f - Entrée de fichier
+ * @returns {boolean}
+ */
+export const isImageFile = (f) => {
+  if (typeof f === 'object' && f?.type?.startsWith('image/')) {
+    return true;
+  }
+  const u = typeof f === 'string' ? f : f?.url;
+  if (!u) return false;
+  return u.startsWith('data:image/')
+    || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?|\.heic|\.heif|\.avif)($|\?)/i.test(u);
+};
+
 const reportHelpers = {
   buildSanitizedReport,
-  validateReport
+  validateReport,
+  normalizeFileEntry,
+  isImageFile
 };
 
 export default reportHelpers;

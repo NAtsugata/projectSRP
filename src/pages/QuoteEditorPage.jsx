@@ -180,7 +180,7 @@ function QuoteEditorPage() {
             quantity: parseFloat(item.quantity) || 0,
             unit: item.unit,
             unit_price: parseFloat(item.unit_price) || 0,
-            tax_rate: parseFloat(item.tax_rate) || 20,
+            tax_rate: Number.isFinite(parseFloat(item.tax_rate)) ? parseFloat(item.tax_rate) : 20,
             discount_percent: parseFloat(item.discount_percent) || 0,
             line_total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0),
             sort_order: idx
@@ -254,7 +254,7 @@ function QuoteEditorPage() {
             quantity: parseFloat(item.quantity) || 0,
             unit: item.unit,
             unit_price: parseFloat(item.unit_price) || 0,
-            tax_rate: parseFloat(item.tax_rate) || 20,
+            tax_rate: Number.isFinite(parseFloat(item.tax_rate)) ? parseFloat(item.tax_rate) : 20,
             discount_percent: parseFloat(item.discount_percent) || 0,
             line_total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0),
             sort_order: idx

@@ -42,7 +42,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  var(--bg-primary)-space: nowrap;
+  white-space: nowrap;
 }
 
 .export-csv-btn:hover:not(:disabled) {
@@ -74,7 +74,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  var(--bg-primary)-space: nowrap;
+  white-space: nowrap;
 }
 
 .export-pdf-btn:hover:not(:disabled) {
@@ -100,7 +100,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  var(--bg-primary)-space: nowrap;
+  white-space: nowrap;
 }
 
 .reset-all-btn:hover {
@@ -362,7 +362,7 @@
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  var(--bg-primary)-space: nowrap;
+  white-space: nowrap;
   transition: all 0.2s;
 }
 
@@ -758,7 +758,7 @@
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
-  var(--bg-primary)-space: nowrap;
+  white-space: nowrap;
 }
 
 .chantier-km {

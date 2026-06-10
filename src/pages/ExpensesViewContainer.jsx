@@ -45,6 +45,12 @@ const ExpensesViewContainer = () => {
 
     // Handler pour supprimer une note de frais
     const handleDeleteExpense = async (expenseId) => {
+        // Tant que le profil n'est pas hydraté, le hook routerait la suppression
+        // sur le chemin admin (sans garde propriétaire/statut) : on refuse.
+        if (!profile?.id) {
+            toast?.error('Profil en cours de chargement, réessayez dans un instant.');
+            return;
+        }
         try {
             await deleteExpense(expenseId);
             toast?.success('Note de frais supprimée');

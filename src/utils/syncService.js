@@ -78,8 +78,16 @@ const executeOperation = async (operation) => {
         .select()
         .single();
 
-    case SYNC_OPERATION_TYPES.DELETE_EXPENSE:
-      return await supabase.from('expenses').delete().eq('id', payload.id);
+    case SYNC_OPERATION_TYPES.DELETE_EXPENSE: {
+      let query = supabase.from('expenses').delete().eq('id', payload.id);
+      // Suppression employé mise en queue hors-ligne : ré-applique les mêmes
+      // gardes que le chemin en ligne (propriétaire + encore en attente), pour
+      // ne pas supprimer une note approuvée entre-temps par un admin.
+      if (payload.userId) {
+        query = query.eq('user_id', payload.userId).eq('status', 'pending');
+      }
+      return await query;
+    }
 
     case SYNC_OPERATION_TYPES.CREATE_INTERVENTION:
       return await supabase.from('interventions').insert([payload]).select().single();
