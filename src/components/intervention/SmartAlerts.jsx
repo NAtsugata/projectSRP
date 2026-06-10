@@ -13,10 +13,12 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2, onNavigate }) => {
     // Photos manquantes (OBLIGATOIRE → rouge)
     // Compte par type MIME OU par extension d'URL (certaines entrées legacy
     // n'ont pas de champ `type`) — cohérent avec le compteur de la page détail.
-    const isImg = (f) =>
-      f?.type?.startsWith('image/') ||
-      (typeof f?.url === 'string' && f.url.startsWith('data:image/')) ||
-      /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(f?.url || '');
+    const isImg = (f) => {
+      if (f?.type?.startsWith('image/')) return true;
+      const u = typeof f === 'string' ? f : f?.url;
+      if (!u) return false;
+      return u.startsWith('data:image/') || /(\.png|\.jpe?g|\.webp|\.gif|\.bmp|\.tiff?)($|\?)/i.test(u);
+    };
     const photoCount = (report.files || []).filter(isImg).length;
     if (photoCount < MIN_PHOTOS) {
       alertList.push({

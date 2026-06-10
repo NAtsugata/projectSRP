@@ -565,7 +565,10 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
     // 1) Retrait OPTIMISTE du rapport (par URL normalisée ou nom) — garantit que
     //    l'entrée disparaît de la liste, quelle que soit l'issue côté stockage.
-    const updatedFiles = (report.files || []).filter(f => !(target && normalizeUrl(f.url) === target));
+    const updatedFiles = (report.files || []).filter(f => {
+      const fUrl = typeof f === 'string' ? f : f?.url; // entrées legacy = chaîne
+      return !(target && normalizeUrl(fUrl) === target);
+    });
     const updated = { ...report, files: updatedFiles };
     await persistReport(updated);
 
@@ -1253,7 +1256,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </div>
           <ImageGalleryOptimized
-            images={(report.files || []).filter(isImageUrl).map(f => ({ url: f.url, name: f.name, type: f.type }))}
+            images={(report.files || []).filter(isImageUrl).map(f =>
+              typeof f === 'string' ? { url: f } : { url: f.url, name: f.name, type: f.type }
+            )}
             uploadQueue={uploadQueue.filter(item => item.type?.startsWith('image/'))}
             emptyMessage="Aucune photo. Utilisez le bouton ci-dessous pour en ajouter."
             onDeleteImage={isAdmin ? handleDeleteImage : null}
