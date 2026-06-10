@@ -845,21 +845,52 @@ export default function DocumentScannerView({ onSave, onClose }) {
   // RENDUS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  const MODE_TITLES = {
+    idle:       'Scanner',
+    camera:     'Caméra',
+    processing: 'Traitement…',
+    adjust:     'Ajustement',
+    preview:    'Aperçu',
+    export:     'Exporter',
+  };
+
   const renderIdleView = () => (
     <div className="start-view">
-      <h2>Scanner de Documents</h2>
-      <p>Numérisez vos documents en haute qualité</p>
+      <div className="start-hero">
+        <div className="start-hero-icon">
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+            <rect x="10" y="8" width="32" height="40" rx="3" stroke="rgba(255,255,255,0.7)" strokeWidth="2" fill="rgba(255,255,255,0.06)"/>
+            <line x1="16" y1="18" x2="36" y2="18" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="16" y1="23" x2="36" y2="23" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="16" y1="28" x2="28" y2="28" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="4" y1="26" x2="48" y2="26" stroke="#b87333" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M3 20L3 14L9 14" stroke="#b87333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M49 20L49 14L43 14" stroke="#b87333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 32L3 38L9 38" stroke="#b87333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M49 32L49 38L43 38" stroke="#b87333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="start-title">Scanner de documents</h2>
+        <p className="start-subtitle">Numérisez, corrigez et exportez vos documents en haute qualité</p>
+      </div>
+
       <div className="start-actions">
-        <button className="scanner-btn primary" onClick={startCamera}>
-          <CameraIcon style={{ width: 20, height: 20 }} />
+        <button className="scanner-btn primary start-lg" onClick={startCamera}>
+          <CameraIcon style={{ width: 22, height: 22 }} />
           Ouvrir la caméra
         </button>
-        <span className="start-divider">ou</span>
-        <button className="scanner-btn" onClick={() => fileInputRef.current?.click()}>
+        <button className="scanner-btn start-ghost" onClick={() => fileInputRef.current?.click()}>
           <DownloadIcon style={{ width: 20, height: 20 }} />
-          Choisir une image
+          Importer une image
         </button>
       </div>
+
+      <div className="start-features">
+        <span className="start-feature">🔍 Détection auto</span>
+        <span className="start-feature">✨ 5 filtres IA</span>
+        <span className="start-feature">📄 Export PDF</span>
+      </div>
+
       <input
         ref={fileInputRef}
         type="file"
@@ -917,12 +948,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </>
   );
 
-  const renderProcessingView = () => (
-    <div className="scanning-view">
-      <div className="scan-line" style={{ top: `${scanProgress}%` }} />
-      <div className="scanning-text">Aplanissement...</div>
-    </div>
-  );
+  const renderProcessingView = () => {
+    const stepText =
+      scanProgress < 30 ? 'Capture en cours…' :
+      scanProgress < 60 ? 'Détection du document…' :
+      scanProgress < 85 ? 'Correction de perspective…' :
+      'Optimisation du rendu…';
+    return (
+      <div className="scanning-view">
+        <div className="scan-line" style={{ top: `${scanProgress}%` }} />
+        <div className="scanning-info">
+          <div className="scanning-text">{stepText}</div>
+          <div className="scanning-progress">{Math.round(scanProgress)} %</div>
+        </div>
+      </div>
+    );
+  };
 
   const renderAdjustView = () => {
     const hasStage = !!stageDims;
@@ -1045,9 +1086,10 @@ export default function DocumentScannerView({ onSave, onClose }) {
           className={`filter-btn${enhanceMode === f.id ? ' active' : ''}`}
           onClick={() => applyFilter(f.id)}
           disabled={isProcessing}
+          title={f.desc}
         >
           <span className="filter-icon">{f.icon}</span>
-          <span>{f.label}</span>
+          <span className="filter-label">{f.label}</span>
         </button>
       ))}
     </div>
@@ -1225,18 +1267,20 @@ export default function DocumentScannerView({ onSave, onClose }) {
               setIsProcessing(false);
               startCamera();
             }}
+            title="Reprendre la capture"
           >
             <XCircleIcon style={{ width: 18, height: 18 }} />
+            Reprendre
           </button>
 
-          <button className="scanner-btn primary" onClick={confirmAndContinue}>
+          <button className="scanner-btn primary" onClick={confirmAndContinue} title="Ajouter une autre page">
             <CameraIcon style={{ width: 18, height: 18 }} />
-            +1
+            + Page
           </button>
 
-          <button className="scanner-btn success" onClick={confirmDocument}>
+          <button className="scanner-btn success" onClick={confirmDocument} title="Valider et terminer">
             <CheckCircleIcon style={{ width: 18, height: 18 }} />
-            OK
+            Valider
           </button>
         </>
       )}
@@ -1266,9 +1310,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
           <ChevronLeftIcon style={{ width: 18, height: 18 }} />
           Retour
         </button>
-        <h1 className="scanner-title">Scanner</h1>
+        <h1 className="scanner-title">{MODE_TITLES[mode] || 'Scanner'}</h1>
         <div className="scanner-counter">
-          {scannedDocs.length} doc{scannedDocs.length !== 1 ? 's' : ''}
+          {scannedDocs.length > 0
+            ? `${scannedDocs.length} page${scannedDocs.length > 1 ? 's' : ''}`
+            : 'Prêt'}
         </div>
       </div>
 
