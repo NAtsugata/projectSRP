@@ -95,6 +95,28 @@ function canvasToBlob(canvas) {
   });
 }
 
+/**
+ * Suggère un nom de fichier à partir du texte OCR : première ligne significative
+ * du premier document reconnu (ex : "Facture EDF mars" → "Facture_EDF_mars").
+ */
+function suggestScanName(docs) {
+  for (const d of docs) {
+    const line = (d.ocrText || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => l.replace(/[^a-zA-ZÀ-ÿ0-9]/g, '').length >= 4);
+    if (line) {
+      const clean = line
+        .replace(/[<>:"/\\|?*]/g, ' ')
+        .replace(/\s+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 40);
+      if (clean) return clean;
+    }
+  }
+  return 'scan';
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function DocumentScannerView({ onSave, onClose }) {
@@ -123,6 +145,19 @@ export default function DocumentScannerView({ onSave, onClose }) {
 
   // Export
   const [exportFormat, setExportFormat] = useState('pdf');
+
+  // Panneau texte OCR (null = fermé, sinon texte à afficher)
+  const [ocrPanelText, setOcrPanelText]   = useState(null);
+  const [ocrTextCopied, setOcrTextCopied] = useState(false);
+
+  // L'OCR tourne en arrière-plan : si la page a déjà été validée (currentDoc
+  // remis à null), le résultat doit être appliqué à la page dans la galerie.
+  const applyOcrResult = useCallback((docId, patch) => {
+    setCurrentDoc((prev) => (prev && prev.id === docId ? { ...prev, ...patch } : prev));
+    setScannedDocs((prev) =>
+      prev.map((d) => (d.id === docId && !d.ocrAttempted ? { ...d, ...patch } : d))
+    );
+  }, []);
 
   // Auto-capture
   const [autoCapturing, setAutoCapturing] = useState(false);
@@ -518,8 +553,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
           const enhancedBlob   = await canvasToBlob(enhancedCanvas);
           const url            = URL.createObjectURL(enhancedBlob);
 
+          const docId = Date.now();
           setCurrentDoc({
-            id:         Date.now(),
+            id:         docId,
             url,
             originalUrl,
             blob:       enhancedBlob,
@@ -538,17 +574,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
           canvasToBlob(ocrCanvas)
             .then((ocrBlob) => runOCR(ocrBlob))
             .then((text) =>
-              setCurrentDoc((prev) =>
-                prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev
-              )
+              applyOcrResult(docId, { ocrText: text || '', ocrAttempted: true })
             )
             .catch((err) => {
               logger.error('[OCR]:', err);
-              setCurrentDoc((prev) =>
-                prev
-                  ? { ...prev, ocrText: '', ocrAttempted: true, ocrError: true }
-                  : prev
-              );
+              applyOcrResult(docId, { ocrText: '', ocrAttempted: true, ocrError: true });
             });
 
           return; // Ne pas passer par adjust
@@ -590,7 +620,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [stopCamera, detectDocument, runOCR, liveCornersRef]);
+  }, [stopCamera, detectDocument, runOCR, liveCornersRef, applyOcrResult]);
 
   // Synchroniser ref pour auto-capture
   useEffect(() => { capturePhotoRef.current = capturePhoto; }, [capturePhoto]);
@@ -675,8 +705,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
         URL.revokeObjectURL(currentDoc.originalUrl);
       }
 
+      const docId = Date.now();
       setCurrentDoc({
-        id:         Date.now(),
+        id:         docId,
         url,
         originalUrl,
         blob:       enhancedBlob,
@@ -693,15 +724,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
       canvasToBlob(ocrCanvas2)
         .then((ocrBlob) => runOCR(ocrBlob))
         .then((text) =>
-          setCurrentDoc((prev) =>
-            prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev
-          )
+          applyOcrResult(docId, { ocrText: text || '', ocrAttempted: true })
         )
         .catch((err) => {
           logger.error('[OCR]:', err);
-          setCurrentDoc((prev) =>
-            prev ? { ...prev, ocrText: '', ocrAttempted: true, ocrError: true } : prev
-          );
+          applyOcrResult(docId, { ocrText: '', ocrAttempted: true, ocrError: true });
         });
     } catch (err) {
       logger.error('Erreur transformation:', err);
@@ -709,7 +736,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     } finally {
       setIsProcessing(false);
     }
-  }, [corners, originalImage, currentDoc, runOCR]);
+  }, [corners, originalImage, currentDoc, runOCR, applyOcrResult]);
 
   // ── Annuler ajustement ────────────────────────────────────────────────────
   const cancelAdjustment = useCallback(() => {
@@ -818,7 +845,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     if (!scannedDocs.length) return;
     setIsProcessing(true);
     try {
-      const filename = `scan_${new Date().toISOString().slice(0, 10)}`;
+      const filename = `${suggestScanName(scannedDocs)}_${new Date().toISOString().slice(0, 10)}`;
       await createAndDownloadPdf(scannedDocs, filename, {
         title: filename, pageSize: 'a4', orientation: 'portrait',
       });
@@ -834,7 +861,7 @@ export default function DocumentScannerView({ onSave, onClose }) {
     if (!scannedDocs.length) return;
     setIsProcessing(true);
     try {
-      await downloadImagesAsZip(scannedDocs, `scan_${new Date().toISOString().slice(0, 10)}`);
+      await downloadImagesAsZip(scannedDocs, `${suggestScanName(scannedDocs)}_${new Date().toISOString().slice(0, 10)}`);
     } catch (err) {
       logger.error('Erreur images:', err);
       alert('Erreur téléchargement');
@@ -1111,12 +1138,13 @@ export default function DocumentScannerView({ onSave, onClose }) {
           </div>
         )}
         {!isProcessingOCR && currentDoc.ocrText && (
-          <div
-            className="preview-ocr-badge success"
-            title={`${currentDoc.ocrText.length} caractères reconnus`}
+          <button
+            className="preview-ocr-badge success clickable"
+            title={`${currentDoc.ocrText.length} caractères reconnus — cliquez pour voir`}
+            onClick={() => { setOcrTextCopied(false); setOcrPanelText(currentDoc.ocrText); }}
           >
-            ✓ Texte reconnu
-          </div>
+            ✓ Texte reconnu · Voir
+          </button>
         )}
         {!isProcessingOCR && currentDoc.ocrAttempted && !currentDoc.ocrText && (
           <div className="preview-ocr-badge neutral">
@@ -1167,14 +1195,22 @@ export default function DocumentScannerView({ onSave, onClose }) {
     const today = new Date().toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
     });
+    const hasOcr = scannedDocs.some((d) => d.ocrText && d.ocrText.trim());
     const EXPORT_OPTS = [
-      { id: 'pdf',    icon: '📄', title: 'Document PDF',     desc: 'Fichier unique multi-pages' },
+      { id: 'pdf',    icon: '📄', title: 'Document PDF',     desc: hasOcr ? 'Multi-pages · texte consultable (OCR)' : 'Fichier unique multi-pages' },
       { id: 'images', icon: '🖼️', title: 'Images séparées',  desc: `${scannedDocs.length} fichier${scannedDocs.length > 1 ? 's' : ''} PNG` },
       ...(onSave ? [{ id: 'cloud', icon: '☁️', title: 'Sauvegarder', desc: 'Dans vos documents' }] : []),
     ];
     const ctaLabel = exportFormat === 'pdf'    ? 'Télécharger le PDF'
                    : exportFormat === 'images' ? 'Télécharger les images'
                    : 'Sauvegarder';
+    const ocrPages = scannedDocs.filter((d) => d.ocrText && d.ocrText.trim());
+    const allOcrText = ocrPages
+      .map((d) => {
+        const num = scannedDocs.indexOf(d) + 1;
+        return `── Page ${num} ──\n${d.ocrText.trim()}`;
+      })
+      .join('\n\n');
 
     return (
       <div className="export-view">
@@ -1186,6 +1222,14 @@ export default function DocumentScannerView({ onSave, onClose }) {
               {scannedDocs.length} page{scannedDocs.length > 1 ? 's' : ''} numérisée{scannedDocs.length > 1 ? 's' : ''}
             </div>
             <div className="export-summary-date">{today}</div>
+            {ocrPages.length > 0 && (
+              <button
+                className="export-summary-ocr"
+                onClick={() => { setOcrTextCopied(false); setOcrPanelText(allOcrText); }}
+              >
+                🔤 Texte reconnu sur {ocrPages.length} page{ocrPages.length > 1 ? 's' : ''} — Voir / Copier
+              </button>
+            )}
           </div>
         </div>
 
@@ -1415,6 +1459,31 @@ export default function DocumentScannerView({ onSave, onClose }) {
             renderGallery()}
           {mode === 'preview' && currentDoc && renderFilterBar()}
           {renderControls()}
+        </div>
+      )}
+
+      {/* ── Panneau texte OCR ── */}
+      {ocrPanelText && (
+        <div className="ocr-panel-backdrop" onClick={() => setOcrPanelText(null)}>
+          <div className="ocr-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ocr-panel-header">
+              <span className="ocr-panel-title">🔤 Texte reconnu</span>
+              <button className="ocr-panel-close" onClick={() => setOcrPanelText(null)}>×</button>
+            </div>
+            <pre className="ocr-panel-text">{ocrPanelText}</pre>
+            <div className="ocr-panel-actions">
+              <button
+                className="scanner-btn primary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(ocrPanelText)
+                    .then(() => setOcrTextCopied(true))
+                    .catch(() => {});
+                }}
+              >
+                {ocrTextCopied ? '✓ Copié !' : '📋 Copier le texte'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

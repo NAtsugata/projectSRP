@@ -202,10 +202,12 @@ const scannedDocumentsService = {
           continue;
         }
 
+        // Le texte OCR devient la description (recherche full-text dans "Mes documents")
+        const ocrText = (doc.ocrText || '').trim();
         const result = await this.createDocument({
           userId: user_id,
           title: docTitle,
-          description,
+          description: description || ocrText.slice(0, 2000),
           category,
           tags,
           file,
@@ -213,7 +215,8 @@ const scannedDocumentsService = {
             scannedAt: doc.timestamp || new Date().toISOString(),
             enhanceMode: doc.enhanceMode || 'original',
             rotation: doc.rotation || 0,
-            wasDetected: doc.wasDetected || false
+            wasDetected: doc.wasDetected || false,
+            ocrText: ocrText ? ocrText.slice(0, 10000) : null
           }
         });
 
