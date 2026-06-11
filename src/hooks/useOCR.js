@@ -22,8 +22,18 @@ export function useOCR() {
             }
           }
         });
+        // PSM 6 = bloc de texte uniforme (meilleur pour documents scannés)
+        // preserve_interword_spaces conserve l'espacement original
+        try {
+          await worker.setParameters({
+            tessedit_pageseg_mode: '6',
+            preserve_interword_spaces: '1',
+          });
+        } catch {
+          // setParameters non disponible dans certaines versions — ignoré
+        }
         workerRef.current = worker;
-        logger.log('[OCR] Worker Tesseract initialisé (fra+eng)');
+        logger.log('[OCR] Worker Tesseract initialisé (fra+eng, PSM 6)');
         return worker;
       })();
     }
@@ -37,8 +47,11 @@ export function useOCR() {
       const worker = await _initWorker();
       const { data } = await worker.recognize(imageBlob);
       setOcrProgress(100);
-      logger.log(`[OCR] Texte reconnu: ${data.text.length} caractères`);
-      return data.text || '';
+      // Ignorer les résultats à très faible confiance (bruit visuel)
+      const confidence = data.confidence ?? 100;
+      const text = confidence >= 20 ? (data.text || '') : '';
+      logger.log(`[OCR] ${text.length} chars, confiance ${confidence.toFixed(0)}%`);
+      return text;
     } catch (err) {
       logger.error('[OCR] Erreur reconnaissance:', err);
       return '';

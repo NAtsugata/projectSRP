@@ -86,7 +86,7 @@ function isValidDocumentShape(points, imgWidth, imgHeight) {
   const bboxH = Math.max(...ys) - Math.min(...ys);
   if (bboxW < imgWidth * 0.05 || bboxH < imgHeight * 0.05) return false;
   const aspect = bboxW / bboxH;
-  if (aspect < 0.1 || aspect > 10.0) return false;
+  if (aspect < 0.15 || aspect > 6.5) return false;
   for (let i = 0; i < 4; i++) {
     const angle = calcAngle(
       points[(i + 3) % 4],
@@ -169,7 +169,7 @@ function extractQuadFromContour(cv, contour, imgWidth, imgHeight) {
 
 /**
  * Cherche les meilleurs 4 coins dans un ensemble de contours (RETR_LIST).
- * Trie par aire décroissante, essaie les 5 plus grands > minArea.
+ * Trie par aire décroissante, essaie les 8 plus grands > minArea.
  */
 function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
   const candidates = [];
@@ -180,7 +180,7 @@ function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
   }
   candidates.sort((a, b) => b.area - a.area);
 
-  for (let k = 0; k < Math.min(5, candidates.length); k++) {
+  for (let k = 0; k < Math.min(8, candidates.length); k++) {
     const contour = contours.get(candidates[k].idx);
     const quad = extractQuadFromContour(cv, contour, imgWidth, imgHeight);
     if (quad) return quad;
@@ -192,15 +192,13 @@ function findQuadInContours(cv, contours, minArea, imgWidth, imgHeight) {
 
 /**
  * Détecte le contour d'un document dans une ImageData.
- * Stratégie unique (style ClearScanner) :
- *   1. Grayscale → GaussianBlur(5,5)
- *   2. Canny adaptatif (sigma=0.33 sur médiane) → dilate 5×5
- *   3. findContours RETR_LIST → 5 plus grands > 8% de l'image
- *   4. convexHull → approxPolyDP (ε=0.02*périmètre)
- *      • 4 pts  → validation → retourne
- *      • >4 pts → 4 coins extrêmes → validation → retourne
- *   5. Fallback : adaptiveThreshold → même pipeline
- *   6. Last resort : coins pleine image (5% de marge)
+ * Stratégie multi-passes :
+ *   1. Grayscale → GaussianBlur(5,5) → Canny adaptatif → MORPH_CLOSE 5×5
+ *      findContours RETR_LIST → 8 plus grands > 8% → convexHull → approxPolyDP
+ *   2. adaptiveThreshold GAUSSIAN_C → MORPH_CLOSE 5×5 → même pipeline
+ *   3. GaussianBlur(9,9) → Canny seuils réduits → MORPH_CLOSE 9×9
+ *      minArea réduit à 55% (documents partiels ou fond similaire)
+ *   4. Last resort : coins pleine image (5% de marge, statique uniquement)
  *
  * @param {ImageData} imageData
  * @returns {Array<{x,y}>|null} 4 coins triés TL, TR, BR, BL
@@ -236,10 +234,10 @@ export function detectDocumentContour(imageData, allowFullFrameFallback = true) 
     const edges = t(new cv.Mat());
     cv.Canny(blurred, edges, low, high);
 
-    // Dilate 5×5 pour fermer les brèches
+    // MORPH_CLOSE 5×5 : dilate + érode = ferme les brèches sans épaissir
     const kernel5 = t(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5)));
     const morphed = t(new cv.Mat());
-    cv.dilate(edges, morphed, kernel5);
+    cv.morphologyEx(edges, morphed, cv.MORPH_CLOSE, kernel5);
 
     // RETR_LIST : récupère TOUS les contours, y compris les internes
     const contours  = t(new cv.MatVector());
@@ -259,13 +257,28 @@ export function detectDocumentContour(imageData, allowFullFrameFallback = true) 
     if (cv.mean(thresh)[0] > 127) cv.bitwise_not(thresh, thresh);
 
     const morphed2  = t(new cv.Mat());
-    cv.dilate(thresh, morphed2, kernel5);
+    cv.morphologyEx(thresh, morphed2, cv.MORPH_CLOSE, kernel5);
 
     const contours2  = t(new cv.MatVector());
     const hierarchy2 = t(new cv.Mat());
     cv.findContours(morphed2, contours2, hierarchy2, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
     quad = findQuadInContours(cv, contours2, minArea, w, h);
+    if (quad) return sortCorners(quad);
+
+    // ── Tentative 3 : blur fort + seuils Canny réduits + CLOSE 9×9 ─────────
+    // Rattrape les documents sur fond similaire ou à faible contraste
+    const blurred3 = t(new cv.Mat());
+    cv.GaussianBlur(gray, blurred3, new cv.Size(9, 9), 0);
+    const edges3 = t(new cv.Mat());
+    cv.Canny(blurred3, edges3, Math.max(5, low * 0.5), Math.min(250, high * 0.5));
+    const kernel9 = t(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9)));
+    const morphed3 = t(new cv.Mat());
+    cv.morphologyEx(edges3, morphed3, cv.MORPH_CLOSE, kernel9);
+    const contours3  = t(new cv.MatVector());
+    const hierarchy3 = t(new cv.Mat());
+    cv.findContours(morphed3, contours3, hierarchy3, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+    quad = findQuadInContours(cv, contours3, minArea * 0.55, w, h);
     if (quad) return sortCorners(quad);
 
     // ── Last resort : coins pleine image avec 5% de marge ──────────────────

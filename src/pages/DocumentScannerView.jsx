@@ -532,7 +532,11 @@ export default function DocumentScannerView({ onSave, onClose }) {
           setEnhanceMode(DEFAULT_FILTER);
           setMode('preview');
 
-          runOCR(enhancedBlob)
+          // OCR sur version ClearScan (binarisation adaptative = meilleure extraction de texte)
+          // indépendante du filtre d'affichage choisi par l'utilisateur
+          const ocrCanvas = enhanceCanvas(flatCanvas, 'clearscan');
+          canvasToBlob(ocrCanvas)
+            .then((ocrBlob) => runOCR(ocrBlob))
             .then((text) =>
               setCurrentDoc((prev) =>
                 prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev
@@ -685,7 +689,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
       setEnhanceMode(DEFAULT_FILTER);
       setMode('preview');
 
-      runOCR(enhancedBlob)
+      const ocrCanvas2 = enhanceCanvas(flatCanvas, 'clearscan');
+      canvasToBlob(ocrCanvas2)
+        .then((ocrBlob) => runOCR(ocrBlob))
         .then((text) =>
           setCurrentDoc((prev) =>
             prev ? { ...prev, ocrText: text || '', ocrAttempted: true } : prev

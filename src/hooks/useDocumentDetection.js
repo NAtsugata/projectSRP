@@ -9,6 +9,25 @@
 import { useState, useCallback, useRef } from 'react';
 import { detectDocumentContour, isOpenCvReady } from '../utils/documentScanner';
 
+// ─── Helpers overlay ─────────────────────────────────────────────────────────
+
+// Directions des bras de chaque équerre (dx1,dy1 = bras 1 ; dx2,dy2 = bras 2)
+const BRACKET_DIRS = {
+  tl: [[1, 0], [0, 1]],
+  tr: [[-1, 0], [0, 1]],
+  br: [[-1, 0], [0, -1]],
+  bl: [[1, 0], [0, -1]],
+};
+
+function drawBracket(ctx, x, y, len, pos) {
+  const [[dx1, dy1], [dx2, dy2]] = BRACKET_DIRS[pos];
+  ctx.beginPath();
+  ctx.moveTo(x + dx1 * len, y + dy1 * len);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + dx2 * len, y + dy2 * len);
+  ctx.stroke();
+}
+
 export const useDocumentDetection = () => {
   // État React minimal : 2 booléens, changés uniquement sur transition
   const [detectionActive, setDetectionActive] = useState(false);
@@ -30,10 +49,10 @@ export const useDocumentDetection = () => {
   // Configuration
   const THROTTLE_MS = 100;       // ~10 fps de détection
   const DETECT_WIDTH = 640;
-  const STABLE_FRAMES = 3;
+  const STABLE_FRAMES = 4;       // était 3 — plus exigeant avant auto-capture
   const MISS_LIMIT = 5;
-  const STABLE_DIST = 3.0;
-  const ALPHA = 0.4;
+  const STABLE_DIST = 2.5;       // était 3.0 — plus précis
+  const ALPHA = 0.3;             // était 0.4 — EMA plus lisse
 
   const syncState = useCallback((active, stable) => {
     setDetectionActive((p) => (p === active ? p : active));
@@ -46,29 +65,47 @@ export const useDocumentDetection = () => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, vw, vh);
     if (!corners) return;
+
     const pts = corners.map((p) => ({ x: (p.x / 100) * vw, y: (p.y / 100) * vh }));
-    // Remplissage
+    const color = stable ? '#b87333' : 'rgba(255,255,255,0.9)';
+    const bracketLen = Math.max(24, Math.min(vw, vh) * 0.065);
+    const lineW = stable ? 3.5 : 2.5;
+
+    // 1. Vignette sombre hors document (punch-through via destination-out)
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.50)';
+    ctx.fillRect(0, 0, vw, vh);
+    ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
-    pts.slice(1).forEach((p) => ctx.lineTo(p.x, p.y));
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.closePath();
-    ctx.fillStyle = stable ? 'rgba(184,115,51,0.15)' : 'rgba(255,255,255,0.05)';
     ctx.fill();
-    // Contour
-    ctx.strokeStyle = stable ? '#b87333' : 'rgba(255,255,255,0.8)';
-    ctx.lineWidth = stable ? 4 : 2.5;
+    ctx.restore();
+
+    // 2. Bordure du document (pointillée si instable, pleine si stable)
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineW;
+    if (!stable) ctx.setLineDash([10, 6]);
     ctx.stroke();
-    // Coins
-    pts.forEach((p) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, stable ? 14 : 9, 0, Math.PI * 2);
-      ctx.fillStyle = stable ? '#b87333' : 'rgba(255,255,255,0.9)';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, stable ? 6 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-    });
+    ctx.setLineDash([]);
+
+    // 3. Équerres aux 4 coins (TL, TR, BR, BL) — style Adobe Scan
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineW + 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (stable) {
+      ctx.shadowColor = '#b87333';
+      ctx.shadowBlur = 10;
+    }
+    const KEYS = ['tl', 'tr', 'br', 'bl'];
+    pts.forEach((p, i) => drawBracket(ctx, p.x, p.y, bracketLen, KEYS[i]));
+    ctx.shadowBlur = 0;
   };
 
   const clearOverlay = (overlay, vw, vh) => {
