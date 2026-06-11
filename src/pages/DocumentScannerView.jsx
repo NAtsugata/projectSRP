@@ -36,6 +36,15 @@ const FILTERS = [
   { id: 'original',  label: 'Original', icon: '🖼️', desc: 'Sans modification' },
 ];
 
+// Bandelette de prévisualisation colorée par filtre
+const FILTER_TONE = {
+  magic:     'linear-gradient(to right, #fff9ef, #fde8b0, #f5d28a)',
+  clearscan: 'linear-gradient(to right, #f0f0f0, #888, #111)',
+  gray:      'linear-gradient(to right, #e0e0e0, #aaa, #555)',
+  bw:        'linear-gradient(to right, #000 50%, #fff 50%)',
+  original:  'linear-gradient(to right, #e74c3c 0%, #27ae60 50%, #3498db 100%)',
+};
+
 // Filtre appliqué automatiquement après capture (signature ClearScanner)
 const DEFAULT_FILTER = 'magic';
 
@@ -1071,11 +1080,45 @@ export default function DocumentScannerView({ onSave, onClose }) {
   };
 
   const renderPreviewView = () => (
-    <img
-      src={currentDoc.url}
-      alt="Document scanné"
-      className="document-preview"
-    />
+    <>
+      <img
+        src={currentDoc.url}
+        alt="Document scanné"
+        className="document-preview"
+      />
+      {/* Overlays sur l'image */}
+      <div className="preview-overlays">
+        {/* Badge filtre actif */}
+        {(() => {
+          const f = FILTERS.find((x) => x.id === enhanceMode);
+          return f ? (
+            <div className="preview-filter-badge">
+              {f.icon} {f.label}
+            </div>
+          ) : null;
+        })()}
+        {/* Badge OCR */}
+        {isProcessingOCR && (
+          <div className="preview-ocr-badge processing">
+            <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+            {` OCR ${ocrProgress}%`}
+          </div>
+        )}
+        {!isProcessingOCR && currentDoc.ocrText && (
+          <div
+            className="preview-ocr-badge success"
+            title={`${currentDoc.ocrText.length} caractères reconnus`}
+          >
+            ✓ Texte reconnu
+          </div>
+        )}
+        {!isProcessingOCR && currentDoc.ocrAttempted && !currentDoc.ocrText && (
+          <div className="preview-ocr-badge neutral">
+            {currentDoc.ocrError ? 'OCR indisponible' : 'Aucun texte'}
+          </div>
+        )}
+      </div>
+    </>
   );
 
   const renderFilterBar = () => (
@@ -1090,6 +1133,12 @@ export default function DocumentScannerView({ onSave, onClose }) {
         >
           <span className="filter-icon">{f.icon}</span>
           <span className="filter-label">{f.label}</span>
+          {FILTER_TONE[f.id] && (
+            <span
+              className="filter-tone"
+              style={{ background: FILTER_TONE[f.id] }}
+            />
+          )}
         </button>
       ))}
     </div>
@@ -1108,61 +1157,96 @@ export default function DocumentScannerView({ onSave, onClose }) {
     </div>
   );
 
-  const renderExportView = () => (
-    <div className="export-view">
-      <div className="export-preview">
-        {scannedDocs.map((doc, idx) => (
-          <div key={doc.id} className="export-preview-item">
-            <img src={doc.url} alt={`Page ${idx + 1}`} />
-            <span className="page-number">{idx + 1}</span>
-          </div>
-        ))}
-      </div>
+  const renderExportView = () => {
+    const today = new Date().toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+    const EXPORT_OPTS = [
+      { id: 'pdf',    icon: '📄', title: 'Document PDF',     desc: 'Fichier unique multi-pages' },
+      { id: 'images', icon: '🖼️', title: 'Images séparées',  desc: `${scannedDocs.length} fichier${scannedDocs.length > 1 ? 's' : ''} PNG` },
+      ...(onSave ? [{ id: 'cloud', icon: '☁️', title: 'Sauvegarder', desc: 'Dans vos documents' }] : []),
+    ];
+    const ctaLabel = exportFormat === 'pdf'    ? 'Télécharger le PDF'
+                   : exportFormat === 'images' ? 'Télécharger les images'
+                   : 'Sauvegarder';
 
-      <h3 className="export-title">
-        {scannedDocs.length} document{scannedDocs.length > 1 ? 's' : ''} prêt
-        {scannedDocs.length > 1 ? 's' : ''}
-      </h3>
-
-      <div className="export-options">
-        {[
-          { id: 'pdf',    icon: '📄', title: 'PDF',        desc: 'Un seul fichier multi-pages' },
-          { id: 'images', icon: '🖼️', title: 'Images JPG', desc: `${scannedDocs.length} fichier${scannedDocs.length > 1 ? 's' : ''} séparé${scannedDocs.length > 1 ? 's' : ''}` },
-          ...(onSave ? [{ id: 'cloud', icon: '☁️', title: 'Sauvegarder', desc: 'Dans vos documents' }] : []),
-        ].map((opt) => (
-          <div
-            key={opt.id}
-            className={`export-option${exportFormat === opt.id ? ' selected' : ''}`}
-            onClick={() => setExportFormat(opt.id)}
-          >
-            <span className="option-icon">{opt.icon}</span>
-            <div className="option-info">
-              <div className="option-title">{opt.title}</div>
-              <div className="option-desc">{opt.desc}</div>
+    return (
+      <div className="export-view">
+        {/* En-tête récapitulatif */}
+        <div className="export-summary">
+          <div className="export-summary-icon">📑</div>
+          <div className="export-summary-info">
+            <div className="export-summary-count">
+              {scannedDocs.length} page{scannedDocs.length > 1 ? 's' : ''} numérisée{scannedDocs.length > 1 ? 's' : ''}
             </div>
-            <div className="option-check">{exportFormat === opt.id ? '✓' : ''}</div>
+            <div className="export-summary-date">{today}</div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      <div className="export-actions">
+        {/* Grille de pages */}
+        <div className="export-page-grid">
+          {scannedDocs.map((doc, idx) => (
+            <div key={doc.id} className="export-page-card">
+              <img src={doc.url} alt={`Page ${idx + 1}`} />
+              <div className="export-page-num">{idx + 1}</div>
+              <button
+                className="export-page-del"
+                onClick={() => removeDocument(doc.id)}
+                title="Supprimer cette page"
+              >×</button>
+            </div>
+          ))}
+          <button
+            className="export-add-card"
+            onClick={() => startCamera()}
+            disabled={isProcessing}
+            title="Ajouter une page"
+          >
+            <span className="export-add-icon">+</span>
+            <span className="export-add-label">Page</span>
+          </button>
+        </div>
+
+        {/* Sélection du format */}
+        <div className="export-section-label">Format d'export</div>
+        <div className="export-options">
+          {EXPORT_OPTS.map((opt) => (
+            <div
+              key={opt.id}
+              className={`export-option${exportFormat === opt.id ? ' selected' : ''}`}
+              onClick={() => setExportFormat(opt.id)}
+            >
+              <span className="option-icon">{opt.icon}</span>
+              <div className="option-info">
+                <div className="option-title">{opt.title}</div>
+                <div className="option-desc">{opt.desc}</div>
+              </div>
+              <div className="option-check">{exportFormat === opt.id ? '✓' : ''}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bouton d'action principal */}
         <button
-          className="scanner-btn"
-          onClick={() => startCamera()}
-          disabled={isProcessing}
-        >
-          + Ajouter
-        </button>
-        <button
-          className="scanner-btn primary"
+          className="scanner-btn primary export-cta"
           onClick={handleExport}
           disabled={isProcessing}
         >
-          {isProcessing ? 'Export...' : 'Exporter'}
+          {isProcessing ? (
+            <>
+              <span style={{ animation: 'spin 0.9s linear infinite', display: 'inline-block' }}>⟳</span>
+              Exportation en cours…
+            </>
+          ) : (
+            <>
+              <DownloadIcon style={{ width: 20, height: 20 }} />
+              {ctaLabel}
+            </>
+          )}
         </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderControls = () => (
     <div className="control-buttons">
@@ -1222,28 +1306,9 @@ export default function DocumentScannerView({ onSave, onClose }) {
       {/* ── Mode preview ── */}
       {mode === 'preview' && currentDoc && (
         <>
-          {isProcessingOCR && (
-            <div style={{ fontSize: 12, color: '#b87333', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
-              OCR {ocrProgress}%
-            </div>
-          )}
-          {!isProcessingOCR && currentDoc.ocrText && (
-            <div
-              style={{ fontSize: 12, color: '#10b981' }}
-              title={`${currentDoc.ocrText.length} caractères reconnus`}
-            >
-              Texte reconnu
-            </div>
-          )}
-          {!isProcessingOCR && currentDoc.ocrAttempted && !currentDoc.ocrText && (
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>
-              {currentDoc.ocrError ? 'OCR indisponible' : 'Aucun texte'}
-            </div>
-          )}
-
-          <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing}>
+          <button className="scanner-btn" onClick={rotateImage} disabled={isProcessing} title="Pivoter de 90°">
             <RotateCwIcon style={{ width: 18, height: 18 }} />
+            Pivoter
           </button>
 
           {originalImage && corners && (
