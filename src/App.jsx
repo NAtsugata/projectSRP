@@ -10,6 +10,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { useAuthStore } from './store/authStore';
 import { DownloadProvider } from './contexts/DownloadContext';
 import LoginScreen from './pages/LoginScreen';
+import OnboardingCreateOrg from './pages/OnboardingCreateOrg';
 import { useRealtimePushNotifications } from './hooks/usePushNotifications';
 import { NotificationPermissionManager } from './components/mobile/NotificationPermissionPrompt';
 import { debounce } from './utils/debounce';
@@ -83,6 +84,14 @@ function App() {
 
   const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
   const showConfirmationModal = useCallback((config) => setModal(config), []);
+
+  // Recharge le profil courant (utilisé après l'onboarding / création d'organisation)
+  const refreshProfile = useCallback(async () => {
+    const userId = profileRef.current?.id || session?.user?.id;
+    if (!userId) return;
+    const { data: userProfile, error } = await profileService.getProfile(userId);
+    if (!error && userProfile) setProfile(userProfile);
+  }, [session]);
 
   // ✅ Override window.alert pour utiliser des toasts
   useEffect(() => {
@@ -320,6 +329,21 @@ function App() {
                 isOffline: !navigator.onLine
               })}
               <Route path="*" element={<LoginScreen />} />
+            </>
+          ) : !profile.organization_id ? (
+            <>
+              {/* Utilisateur inscrit mais sans organisation : onboarding */}
+              {logger.log('[App] 🏢 Onboarding - Aucune organisation rattachée')}
+              <Route
+                path="*"
+                element={
+                  <OnboardingCreateOrg
+                    userEmail={profile.email}
+                    onOrganizationReady={refreshProfile}
+                    onLogout={() => { setProfile(null); setSession(null); }}
+                  />
+                }
+              />
             </>
           ) : (
             <Route path="/" element={<AppLayout profile={profile} handleLogout={handleLogout} lastNotification={pushNotifications.lastNotification} />}>

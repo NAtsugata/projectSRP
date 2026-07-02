@@ -72,6 +72,39 @@ export const organizationService = {
     return { data, error };
   },
 
+  /**
+   * Créer sa propre organisation (self-service, à l'onboarding).
+   * L'utilisateur courant en devient owner/admin (plan trial, 5 utilisateurs).
+   * S'appuie sur le RPC sécurisé create_organization_with_owner.
+   */
+  async createOwnOrganization(name, slug = null) {
+    const { data, error } = await supabase.rpc('create_organization_with_owner', {
+      p_name: name,
+      p_slug: slug,
+    });
+    return { organizationId: data, error };
+  },
+
+  /**
+   * Accepter une invitation via son token (employé déjà connecté sans org).
+   */
+  async acceptInvitation(token) {
+    const { data, error } = await supabase.rpc('accept_invitation', { p_token: token });
+    return { organizationId: data, error };
+  },
+
+  /**
+   * Inviter un employé dans son organisation (admin uniquement).
+   * Retourne le token d'invitation (à intégrer dans le lien envoyé par email).
+   */
+  async inviteEmployee(email, role = 'technician') {
+    const { data, error } = await supabase.rpc('invite_employee', {
+      p_email: email,
+      p_role: role,
+    });
+    return { data: Array.isArray(data) ? data[0] : data, error };
+  },
+
   // ========== SUPER-ADMIN ==========
 
   /**

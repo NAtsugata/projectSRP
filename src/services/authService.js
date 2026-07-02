@@ -81,6 +81,46 @@ export const authService = {
     return result;
   },
 
+  /**
+   * Inscription via le site (email + mot de passe).
+   * Confirmation email obligatoire : Supabase envoie un lien de vérification.
+   * Si l'email correspond à une invitation valide, le trigger handle_new_user
+   * rattache automatiquement le compte à son organisation.
+   */
+  async signUp(email, password, fullName = '') {
+    logger.emoji('📝', 'Inscription pour:', email);
+
+    if (!navigator.onLine) {
+      return { data: null, error: { message: 'Une connexion Internet est requise pour créer un compte.' } };
+    }
+
+    const result = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName?.trim() || email },
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (result.error) {
+      logger.error('❌ Erreur inscription:', result.error);
+    } else {
+      logger.emoji('✅', 'Inscription réussie, confirmation email envoyée');
+    }
+
+    return result;
+  },
+
+  /** Renvoyer l'email de confirmation */
+  async resendConfirmation(email) {
+    return await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+  },
+
   /** Sign out and clean local storage (garde credentials pour reconnexion offline) */
   async signOut() {
     logger.emoji('🚪', 'Déconnexion en cours...');

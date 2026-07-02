@@ -138,11 +138,39 @@ pour libérer le siège d'un employé parti, le super admin peut détacher le
 profil (`organization_id = NULL`) — les fichiers restent accessibles via le
 registre.
 
+## Inscription via le site (fait)
+
+> Ajoutée le 02/07/2026. Modèle **hybride** + **confirmation email obligatoire**.
+
+- **`LoginScreen`** : onglets « Connexion » / « Créer un compte » (nom, email,
+  mot de passe ≥ 8 car., confirmation). Après inscription → écran « Vérifiez
+  votre boîte mail » avec bouton « Renvoyer l'email ».
+- **`authService.signUp()` / `resendConfirmation()`** : inscription Supabase
+  avec `emailRedirectTo` vers le site.
+- **`OnboardingCreateOrg`** : affiché quand un utilisateur est connecté mais
+  sans organisation. Deux onglets :
+  - « Créer une entreprise » → RPC `create_organization_with_owner` (devient
+    owner/admin, plan trial)
+  - « J'ai une invitation » → RPC `accept_invitation(token)` (secours ; les
+    invités par email sont déjà rattachés automatiquement à l'inscription)
+- **`App.jsx`** : nouvelle porte de routage —
+  `session && profile && !organization_id` → `OnboardingCreateOrg`
+  (aucune régression : tous les profils existants ont déjà une organisation).
+
+### ⚠️ Réglages Supabase Dashboard requis (1 fois)
+
+1. **Authentication → Providers → Email → « Confirm email » = ON**
+   (sinon l'inscription connecte directement sans vérifier l'email ; le code
+   gère les deux cas mais le modèle choisi impose la confirmation).
+2. **Authentication → URL Configuration** : ajouter l'URL du site (prod + local)
+   dans *Redirect URLs* pour que le lien de confirmation revienne sur le site.
+3. **Authentication → Providers → Email → « Confirm email » template** :
+   personnaliser l'email si besoin (marque SRP).
+
 ## Reste à faire (hors SQL)
 
-- [ ] **UI d'onboarding** : page « Créer mon organisation » (appel RPC) pour
-  les inscrits sans org, page « Invitations » dans l'admin (appel
-  `invite_employee` + envoi de l'email d'invitation via Edge Function)
+- [ ] **Page « Invitations » dans l'admin** : appel `invite_employee` +
+  envoi de l'email d'invitation (via Edge Function ou service mail)
 - [ ] **Stripe** : Edge Function webhook (`checkout.session.completed`,
   `customer.subscription.updated`) qui met à jour `organizations` avec la clé
   service role
