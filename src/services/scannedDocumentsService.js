@@ -2,7 +2,7 @@
 import { supabase, storageService } from '../lib/supabase';
 import { sanitizeFilename } from '../utils/sanitize';
 import logger from '../utils/logger';
-import { withOrgId } from '../utils/orgHelper';
+import { withOrgId, getOrgId } from '../utils/orgHelper';
 
 /**
  * Échappe les caractères spéciaux pour les requêtes SQL LIKE
@@ -84,11 +84,13 @@ const scannedDocumentsService = {
     try {
       // 1. Upload le fichier vers Supabase Storage
       // Sanitize le nom de fichier pour éviter path traversal
+      // Arborescence canonique : {org}/employees/{user}/scans/...
       const safeFileName = sanitizeFilename(file.name);
-      const uploadResult = await storageService.uploadFile(
-        file,
-        `scanned-docs/${userId}/${Date.now()}-${safeFileName}`
-      );
+      const orgId = getOrgId();
+      const scanPath = orgId
+        ? `${orgId}/employees/${userId}/scans/${Date.now()}-${safeFileName}`
+        : `scanned-docs/${userId}/${Date.now()}-${safeFileName}`;
+      const uploadResult = await storageService.uploadFile(file, scanPath);
 
       if (uploadResult.error) throw uploadResult.error;
 

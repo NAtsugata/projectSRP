@@ -3,6 +3,7 @@
 // Règlement eIDAS (UE) 910/2014 - Signature Électronique Avancée
 
 import { supabase } from '../lib/supabase';
+import { getOrgId } from '../utils/orgHelper';
 import logger from '../utils/logger';
 
 /**
@@ -214,8 +215,12 @@ export async function createElectronicSignature({
     signatureRecord.signature_certificate = certificate;
 
     // 7. Upload image de signature dans Supabase Storage (sécurisé)
+    // Arborescence canonique : {org}/employees/{user}/signatures/...
     const fileName = `${documentType}_${documentId}_${Date.now()}.png`;
-    const filePath = `${userId}/${fileName}`;
+    const sigOrgId = getOrgId();
+    const filePath = sigOrgId
+      ? `${sigOrgId}/employees/${userId}/signatures/${fileName}`
+      : `${userId}/${fileName}`;
 
     // Convertir base64 en blob
     const base64Data = signatureImageBase64.split(',')[1];

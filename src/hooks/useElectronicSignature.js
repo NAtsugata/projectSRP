@@ -141,7 +141,8 @@ export function useElectronicSignature({
         });
 
         // 12. Upload de l'image de signature vers Storage
-        const fileName = generateSignatureFileName(user.id, documentType, documentId);
+        // Arborescence canonique : {org}/employees/{user}/signatures/...
+        const fileName = generateSignatureFileName(user.id, documentType, documentId, profile?.organization_id);
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('signature-files')
           .upload(fileName, signatureBlob, {

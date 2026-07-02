@@ -271,10 +271,15 @@ export function resizeCanvas(sourceCanvas, maxWidth = 800, maxHeight = 400) {
  * @param {string} documentId - ID du document
  * @returns {string} Nom de fichier
  */
-export function generateSignatureFileName(userId, documentType, documentId) {
+export function generateSignatureFileName(userId, documentType, documentId, organizationId = null) {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 9);
-  return `${userId}/${documentType}_${documentId}_${timestamp}_${random}.png`;
+  const fileName = `${documentType}_${documentId}_${timestamp}_${random}.png`;
+  // Arborescence canonique : {org}/employees/{user}/signatures/...
+  // (repli sur l'ancien schéma si l'organisation n'est pas fournie)
+  return organizationId
+    ? `${organizationId}/employees/${userId}/signatures/${fileName}`
+    : `${userId}/${fileName}`;
 }
 
 /**

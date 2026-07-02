@@ -93,6 +93,51 @@ Fichiers dans `sql/` (déjà appliqués via MCP, conservés pour référence) :
 4. **Entreprise 2** fait pareil : aucune donnée ne circule entre les deux
    (RLS + storage + triggers, vérifié).
 
+## Réorganisation du stockage (entreprise → intervention → employé)
+
+> Ajoutée le 02/07/2026 (`sql/2026_07_storage_reorganization.sql`, appliquée).
+
+**Principe : rien n'est déplacé ni supprimé.** Les chemins des fichiers sont
+référencés partout en base (rapports, coffre-fort, JSON) — un déplacement
+physique casserait ces références. La réorganisation est donc **logique** :
+
+1. **Registre central `storage_registry`** : les 961 fichiers existants sont
+   catalogués `entreprise → intervention → employé → catégorie`
+   (interventions, vault, scans, cerfa, expenses, ir-shower, signatures,
+   photos, quotes, assets). L'organisation est **figée** dans le registre :
+   si l'employé est licencié, désactivé ou supprimé, l'entreprise **garde
+   l'accès à 100 % de ses fichiers** (testé : départ simulé → l'admin voit
+   toujours les 41 fichiers de coffre-fort de l'ex-employé).
+2. **Synchronisation automatique** : trigger sur `storage.objects` — chaque
+   nouvel upload est catalogué immédiatement (+ classification à la volée en
+   secours via `registry_lookup`).
+3. **Arborescence canonique** pour tous les NOUVEAUX uploads :
+   ```
+   {org_id}/interventions/{intervention_id}/{dossier}/...
+   {org_id}/employees/{user_id}/vault/...
+   {org_id}/employees/{user_id}/scans/...
+   {org_id}/employees/{user_id}/signatures/...
+   {org_id}/employees/{user_id}/ir-shower/...
+   {org_id}/cerfa/...
+   {org_id}/quotes/{quote_id}/...
+   ```
+   Code mis à jour : `storageService`, `scannedDocumentsService`,
+   `electronicSignatureService`, `signatureUtils`, `useElectronicSignature`
+   (+ pages CERFA déjà migrées). Les anciens chemins restent lisibles.
+4. **Licenciement propre** : RPC `deactivate_employee(user_id)` — compte
+   bloqué (`banned_until = infinity`), statut `inactive`, admin retiré,
+   **toutes les données conservées et visibles par l'entreprise**.
+   `reactivate_employee(user_id)` pour réintégrer.
+5. **Historique protégé** : FK `CASCADE → SET NULL` sur `employee_absences`,
+   `leave_requests`, `shared_vault_access` — supprimer un profil n'efface
+   plus les absences/congés/partages.
+
+**Flux recommandé pour un départ** : appeler `deactivate_employee`, ne PAS
+supprimer le compte. Le quota `max_users` compte les profils rattachés ;
+pour libérer le siège d'un employé parti, le super admin peut détacher le
+profil (`organization_id = NULL`) — les fichiers restent accessibles via le
+registre.
+
 ## Reste à faire (hors SQL)
 
 - [ ] **UI d'onboarding** : page « Créer mon organisation » (appel RPC) pour

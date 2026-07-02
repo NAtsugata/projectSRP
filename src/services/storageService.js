@@ -4,6 +4,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { sanitizeFilename } from '../utils/sanitize';
+import { getOrgId } from '../utils/orgHelper';
 import logger from '../utils/logger';
 
 // Durée de validité des signed URLs (1 heure)
@@ -43,8 +44,12 @@ export const storageService = {
     const safeName = sanitizeFilename(file.name);
     logger.log('storageService: uploadVaultFile started', { userId, fileName: safeName });
     const fileExt = safeName.split('.').pop().toLowerCase();
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
-    const filePath = `vault/${fileName}`;
+    // Arborescence canonique : {org}/employees/{user}/vault/...
+    // (repli sur l'ancien schéma si l'organisation n'est pas encore chargée)
+    const orgId = getOrgId();
+    const filePath = orgId
+      ? `${orgId}/employees/${userId}/vault/${Date.now()}.${fileExt}`
+      : `vault/${userId}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('vault-files')
@@ -60,8 +65,12 @@ export const storageService = {
   async uploadInterventionFile(file, interventionId, folder = 'general', onProgress) {
     const safeName = sanitizeFilename(file.name);
     const fileExt = safeName.split('.').pop().toLowerCase();
-    const fileName = `${interventionId}/${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = fileName;
+    // Arborescence canonique : {org}/interventions/{id}/{dossier}/...
+    const orgId = getOrgId();
+    const baseName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = orgId
+      ? `${orgId}/interventions/${interventionId}/${folder}/${baseName}`
+      : `${interventionId}/${folder}/${baseName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('intervention-files')
@@ -119,8 +128,12 @@ export const storageService = {
   async uploadExpenseFile(file, userId, onProgress) {
     const safeName = sanitizeFilename(file.name);
     const fileExt = safeName.split('.').pop().toLowerCase();
-    const fileName = `${userId}/ir-shower/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = fileName;
+    // Arborescence canonique : {org}/employees/{user}/ir-shower/...
+    const orgId = getOrgId();
+    const baseName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = orgId
+      ? `${orgId}/employees/${userId}/ir-shower/${baseName}`
+      : `${userId}/ir-shower/${baseName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('intervention-files')
