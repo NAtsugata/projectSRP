@@ -16,6 +16,7 @@ import {
     getNextFicheNumber
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
+import { getOrgId, withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
@@ -245,7 +246,9 @@ function CerfaPage15498() {
 
             // Enregistrer dans Supabase Storage
             try {
-                const filePath = `cerfa/${filename}`;
+                // Chemin préfixé par l'organisation (requis par les politiques RLS multi-tenant)
+                const orgId = getOrgId();
+                const filePath = orgId ? `${orgId}/cerfa/${filename}` : `cerfa/${filename}`;
                 const { error: uploadError } = await supabase.storage
                     .from('cerfa-documents')
                     .upload(filePath, pdfBlob, { upsert: true });
@@ -254,7 +257,7 @@ function CerfaPage15498() {
                     // Enregistrer dans la base de données
                     await supabase
                         .from('cerfa_documents')
-                        .insert({
+                        .insert(withOrgId({
                             numero: ficheNumber,
                             template_name: 'CERFA 15498',
                             file_path: filePath,
@@ -262,7 +265,7 @@ function CerfaPage15498() {
                             client_name: formData.acq_nom || '',
                             intervention_date: null,
                             notes: formData.details || ''
-                        });
+                        }));
                     logger.log('[CERFA 15498] Document enregistré dans Supabase');
                 }
             } catch (storageError) {
