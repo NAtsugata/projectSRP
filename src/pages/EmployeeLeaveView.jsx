@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { LeaveRequestForm, LeaveRequestList } from '../components/leave';
 import { Button } from '../components/ui';
 import { PlusIcon } from '../components/SharedUI';
+import { LEAVE_STATUS } from '../utils/leaveStatus';
 import logger from '../utils/logger';
 import './EmployeeLeaveView.css';
 
@@ -53,7 +54,7 @@ export default function EmployeeLeaveView({
         start_date: formData.startDate,   // ✅ Converti en snake_case
         end_date: formData.endDate,       // ✅ Converti en snake_case
         reason: formData.reason,          // ✅ Déjà correct
-        status: 'En attente',             // ✅ Ajouté (statut initial)
+        status: LEAVE_STATUS.PENDING,     // valeur canonique ('pending')
         type: 'Congés payés',             // ✅ Ajouté (type par défaut)
         days_count: daysCount             // ✅ Ajouté (calculé automatiquement)
         // Note: organization_id sera ajouté automatiquement par withOrgId()

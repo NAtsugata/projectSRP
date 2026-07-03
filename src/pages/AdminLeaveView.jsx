@@ -3,6 +3,7 @@
 
 import React, { useCallback } from 'react';
 import { LeaveRequestList } from '../components/leave';
+import { LEAVE_STATUS } from '../utils/leaveStatus';
 import logger from '../utils/logger';
 import './AdminLeaveView.css';
 
@@ -14,12 +15,12 @@ export default function AdminLeaveView({
   // Adapter callbacks for component API
   const handleApprove = useCallback((requestId) => {
     logger.log('AdminLeaveView: Approbation demande', requestId);
-    onUpdateStatus(requestId, 'Approuvée');
+    onUpdateStatus(requestId, LEAVE_STATUS.APPROVED);
   }, [onUpdateStatus]);
 
   const handleReject = useCallback((requestId) => {
     logger.log('AdminLeaveView: Rejet demande', requestId);
-    onUpdateStatus(requestId, 'Rejetée');
+    onUpdateStatus(requestId, LEAVE_STATUS.REJECTED);
   }, [onUpdateStatus]);
 
   const handleDelete = useCallback((requestId) => {

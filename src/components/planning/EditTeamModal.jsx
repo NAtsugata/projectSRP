@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../ui';
+import { useAvailableEmployees } from '../../hooks/useAvailableEmployees';
 import './EditTeamModal.css';
 
 const EditTeamModal = ({
@@ -30,9 +31,19 @@ const EditTeamModal = ({
 
   const isMultiDay = scheduledDates.length > 1;
 
-  // Filtrer et trier les employés
+  // Dates visées : dates planifiées ou date unique de l'intervention
+  const targetDates = useMemo(() => {
+    if (scheduledDates.length) return scheduledDates;
+    return intervention?.date ? [intervention.date] : [];
+  }, [scheduledDates, intervention]);
+
+  // Ne proposer que les employés disponibles (ni licenciés, ni absents)
+  const { availableUsers } = useAvailableEmployees(users, targetDates);
+  const hiddenCount = users.length - availableUsers.length;
+
+  // Filtrer et trier les employés disponibles
   const filteredEmployees = useMemo(() => {
-    let filtered = users;
+    let filtered = availableUsers;
 
     // Filtrer par recherche
     if (searchTerm.trim()) {
@@ -47,7 +58,7 @@ const EditTeamModal = ({
     return [...filtered].sort((a, b) =>
       (a.full_name || '').localeCompare(b.full_name || '')
     );
-  }, [users, searchTerm]);
+  }, [availableUsers, searchTerm]);
 
   // Fonction pour obtenir les initiales d'un nom
   const getInitials = (name) => {
@@ -270,7 +281,12 @@ const EditTeamModal = ({
               ) : searchTerm ? (
                 <p className="no-employees">Aucun employé trouvé pour "{searchTerm}"</p>
               ) : (
-                <p className="no-employees">Aucun employé disponible</p>
+                <p className="no-employees">Aucun employé disponible à cette date</p>
+              )}
+              {hiddenCount > 0 && !searchTerm && (
+                <p className="no-employees" style={{ fontSize: '0.78rem', opacity: 0.8 }}>
+                  {hiddenCount} employé{hiddenCount > 1 ? 's' : ''} masqué{hiddenCount > 1 ? 's' : ''} (congé, maladie ou départ)
+                </p>
               )}
             </div>
           </>

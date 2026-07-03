@@ -12,6 +12,46 @@
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 2px solid var(--text-primary);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Badges statut employé */
+.badge-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-fired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.user-item-inactive {
+  opacity: 0.65;
+}
+
+/* Actions */
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.btn-icon-danger {
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  background: #fff;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-icon-danger:hover {
+  background: #fef2f2;
 }
 
 .admin-user-header h3 {

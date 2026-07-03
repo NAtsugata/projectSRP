@@ -4,16 +4,8 @@
 import React from 'react';
 import { Button } from '../ui';
 import { CheckIcon, XIcon, TrashIcon } from '../SharedUI';
+import { leaveStatusLabel, leaveStatusColor, normalizeLeaveStatus, LEAVE_STATUS } from '../../utils/leaveStatus';
 import './LeaveRequestCard.css';
-
-/**
- * Status badge color mapping
- */
-const STATUS_COLORS = {
-  'Approuvé': 'status-approved',
-  'En attente': 'status-pending',
-  'Rejeté': 'status-rejected'
-};
 
 /**
  * Calculate number of days between two dates
@@ -43,9 +35,9 @@ const LeaveRequestCard = ({
   showActions = true,
   showUserName = false
 }) => {
-  const statusClass = STATUS_COLORS[request.status] || 'status-default';
+  const statusClass = leaveStatusColor(request.status);
   const days = calculateDays(request.start_date, request.end_date);
-  const isPending = request.status === 'En attente';
+  const isPending = normalizeLeaveStatus(request.status) === LEAVE_STATUS.PENDING;
 
   return (
     <div className="leave-request-card">
@@ -57,7 +49,7 @@ const LeaveRequestCard = ({
               <h4 className="request-user-name">{request.user_name}</h4>
             )}
             <span className={`status-badge ${statusClass}`}>
-              {request.status}
+              {leaveStatusLabel(request.status)}
             </span>
           </div>
           <p className="request-reason">{request.reason}</p>

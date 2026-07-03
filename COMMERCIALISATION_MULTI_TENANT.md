@@ -167,15 +167,71 @@ registre.
 3. **Authentication → Providers → Email → « Confirm email » template** :
    personnaliser l'email si besoin (marque SRP).
 
+## Disponibilité des employés & gestion RH (fait)
+
+> Ajouté le 03/07/2026 (`sql/2026_07_employee_availability.sql`).
+
+**Un employé n'apparaît dans les listes d'affectation que s'il est disponible :**
+
+- **Licencié** (`employee_status = 'licencié'`) → jamais proposé, partout.
+  Bouton **« Désactiver »/« Réactiver »** dans Admin → Employés (RPC
+  `deactivate_employee` / `reactivate_employee` : compte bloqué, **données
+  conservées**).
+- **Absent** (maladie, congé, autre) → retiré pour les dates concernées.
+  Source unique de vérité : `employee_absences`.
+- **Congé approuvé → absence automatique** (trigger `sync_leave_to_absence`).
+  Approuver/rejeter/annuler crée ou retire l'absence. Vérifié en live :
+  congé approuvé du 10 au 12/07 → l'employé disparaît des disponibles ces
+  jours-là et réapparaît avant/après.
+
+Côté front :
+- `useAvailableEmployees(users, dates)` + `availabilityService` +
+  `employeeAvailability` : filtrage centralisé.
+- Branché dans **`InterventionForm`** (date + dates planifiées) et
+  **`EditTeamModal`** (dates de l'intervention), avec note « N employés
+  masqués (congé, maladie ou départ) ».
+- RPC `available_employee_ids(p_start, p_end)` disponible pour toute autre vue.
+
+### 🐛 Bug corrigé au passage : statuts de congés
+
+La fonctionnalité congés était **cassée** : le front écrivait des statuts
+français (`En attente`, `Approuvée`, `Rejetée`) alors que la base impose
+`pending` / `approved` / `rejected` / `cancelled` (contrainte
+`check_leave_requests_status`). Créer OU approuver un congé échouait donc
+silencieusement. Corrigé via `utils/leaveStatus.js` (valeurs canoniques +
+libellés FR à l'affichage), appliqué dans `EmployeeLeaveView`,
+`AdminLeaveView`, `LeaveRequestCard`, `LeaveRequestList`.
+
+## Invitation d'employés depuis l'admin (fait)
+
+- Bouton **« + Inviter un employé »** dans Admin → Employés : email + rôle
+  → RPC `invite_employee` → affiche un message prêt à envoyer (l'employé
+  s'inscrit avec cet email et est rattaché automatiquement).
+- `organizationService` : `inviteEmployee`, `deactivateEmployee`,
+  `reactivateEmployee`.
+
+## Optimisation (vérifiée)
+
+Advisors performance passés en revue :
+- **0 clé étrangère sans index** (tous les FK indexés, y compris les nouveaux).
+- 2 index dupliqués supprimés (`idx_absences_org_dates`,
+  `idx_employee_invitations_token`).
+- Policy `cerfa_counters_org_access` réécrite pour ne plus réévaluer
+  `auth.uid()` par ligne (`(SELECT auth.uid())`).
+- 96 « unused_index » : quasi tous préexistants (faible volume) ou nouveaux
+  (pas encore sollicités) — laissés en place, non bloquants.
+- 1 note préexistante « multiple permissive policies » sur `profiles` UPDATE
+  (own + admin) : correcte fonctionnellement, impact négligeable, laissée.
+
 ## Reste à faire (hors SQL)
 
-- [ ] **Page « Invitations » dans l'admin** : appel `invite_employee` +
-  envoi de l'email d'invitation (via Edge Function ou service mail)
+- [ ] **Envoi automatique de l'email d'invitation** (aujourd'hui le message
+  est à copier/coller) : Edge Function ou service mail.
 - [ ] **Stripe** : Edge Function webhook (`checkout.session.completed`,
   `customer.subscription.updated`) qui met à jour `organizations` avec la clé
-  service role
+  service role.
 - [ ] **Dashboard Supabase → Auth** : activer la protection « leaked password »
-  (HaveIBeenPwned) — voir advisor
+  (HaveIBeenPwned) — voir advisor.
 - [ ] Optionnel : resserrer `interventions` UPDATE (aujourd'hui tout membre de
-  l'org peut modifier ; passer à admin/assigné si souhaité)
-- [ ] Optionnel : politique de rétention des invitations expirées (cron de purge)
+  l'org peut modifier ; passer à admin/assigné si souhaité).
+- [ ] Optionnel : politique de rétention des invitations expirées (cron de purge).

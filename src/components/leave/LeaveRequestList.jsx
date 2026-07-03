@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import LeaveRequestCard from './LeaveRequestCard';
 import { EmptyState } from '../ui';
 import { SearchIcon, FilterIcon } from '../SharedUI';
+import { normalizeLeaveStatus, LEAVE_STATUS } from '../../utils/leaveStatus';
 import logger from '../../utils/logger';
 import './LeaveRequestList.css';
 
@@ -23,9 +24,9 @@ const filterRequests = (requests, searchText, statusFilter) => {
     );
   }
 
-  // Status filter
+  // Status filter (comparaison sur valeur canonique)
   if (statusFilter && statusFilter !== 'all') {
-    filtered = filtered.filter(req => req.status === statusFilter);
+    filtered = filtered.filter(req => normalizeLeaveStatus(req.status) === statusFilter);
   }
 
   return filtered;
@@ -47,10 +48,15 @@ const sortRequests = (requests, sortBy) => {
         new Date(b.start_date) - new Date(a.start_date)
       );
     case 'status': {
-      // Order: En attente > Approuvée > Rejetée
-      const statusOrder = { 'En attente': 0, 'Approuvée': 1, 'Rejetée': 2 };
+      // Ordre : en attente > approuvée > rejetée > annulée
+      const statusOrder = {
+        [LEAVE_STATUS.PENDING]: 0,
+        [LEAVE_STATUS.APPROVED]: 1,
+        [LEAVE_STATUS.REJECTED]: 2,
+        [LEAVE_STATUS.CANCELLED]: 3,
+      };
       return sorted.sort((a, b) =>
-        (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3)
+        (statusOrder[normalizeLeaveStatus(a.status)] ?? 4) - (statusOrder[normalizeLeaveStatus(b.status)] ?? 4)
       );
     }
     case 'user':
@@ -138,9 +144,10 @@ const LeaveRequestList = ({
               className="filter-select"
             >
               <option value="all">Tous les statuts</option>
-              <option value="En attente">En attente</option>
-              <option value="Approuvée">Approuvée</option>
-              <option value="Rejetée">Rejetée</option>
+              <option value={LEAVE_STATUS.PENDING}>En attente</option>
+              <option value={LEAVE_STATUS.APPROVED}>Approuvée</option>
+              <option value={LEAVE_STATUS.REJECTED}>Rejetée</option>
+              <option value={LEAVE_STATUS.CANCELLED}>Annulée</option>
             </select>
           </div>
 

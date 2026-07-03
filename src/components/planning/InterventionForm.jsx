@@ -1,13 +1,14 @@
 // src/components/planning/InterventionForm.js
 // Formulaire de création/édition d'intervention
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useFormDraft, DraftBanner } from '../../hooks/useFormDraft';
 import { validateIntervention } from '../../utils/validators';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
 import { clientService } from '../../services/clientService';
+import { useAvailableEmployees } from '../../hooks/useAvailableEmployees';
 import logger from '../../utils/logger';
 import './InterventionForm.css';
 
@@ -282,7 +283,17 @@ const InterventionForm = ({
     }
   }, [handleFileChange]);
 
-  const employees = users;
+  // Dates visées par l'affectation (date principale + dates planifiées)
+  const targetDates = useMemo(() => {
+    const list = [...scheduledDates];
+    if (values.date) list.push(values.date);
+    return list;
+  }, [values.date, scheduledDates]);
+
+  // Ne proposer que les employés disponibles : ni licenciés, ni absents
+  // (maladie / congé approuvé) sur la période visée.
+  const { availableUsers: employees } = useAvailableEmployees(users, targetDates);
+  const hiddenCount = users.length - employees.length;
 
   return (
     <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>
@@ -669,7 +680,12 @@ const InterventionForm = ({
           ))}
         </div>
         {employees.length === 0 && (
-          <p className="text-muted">Aucun employé disponible</p>
+          <p className="text-muted">Aucun employé disponible à cette date</p>
+        )}
+        {hiddenCount > 0 && employees.length > 0 && (
+          <p className="text-muted" style={{ fontSize: '0.78rem', marginTop: '0.4rem' }}>
+            {hiddenCount} employé{hiddenCount > 1 ? 's' : ''} masqué{hiddenCount > 1 ? 's' : ''} (indisponible{hiddenCount > 1 ? 's' : ''} : congé, maladie ou départ)
+          </p>
         )}
       </div>
 

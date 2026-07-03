@@ -105,6 +105,22 @@ export const organizationService = {
     return { data: Array.isArray(data) ? data[0] : data, error };
   },
 
+  /**
+   * Désactiver un employé (licenciement) : compte bloqué, données conservées.
+   */
+  async deactivateEmployee(userId) {
+    const { error } = await supabase.rpc('deactivate_employee', { p_user_id: userId });
+    return { error };
+  },
+
+  /**
+   * Réactiver un employé précédemment désactivé.
+   */
+  async reactivateEmployee(userId) {
+    const { error } = await supabase.rpc('reactivate_employee', { p_user_id: userId });
+    return { error };
+  },
+
   // ========== SUPER-ADMIN ==========
 
   /**
