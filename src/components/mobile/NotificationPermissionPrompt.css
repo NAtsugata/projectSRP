@@ -169,9 +169,9 @@
 @media (min-width: 640px) {
   .notification-permission-banner {
     bottom: 1rem;
-    left: 1rem;
-    right: auto;
-    max-width: 400px;
+    left: auto;
+    right: 1rem;
+    max-width: 380px;
     border-radius: 1rem;
   }
 

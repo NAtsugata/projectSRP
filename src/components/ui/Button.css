@@ -27,7 +27,10 @@
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 1;
+  background-color: #cbd5e1;
+  color: #475569;
+  box-shadow: none;
   cursor: not-allowed;
 }
 

@@ -205,11 +205,19 @@ body {
     background-color: var(--color-danger-dark);
 }
 
-/* État disabled pour les boutons */
-.btn:disabled {
-    opacity: 0.5;
+/* État disabled pour les boutons : gris lisible plutôt qu'un aplat délavé */
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
+    opacity: 1;
+    background-color: #cbd5e1;
+    background-image: none;
+    color: #475569;
+    box-shadow: none;
     cursor: not-allowed;
-    filter: grayscale(0.3);
+    filter: none;
 }
 
 /* Boutons icônes */
