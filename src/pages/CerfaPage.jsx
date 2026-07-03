@@ -361,9 +361,14 @@ function CerfaPage() {
                     .from('cerfa-documents')
                     .upload(filePath, pdfBlob, { upsert: true });
 
-                if (!uploadError) {
-                    // Enregistrer dans la base de données
-                    await supabase
+                if (uploadError) {
+                    logger.error('[CERFA] Échec upload storage:', uploadError.message);
+                    alert('⚠️ Le PDF a été téléchargé sur votre appareil mais n\'a pas pu être sauvegardé en ligne. Réessayez ou importez-le depuis le Gestionnaire CERFA.');
+                } else {
+                    // Enregistrer dans la base de données (supabase-js ne lève pas
+                    // d'exception : il faut vérifier l'erreur retournée, sinon le
+                    // PDF devient invisible dans le gestionnaire)
+                    const { error: dbError } = await supabase
                         .from('cerfa_documents')
                         .insert(withOrgId({
                             numero: ficheNumber,
@@ -374,10 +379,16 @@ function CerfaPage() {
                             intervention_date: formData.dateIntervention || null,
                             notes: formData.observations || ''
                         }));
-                    logger.log('[CERFA] Document enregistré dans Supabase');
+                    if (dbError) {
+                        logger.error('[CERFA] Échec enregistrement en base:', dbError.message);
+                        alert('⚠️ Le PDF est sauvegardé en ligne mais n\'apparaîtra pas dans le Gestionnaire CERFA (erreur d\'enregistrement : ' + dbError.message + ')');
+                    } else {
+                        logger.log('[CERFA] Document enregistré dans Supabase');
+                    }
                 }
             } catch (storageError) {
                 logger.warn('[CERFA] Erreur enregistrement Supabase:', storageError.message);
+                alert('⚠️ Le PDF a été téléchargé sur votre appareil mais la sauvegarde en ligne a échoué.');
                 // Continue même si l'enregistrement échoue
             }
 

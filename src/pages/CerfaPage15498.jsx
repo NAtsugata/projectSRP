@@ -253,9 +253,14 @@ function CerfaPage15498() {
                     .from('cerfa-documents')
                     .upload(filePath, pdfBlob, { upsert: true });
 
-                if (!uploadError) {
-                    // Enregistrer dans la base de données
-                    await supabase
+                if (uploadError) {
+                    logger.error('[CERFA 15498] Échec upload storage:', uploadError.message);
+                    alert('⚠️ Le PDF a été téléchargé sur votre appareil mais n\'a pas pu être sauvegardé en ligne. Réessayez ou importez-le depuis le Gestionnaire CERFA.');
+                } else {
+                    // Enregistrer dans la base de données (supabase-js ne lève pas
+                    // d'exception : il faut vérifier l'erreur retournée, sinon le
+                    // PDF devient invisible dans le gestionnaire)
+                    const { error: dbError } = await supabase
                         .from('cerfa_documents')
                         .insert(withOrgId({
                             numero: ficheNumber,
@@ -266,10 +271,16 @@ function CerfaPage15498() {
                             intervention_date: null,
                             notes: formData.details || ''
                         }));
-                    logger.log('[CERFA 15498] Document enregistré dans Supabase');
+                    if (dbError) {
+                        logger.error('[CERFA 15498] Échec enregistrement en base:', dbError.message);
+                        alert('⚠️ Le PDF est sauvegardé en ligne mais n\'apparaîtra pas dans le Gestionnaire CERFA (erreur d\'enregistrement : ' + dbError.message + ')');
+                    } else {
+                        logger.log('[CERFA 15498] Document enregistré dans Supabase');
+                    }
                 }
             } catch (storageError) {
                 logger.warn('[CERFA 15498] Erreur enregistrement Supabase:', storageError.message);
+                alert('⚠️ Le PDF a été téléchargé sur votre appareil mais la sauvegarde en ligne a échoué.');
             }
 
             saveGenerationRecord({
