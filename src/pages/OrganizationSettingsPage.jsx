@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
+import { MENU_MODULES } from '../config/menuModules';
 import './OrganizationSettingsPage.css';
 
 const DEFAULT_INVOICE_SETTINGS = {
@@ -26,11 +27,13 @@ const DEFAULT_INVOICE_SETTINGS = {
 };
 
 function OrganizationSettingsPage() {
-  const { profile } = useAuthStore();
+  const { profile, setOrganization } = useAuthStore();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('company');
   const [formData, setFormData] = useState({});
+  // Modules du menu masqués pour l'organisation (clés)
+  const [hiddenModules, setHiddenModules] = useState([]);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -84,8 +87,28 @@ function OrganizationSettingsPage() {
         bank_name: invoiceSettings.bank_details?.bank_name || ''
       });
       setLogoPreview(organization.logo_url);
+      setHiddenModules(organization.settings?.hidden_modules || []);
     }
   }, [organization]);
+
+  // Activer/désactiver un module du menu
+  const toggleModule = (key) => {
+    setHiddenModules((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // Enregistrer les modules visibles/masqués + mise à jour immédiate du menu
+  const saveMenuModules = async () => {
+    const newSettings = { ...(organization?.settings || {}), hidden_modules: hiddenModules };
+    try {
+      await saveMutation.mutateAsync({ settings: newSettings });
+      const storeOrg = useAuthStore.getState().organization;
+      setOrganization({ ...(storeOrg || organization), settings: newSettings });
+    } catch {
+      /* erreur déjà signalée par la mutation */
+    }
+  };
 
   // Save mutation
   const saveMutation = useMutation({
@@ -297,6 +320,12 @@ function OrganizationSettingsPage() {
           Informations entreprise
         </button>
         <button
+          className={`tab-btn ${activeTab === 'menu' ? 'active' : ''}`}
+          onClick={() => setActiveTab('menu')}
+        >
+          🧭 Menu
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'logo' ? 'active' : ''}`}
           onClick={() => setActiveTab('logo')}
         >
@@ -323,6 +352,52 @@ function OrganizationSettingsPage() {
       </div>
 
       <div className="settings-content">
+        {/* TAB: Menu / Modules */}
+        {activeTab === 'menu' && (
+          <div className="settings-section">
+            <h2>Modules du menu</h2>
+            <p className="settings-help">
+              Activez uniquement les fonctionnalités dont votre entreprise a besoin.
+              Un module désactivé disparaît du menu pour vous <strong>et vos employés</strong>.
+              Vous pouvez le réactiver à tout moment ici.
+            </p>
+
+            <div className="modules-list">
+              {MENU_MODULES.map((mod) => {
+                const visible = !hiddenModules.includes(mod.key);
+                return (
+                  <label key={mod.key} className={`module-row ${visible ? '' : 'module-off'}`}>
+                    <div className="module-info">
+                      <span className="module-name">{mod.label}</span>
+                      {mod.hint && <span className="module-hint">{mod.hint}</span>}
+                    </div>
+                    <span className="module-toggle">
+                      <span className="module-state">{visible ? 'Affiché' : 'Masqué'}</span>
+                      <input
+                        type="checkbox"
+                        checked={visible}
+                        onChange={() => toggleModule(mod.key)}
+                        aria-label={`Afficher ${mod.label}`}
+                      />
+                      <span className="switch" aria-hidden="true"></span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="settings-actions">
+              <button
+                className="btn-save"
+                onClick={saveMenuModules}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer le menu'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* TAB: Company Info */}
         {activeTab === 'company' && (
           <div className="settings-section">

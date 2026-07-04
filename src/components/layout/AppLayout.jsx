@@ -21,6 +21,7 @@ import {
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import { isHrefHidden } from '../../config/menuModules';
 import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../ThemeToggle';
 import { MobileThemeToggleCompact } from '../MobileThemeSelector';
@@ -122,27 +123,34 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         },
     ];
 
+    // Modules masqués par le chef d'entreprise (organizations.settings.hidden_modules)
+    const hiddenModules = organization?.settings?.hidden_modules || [];
+    const hiddenKey = hiddenModules.join(',');
+
     // Construire la navigation finale
     const navigation = useMemo(() => {
+        let nav;
         if (isAdmin) {
-            return adminNavigation;
+            nav = [...adminNavigation];
+        } else {
+            // Commencer avec la nav de base
+            nav = [...baseNavigation];
+
+            // Ajouter les pages basees sur les permissions
+            permissionBasedPages.forEach(({ permission, page }) => {
+                if (hasPermission(permission)) {
+                    // Eviter les doublons
+                    if (!nav.some(n => n.href === page.href)) {
+                        nav.push(page);
+                    }
+                }
+            });
         }
 
-        // Commencer avec la nav de base
-        const nav = [...baseNavigation];
-
-        // Ajouter les pages basees sur les permissions
-        permissionBasedPages.forEach(({ permission, page }) => {
-            if (hasPermission(permission)) {
-                // Eviter les doublons
-                if (!nav.some(n => n.href === page.href)) {
-                    nav.push(page);
-                }
-            }
-        });
-
-        return nav;
-    }, [isAdmin, hasPermission]);
+        // Retirer les modules désactivés pour l'organisation
+        return nav.filter(item => !isHrefHidden(item.href, hiddenModules));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAdmin, hasPermission, hiddenKey]);
 
     const handleMenuNavigation = (href) => {
         navigate(href);

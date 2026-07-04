@@ -19,6 +19,8 @@ export const useAuthStore = create((set, get) => ({
 
     setProfile: (profile) => set({ profile }),
 
+    setOrganization: (organization) => set({ organization }),
+
     setLoading: (loading) => set({ loading }),
 
     setError: (error) => set({ error }),

@@ -512,3 +512,123 @@
 .dark-theme .organization-settings-page {
   /* Overrides spécifiques si nécessaires */
 }
+
+/* ============================================================
+   Onglet Menu / Modules
+   ============================================================ */
+.settings-help {
+  color: var(--text-tertiary, #6b7280);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+}
+
+.modules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  background: var(--bg-primary, #fff);
+  cursor: pointer;
+  transition: border-color 0.15s, opacity 0.15s, background 0.15s;
+}
+
+.module-row:hover {
+  border-color: var(--color-copper, #b87333);
+}
+
+.module-row.module-off {
+  opacity: 0.6;
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.module-name {
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.module-hint {
+  font-size: 0.78rem;
+  color: var(--text-tertiary, #6b7280);
+}
+
+.module-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.module-state {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-tertiary, #6b7280);
+  min-width: 52px;
+  text-align: right;
+}
+
+/* Interrupteur */
+.module-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.module-toggle .switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.module-toggle .switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.module-toggle input:checked + .switch {
+  background: #16a34a;
+}
+
+.module-toggle input:checked + .switch::after {
+  transform: translateX(20px);
+}
+
+.module-toggle input:focus-visible + .switch {
+  outline: 2px solid var(--color-copper, #b87333);
+  outline-offset: 2px;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
