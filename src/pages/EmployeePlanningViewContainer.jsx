@@ -1,9 +1,10 @@
 // src/pages/EmployeePlanningViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à EmployeePlanningView
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useInterventions } from '../hooks/useInterventions';
 import { useUsers } from '../hooks/useUsers';
 import { useAuthStore } from '../store/authStore';
+import { getDayTeamIds } from '../utils/teamForDate';
 import EmployeePlanningView from './EmployeePlanningView';
 import logger from '../utils/logger';
 
@@ -29,6 +30,24 @@ const EmployeePlanningViewContainer = () => {
     // Récupérer les utilisateurs pour afficher les noms dans le Gantt
     const { users } = useUsers();
 
+    // Sur un chantier multi-jours, ne garder que les jours où CET employé
+    // travaille (daily_assignments) : son planning ne montre pas les jours
+    // où d'autres membres de l'équipe interviennent sans lui.
+    const myInterventions = useMemo(() => {
+        if (!interventions || !profile?.id) return interventions || [];
+        return interventions
+            .map((itv) => {
+                if (!itv.scheduled_dates?.length) return itv; // journée simple
+                const myDates = itv.scheduled_dates.filter((d) =>
+                    getDayTeamIds(itv, d).includes(profile.id)
+                );
+                if (myDates.length === 0) return null; // aucun de ses jours
+                if (myDates.length === itv.scheduled_dates.length) return itv;
+                return { ...itv, scheduled_dates: myDates };
+            })
+            .filter(Boolean);
+    }, [interventions, profile?.id]);
+
     // Debug: Log interventions
     useEffect(() => {
         logger.log('📋 EmployeePlanningViewContainer - Interventions:', {
@@ -41,7 +60,7 @@ const EmployeePlanningViewContainer = () => {
 
     return (
         <EmployeePlanningView
-            interventions={interventions}
+            interventions={myInterventions}
             users={users}
             loading={isLoading}
             userId={profile?.id}

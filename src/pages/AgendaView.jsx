@@ -21,6 +21,7 @@ import {
   navigatePeriod,
   toLocalDateStr
 } from '../utils/agendaHelpers';
+import { narrowToDate } from '../utils/teamForDate';
 // eslint-disable-next-line no-unused-vars -- Reserved for future notification features
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
@@ -83,8 +84,10 @@ const AgendaView = ({
         // For each scheduled date, check if it's in range and add it
         for (const scheduledDate of itv.scheduled_dates) {
           if (scheduledDate >= startStr && scheduledDate <= endStr) {
+            // Restreindre l'équipe à celle qui travaille CE jour-là
+            // (daily_assignments), pas toute l'équipe du chantier
             expanded.push({
-              ...itv,
+              ...narrowToDate(itv, scheduledDate),
               date: scheduledDate,
               _isMultiDay: true,
               _originalDate: itv.date

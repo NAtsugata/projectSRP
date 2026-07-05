@@ -176,9 +176,10 @@ export const filterInterventions = (interventions, filters) => {
   if (!filters) return interventions;
 
   return interventions.filter(intervention => {
-    // Filter by employees
+    // Filter by employees (user_id d'abord : fiable même pour les équipes
+    // journalières restreintes via narrowToDate)
     if (filters.employees && filters.employees.length > 0) {
-      const assigneeIds = intervention.intervention_assignments?.map(a => a.profiles?.id) || [];
+      const assigneeIds = intervention.intervention_assignments?.map(a => a.user_id || a.profiles?.id) || [];
       const hasSelectedEmployee = filters.employees.some(id => assigneeIds.includes(id));
       if (!hasSelectedEmployee) return false;
     }

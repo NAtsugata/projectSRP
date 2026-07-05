@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from '../SharedUI';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
+import { narrowToDate } from '../../utils/teamForDate';
 import './PlanningCalendarView.css';
 
 /**
@@ -142,7 +143,9 @@ const PlanningCalendarView = ({
         if (!date) return;
         const key = date.split('T')[0];
         if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(itv);
+        // Équipe restreinte à CE jour (daily_assignments) : chaque case du
+        // calendrier n'affiche que ceux qui travaillent ce jour-là
+        grouped[key].push(narrowToDate(itv, key));
       });
     });
 

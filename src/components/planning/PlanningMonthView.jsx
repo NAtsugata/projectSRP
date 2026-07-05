@@ -5,6 +5,7 @@ import { useMemo, useState, memo } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from '../SharedUI';
 import { exportMonthlyPlanningPdf } from '../../utils/planningPdfExport';
 import { toLocalDateStr } from '../../utils/agendaHelpers';
+import { narrowToDate } from '../../utils/teamForDate';
 import logger from '../../utils/logger';
 import './PlanningMonthView.css';
 
@@ -99,7 +100,8 @@ const PlanningMonthView = ({
         if (!byDate[dateStr]) {
           byDate[dateStr] = [];
         }
-        byDate[dateStr].push(itv);
+        // Équipe restreinte à CE jour (daily_assignments)
+        byDate[dateStr].push(narrowToDate(itv, dateStr));
       });
     });
 
