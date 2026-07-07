@@ -141,13 +141,29 @@ function App() {
     const {
       data: { subscription }
     } = authService.onAuthStateChange((event, sessionData) => {
-      // Token de refresh invalide (expiré pendant panne Supabase) — déconnecter proprement
-      if (!sessionData && event === 'SIGNED_OUT' && profileRef.current) {
-        logger.warn('[App] Session expirée (token invalide) — reconnexion requise');
-        showToast('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+      // Déconnexion explicite : nettoyer proprement
+      if (event === 'SIGNED_OUT') {
+        if (profileRef.current) {
+          logger.warn('[App] Session terminée — reconnexion requise');
+          showToast('Votre session a expiré. Veuillez vous reconnecter.', 'warning');
+        }
         setProfile(null);
+        setSession(null);
+        return;
       }
-      setSession(sessionData);
+
+      // IMPORTANT (mobile) : au retour d'arrière-plan, Supabase émet
+      // TOKEN_REFRESHED / SIGNED_IN pour le MÊME utilisateur. Si on remplace
+      // l'objet session, l'effet de chargement du profil se relance, le "gate"
+      // de chargement démonte toute l'app et on repart en haut / à l'accueil.
+      // On conserve donc la même référence tant que l'utilisateur ne change pas.
+      setSession(prev => {
+        const prevId = prev?.user?.id;
+        const nextId = sessionData?.user?.id;
+        if (!nextId) return prev;            // pas de nouvelle session valide → garder l'actuelle
+        if (prevId === nextId) return prev;  // même utilisateur → garder la référence (pas de reload)
+        return sessionData;                  // nouvel utilisateur / première connexion
+      });
     });
     return () => subscription.unsubscribe();
   }, [showToast]);
