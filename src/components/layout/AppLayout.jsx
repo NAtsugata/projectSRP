@@ -43,6 +43,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     // Navigation de base pour les employes
     const baseNavigation = [
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+        { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
         { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
         { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
         { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },
@@ -58,6 +59,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const adminNavigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+        { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
         { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
         { name: 'Conges', href: '/leaves', icon: SunIcon, color: 'text-orange-500', bg: 'bg-orange-50' },
         { name: 'Depenses', href: '/expenses', icon: DollarSignIcon, color: 'text-green-500', bg: 'bg-green-50' },

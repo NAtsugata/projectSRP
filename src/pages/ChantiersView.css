@@ -1,0 +1,130 @@
+/* src/pages/ChantiersView.css — Suivi de chantier MOE */
+
+.chantiers-view { padding: 1rem 1.25rem 4rem; max-width: 1100px; margin: 0 auto; }
+.chantiers-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+}
+.chantiers-header h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--text-primary, #111827); }
+.chantiers-subtitle { margin: .25rem 0 0; color: var(--text-tertiary, #6b7280); font-size: .9rem; }
+.muted { color: var(--text-tertiary, #6b7280); font-size: .85rem; }
+
+.chantier-back {
+  background: none; border: none; color: var(--color-copper, #b87333);
+  font-weight: 600; cursor: pointer; padding: 0 0 .75rem; font-size: .9rem;
+}
+
+/* Grille des chantiers */
+.chantiers-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;
+}
+.chantier-card {
+  text-align: left; background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 16px; padding: 1rem; cursor: pointer; transition: transform .12s, box-shadow .12s;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+.chantier-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.chantier-card-top { display: flex; justify-content: space-between; align-items: center; }
+.chantier-card-name { margin: .2rem 0 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #111827); }
+.chantier-card-client { margin: 0; font-weight: 600; color: #374151; font-size: .85rem; }
+.chantier-card-address { margin: 0; color: var(--text-tertiary, #6b7280); font-size: .8rem; }
+.chantier-lots-count { font-size: .78rem; color: var(--text-tertiary, #6b7280); }
+
+.chantier-status { font-size: .72rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; }
+.chantier-status-prep { background: #fef3c7; color: #92400e; }
+.chantier-status-active { background: #dbeafe; color: #1e40af; }
+.chantier-status-done { background: #dcfce7; color: #166534; }
+.chantier-status-closed { background: #e5e7eb; color: #374151; }
+
+/* Barre d'avancement */
+.chantier-progress { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
+.chantier-progress-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.chantier-progress-fill { height: 100%; background: linear-gradient(90deg, #b87333, #d99a5b); border-radius: 999px; transition: width .3s; }
+.chantier-progress-label { font-size: .8rem; font-weight: 700; color: #374151; min-width: 34px; text-align: right; }
+.chantier-progress-label.big { font-size: 1.5rem; }
+.chantier-global-progress { display: flex; flex-direction: column; align-items: flex-end; }
+
+/* Onglets */
+.chantier-tabs { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 2px solid var(--border-color, #e5e7eb); margin-bottom: 1rem; }
+.chantier-tabs button {
+  background: none; border: none; padding: .6rem .9rem; font-weight: 600; color: #64748b;
+  cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.chantier-tabs button.active { color: var(--color-copper, #b87333); border-bottom-color: var(--color-copper, #b87333); }
+
+.chantier-section { display: flex; flex-direction: column; gap: .75rem; }
+.chantier-block-head { display: flex; align-items: center; justify-content: space-between; margin-top: .5rem; }
+.chantier-block-head h3 { margin: 0; font-size: 1.1rem; }
+
+.inline-add { display: flex; gap: .5rem; margin: .25rem 0 .5rem; }
+.inline-add.col { flex-direction: column; }
+
+.chantier-zone-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.zone-chip { background: #eef2ff; color: #3730a3; padding: .25rem .6rem; border-radius: 8px; font-size: .82rem; font-weight: 600; }
+
+/* Lots */
+.chantier-lots { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.lot-card { border: 1px solid var(--border-color, #e5e7eb); border-radius: 14px; padding: 1rem; background: var(--bg-primary, #fff); }
+.lot-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+.lot-card-head h4 { margin: 0; font-size: 1.05rem; }
+.lot-cdc { color: #4b5563; font-size: .85rem; margin: .4rem 0; }
+.lot-badge { font-size: .72rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; white-space: nowrap; }
+.lot-a_demarrer { background: #f3f4f6; color: #374151; }
+.lot-en_cours { background: #dbeafe; color: #1e40af; }
+.lot-termine { background: #fef3c7; color: #92400e; }
+.lot-valide { background: #dcfce7; color: #166534; }
+.lot-admin { display: flex; flex-direction: column; gap: .5rem; margin-top: .5rem; }
+.lot-admin input[type=range] { width: 100%; }
+.lot-members { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.member-chip { background: #f1f5f9; color: #334155; padding: .2rem .5rem; border-radius: 8px; font-size: .8rem; display: inline-flex; gap: .3rem; align-items: center; }
+.member-chip button { background: none; border: none; color: #b91c1c; cursor: pointer; font-weight: 700; }
+.member-add { border: 1px dashed #cbd5e1; border-radius: 8px; padding: .2rem .4rem; font-size: .8rem; }
+
+/* Tâches */
+.task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.task-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .6rem .8rem; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: var(--bg-primary, #fff); }
+.task-main { display: flex; flex-direction: column; }
+.task-title { font-weight: 600; }
+.task-meta { font-size: .78rem; color: #6b7280; }
+.task-actions { display: flex; align-items: center; gap: .5rem; }
+.task-badge { font-size: .72rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; }
+.tb-a_faire { background: #f3f4f6; color: #374151; }
+.tb-en_cours { background: #dbeafe; color: #1e40af; }
+.tb-fait { background: #fef3c7; color: #92400e; }
+.tb-valide { background: #dcfce7; color: #166534; }
+.task-valide { opacity: .75; }
+
+/* Médias */
+.media-uploader { display: flex; flex-direction: column; gap: .5rem; padding: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px; margin-bottom: 1rem; }
+.media-upload-btn { position: relative; text-align: center; }
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.media-item { margin: 0; border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px; overflow: hidden; background: var(--bg-primary, #fff); display: flex; flex-direction: column; }
+.media-item img { width: 100%; height: 150px; object-fit: cover; }
+.media-placeholder { height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2rem; background: #f3f4f6; }
+.media-item figcaption { display: flex; flex-direction: column; gap: .1rem; padding: .5rem .6rem; font-size: .76rem; }
+.media-lot { font-weight: 700; color: #374151; }
+.media-date, .media-author { color: #6b7280; }
+.media-caption { color: #111827; margin-top: .2rem; }
+.media-flag { color: #b91c1c; font-weight: 700; }
+.media-deleted { opacity: .55; }
+.media-actions { padding: 0 .6rem .5rem; }
+.btn-link { background: none; border: none; color: #2563eb; cursor: pointer; font-weight: 600; font-size: .8rem; padding: 0; }
+.btn-link-danger { background: none; border: none; color: #b91c1c; cursor: pointer; font-weight: 600; font-size: .8rem; padding: 0; }
+
+/* Journal */
+.journal-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.journal-row { display: grid; grid-template-columns: 160px 160px 1fr 1fr; gap: .5rem; padding: .5rem .3rem; border-bottom: 1px solid #f1f5f9; font-size: .82rem; align-items: center; }
+.journal-date { color: #6b7280; }
+.journal-type { font-weight: 700; color: #374151; }
+.journal-actor { color: #111827; }
+.journal-ctx { color: #6b7280; }
+
+/* Formulaires */
+.chantier-form, .alert-form { display: flex; flex-direction: column; gap: .75rem; }
+.chantier-form-row { display: flex; gap: .75rem; }
+.chantier-form-row .form-group { flex: 1; }
+
+@media (max-width: 640px) {
+  .journal-row { grid-template-columns: 1fr; gap: .1rem; padding: .6rem .3rem; }
+  .chantier-form-row { flex-direction: column; }
+}

@@ -47,6 +47,8 @@ const AdminCatalogViewContainer = lazy(() => import('./pages/AdminCatalogViewCon
 const QuoteEditorPage = lazy(() => import('./pages/QuoteEditorPage'));
 const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage'));
 const CompanySettings = lazy(() => import('./pages/CompanySettings'));
+const ChantiersView = lazy(() => import('./pages/ChantiersView'));
+const ChantierDetailView = lazy(() => import('./pages/ChantierDetailView'));
 const SmartPlanningManager = lazy(() => import('./components/SmartPlanningManager'));
 
 const EmployeePlanningViewContainer = lazy(() => import('./pages/EmployeePlanningViewContainer'));
@@ -447,6 +449,16 @@ function App() {
                       <ContractDetailViewContainer />
                     </Suspense>
                   } />
+                  <Route path="chantiers" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ChantiersView />
+                    </Suspense>
+                  } />
+                  <Route path="chantiers/:chantierId" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ChantierDetailView />
+                    </Suspense>
+                  } />
                   <Route path="organizations" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <AdminOrganizationsViewContainer />
@@ -645,6 +657,18 @@ function App() {
                       <CalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
+                  } />
+
+                  {/* Suivi de chantier — accès restreint (RLS : lots assignés) */}
+                  <Route path="chantiers" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ChantiersView />
+                    </Suspense>
+                  } />
+                  <Route path="chantiers/:chantierId" element={
+                    <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
+                      <ChantierDetailView />
+                    </Suspense>
                   } />
 
                   {/* Routes protegees par permissions pour employes */}
