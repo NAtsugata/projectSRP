@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import { LoadingSpinner } from '../components/ui';
+import { DOC_CATEGORIES, DOC_CATEGORY_LABEL } from '../config/chantierPresets';
 import './ChantiersView.css';
 
 const LOT_STATUS = { a_demarrer: 'À démarrer', en_cours: 'En cours', termine: 'Terminé', valide: 'Validé' };
@@ -35,20 +36,23 @@ export default function ChantierDetailView() {
   const [chantier, setChantier] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [media, setMedia] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [journal, setJournal] = useState([]);
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: c }, { data: t }, { data: m }] = await Promise.all([
+    const [{ data: c }, { data: t }, { data: m }, { data: d }] = await Promise.all([
       chantierService.getChantier(chantierId),
       chantierService.getTasks(chantierId),
       chantierService.getMedia(chantierId),
+      chantierService.getDocuments(chantierId),
     ]);
     setChantier(c || null);
     setTasks(t || []);
     setMedia(m || []);
+    setDocuments(d || []);
     if (isAdmin) {
       const { data: j } = await chantierService.getJournal(chantierId);
       setJournal(j || []);
@@ -94,6 +98,7 @@ export default function ChantierDetailView() {
       <div className="chantier-tabs">
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Vue d'ensemble</button>
         <button className={tab === 'tasks' ? 'active' : ''} onClick={() => setTab('tasks')}>Tâches</button>
+        <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}>Documents</button>
         <button className={tab === 'media' ? 'active' : ''} onClick={() => setTab('media')}>Photos</button>
         {isAdmin && <button className={tab === 'journal' ? 'active' : ''} onClick={() => setTab('journal')}>Journal</button>}
         {isAdmin && <button className={tab === 'alert' ? 'active' : ''} onClick={() => setTab('alert')}>Alertes</button>}
@@ -104,6 +109,9 @@ export default function ChantierDetailView() {
       )}
       {tab === 'tasks' && (
         <TasksTab chantier={chantier} lots={lots} zones={zones} tasks={tasks} isAdmin={isAdmin} reload={load} toast={toast} />
+      )}
+      {tab === 'docs' && (
+        <DocumentsTab chantier={chantier} lots={lots} documents={documents} isAdmin={isAdmin} profile={profile} reload={load} toast={toast} />
       )}
       {tab === 'media' && (
         <MediaTab chantier={chantier} lots={lots} zones={zones} media={media} isAdmin={isAdmin} profile={profile} reload={load} toast={toast} />
@@ -421,6 +429,91 @@ function MediaTab({ chantier, lots, zones, media, isAdmin, profile, reload, toas
           </figure>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------- Documents de référence (MOE) ----------
+function DocumentsTab({ chantier, lots, documents, isAdmin, profile, reload, toast }) {
+  const [category, setCategory] = useState('plan');
+  const [title, setTitle] = useState('');
+  const [lotId, setLotId] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const onUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const { error } = await chantierService.uploadDocument({
+      chantier, lotId: lotId || null, category, title: title || file.name,
+      file, uploaderName: profile?.full_name,
+    });
+    setUploading(false);
+    e.target.value = '';
+    if (error) return toast?.error(`Envoi impossible : ${error.message}`);
+    toast?.success('Document ajouté'); setTitle(''); reload();
+  };
+
+  const openDoc = async (doc) => {
+    const { url } = await chantierService.getDocumentUrl(doc.file_path);
+    if (url) window.open(url, '_blank', 'noopener');
+    else toast?.error('Document indisponible');
+  };
+  const removeDoc = async (doc) => {
+    if (!window.confirm(`Supprimer « ${doc.title} » ?`)) return;
+    const { error } = await chantierService.deleteDocument(doc);
+    if (error) return toast?.error(error.message);
+    toast?.success('Document supprimé'); reload();
+  };
+
+  const byCat = documents.reduce((acc, d) => { (acc[d.category] = acc[d.category] || []).push(d); return acc; }, {});
+
+  return (
+    <div className="chantier-section">
+      {isAdmin && (
+        <div className="media-uploader">
+          <p className="muted" style={{ margin: 0 }}>Déposez les documents du chantier (plans, plan d'exécution, CCTP…). Ils sont accessibles aux entreprises assignées.</p>
+          <div className="chantier-form-row">
+            <select className="form-control" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {DOC_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+            <select className="form-control" value={lotId} onChange={(e) => setLotId(e.target.value)}>
+              <option value="">Tout le chantier</option>
+              {lots.map(l => <option key={l.id} value={l.id}>Lot : {l.name}</option>)}
+            </select>
+          </div>
+          <input className="form-control" placeholder="Titre du document (facultatif)" value={title}
+            onChange={(e) => setTitle(e.target.value)} />
+          <label className="btn btn-primary media-upload-btn">
+            {uploading ? 'Envoi…' : '📎 Ajouter un document'}
+            <input type="file" hidden onChange={onUpload} disabled={uploading}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.jpg,.jpeg,.png,image/*,application/pdf" />
+          </label>
+        </div>
+      )}
+
+      {documents.length === 0 && <p className="muted">Aucun document déposé.</p>}
+      {DOC_CATEGORIES.filter(c => byCat[c.key]?.length).map(c => (
+        <div key={c.key} className="doc-cat-block">
+          <h4>{c.label}</h4>
+          <ul className="doc-list">
+            {byCat[c.key].map(d => (
+              <li key={d.id} className="doc-row">
+                <button className="doc-open" onClick={() => openDoc(d)}>
+                  <span className="doc-icon">📄</span>
+                  <span className="doc-meta">
+                    <span className="doc-title">{d.title}</span>
+                    <span className="doc-sub">
+                      {lots.find(l => l.id === d.lot_id)?.name || 'Chantier'} · {new Date(d.created_at).toLocaleDateString('fr-FR')}
+                    </span>
+                  </span>
+                </button>
+                {isAdmin && <button className="btn-link-danger" onClick={() => removeDoc(d)}>Supprimer</button>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }

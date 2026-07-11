@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { LoadingSpinner, EmptyState } from '../components/ui';
 import { BuildingIcon } from '../components/SharedUI';
+import { PRESET_LOTS } from '../config/chantierPresets';
 import './ChantiersView.css';
 
 const STATUS_LABELS = {
@@ -40,7 +41,18 @@ export default function ChantiersView() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', client_name: '', address: '', start_date: '', end_date: '' });
+  const [selectedLots, setSelectedLots] = useState([]);
+  const [customLot, setCustomLot] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const toggleLot = (lot) => {
+    setSelectedLots((prev) => prev.includes(lot) ? prev.filter((l) => l !== lot) : [...prev, lot]);
+  };
+  const addCustomLot = () => {
+    const v = customLot.trim();
+    if (v && !selectedLots.includes(v)) setSelectedLots((prev) => [...prev, v]);
+    setCustomLot('');
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,22 +68,24 @@ export default function ChantiersView() {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSaving(true);
-    const { data, error } = await chantierService.createChantier({
+    const { id, error } = await chantierService.createChantierWithLots({
       name: form.name.trim(),
       client_name: form.client_name || null,
       address: form.address || null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
+      lots: selectedLots,
     });
     setSaving(false);
     if (error) {
       toast?.error(`Création impossible : ${error.message}`);
       return;
     }
-    toast?.success('Chantier créé');
+    toast?.success(selectedLots.length ? `Chantier créé avec ${selectedLots.length} lot(s)` : 'Chantier créé');
     setShowCreate(false);
     setForm({ name: '', client_name: '', address: '', start_date: '', end_date: '' });
-    navigate(`/chantiers/${data.id}`);
+    setSelectedLots([]);
+    navigate(`/chantiers/${id}`);
   };
 
   if (loading) return <LoadingSpinner text="Chargement des chantiers..." />;
@@ -127,6 +141,31 @@ export default function ChantiersView() {
                     onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
                 </div>
               </div>
+
+              <div className="form-group">
+                <label>Lots (corps de métier) — cochez ceux du chantier</label>
+                <div className="preset-lots">
+                  {PRESET_LOTS.map((lot) => (
+                    <button type="button" key={lot}
+                      className={`preset-chip ${selectedLots.includes(lot) ? 'selected' : ''}`}
+                      onClick={() => toggleLot(lot)}>
+                      {selectedLots.includes(lot) ? '✓ ' : '+ '}{lot}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-add" style={{ marginTop: '.5rem' }}>
+                  <input className="form-control" placeholder="Autre lot…" value={customLot}
+                    onChange={(e) => setCustomLot(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomLot(); } }} />
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={addCustomLot}>Ajouter</button>
+                </div>
+                {selectedLots.length > 0 && (
+                  <p className="muted" style={{ marginTop: '.4rem' }}>
+                    {selectedLots.length} lot(s) sélectionné(s) — vous pourrez les compléter ensuite.
+                  </p>
+                )}
+              </div>
+
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Annuler</button>
                 <button type="submit" className="btn btn-primary" disabled={saving || !form.name}>

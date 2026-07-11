@@ -42,6 +42,19 @@ export const chantierService = {
     return { data, error };
   },
 
+  /** Créer un chantier ET ses lots prédéfinis en un seul appel. */
+  async createChantierWithLots({ name, client_name, address, start_date, end_date, lots }) {
+    const { data, error } = await supabase.rpc('create_chantier_with_lots', {
+      p_name: name,
+      p_client: client_name || null,
+      p_address: address || null,
+      p_start: start_date || null,
+      p_end: end_date || null,
+      p_lots: (lots && lots.length) ? lots : null,
+    });
+    return { id: data, error };
+  },
+
   async updateChantier(id, updates) {
     const { data, error } = await supabase
       .from('chantiers').update(updates).eq('id', id).select().single();
@@ -189,6 +202,60 @@ export const chantierService = {
   async restoreMedia(mediaId) {
     const { error } = await supabase
       .from('chantier_media').update({ is_deleted: false }).eq('id', mediaId);
+    return { error };
+  },
+
+  // ===== Documents de référence (MOE) =====
+  async getDocuments(chantierId) {
+    const { data, error } = await supabase
+      .from('chantier_documents')
+      .select('*')
+      .eq('chantier_id', chantierId)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  },
+
+  async uploadDocument({ chantier, lotId, category, title, file, uploaderName }) {
+    const orgId = getOrgId();
+    if (!orgId) return { error: { message: 'Organisation inconnue' } };
+    const { data: { user } } = await supabase.auth.getUser();
+    const safeName = sanitizeFilename(file.name || 'document');
+    const path = `${orgId}/chantiers/${chantier.id}/documents/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('chantier-docs')
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+    if (upErr) return { error: upErr };
+
+    const { data, error } = await supabase
+      .from('chantier_documents')
+      .insert(withOrgId({
+        chantier_id: chantier.id,
+        lot_id: lotId || null,
+        category: category || 'autre',
+        title: title || safeName,
+        file_path: path,
+        file_name: safeName,
+        uploaded_by: user?.id,
+        uploader_name: uploaderName || null,
+      }))
+      .select().single();
+    return { data, error };
+  },
+
+  async getDocumentUrl(filePath) {
+    const { data, error } = await supabase.storage
+      .from('chantier-docs')
+      .createSignedUrl(filePath, SIGNED_URL_EXPIRY);
+    return { url: data?.signedUrl || null, error };
+  },
+
+  async deleteDocument(doc) {
+    // Retire l'enregistrement puis le fichier (MOE uniquement, RLS)
+    const { error } = await supabase.from('chantier_documents').delete().eq('id', doc.id);
+    if (!error && doc.file_path) {
+      await supabase.storage.from('chantier-docs').remove([doc.file_path]);
+    }
     return { error };
   },
 

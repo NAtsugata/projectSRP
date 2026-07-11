@@ -119,6 +119,38 @@
 .journal-actor { color: #111827; }
 .journal-ctx { color: #6b7280; }
 
+/* Lots prédéfinis (création rapide) */
+.preset-lots { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+.preset-chip {
+  background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #d1d5db);
+  color: #374151; padding: .3rem .65rem; border-radius: 999px; font-size: .82rem;
+  font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+}
+.preset-chip:hover { border-color: var(--color-copper, #b87333); }
+.preset-chip.selected {
+  background: var(--color-copper, #b87333); border-color: var(--color-copper, #b87333); color: #fff;
+}
+
+/* Documents de référence (MOE) */
+.doc-cat-block { margin-bottom: 1rem; }
+.doc-cat-block h4 {
+  margin: 0 0 .4rem; font-size: .95rem; color: #374151;
+  text-transform: uppercase; letter-spacing: .02em; font-weight: 700;
+}
+.doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.doc-row {
+  display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem;
+  border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: var(--bg-primary, #fff);
+}
+.doc-open {
+  display: flex; align-items: center; gap: .6rem; flex: 1; min-width: 0;
+  background: none; border: none; cursor: pointer; text-align: left; padding: 0; color: inherit;
+}
+.doc-icon { font-size: 1.4rem; flex-shrink: 0; }
+.doc-meta { display: flex; flex-direction: column; min-width: 0; }
+.doc-title { font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-sub { font-size: .76rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Formulaires */
 .chantier-form, .alert-form { display: flex; flex-direction: column; gap: .75rem; }
 .chantier-form-row { display: flex; gap: .75rem; }
