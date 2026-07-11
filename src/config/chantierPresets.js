@@ -36,3 +36,30 @@ export const DOC_CATEGORIES = [
 ];
 
 export const DOC_CATEGORY_LABEL = DOC_CATEGORIES.reduce((a, c) => { a[c.key] = c.label; return a; }, {});
+
+// Limites d'upload — messages clairs plutôt que blocage silencieux.
+export const MAX_DOC_MB = 50;
+export const MAX_PHOTO_MB = 25;
+export const ALLOWED_DOC_EXTENSIONS = [
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods',
+  'dwg', 'dxf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'zip', 'txt', 'csv',
+];
+
+/**
+ * Valide un fichier avant envoi. Retourne null si OK, sinon un message
+ * d'erreur en français prêt à afficher.
+ */
+export function validateChantierFile(file, { maxMb, extensions = null } = {}) {
+  if (!file) return 'Aucun fichier sélectionné.';
+  const sizeMb = file.size / (1024 * 1024);
+  if (maxMb && sizeMb > maxMb) {
+    return `Fichier trop volumineux (${sizeMb.toFixed(1)} Mo). Maximum autorisé : ${maxMb} Mo.`;
+  }
+  if (extensions) {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase() || '';
+    if (!extensions.includes(ext)) {
+      return `Format « .${ext || '?'} » non accepté. Formats autorisés : PDF, Word, Excel, images, DWG, ZIP.`;
+    }
+  }
+  return null;
+}

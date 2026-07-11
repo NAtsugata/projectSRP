@@ -3,14 +3,17 @@
 // lots (MOE), tâches (fait par l'entreprise / validé par la MOE), photos
 // contextualisées (zéro perte), journal d'audit (MOE), alertes ciblées (MOE).
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { chantierService } from '../services/chantierService';
 import { useAuthStore } from '../store/authStore';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import { LoadingSpinner } from '../components/ui';
-import { DOC_CATEGORIES, DOC_CATEGORY_LABEL } from '../config/chantierPresets';
+import {
+  DOC_CATEGORIES, DOC_CATEGORY_LABEL,
+  MAX_DOC_MB, MAX_PHOTO_MB, ALLOWED_DOC_EXTENSIONS, validateChantierFile,
+} from '../config/chantierPresets';
 import './ChantiersView.css';
 
 const LOT_STATUS = { a_demarrer: 'À démarrer', en_cours: 'En cours', termine: 'Terminé', valide: 'Validé' };
@@ -22,6 +25,9 @@ const EVENT_LABELS = {
   membre_ajoute: 'Membre ajouté', membre_retire: 'Membre retiré',
   tache_creee: 'Tâche créée', tache_faite: 'Tâche marquée faite', tache_validee: 'Tâche validée', tache_statut: 'Statut tâche',
   photo_ajoutee: 'Photo ajoutée', photo_supprimee: 'Photo retirée', photo_restauree: 'Photo restaurée',
+  document_ajoute: 'Document déposé', document_supprime: 'Document supprimé',
+  document_modifie: 'Document modifié', document_obsolete: 'Document rendu obsolète',
+  document_reactive: 'Document réactivé', document_consulte: 'Document consulté',
   alerte_envoyee: 'Alerte envoyée',
 };
 
@@ -356,6 +362,8 @@ function MediaTab({ chantier, lots, zones, media, isAdmin, profile, reload, toas
   const onUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const sizeErr = validateChantierFile(file, { maxMb: MAX_PHOTO_MB });
+    if (sizeErr) { toast?.error(sizeErr); e.target.value = ''; return; }
     if (!lotId) { toast?.error('Choisissez un lot'); return; }
     const lot = lots.find(l => l.id === lotId);
     setUploading(true);
@@ -434,45 +442,112 @@ function MediaTab({ chantier, lots, zones, media, isAdmin, profile, reload, toas
 }
 
 // ---------- Documents de référence (MOE) ----------
+// Versioning : redéposer un plan corrigé crée une v2 ; l'ancienne passe
+// automatiquement en « obsolète » (conservée, jamais écrasée) et les
+// entreprises du lot sont notifiées.
 function DocumentsTab({ chantier, lots, documents, isAdmin, profile, reload, toast }) {
   const [category, setCategory] = useState('plan');
   const [title, setTitle] = useState('');
   const [lotId, setLotId] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [openHistory, setOpenHistory] = useState({});
+  const versionTarget = useRef(null);
+  const versionInput = useRef(null);
+
+  const checkFile = (file) => {
+    const err = validateChantierFile(file, { maxMb: MAX_DOC_MB, extensions: ALLOWED_DOC_EXTENSIONS });
+    if (err) toast?.error(err);
+    return !err;
+  };
 
   const onUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = '';
+    if (!file || !checkFile(file)) return;
     setUploading(true);
     const { error } = await chantierService.uploadDocument({
       chantier, lotId: lotId || null, category, title: title || file.name,
       file, uploaderName: profile?.full_name,
     });
     setUploading(false);
-    e.target.value = '';
     if (error) return toast?.error(`Envoi impossible : ${error.message}`);
-    toast?.success('Document ajouté'); setTitle(''); reload();
+    toast?.success('Document ajouté — les entreprises concernées sont notifiées');
+    setTitle(''); reload();
   };
 
-  const openDoc = async (doc) => {
-    const { url } = await chantierService.getDocumentUrl(doc.file_path);
-    if (url) window.open(url, '_blank', 'noopener');
-    else toast?.error('Document indisponible');
+  const askNewVersion = (doc) => {
+    versionTarget.current = doc;
+    versionInput.current?.click();
+  };
+  const onUploadVersion = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const doc = versionTarget.current;
+    versionTarget.current = null;
+    if (!file || !doc || !checkFile(file)) return;
+    setUploading(true);
+    const { error } = await chantierService.uploadDocument({
+      chantier, lotId: doc.lot_id || null, category: doc.category, title: doc.title,
+      file, uploaderName: profile?.full_name,
+      groupId: doc.document_group_id || doc.id,
+    });
+    setUploading(false);
+    if (error) return toast?.error(`Envoi impossible : ${error.message}`);
+    toast?.success(`Nouvelle version de « ${doc.title} » déposée — l'ancienne est conservée en obsolète`);
+    reload();
+  };
+
+  const openDoc = (doc) => {
+    // Log de consultation (journal) sans bloquer l'ouverture
+    chantierService.logDocumentView(doc.id);
+    chantierService.getDocumentUrl(doc.file_path).then(({ url }) => {
+      if (url) window.open(url, '_blank', 'noopener');
+      else toast?.error('Document indisponible');
+    });
+  };
+  const toggleObsolete = async (doc) => {
+    const next = doc.status === 'obsolete' ? 'actif' : 'obsolete';
+    const { error } = await chantierService.setDocumentStatus(doc.id, next);
+    if (error) return toast?.error(error.message);
+    toast?.success(next === 'obsolete' ? 'Document marqué obsolète (conservé)' : 'Document réactivé');
+    reload();
   };
   const removeDoc = async (doc) => {
-    if (!window.confirm(`Supprimer « ${doc.title} » ?`)) return;
+    if (!window.confirm(`Supprimer définitivement « ${doc.title} » (v${doc.version || 1}) ?\n\nPréférez « Marquer obsolète » pour garder la traçabilité.`)) return;
     const { error } = await chantierService.deleteDocument(doc);
     if (error) return toast?.error(error.message);
     toast?.success('Document supprimé'); reload();
   };
 
-  const byCat = documents.reduce((acc, d) => { (acc[d.category] = acc[d.category] || []).push(d); return acc; }, {});
+  // Regroupe les versions : une ligne par document, historique replié.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const d of documents) {
+      const key = d.document_group_id || d.id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(d);
+    }
+    return Array.from(map.values()).map((versions) => {
+      versions.sort((a, b) => (b.version || 1) - (a.version || 1));
+      return { current: versions[0], older: versions.slice(1) };
+    });
+  }, [documents]);
+
+  const byCat = groups.reduce((acc, g) => {
+    (acc[g.current.category] = acc[g.current.category] || []).push(g);
+    return acc;
+  }, {});
+
+  const lotName = (id) => lots.find(l => l.id === id)?.name || 'Chantier';
 
   return (
     <div className="chantier-section">
       {isAdmin && (
         <div className="media-uploader">
-          <p className="muted" style={{ margin: 0 }}>Déposez les documents du chantier (plans, plan d'exécution, CCTP…). Ils sont accessibles aux entreprises assignées.</p>
+          <p className="muted" style={{ margin: 0 }}>
+            Déposez les documents du chantier (plans, plan d'exécution, CCTP…). Les entreprises assignées
+            sont notifiées à chaque dépôt. Taille max : {MAX_DOC_MB} Mo.
+          </p>
           <div className="chantier-form-row">
             <select className="form-control" value={category} onChange={(e) => setCategory(e.target.value)}>
               {DOC_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
@@ -487,8 +562,11 @@ function DocumentsTab({ chantier, lots, documents, isAdmin, profile, reload, toa
           <label className="btn btn-primary media-upload-btn">
             {uploading ? 'Envoi…' : '📎 Ajouter un document'}
             <input type="file" hidden onChange={onUpload} disabled={uploading}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.jpg,.jpeg,.png,image/*,application/pdf" />
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.zip,image/*,application/pdf" />
           </label>
+          {/* Entrée fichier cachée pour « Nouvelle version » */}
+          <input ref={versionInput} type="file" hidden onChange={onUploadVersion}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.zip,image/*,application/pdf" />
         </div>
       )}
 
@@ -497,20 +575,70 @@ function DocumentsTab({ chantier, lots, documents, isAdmin, profile, reload, toa
         <div key={c.key} className="doc-cat-block">
           <h4>{c.label}</h4>
           <ul className="doc-list">
-            {byCat[c.key].map(d => (
-              <li key={d.id} className="doc-row">
-                <button className="doc-open" onClick={() => openDoc(d)}>
-                  <span className="doc-icon">📄</span>
-                  <span className="doc-meta">
-                    <span className="doc-title">{d.title}</span>
-                    <span className="doc-sub">
-                      {lots.find(l => l.id === d.lot_id)?.name || 'Chantier'} · {new Date(d.created_at).toLocaleDateString('fr-FR')}
-                    </span>
-                  </span>
-                </button>
-                {isAdmin && <button className="btn-link-danger" onClick={() => removeDoc(d)}>Supprimer</button>}
-              </li>
-            ))}
+            {byCat[c.key].map(({ current: d, older }) => {
+              const groupKey = d.document_group_id || d.id;
+              const isObsolete = d.status === 'obsolete';
+              return (
+                <li key={d.id} className={`doc-group ${isObsolete ? 'doc-obsolete' : ''}`}>
+                  <div className="doc-row">
+                    <button className="doc-open" onClick={() => openDoc(d)}>
+                      <span className="doc-icon">📄</span>
+                      <span className="doc-meta">
+                        <span className="doc-title">
+                          {d.title}
+                          {(d.version || 1) > 1 && <span className="doc-badge doc-badge-version">v{d.version}</span>}
+                          {isObsolete && <span className="doc-badge doc-badge-obsolete">Obsolète</span>}
+                        </span>
+                        <span className="doc-sub">
+                          {lotName(d.lot_id)} · {new Date(d.created_at).toLocaleDateString('fr-FR')}
+                          {d.uploader_name ? ` · ${d.uploader_name}` : ''}
+                        </span>
+                      </span>
+                    </button>
+                    {isAdmin && (
+                      <div className="doc-actions">
+                        <button className="btn-link" onClick={() => askNewVersion(d)} disabled={uploading}>
+                          Nouvelle version
+                        </button>
+                        <button className="btn-link" onClick={() => toggleObsolete(d)}>
+                          {isObsolete ? 'Réactiver' : 'Marquer obsolète'}
+                        </button>
+                        <button className="btn-link-danger" onClick={() => removeDoc(d)}>Supprimer</button>
+                      </div>
+                    )}
+                  </div>
+                  {older.length > 0 && (
+                    <div className="doc-history">
+                      <button className="btn-link doc-history-toggle"
+                        onClick={() => setOpenHistory(h => ({ ...h, [groupKey]: !h[groupKey] }))}>
+                        {openHistory[groupKey] ? '▾' : '▸'} {older.length} version{older.length > 1 ? 's' : ''} précédente{older.length > 1 ? 's' : ''}
+                      </button>
+                      {openHistory[groupKey] && (
+                        <ul className="doc-list doc-history-list">
+                          {older.map(v => (
+                            <li key={v.id} className="doc-row doc-obsolete">
+                              <button className="doc-open" onClick={() => openDoc(v)}>
+                                <span className="doc-icon">🗂️</span>
+                                <span className="doc-meta">
+                                  <span className="doc-title">
+                                    v{v.version || 1}
+                                    <span className="doc-badge doc-badge-obsolete">Obsolète</span>
+                                  </span>
+                                  <span className="doc-sub">
+                                    {new Date(v.created_at).toLocaleDateString('fr-FR')}
+                                    {v.uploader_name ? ` · ${v.uploader_name}` : ''}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}

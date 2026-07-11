@@ -2,10 +2,11 @@
 // Suivi de chantier (MOE) : liste des chantiers + création (MOE uniquement).
 // Les entreprises/employés ne voient que les chantiers où un lot leur est assigné.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chantierService } from '../services/chantierService';
 import { useAuthStore } from '../store/authStore';
+import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import { LoadingSpinner, EmptyState } from '../components/ui';
 import { BuildingIcon } from '../components/SharedUI';
@@ -37,21 +38,55 @@ export default function ChantiersView() {
   const { profile } = useAuthStore();
   const isAdmin = !!profile?.is_admin;
 
+  const { users } = useUsers();
+
   const [chantiers, setChantiers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', client_name: '', address: '', start_date: '', end_date: '' });
   const [selectedLots, setSelectedLots] = useState([]);
+  const [lotAssign, setLotAssign] = useState({});   // { nomDuLot: userId }
+  const [dupFrom, setDupFrom] = useState('');
   const [customLot, setCustomLot] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const assignableUsers = useMemo(
+    () => (users || []).filter((u) => (u.employee_status || 'actif') !== 'licencié'),
+    [users]
+  );
+
   const toggleLot = (lot) => {
     setSelectedLots((prev) => prev.includes(lot) ? prev.filter((l) => l !== lot) : [...prev, lot]);
+    setLotAssign((prev) => {
+      if (!(lot in prev)) return prev;
+      const next = { ...prev }; delete next[lot]; return next;
+    });
   };
   const addCustomLot = () => {
     const v = customLot.trim();
     if (v && !selectedLots.includes(v)) setSelectedLots((prev) => [...prev, v]);
     setCustomLot('');
+  };
+
+  // Duplication : repart des lots (et assignations) d'un chantier existant.
+  const applyDuplicate = (chantierId) => {
+    setDupFrom(chantierId);
+    if (!chantierId) return;
+    const source = chantiers.find((c) => c.id === chantierId);
+    if (!source) return;
+    const lots = source.chantier_lots || [];
+    setSelectedLots(lots.map((l) => l.name));
+    const assign = {};
+    for (const l of lots) {
+      const firstMember = l.chantier_lot_members?.[0]?.user_id;
+      if (firstMember) assign[l.name] = firstMember;
+    }
+    setLotAssign(assign);
+  };
+
+  const resetCreateForm = () => {
+    setForm({ name: '', client_name: '', address: '', start_date: '', end_date: '' });
+    setSelectedLots([]); setLotAssign({}); setDupFrom(''); setCustomLot('');
   };
 
   const load = useCallback(async () => {
@@ -74,7 +109,7 @@ export default function ChantiersView() {
       address: form.address || null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
-      lots: selectedLots,
+      lots: selectedLots.map((name) => ({ name, member_id: lotAssign[name] || null })),
     });
     setSaving(false);
     if (error) {
@@ -83,8 +118,7 @@ export default function ChantiersView() {
     }
     toast?.success(selectedLots.length ? `Chantier créé avec ${selectedLots.length} lot(s)` : 'Chantier créé');
     setShowCreate(false);
-    setForm({ name: '', client_name: '', address: '', start_date: '', end_date: '' });
-    setSelectedLots([]);
+    resetCreateForm();
     navigate(`/chantiers/${id}`);
   };
 
@@ -142,6 +176,25 @@ export default function ChantiersView() {
                 </div>
               </div>
 
+              {chantiers.length > 0 && (
+                <div className="form-group">
+                  <label>Dupliquer un chantier existant (facultatif)</label>
+                  <select className="form-control" value={dupFrom} onChange={(e) => applyDuplicate(e.target.value)}>
+                    <option value="">— Partir de zéro —</option>
+                    {chantiers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({(c.chantier_lots || []).length} lots)
+                      </option>
+                    ))}
+                  </select>
+                  {dupFrom && (
+                    <p className="muted" style={{ marginTop: '.3rem' }}>
+                      Lots et intervenants pré-remplis — ajustez ci-dessous.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Lots (corps de métier) — cochez ceux du chantier</label>
                 <div className="preset-lots">
@@ -152,6 +205,12 @@ export default function ChantiersView() {
                       {selectedLots.includes(lot) ? '✓ ' : '+ '}{lot}
                     </button>
                   ))}
+                  {/* Lots personnalisés (hors liste standard) */}
+                  {selectedLots.filter((l) => !PRESET_LOTS.includes(l)).map((lot) => (
+                    <button type="button" key={lot} className="preset-chip selected" onClick={() => toggleLot(lot)}>
+                      ✓ {lot}
+                    </button>
+                  ))}
                 </div>
                 <div className="inline-add" style={{ marginTop: '.5rem' }}>
                   <input className="form-control" placeholder="Autre lot…" value={customLot}
@@ -159,12 +218,27 @@ export default function ChantiersView() {
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomLot(); } }} />
                   <button type="button" className="btn btn-secondary btn-sm" onClick={addCustomLot}>Ajouter</button>
                 </div>
-                {selectedLots.length > 0 && (
-                  <p className="muted" style={{ marginTop: '.4rem' }}>
-                    {selectedLots.length} lot(s) sélectionné(s) — vous pourrez les compléter ensuite.
-                  </p>
-                )}
               </div>
+
+              {selectedLots.length > 0 && (
+                <div className="form-group">
+                  <label>Intervenant par lot (facultatif — assignable plus tard)</label>
+                  <div className="lot-assign-list">
+                    {selectedLots.map((lot) => (
+                      <div key={lot} className="lot-assign-row">
+                        <span className="lot-assign-name">{lot}</span>
+                        <select className="form-control lot-assign-select" value={lotAssign[lot] || ''}
+                          onChange={(e) => setLotAssign((prev) => ({ ...prev, [lot]: e.target.value }))}>
+                          <option value="">Non attribué</option>
+                          {assignableUsers.map((u) => (
+                            <option key={u.id} value={u.id}>{u.full_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Annuler</button>

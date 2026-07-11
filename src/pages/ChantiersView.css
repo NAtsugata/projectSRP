@@ -151,6 +151,27 @@
 .doc-title { font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-sub { font-size: .76rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Versions et obsolescence */
+.doc-group { list-style: none; }
+.doc-badge {
+  display: inline-block; margin-left: .4rem; padding: .1rem .45rem;
+  border-radius: 999px; font-size: .68rem; font-weight: 700; vertical-align: middle;
+}
+.doc-badge-version { background: #dbeafe; color: #1e40af; }
+.doc-badge-obsolete { background: #fee2e2; color: #b91c1c; }
+.doc-obsolete .doc-title, .doc-obsolete .doc-icon { opacity: .6; }
+.doc-actions { display: flex; gap: .7rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+.doc-history { margin: .15rem 0 .4rem 2.4rem; }
+.doc-history-toggle { font-size: .78rem; color: #6b7280; }
+.doc-history-list { margin-top: .35rem; }
+.doc-history-list .doc-row { padding: .35rem .6rem; background: #f9fafb; }
+
+/* Assignation d'intervenant par lot (création) */
+.lot-assign-list { display: flex; flex-direction: column; gap: .4rem; margin-top: .35rem; }
+.lot-assign-row { display: flex; align-items: center; gap: .6rem; }
+.lot-assign-name { flex: 1; font-size: .85rem; font-weight: 600; color: #374151; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lot-assign-select { flex: 1.2; }
+
 /* Formulaires */
 .chantier-form, .alert-form { display: flex; flex-direction: column; gap: .75rem; }
 .chantier-form-row { display: flex; gap: .75rem; }

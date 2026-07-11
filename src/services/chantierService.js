@@ -6,14 +6,17 @@ import { supabase } from '../lib/supabaseClient';
 import { getOrgId, withOrgId } from '../utils/orgHelper';
 import { sanitizeFilename } from '../utils/sanitize';
 
-const SIGNED_URL_EXPIRY = 3600;
+// URLs signées : durée courte, régénérées à chaque ouverture — un lien
+// copié ou transféré expire vite.
+const MEDIA_URL_EXPIRY = 900;  // 15 min (vignettes photos)
+const DOC_URL_EXPIRY = 300;    // 5 min (ouverture d'un document)
 
 export const chantierService = {
   // ===== Chantiers =====
   async getChantiers() {
     const { data, error } = await supabase
       .from('chantiers')
-      .select('*, chantier_lots(id, name, status, progress)')
+      .select('*, chantier_lots(id, name, status, progress, chantier_lot_members(user_id))')
       .order('created_at', { ascending: false });
     return { data, error };
   },
@@ -42,15 +45,22 @@ export const chantierService = {
     return { data, error };
   },
 
-  /** Créer un chantier ET ses lots prédéfinis en un seul appel. */
+  /**
+   * Créer un chantier ET ses lots en un seul appel.
+   * lots : [{ name, member_id }] — member_id facultatif (intervenant
+   * assigné au lot dès la création).
+   */
   async createChantierWithLots({ name, client_name, address, start_date, end_date, lots }) {
+    const payload = (lots || [])
+      .map((l) => (typeof l === 'string' ? { name: l, member_id: null } : { name: l.name, member_id: l.member_id || null }))
+      .filter((l) => l.name && l.name.trim());
     const { data, error } = await supabase.rpc('create_chantier_with_lots', {
       p_name: name,
       p_client: client_name || null,
       p_address: address || null,
       p_start: start_date || null,
       p_end: end_date || null,
-      p_lots: (lots && lots.length) ? lots : null,
+      p_lots: payload.length ? payload : null,
     });
     return { id: data, error };
   },
@@ -187,7 +197,7 @@ export const chantierService = {
   async getMediaUrl(filePath) {
     const { data, error } = await supabase.storage
       .from('chantier-media')
-      .createSignedUrl(filePath, SIGNED_URL_EXPIRY);
+      .createSignedUrl(filePath, MEDIA_URL_EXPIRY);
     return { url: data?.signedUrl || null, error };
   },
 
@@ -215,7 +225,12 @@ export const chantierService = {
     return { data, error };
   },
 
-  async uploadDocument({ chantier, lotId, category, title, file, uploaderName }) {
+  /**
+   * Dépôt d'un document. groupId : passer document_group_id d'un
+   * document existant pour déposer une NOUVELLE VERSION (v2, v3…) —
+   * l'ancienne passe automatiquement en obsolète, rien n'est écrasé.
+   */
+  async uploadDocument({ chantier, lotId, category, title, file, uploaderName, groupId }) {
     const orgId = getOrgId();
     if (!orgId) return { error: { message: 'Organisation inconnue' } };
     const { data: { user } } = await supabase.auth.getUser();
@@ -238,6 +253,7 @@ export const chantierService = {
         file_name: safeName,
         uploaded_by: user?.id,
         uploader_name: uploaderName || null,
+        document_group_id: groupId || null,
       }))
       .select().single();
     return { data, error };
@@ -246,8 +262,21 @@ export const chantierService = {
   async getDocumentUrl(filePath) {
     const { data, error } = await supabase.storage
       .from('chantier-docs')
-      .createSignedUrl(filePath, SIGNED_URL_EXPIRY);
+      .createSignedUrl(filePath, DOC_URL_EXPIRY);
     return { url: data?.signedUrl || null, error };
+  },
+
+  /** Marquer obsolète / réactiver sans supprimer (traçabilité). */
+  async setDocumentStatus(docId, status) {
+    const { error } = await supabase
+      .from('chantier_documents').update({ status }).eq('id', docId);
+    return { error };
+  },
+
+  /** Journalise la consultation d'un document (qui a ouvert quoi, quand). */
+  async logDocumentView(docId) {
+    const { error } = await supabase.rpc('log_document_view', { p_doc: docId });
+    return { error };
   },
 
   async deleteDocument(doc) {
