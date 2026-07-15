@@ -158,17 +158,24 @@ export const CEE_RATES = {
  * @returns {string} - 'h1', 'h2', 'h3'
  */
 export const getClimateZone = (postalCode) => {
-  const dept = postalCode.substring(0, 2);
+  const dept = String(postalCode || '').substring(0, 2);
 
-  // Zone H1 (Nord, Est) - Départements les plus froids
-  const h1Depts = ['02', '08', '10', '14', '25', '27', '39', '50', '51', '52', '54', '55', '57', '58', '59', '60', '61', '62', '67', '68', '70', '76', '80', '88', '89', '90'];
+  // Zone H1 (Nord, Est, Île-de-France, Rhône-Alpes, Massif Central)
+  // Liste officielle RT2012 / fiches CEE
+  const h1Depts = [
+    '01', '02', '03', '05', '08', '10', '14', '15', '19', '21', '23', '25',
+    '27', '28', '38', '39', '42', '43', '45', '51', '52', '54', '55', '57',
+    '58', '59', '60', '61', '62', '63', '67', '68', '69', '70', '71', '73',
+    '74', '75', '76', '77', '78', '80', '87', '88', '89', '90', '91', '92',
+    '93', '94', '95',
+  ];
 
-  // Zone H3 (Sud, Méditerranée) - Départements les plus chauds
-  const h3Depts = ['04', '05', '06', '11', '13', '2A', '2B', '30', '34', '48', '66', '83', '84'];
+  // Zone H3 (Méditerranée) — les codes postaux corses commencent par 20
+  const h3Depts = ['06', '11', '13', '20', '30', '34', '66', '83', '84'];
 
   if (h1Depts.includes(dept)) return 'h1';
   if (h3Depts.includes(dept)) return 'h3';
-  return 'h2'; // Par défaut : zone H2
+  return 'h2'; // Ouest / Sud-Ouest / Centre-Ouest
 };
 
 /**

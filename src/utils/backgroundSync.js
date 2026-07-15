@@ -20,7 +20,9 @@ export const SYNC_TAGS = {
  * @returns {boolean}
  */
 export const isBackgroundSyncSupported = () => {
-  return 'serviceWorker' in navigator && 'sync' in registration;
+  return 'serviceWorker' in navigator
+    && typeof ServiceWorkerRegistration !== 'undefined'
+    && 'sync' in ServiceWorkerRegistration.prototype;
 };
 
 /**
@@ -98,7 +100,7 @@ export const performSync = async (tag) => {
           { table: 'interventions', store: STORES_ENUM.INTERVENTIONS },
           { table: 'expenses', store: STORES_ENUM.EXPENSES },
           { table: 'profiles', store: STORES_ENUM.PROFILES },
-          { table: 'contracts', store: STORES_ENUM.CONTRACTS },
+          { table: 'maintenance_contracts', store: STORES_ENUM.CONTRACTS },
           { table: 'clients', store: STORES_ENUM.CLIENTS }
         ]);
         break;
@@ -177,7 +179,10 @@ const showNotification = (title, options) => {
  * @param {number} intervalMinutes - Intervalle en minutes
  */
 export const schedulePeriodicSync = async (intervalMinutes = 60) => {
-  if (!('periodicSync' in registration)) {
+  const periodicSupported = 'serviceWorker' in navigator
+    && typeof ServiceWorkerRegistration !== 'undefined'
+    && 'periodicSync' in ServiceWorkerRegistration.prototype;
+  if (!periodicSupported) {
     logger.warn('[BackgroundSync] Periodic Sync non supporté');
     // Fallback vers setInterval
     return scheduleSyncWithInterval(intervalMinutes);

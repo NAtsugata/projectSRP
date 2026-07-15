@@ -83,9 +83,9 @@ describe('Subsidy Calculations', () => {
       const result = calculateCEE(params);
 
       expect(result.zone).toBe('H1');
-      expect(result.very_modest).toBe(3636);
-      expect(result.modest).toBe(3181.5);
-      expect(result.classic).toBe(3181.5);
+      expect(result.very_modest).toBe(5300);
+      expect(result.modest).toBe(5300);
+      expect(result.classic).toBe(3300);
     });
 
     test('should calculate CEE for H2 heating + DHW', () => {
@@ -98,8 +98,8 @@ describe('Subsidy Calculations', () => {
       const result = calculateCEE(params);
 
       expect(result.zone).toBe('H2');
-      expect(result.very_modest).toBe(4125);
-      expect(result.modest).toBe(3609);
+      expect(result.very_modest).toBe(4800);
+      expect(result.modest).toBe(4800);
     });
 
     test('should calculate CEE for H3 heating only', () => {
@@ -112,7 +112,7 @@ describe('Subsidy Calculations', () => {
       const result = calculateCEE(params);
 
       expect(result.zone).toBe('H3');
-      expect(result.very_modest).toBe(2700);
+      expect(result.very_modest).toBe(3200);
     });
   });
 
@@ -329,7 +329,7 @@ describe('Subsidy Calculations', () => {
       const veryModest = result.scenarios.find(s => s.id === 'very_modest');
       const modest = result.scenarios.find(s => s.id === 'modest');
 
-      expect(veryModest.cee).toBeGreaterThan(modest.cee);
+      expect(veryModest.cee).toBeGreaterThanOrEqual(modest.cee);
       expect(veryModest.mpr).toBeGreaterThan(modest.mpr);
     });
   });

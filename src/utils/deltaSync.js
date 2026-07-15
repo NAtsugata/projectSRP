@@ -63,9 +63,11 @@ export const fetchDelta = async (table, storeName, options = {}) => {
   try {
     let query = supabase.from(table).select(select);
 
-    // Filtrer par date de modification si disponible
+    // Filtrer par date de modification si disponible.
+    // Uniquement updated_at : toutes les tables synchronisées l'ont
+    // (certaines n'ont pas created_at, ce qui faisait échouer la requête).
     if (lastSync) {
-      query = query.or(`updated_at.gte.${lastSync},created_at.gte.${lastSync}`);
+      query = query.gte('updated_at', lastSync);
     }
 
     // Appliquer les filtres supplémentaires

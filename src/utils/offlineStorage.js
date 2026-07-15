@@ -4,7 +4,7 @@
 import logger from './logger';
 
 const DB_NAME = 'srp-offline-db';
-const DB_VERSION = 3; // v3: Ajout store CLIENTS pour mode hors ligne complet
+const DB_VERSION = 4; // v4: Ajout store LEAVE_REQUESTS (absences/congés)
 
 // Stores (tables) dans IndexedDB
 const STORES = {
@@ -13,6 +13,7 @@ const STORES = {
   EXPENSES: 'expenses',
   CONTRACTS: 'contracts',
   CLIENTS: 'clients',
+  LEAVE_REQUESTS: 'leaveRequests',
   AUTH: 'auth',
   USER_DATA: 'userData',
   SYNC_QUEUE: 'syncQueue',
@@ -75,6 +76,11 @@ export const openDatabase = () => {
       // Store pour les clients
       if (!database.objectStoreNames.contains(STORES.CLIENTS)) {
         database.createObjectStore(STORES.CLIENTS, { keyPath: 'id' });
+      }
+
+      // Store pour les congés/absences (planning intelligent)
+      if (!database.objectStoreNames.contains(STORES.LEAVE_REQUESTS)) {
+        database.createObjectStore(STORES.LEAVE_REQUESTS, { keyPath: 'id' });
       }
 
       // Store pour l'authentification (session, credentials hash)

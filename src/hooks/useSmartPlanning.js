@@ -106,7 +106,7 @@ export const useSmartPlanning = (options = {}) => {
       const results = await Promise.all([
         syncWithDelta('interventions', STORES_ENUM.INTERVENTIONS),
         syncWithDelta('profiles', STORES_ENUM.PROFILES),
-        syncWithDelta('absences', STORES_ENUM.ABSENCES)
+        syncWithDelta('leave_requests', STORES_ENUM.LEAVE_REQUESTS)
       ]);
 
       // Récupérer données fraîches
@@ -123,7 +123,7 @@ export const useSmartPlanning = (options = {}) => {
       }
 
       if (absResult.success) {
-        const freshAbsences = await cacheGet(STORES_ENUM.ABSENCES);
+        const freshAbsences = await cacheGet(STORES_ENUM.LEAVE_REQUESTS);
         setAbsences(freshAbsences || []);
       }
 
