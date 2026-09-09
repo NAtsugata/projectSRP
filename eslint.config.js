@@ -29,7 +29,9 @@ export default [
     rules: {
       // React
       'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'warn',
+      // Projet JS sans TypeScript : la règle générait ~1900 avertissements
+      // qui noyaient les vrais problèmes.
+      'react/prop-types': 'off',
       'react/jsx-no-target-blank': 'error',
 
       // React Hooks
@@ -48,6 +50,23 @@ export default [
       'eqeqeq': ['error', 'always'],
       'no-var': 'error',
       'prefer-const': 'warn',
+    },
+  },
+  {
+    // Fichiers de test : globales Vitest
+    files: ['src/**/__tests__/**/*.{js,jsx}', 'src/**/*.test.{js,jsx}', 'src/setupTests.js'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
     },
   },
   {

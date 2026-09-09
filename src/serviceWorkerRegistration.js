@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 /**
  * Service Worker Registration
  * Enregistre le Service Worker pour PWA et mode hors ligne
@@ -32,7 +33,7 @@ export function register(config) {
 
         // Ajouter du logging pour le développement
         navigator.serviceWorker.ready.then(() => {
-          console.log(
+          logger.log(
             '✅ Service Worker actif. App peut fonctionner hors ligne.\n' +
             'En savoir plus: https://cra.link/PWA'
           );
@@ -49,7 +50,7 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      console.log('✅ Service Worker enregistré:', registration.scope);
+      logger.log('✅ Service Worker enregistré:', registration.scope);
 
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
@@ -61,7 +62,7 @@ function registerValidSW(swUrl, config) {
           if (installingWorker.state === 'installed') {
             if (navigator.serviceWorker.controller) {
               // Nouveau contenu disponible
-              console.log('🔄 Nouveau contenu disponible. Rafraîchir pour voir les changements.');
+              logger.log('🔄 Nouveau contenu disponible. Rafraîchir pour voir les changements.');
 
               // Exécuter le callback si fourni
               if (config && config.onUpdate) {
@@ -69,7 +70,7 @@ function registerValidSW(swUrl, config) {
               }
             } else {
               // Contenu en cache pour utilisation hors ligne
-              console.log('✅ Contenu en cache. App prête pour mode hors ligne.');
+              logger.log('✅ Contenu en cache. App prête pour mode hors ligne.');
 
               // Exécuter le callback si fourni
               if (config && config.onSuccess) {
@@ -109,7 +110,7 @@ function checkValidServiceWorker(swUrl, config) {
       }
     })
     .catch(() => {
-      console.log('❌ Pas de connexion internet. App en mode hors ligne.');
+      logger.log('❌ Pas de connexion internet. App en mode hors ligne.');
     });
 }
 
@@ -118,7 +119,7 @@ export function unregister() {
     navigator.serviceWorker.ready
       .then((registration) => {
         registration.unregister();
-        console.log('✅ Service Worker désenregistré');
+        logger.log('✅ Service Worker désenregistré');
       })
       .catch((error) => {
         console.error('❌ Erreur désenregistrement:', error.message);
@@ -132,7 +133,7 @@ export function update() {
     navigator.serviceWorker.getRegistration().then((registration) => {
       if (registration) {
         registration.update();
-        console.log('🔄 Vérification mise à jour Service Worker...');
+        logger.log('🔄 Vérification mise à jour Service Worker...');
       }
     });
   }
@@ -148,5 +149,5 @@ export function sendMessage(message) {
 // Fonction pour vider le cache
 export function clearCache() {
   sendMessage({ type: 'CLEAR_CACHE' });
-  console.log('🗑️ Demande de nettoyage du cache envoyée');
+  logger.log('🗑️ Demande de nettoyage du cache envoyée');
 }

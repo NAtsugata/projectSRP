@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // src/utils/consoleOverride.js
 // Override console methods en production pour éviter les logs inutiles
 

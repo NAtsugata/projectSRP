@@ -45,7 +45,7 @@ export default function MobileUploadPage({ interventions, onFilesUploaded }) {
                 const maxWidth = 1024;
                 const maxHeight = 1024;
                 const bitmap = await createImageBitmap(file);
-                let { width, height } = bitmap;
+                const { width, height } = bitmap;
                 let newWidth = width;
                 let newHeight = height;
 

@@ -503,7 +503,7 @@ class EReportingService {
     let startDate, endDate, deadline;
 
     switch (frequency.frequency) {
-      case 'DECADE':  // Tous les 10 jours
+      case 'DECADE': {  // Tous les 10 jours
         const currentDay = now.getDate();
         if (currentDay <= 10) {
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -518,6 +518,7 @@ class EReportingService {
         deadline = new Date(endDate);
         deadline.setDate(deadline.getDate() + frequency.delay);
         break;
+      }
 
       case 'MONTHLY':
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -525,7 +526,7 @@ class EReportingService {
         deadline = new Date(now.getFullYear(), now.getMonth(), frequency.delay);
         break;
 
-      case 'BIMONTHLY':
+      case 'BIMONTHLY': {
         const currentMonth = now.getMonth();
         const periodStart = currentMonth % 2 === 0 ? currentMonth - 2 : currentMonth - 1;
         startDate = new Date(now.getFullYear(), periodStart, 1);
@@ -533,6 +534,7 @@ class EReportingService {
         deadline = new Date(endDate);
         deadline.setDate(deadline.getDate() + frequency.delay);
         break;
+      }
 
       default:
         throw new Error(`Fréquence inconnue: ${frequency.frequency}`);

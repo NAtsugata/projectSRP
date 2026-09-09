@@ -129,7 +129,7 @@ const TimeTrackerEnhanced = ({ report, onUpdateReport, disabled = false }) => {
   // Terminer le chantier
   const handleFinish = useCallback(async () => {
     // Si en pause, terminer la pause d'abord
-    let updated = { ...report };
+    const updated = { ...report };
 
     if (report.isPaused && report.pauseStartedAt) {
       const now = new Date().toISOString();

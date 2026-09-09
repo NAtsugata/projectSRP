@@ -380,15 +380,10 @@ export const clientService = {
    * @param {string} clientId - ID du client
    * @returns {Promise<{data: Array, error: Object}>}
    */
-  async getClientContracts(clientId) {
-    try {
-      // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
-      // TODO: Ajouter client_id a maintenance_contracts si necessaire
-      return { data: [], error: null };
-    } catch (error) {
-      logger.error('❌ Erreur getClientContracts:', error);
-      return { data: null, error };
-    }
+  async getClientContracts(_clientId) {
+    // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
+    // TODO: Ajouter client_id a maintenance_contracts si necessaire
+    return { data: [], error: null };
   },
 
   /**

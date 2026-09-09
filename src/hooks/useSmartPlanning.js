@@ -52,7 +52,7 @@ export const useSmartPlanning = (options = {}) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [enableAutoSync]);
+  }, [enableAutoSync, syncAll]);
 
   /**
    * Charge les données (cache ou serveur)
@@ -88,13 +88,15 @@ export const useSmartPlanning = (options = {}) => {
     } catch (error) {
       logger.error('[SmartPlanning] Erreur chargement données:', error);
     }
-  }, [enableCache, isOnline, enableAutoSync]);
+  }, [enableCache, isOnline, enableAutoSync, syncAll]);
 
   /**
    * Synchronise toutes les données
    */
   const syncAll = useCallback(async (background = false) => {
-    if (!isOnline) {
+    // navigator.onLine plutôt que l'état React : lors de l'événement "online",
+    // l'état n'est pas encore à jour et la sync de reconnexion était ignorée.
+    if (!navigator.onLine) {
       logger.log('[SmartPlanning] Hors ligne, sync ignorée');
       return;
     }
@@ -134,7 +136,7 @@ export const useSmartPlanning = (options = {}) => {
     } finally {
       if (!background) setIsSyncing(false);
     }
-  }, [isOnline]);
+  }, []);
 
   /**
    * Crée une intervention multi-jours (hors ligne compatible)

@@ -132,7 +132,7 @@ export const useMobileFileManager = (interventionId) => {
       attempt++;
       try {
         onProgress(fileId, 'uploading', attempt * 20);
-        // eslint-disable-next-line no-loop-func
+         
         const result = await storageService.uploadInterventionFile(file, interventionId, 'report', (percent) => {
           // Relaye la progression de l'upload au gestionnaire d'état
           onProgress(fileId, 'uploading', Math.max(percent, attempt * 20));

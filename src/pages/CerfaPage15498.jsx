@@ -125,7 +125,7 @@ function CerfaPage15498() {
             }
         } catch (e) { /* ignore parse errors */ }
         setDraftRestored(true);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);  
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {

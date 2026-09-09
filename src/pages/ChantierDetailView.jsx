@@ -68,8 +68,8 @@ export default function ChantierDetailView() {
 
   useEffect(() => { load(); }, [load]);
 
-  const lots = chantier?.chantier_lots || [];
-  const zones = chantier?.chantier_zones || [];
+  const lots = useMemo(() => chantier?.chantier_lots || [], [chantier]);
+  const zones = useMemo(() => chantier?.chantier_zones || [], [chantier]);
   const globalProgress = useMemo(() => {
     if (!lots.length) return 0;
     return Math.round(lots.reduce((s, l) => s + (l.progress || 0), 0) / lots.length);

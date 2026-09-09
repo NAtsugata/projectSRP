@@ -75,7 +75,7 @@ export default function EmployeeLeaveView({
     } finally {
       setIsSubmitting(false);
     }
-  }, [userName, userId, onSubmitRequest, showToast, closeForm]);
+  }, [userId, onSubmitRequest, showToast, closeForm]);
 
   return (
     <div className="employee-leave-view">

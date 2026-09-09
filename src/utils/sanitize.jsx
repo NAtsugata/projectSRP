@@ -192,7 +192,7 @@ export const sanitizeURL = (url, options = {}) => {
   if (allowRelative) {
     if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('?')) {
       // Sanitize pour éviter javascript: dans les URLs relatives
-      // eslint-disable-next-line no-script-url -- Vérification intentionnelle de sécurité
+       
       if (trimmed.toLowerCase().includes('javascript:')) return '';
       if (trimmed.toLowerCase().includes('data:')) return '';
       return DOMPurify.sanitize(trimmed, { ALLOWED_TAGS: [] });

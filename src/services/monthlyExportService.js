@@ -167,7 +167,7 @@ export async function getMonthlyExportData(year, month) {
           if (absence.reason !== 'École') return;
           const as = new Date(Math.max(new Date(absence.start_date), new Date(startDate)));
           const ae = new Date(Math.min(new Date(absence.end_date), new Date(endDate)));
-          let current = new Date(as);
+          const current = new Date(as);
           while (current <= ae) {
             const day = current.getDay();
             if (day !== 0 && day !== 6) {
@@ -352,7 +352,7 @@ export async function getMonthlyExportData(year, month) {
           const ls = new Date(Math.max(new Date(leave.start_date), new Date(startDate)));
           const le = new Date(Math.min(new Date(leave.end_date), new Date(endDate)));
           // Compter les jours ouvrés entre les deux dates
-          let current = new Date(ls);
+          const current = new Date(ls);
           while (current <= le) {
             const day = current.getDay();
             if (day !== 0 && day !== 6) leaveDays++;
@@ -362,7 +362,7 @@ export async function getMonthlyExportData(year, month) {
 
         // --- Absences (employee_absences) ---
         let absenceDays = 0;
-        let schoolDays = schoolDatesSet.size;
+        const schoolDays = schoolDatesSet.size;
         const absenceDetails = [];
         const schoolDetails = [];
 
@@ -370,7 +370,7 @@ export async function getMonthlyExportData(year, month) {
           const as = new Date(Math.max(new Date(absence.start_date), new Date(startDate)));
           const ae = new Date(Math.min(new Date(absence.end_date), new Date(endDate)));
           let days = 0;
-          let current = new Date(as);
+          const current = new Date(as);
           while (current <= ae) {
             const day = current.getDay();
             if (day !== 0 && day !== 6) days++;

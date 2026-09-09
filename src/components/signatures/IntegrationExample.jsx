@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 /**
  * ====================================================================
  * EXEMPLE D'INTÉGRATION: Signature Électronique
@@ -41,7 +42,7 @@ export function InterventionSignatureExample({ interventionId }) {
 
   // Callback de succès
   const handleSignatureComplete = async (signatureData) => {
-    console.log('✅ Signature enregistrée:', signatureData);
+    logger.log('✅ Signature enregistrée:', signatureData);
 
     // Mettre à jour l'intervention avec l'ID de la signature
     const { error } = await supabase

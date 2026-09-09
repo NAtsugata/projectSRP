@@ -25,6 +25,7 @@ const ERROR_MESSAGES = {
   
   // Erreurs réseau
   'Failed to fetch': 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.',
+  'Load failed': 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.', // Safari / iOS
   'NetworkError': 'Erreur réseau. Vérifiez votre connexion internet.',
   'timeout': 'La requête a pris trop de temps. Veuillez réessayer.',
   
@@ -187,12 +188,13 @@ export const isAuthError = (error) => {
  */
 export const isNetworkError = (error) => {
   if (!error) return false;
-  
-  const message = error.message || error.error || '';
-  return message.includes('Failed to fetch') || 
-         message.includes('NetworkError') ||
-         message.includes('timeout') ||
-         message.includes('network');
+
+  // supabase-js : échec de fetch côté auth (serveur injoignable, status 0)
+  if (error.name === 'AuthRetryableFetchError' || error.status === 0) return true;
+
+  const message = String(error.message || error.error || '');
+  // "Load failed" = message de Safari/iOS pour un fetch échoué
+  return /failed to fetch|load failed|networkerror|network|timeout|aborted/i.test(message);
 };
 
 /**

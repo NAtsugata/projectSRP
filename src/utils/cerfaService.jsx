@@ -237,9 +237,9 @@ export const inspectCerfaFields = async (pdfAsset = null) => {
         }));
 
         logger.log('CERFA Fields:', fieldInfo);
-        console.log('=== CERFA PDF FIELDS ===');
-        fieldInfo.forEach(f => console.log(`${f.type}: "${f.name}"`));
-        console.log('========================');
+        logger.log('=== CERFA PDF FIELDS ===');
+        fieldInfo.forEach(f => logger.log(`${f.type}: "${f.name}"`));
+        logger.log('========================');
         return fieldInfo;
     } catch (e) {
         logger.error('Erreur inspection CERFA:', e);

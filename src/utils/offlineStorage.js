@@ -199,7 +199,7 @@ export const clearStore = async (storeName) => {
 export const cacheInterventions = async (interventions) => {
   await saveToStore(STORES.INTERVENTIONS, interventions);
   await saveToStore(STORES.META, { key: 'lastSync_interventions', value: Date.now() });
-  console.log(`[OfflineDB] ${interventions.length} interventions en cache`);
+  logger.log(`[OfflineDB] ${interventions.length} interventions en cache`);
 };
 
 /**
@@ -215,7 +215,7 @@ export const getCachedInterventions = async () => {
 export const cacheProfiles = async (profiles) => {
   await saveToStore(STORES.PROFILES, profiles);
   await saveToStore(STORES.META, { key: 'lastSync_profiles', value: Date.now() });
-  console.log(`[OfflineDB] ${profiles.length} profils en cache`);
+  logger.log(`[OfflineDB] ${profiles.length} profils en cache`);
 };
 
 /**
@@ -231,7 +231,7 @@ export const getCachedProfiles = async () => {
 export const cacheExpenses = async (expenses) => {
   await saveToStore(STORES.EXPENSES, expenses);
   await saveToStore(STORES.META, { key: 'lastSync_expenses', value: Date.now() });
-  console.log(`[OfflineDB] ${expenses.length} dépenses en cache`);
+  logger.log(`[OfflineDB] ${expenses.length} dépenses en cache`);
 };
 
 /**
@@ -247,7 +247,7 @@ export const getCachedExpenses = async () => {
 export const cacheContracts = async (contracts) => {
   await saveToStore(STORES.CONTRACTS, contracts);
   await saveToStore(STORES.META, { key: 'lastSync_contracts', value: Date.now() });
-  console.log(`[OfflineDB] ${contracts.length} contrats en cache`);
+  logger.log(`[OfflineDB] ${contracts.length} contrats en cache`);
 };
 
 /**

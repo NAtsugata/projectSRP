@@ -3,7 +3,12 @@ import { authService } from '../lib/supabase';
 import { MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { isNetworkError } from '../utils/supabaseErrors';
+import logger from '../utils/logger';
 import './LoginScreen.css';
+
+const SERVER_UNREACHABLE_MSG =
+    'Impossible de joindre le serveur. Vérifiez votre connexion internet ou réessayez dans quelques minutes.';
 
 export default function LoginScreen() {
     // 'login' | 'signup' | 'check-email'
@@ -29,7 +34,10 @@ export default function LoginScreen() {
             const result = await authService.signIn(email, password);
 
             if (result.error) {
-                setError('Email ou mot de passe incorrect. Veuillez réessayer.');
+                // Ne pas accuser le mot de passe quand c'est le serveur qui ne répond pas
+                setError(isNetworkError(result.error)
+                    ? SERVER_UNREACHABLE_MSG
+                    : 'Email ou mot de passe incorrect. Veuillez réessayer.');
             } else if (result.isOfflineMode) {
                 if (result.data?.user) {
                     setUser(result.data.user);
@@ -39,8 +47,8 @@ export default function LoginScreen() {
             }
             // Mode online : redirection gérée par App.js via onAuthStateChange
         } catch (err) {
-            console.error('Erreur de connexion:', err);
-            setError('Erreur de connexion. Veuillez réessayer.');
+            logger.error('Erreur de connexion:', err);
+            setError(isNetworkError(err) ? SERVER_UNREACHABLE_MSG : 'Erreur de connexion. Veuillez réessayer.');
         } finally {
             setLoading(false);
         }

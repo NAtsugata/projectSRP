@@ -31,9 +31,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'Pragma': 'no-cache',
     },
     fetch: (url, options = {}) => {
-      // Timeout de 30 secondes pour les requêtes mobiles
+      // Timeout de 30 secondes pour les requêtes mobiles, sans perdre
+      // l'annulation éventuellement demandée par l'appelant (options.signal)
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
+      const callerSignal = options.signal;
+      if (callerSignal) {
+        if (callerSignal.aborted) controller.abort();
+        else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
       return fetch(url, {
         ...options,
         signal: controller.signal,

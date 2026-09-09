@@ -171,7 +171,7 @@ export const storageService = {
     const signedPattern = new RegExp(`/storage/v1/object/sign/${bucket}/(.+?)(?:\\?|$)`);
     const publicPattern = new RegExp(`/storage/v1/object/public/${bucket}/(.+?)(?:\\?|$)`);
 
-    let match = url.match(signedPattern) || url.match(publicPattern);
+    const match = url.match(signedPattern) || url.match(publicPattern);
     if (match && match[1]) {
       return decodeURIComponent(match[1]);
     }

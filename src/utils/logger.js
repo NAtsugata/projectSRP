@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // src/utils/logger.js - Système de logging avec monitoring intégré
 // En production, seules les erreurs sont loggées + collectées pour analytics
 // En développement, tous les logs sont affichés

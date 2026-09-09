@@ -39,7 +39,7 @@ export const generateWorkingDays = (startDate, workDays, options = {}) => {
 
   const start = new Date(startDate);
   const dates = [];
-  let currentDate = new Date(start);
+  const currentDate = new Date(start);
   let addedDays = 0;
 
   while (addedDays < workDays) {

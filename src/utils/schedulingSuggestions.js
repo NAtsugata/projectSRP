@@ -79,7 +79,7 @@ const suggestEarliest = (intervention, startDate, context) => {
   const { users } = context;
 
   // Trouver la première date sans conflit
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   let attempts = 0;
   const maxAttempts = 30; // Chercher sur 30 jours max
 
@@ -152,7 +152,7 @@ const suggestOptimal = (intervention, startDate, context, options = {}) => {
   // Trouver le meilleur créneau pour cette équipe
   let bestSlot = null;
   let bestScore = 0;
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
 
   for (let i = 0; i < 14; i++) { // Chercher sur 2 semaines
     const plannedIntervention = createMultiDayIntervention(

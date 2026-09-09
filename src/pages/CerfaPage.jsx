@@ -230,7 +230,7 @@ function CerfaPage() {
             }
         } catch (e) { /* ignore parse errors */ }
         setDraftRestored(true);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);  
 
     // Calcul automatique du teqCO2 basé sur le fluide et la charge
     const calculatedTeqCO2 = useMemo(() => {

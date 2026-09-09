@@ -1,3 +1,4 @@
+import logger from './logger';
 // src/utils/documentScanner.js
 // Utilitaires pour scanner et traiter des documents avec OpenCV.js
 // Version améliorée - Détection robuste multi-méthodes
@@ -114,7 +115,7 @@ export function detectDocumentEdges(imageData) {
     }
 
     if (candidates.length === 0) {
-      console.log('[DETECT] Aucun candidat trouvé');
+      logger.log('[DETECT] Aucun candidat trouvé');
       return null;
     }
 
@@ -126,17 +127,17 @@ export function detectDocumentEdges(imageData) {
     // Trier par score décroissant
     candidates.sort((a, b) => b.score - a.score);
 
-    console.log('[DETECT] Candidats:', candidates.map(c => `${c.method}:${c.score.toFixed(2)}`).join(', '));
+    logger.log('[DETECT] Candidats:', candidates.map(c => `${c.method}:${c.score.toFixed(2)}`).join(', '));
 
     const best = candidates[0];
 
     // Seuil très bas pour accepter plus de détections
     if (best.score > 0.10) {
-      console.log('[DETECT] Meilleur:', best.method, 'score:', best.score.toFixed(2));
+      logger.log('[DETECT] Meilleur:', best.method, 'score:', best.score.toFixed(2));
       return sortCorners(best.points);
     }
 
-    console.log('[DETECT] Score trop bas:', best.score.toFixed(2));
+    logger.log('[DETECT] Score trop bas:', best.score.toFixed(2));
     return null;
 
   } catch (err) {

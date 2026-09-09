@@ -2,6 +2,7 @@
 // Système de détection de conflits de planification
 
 import logger from './logger';
+import { isPublicHoliday } from './smartScheduler';
 
 /**
  * Types de conflits
@@ -216,9 +217,7 @@ const checkTimeOverlap = (user, date, intervention, allInterventions) => {
  * Vérifie si c'est un jour férié
  */
 const checkPublicHoliday = (date) => {
-  // Utiliser la fonction du smartScheduler
   const dateObj = new Date(date);
-  const { isPublicHoliday } = require('./smartScheduler');
 
   if (isPublicHoliday(dateObj)) {
     return {

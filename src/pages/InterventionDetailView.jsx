@@ -436,7 +436,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         for (const result of results) {
           if (result.success) {
             // Ajouter au ZIP avec un nom unique
-            let fileName = result.file.name || `fichier-${successCount + 1}`;
+            const fileName = result.file.name || `fichier-${successCount + 1}`;
             let counter = 1;
             let uniqueName = fileName;
             while (zip.file(uniqueName)) {
@@ -577,7 +577,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       };
       await finalize(updated, 'Géolocalisation refusée. Heure enregistrée sans position.');
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report, lock, unlock, saveScroll, restoreScroll, persistReport]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [report, lock, unlock, saveScroll, restoreScroll, persistReport]);  
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {

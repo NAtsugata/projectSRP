@@ -2,7 +2,7 @@
 // FILE: src/components/quotes/QuoteLayoutEditor.jsx
 // Éditeur de mise en page avancé pour personnaliser les devis
 // =============================
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import './QuoteLayoutEditor.css';
 
 // Configuration par défaut des sections
@@ -118,21 +118,21 @@ function QuoteLayoutEditor({
   const [draggedIndex, setDraggedIndex] = useState(null);
 
   // Fusionner avec les valeurs par défaut
-  const currentLayout = {
+  const currentLayout = useMemo(() => ({
     ...DEFAULT_LAYOUT,
     ...layout,
     sections: layout?.sections || DEFAULT_LAYOUT.sections
-  };
+  }), [layout]);
 
   // Obtenir les sections triées par ordre
-  const getSortedSections = () => {
+  const getSortedSections = useCallback(() => {
     return [...currentLayout.sections]
       .sort((a, b) => a.order - b.order)
       .map(section => ({
         ...section,
         ...DEFAULT_SECTIONS.find(s => s.id === section.id)
       }));
-  };
+  }, [currentLayout.sections]);
 
   // Mettre à jour une valeur du layout
   const updateLayout = useCallback((key, value) => {

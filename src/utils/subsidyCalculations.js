@@ -116,7 +116,7 @@ export const calculateMPR = (params) => {
   const category = getMPRCategory(rfr || 0, household_size || 1, postal_code);
 
   // Montant de base
-  let baseMPR = {
+  const baseMPR = {
     blue: MPR_RATES.blue,
     yellow: MPR_RATES.yellow,
     violet: MPR_RATES.violet,

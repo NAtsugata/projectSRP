@@ -1,3 +1,4 @@
+import logger from './logger';
 // src/utils/safeStorage.js
 // Wrapper sécurisé pour localStorage/sessionStorage
 // Gère les erreurs (mode privé, quota, JSON corrompu)
@@ -145,7 +146,7 @@ export const safeStorage = {
       // Supprimer les clés identifiées
       keysToRemove.forEach(key => this.removeItem(key, type));
 
-      console.log(`🧹 Cleaned ${keysToRemove.length} old items from ${type}`);
+      logger.log(`🧹 Cleaned ${keysToRemove.length} old items from ${type}`);
     } catch (error) {
       console.error('Failed to clear old data:', error);
     }

@@ -22,7 +22,7 @@ import {
   toLocalDateStr
 } from '../utils/agendaHelpers';
 import { narrowToDate } from '../utils/teamForDate';
-// eslint-disable-next-line no-unused-vars -- Reserved for future notification features
+ 
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import logger from '../utils/logger';

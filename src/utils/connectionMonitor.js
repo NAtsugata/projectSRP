@@ -57,7 +57,7 @@ const handleFailure = () => {
 
 const notifyListeners = (isOnline) => {
   state.listeners.forEach(cb => {
-    try { cb(isOnline); } catch {}
+    try { cb(isOnline); } catch { /* un listener défaillant ne doit pas bloquer les autres */ }
   });
 };
 
