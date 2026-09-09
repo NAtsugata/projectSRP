@@ -32,6 +32,54 @@ export const useSmartPlanning = (options = {}) => {
   const [absences, setAbsences] = useState([]);
   const [pendingChanges, setPendingChanges] = useState([]);
 
+  /**
+   * Synchronise toutes les données
+   */
+  const syncAll = useCallback(async (background = false) => {
+    // navigator.onLine plutôt que l'état React : lors de l'événement "online",
+    // l'état n'est pas encore à jour et la sync de reconnexion était ignorée.
+    if (!navigator.onLine) {
+      logger.log('[SmartPlanning] Hors ligne, sync ignorée');
+      return;
+    }
+
+    if (!background) setIsSyncing(true);
+
+    try {
+      // Sync avec Delta pour économiser bande passante
+      const results = await Promise.all([
+        syncWithDelta('interventions', STORES_ENUM.INTERVENTIONS),
+        syncWithDelta('profiles', STORES_ENUM.PROFILES),
+        syncWithDelta('leave_requests', STORES_ENUM.LEAVE_REQUESTS)
+      ]);
+
+      // Récupérer données fraîches
+      const [itvResult, usersResult, absResult] = results;
+
+      if (itvResult.success) {
+        const freshInterventions = await cacheGet(STORES_ENUM.INTERVENTIONS);
+        setInterventions(freshInterventions || []);
+      }
+
+      if (usersResult.success) {
+        const freshUsers = await cacheGet(STORES_ENUM.PROFILES);
+        setUsers(freshUsers || []);
+      }
+
+      if (absResult.success) {
+        const freshAbsences = await cacheGet(STORES_ENUM.LEAVE_REQUESTS);
+        setAbsences(freshAbsences || []);
+      }
+
+      logger.log('[SmartPlanning] Sync complète réussie');
+
+    } catch (error) {
+      logger.error('[SmartPlanning] Erreur sync:', error);
+    } finally {
+      if (!background) setIsSyncing(false);
+    }
+  }, []);
+
   // Écouter changements de connexion
   useEffect(() => {
     const handleOnline = () => {
@@ -90,53 +138,6 @@ export const useSmartPlanning = (options = {}) => {
     }
   }, [enableCache, isOnline, enableAutoSync, syncAll]);
 
-  /**
-   * Synchronise toutes les données
-   */
-  const syncAll = useCallback(async (background = false) => {
-    // navigator.onLine plutôt que l'état React : lors de l'événement "online",
-    // l'état n'est pas encore à jour et la sync de reconnexion était ignorée.
-    if (!navigator.onLine) {
-      logger.log('[SmartPlanning] Hors ligne, sync ignorée');
-      return;
-    }
-
-    if (!background) setIsSyncing(true);
-
-    try {
-      // Sync avec Delta pour économiser bande passante
-      const results = await Promise.all([
-        syncWithDelta('interventions', STORES_ENUM.INTERVENTIONS),
-        syncWithDelta('profiles', STORES_ENUM.PROFILES),
-        syncWithDelta('leave_requests', STORES_ENUM.LEAVE_REQUESTS)
-      ]);
-
-      // Récupérer données fraîches
-      const [itvResult, usersResult, absResult] = results;
-
-      if (itvResult.success) {
-        const freshInterventions = await cacheGet(STORES_ENUM.INTERVENTIONS);
-        setInterventions(freshInterventions || []);
-      }
-
-      if (usersResult.success) {
-        const freshUsers = await cacheGet(STORES_ENUM.PROFILES);
-        setUsers(freshUsers || []);
-      }
-
-      if (absResult.success) {
-        const freshAbsences = await cacheGet(STORES_ENUM.LEAVE_REQUESTS);
-        setAbsences(freshAbsences || []);
-      }
-
-      logger.log('[SmartPlanning] Sync complète réussie');
-
-    } catch (error) {
-      logger.error('[SmartPlanning] Erreur sync:', error);
-    } finally {
-      if (!background) setIsSyncing(false);
-    }
-  }, []);
 
   /**
    * Crée une intervention multi-jours (hors ligne compatible)
