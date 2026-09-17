@@ -2,7 +2,7 @@
 // FILE: src/pages/ContractDetailView.js
 // Detailed view of a single maintenance contract
 // =============================
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import { generateMaintenanceReportPDF } from '../utils/maintenanceReportPDF';

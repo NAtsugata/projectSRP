@@ -1,6 +1,5 @@
 // src/pages/EmployeeLeaveViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à EmployeeLeaveView
-import React from 'react';
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';

@@ -1,5 +1,4 @@
 // src/pages/ChecklistViewContainer.js
-import React from 'react';
 import { useChecklists } from '../hooks/useChecklists';
 import { useInterventions } from '../hooks/useInterventions';
 import { useAuthStore } from '../store/authStore';

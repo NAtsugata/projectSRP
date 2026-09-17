@@ -1,5 +1,4 @@
 // src/pages/AdminDashboardContainer.js
-import React from 'react';
 import { useInterventions } from '../hooks/useInterventions';
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useUsers } from '../hooks/useUsers';

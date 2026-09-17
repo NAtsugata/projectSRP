@@ -1,7 +1,7 @@
 // src/components/intervention/ScheduledDatesEditor.js
 // Composant pour éditer les dates planifiées d'une intervention
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { PlusIcon, XIcon } from '../SharedUI';
 import logger from '../../utils/logger';
 import './ScheduledDatesEditor.css';

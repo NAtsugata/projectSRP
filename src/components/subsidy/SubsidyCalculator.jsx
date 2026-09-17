@@ -1,7 +1,7 @@
 // src/components/subsidy/SubsidyCalculator.jsx
 // Calculateur de primes CEE et MaPrimeRénov' - Style CEDEO
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { calculateFullSubsidy } from '../../utils/subsidyCalculations';
 import SubsidyResult from './SubsidyResult';
 import InfoTooltip from './InfoTooltip';

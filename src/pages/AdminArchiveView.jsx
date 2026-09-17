@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminArchiveView.jsx
 // Vue des archives avec design amélioré
 // =============================
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { TrashIcon } from '../components/SharedUI';
 import './AdminArchiveView.css';
 

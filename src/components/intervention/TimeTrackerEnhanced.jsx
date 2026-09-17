@@ -1,7 +1,7 @@
 // src/components/intervention/TimeTrackerEnhanced.js
 // Chronomètre avancé avec pause/reprise pour chantiers multi-jours
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertTriangleIcon } from '../SharedUI';
 import './TimeTrackerEnhanced.css';
 

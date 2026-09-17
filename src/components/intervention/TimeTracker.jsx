@@ -1,7 +1,7 @@
 // src/components/intervention/TimeTracker.js
 // Composant pour tracker les heures d'arrivée/départ avec géolocalisation
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, LoadingSpinner } from '../ui';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { CheckCircleIcon, MapPinIcon, AlertTriangleIcon } from '../SharedUI';

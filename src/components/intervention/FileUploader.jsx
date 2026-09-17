@@ -2,10 +2,10 @@
 // Composant d'upload avec cache IndexedDB local - permet photos illimitées
 // Les fichiers sont stockés localement puis uploadés en arrière-plan
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '../ui';
 import { storageService } from '../../lib/supabase';
-import { LoaderIcon, CheckCircleIcon, AlertTriangleIcon, UploadIcon } from '../SharedUI';
+import { LoaderIcon, AlertTriangleIcon, UploadIcon } from '../SharedUI';
 import {
   storeFileForUpload,
   getPendingUploads,

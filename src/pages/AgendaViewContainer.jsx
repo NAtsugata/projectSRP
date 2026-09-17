@@ -1,7 +1,6 @@
 // src/pages/AgendaViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à AgendaView
 // Affiche une vue simplifiée pour les employés et une vue complète pour les admins
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInterventions } from '../hooks/useInterventions';
 import { useAuthStore } from '../store/authStore';

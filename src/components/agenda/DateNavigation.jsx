@@ -1,7 +1,6 @@
 // src/components/agenda/DateNavigation.js
 // Composant de navigation entre dates/périodes
 
-import React from 'react';
 import { Button } from '../ui';
 import { ChevronLeftIcon, ChevronRightIcon } from '../SharedUI';
 import './DateNavigation.css';

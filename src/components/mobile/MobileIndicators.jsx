@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDownload } from '../../hooks/useDownload';
 import DownloadProgress from './DownloadProgress';
 import UploadQueue from './UploadQueue';

@@ -1,7 +1,7 @@
 // src/components/agenda/SavedFilters.js
 // Composant pour gérer les filtres sauvegardés (presets)
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui';
 import { BookmarkIcon, PlusIcon, XIcon, StarIcon } from '../SharedUI';
 import { safeStorage } from '../../utils/safeStorage';

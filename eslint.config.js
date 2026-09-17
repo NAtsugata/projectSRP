@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 
 export default [
@@ -10,6 +11,7 @@ export default [
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
+      'unused-imports': unusedImports,
     },
     languageOptions: {
       ecmaVersion: 2022,
@@ -33,6 +35,10 @@ export default [
       // qui noyaient les vrais problèmes.
       'react/prop-types': 'off',
       'react/jsx-no-target-blank': 'error',
+      // Un identifiant utilisé dans du JSX (<Composant/>) compte comme utilisé
+      'react/jsx-uses-vars': 'error',
+      // Imports inutilisés : corrigeable automatiquement (eslint --fix)
+      'unused-imports/no-unused-imports': 'warn',
 
       // React Hooks
       'react-hooks/rules-of-hooks': 'error',

@@ -1,7 +1,6 @@
 // src/components/ir-shower/IRFormElements.js
 // Composants UI réutilisables pour les formulaires IR Douche
 
-import React from 'react';
 
 export const Section = ({ title, children, style, className = "" }) => (
   <div

@@ -1,6 +1,6 @@
 // src/pages/ExpensesViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à ExpensesView
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useExpenses } from '../hooks/useExpenses';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';

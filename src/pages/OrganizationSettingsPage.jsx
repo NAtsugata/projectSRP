@@ -2,7 +2,7 @@
 // FILE: src/pages/OrganizationSettingsPage.jsx
 // Page de paramètres de l'organisation (logo, conditions, facturation)
 // =============================
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';

@@ -2,7 +2,7 @@
 // FILE: src/components/quotes/QuoteEditor.jsx
 // Full-page quote editor with catalog sidebar
 // =============================
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useCatalogItems, useCatalogCategories, useTaxRates } from '../../hooks/useCatalog';
 import QuickClientModal from '../catalog/QuickClientModal';
 import QuoteAttachments from './QuoteAttachments';

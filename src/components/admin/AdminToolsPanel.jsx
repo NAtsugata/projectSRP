@@ -1,5 +1,5 @@
 // src/components/admin/AdminToolsPanel.js - Panneau d'outils avancés pour admin
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import logger from '../../utils/logger';
 import {
   DownloadIcon,

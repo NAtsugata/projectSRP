@@ -1,7 +1,7 @@
 // src/components/intervention/SignatureModal.js
 // Modal plein écran pour capturer la signature client
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Button } from '../ui';
 import logger from '../../utils/logger';
 import './SignatureModal.css';

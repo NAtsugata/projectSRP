@@ -1,7 +1,7 @@
 // src/components/planning/InterventionList.js
 // Liste d'interventions avec tri et filtrage
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import InterventionCard from './InterventionCard';
 import { EmptyState } from '../ui';
 import { CalendarIcon } from '../SharedUI';

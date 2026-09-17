@@ -15,7 +15,6 @@
 
 import { supabase } from '../../lib/supabaseClient';
 import logger from '../../utils/logger';
-import { AUDIT_EVENT_TYPE } from '../../types/invoicing2026';
 
 class ISCAService {
   constructor() {

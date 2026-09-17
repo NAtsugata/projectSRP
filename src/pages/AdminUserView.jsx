@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { EditIcon } from '../components/SharedUI';
 import PermissionsModal from '../components/admin/PermissionsModal';
 import { permissionService } from '../services/permissionService';

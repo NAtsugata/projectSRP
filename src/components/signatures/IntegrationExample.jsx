@@ -10,7 +10,7 @@ import logger from '../../utils/logger';
  * ====================================================================
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ElectronicSignaturePad, SignatureViewer } from './index';
 import useElectronicSignature from '../../hooks/useElectronicSignature';
 import { supabase } from '../../lib/supabase';

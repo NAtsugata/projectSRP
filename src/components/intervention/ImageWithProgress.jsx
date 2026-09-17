@@ -1,7 +1,6 @@
 // src/components/intervention/ImageWithProgress.jsx
 // Composant pour afficher une image avec overlay de progression d'upload
 
-import React from 'react';
 import { CheckCircleIcon, AlertTriangleIcon } from '../SharedUI';
 
 /**

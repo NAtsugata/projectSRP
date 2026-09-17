@@ -2,7 +2,7 @@
 // FILE: src/components/catalog/CatalogItemSelector.jsx
 // Dropdown component to select catalog items when creating quotes/invoices
 // =============================
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useCatalogSearch, useCatalogItems } from '../../hooks/useCatalog';
 import './CatalogItemSelector.css';
 

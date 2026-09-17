@@ -1,7 +1,7 @@
 // src/components/dashboard/DashboardCharts.jsx
 // Composants graphiques pour le tableau de bord admin
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,

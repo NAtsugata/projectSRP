@@ -1,7 +1,7 @@
 // src/components/agenda/EmployeeAgendaView.jsx
 // Vue agenda simplifiée et intuitive pour les employés
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarIcon,

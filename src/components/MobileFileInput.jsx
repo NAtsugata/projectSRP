@@ -3,7 +3,7 @@
 // Il inclut des améliorations pour éviter les erreurs lorsque ``navigator``
 // n'existe pas (tests, SSR) et pour nettoyer les fichiers sélectionnés.
 
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 const MobileFileInput = ({
   onChange,

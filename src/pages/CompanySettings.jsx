@@ -3,7 +3,7 @@
 // Page de configuration entreprise et assurance
 // =============================
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './CompanySettings.css';
 
 const CompanySettings = () => {

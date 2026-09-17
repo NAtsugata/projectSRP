@@ -1,5 +1,5 @@
 // src/pages/ChecklistView.js - CHECKLISTS D'INTERVENTION POUR EMPLOYÉS
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   CheckCircleIcon,
   CameraIcon,

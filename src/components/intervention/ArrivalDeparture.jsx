@@ -1,7 +1,6 @@
 // src/components/intervention/ArrivalDeparture.jsx
 // Interface modernisée pour marquer arrivée et départ
 
-import React from 'react';
 import './ArrivalDeparture.css';
 
 const ArrivalDeparture = ({ report, onMarkArrival, onMarkDeparture, disabled = false }) => {

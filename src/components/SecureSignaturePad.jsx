@@ -2,7 +2,7 @@
 // Composant de signature conforme eIDAS & RGPD
 // Inclut consentement explicite et collecte métadonnées
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { createElectronicSignature } from '../services/electronicSignatureService';
 import { useAuthStore } from '../store/authStore';

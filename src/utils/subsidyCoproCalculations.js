@@ -11,7 +11,7 @@ import {
   getAccompanimentRate,
 } from './subsidyCoproData';
 
-import { CEE_RATES, getClimateZone } from './subsidyData';
+import { getClimateZone } from './subsidyData';
 
 /**
  * Valide l'éligibilité d'une copropriété

@@ -1,5 +1,5 @@
 // src/pages/AdminChecklistTemplatesView.js - GESTION DES TEMPLATES DE CHECKLIST
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   PlusIcon,
   TrashIcon,

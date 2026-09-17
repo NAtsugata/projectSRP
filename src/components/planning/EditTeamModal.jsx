@@ -2,7 +2,7 @@
 // Modal pour modifier l'équipe assignée à une intervention
 // Supporte les assignations par jour pour les interventions multi-jours
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../ui';
 import { useAvailableEmployees } from '../../hooks/useAvailableEmployees';
 import './EditTeamModal.css';

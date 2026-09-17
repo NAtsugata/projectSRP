@@ -11,7 +11,7 @@
  * ====================================================================
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import useElectronicSignature from '../../hooks/useElectronicSignature';
 import { formatSignatureDate } from '../../lib/signature/signatureUtils';
 import './SignatureViewer.css';

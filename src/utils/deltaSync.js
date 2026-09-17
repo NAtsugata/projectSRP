@@ -4,7 +4,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { saveToStore, getFromStore, getAllFromStore, STORES_ENUM } from './offlineStorage';
-import { detectConflict, resolveConflict, RESOLUTION_STRATEGIES, addVersion } from './conflictResolver';
+import { detectConflict, resolveConflict, RESOLUTION_STRATEGIES } from './conflictResolver';
 import logger from './logger';
 
 /**

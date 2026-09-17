@@ -1,7 +1,7 @@
 // =============================
 // FILE: src/App.js — REFACTORISÉ (Containers + React Query)
 // =============================
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService, profileService, supabase } from './lib/supabase';

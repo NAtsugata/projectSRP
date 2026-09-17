@@ -1,7 +1,6 @@
 // src/components/subsidy/ProjectTypeSelector.jsx
 // Page d'accueil - Sélection du type de projet (comme CEDEO)
 
-import React from 'react';
 import './ProjectTypeSelector.css';
 
 const ProjectTypeSelector = ({ onSelectType }) => {

@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminClientsViewContainer.jsx
 // Container component for Admin Clients View (CRM)
 // =============================
-import React, { useState } from 'react';
+import { useState } from 'react';
 import AdminClientsView from './AdminClientsView';
 import { useClients, useClient, useClientStats, useClientInterventions } from '../hooks/useClients';
 import { useToast } from '../contexts/ToastContext';

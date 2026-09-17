@@ -1,7 +1,7 @@
 // src/components/intervention/QuickActionsBar.js
 // Barre d'actions rapides pour employés
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './QuickActionsBar.css';
 
 const QuickActionsBar = ({ intervention, onAction }) => {

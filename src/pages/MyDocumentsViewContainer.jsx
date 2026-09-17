@@ -1,5 +1,4 @@
 // src/pages/MyDocumentsViewContainer.js
-import React from 'react';
 import { useDocuments } from '../hooks/useDocuments';
 import { useUsers } from '../hooks/useUsers';
 import { useAuthStore } from '../store/authStore';

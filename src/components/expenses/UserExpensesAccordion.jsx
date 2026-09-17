@@ -1,7 +1,7 @@
 // src/components/expenses/UserExpensesAccordion.js
 // Accordion pour afficher les notes de frais d'un employé (vue admin)
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import logger from '../../utils/logger';
 import {

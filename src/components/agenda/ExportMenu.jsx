@@ -1,7 +1,7 @@
 // src/components/agenda/ExportMenu.js
 // Menu d'export pour l'agenda (PDF, Excel, Impression)
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DownloadIcon, FileIcon } from '../SharedUI';
 import logger from '../../utils/logger';
 import './ExportMenu.css';

@@ -1,7 +1,7 @@
 // src/pages/AdminPlanningView.js - Version refactorisée
 // Gestion du planning admin avec composants modulaires
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';

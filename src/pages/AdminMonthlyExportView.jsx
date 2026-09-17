@@ -3,7 +3,7 @@
 // Permet la modification des valeurs avant export
 // Base horaire : 35h/semaine (7h/jour), heures supp calculées
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   DownloadIcon,
   ChevronLeftIcon,

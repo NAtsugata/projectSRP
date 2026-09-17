@@ -2,7 +2,7 @@
 // FILE: src/components/quotes/QuotePdfPreview.jsx
 // Real-time PDF preview for quotes
 // =============================
-import React, { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { generateQuotePDFWithLayout } from '../../utils/invoicePdfGenerator';
 import { DEFAULT_LAYOUT } from './QuoteLayoutEditor';
 import './QuotePdfPreview.css';

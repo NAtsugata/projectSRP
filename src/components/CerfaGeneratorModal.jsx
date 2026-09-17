@@ -4,7 +4,7 @@
 // Fiche d'intervention sur équipements contenant des fluides frigorigènes
 // =============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import logger from '../utils/logger';
 import {
     fillCerfa15497,

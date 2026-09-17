@@ -1,5 +1,4 @@
 // src/pages/AdminLeaveViewContainer.js
-import React from 'react';
 import { useLeaveRequests } from '../hooks/useLeaveRequests';
 import { useToast } from '../contexts/ToastContext';
 import AdminLeaveView from './AdminLeaveView';

@@ -3,7 +3,7 @@
 // Formulaire CERFA 15498 - Attestation d'acquisition de fluides frigorigènes
 // =============================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     fillCerfa15498,

@@ -1,5 +1,5 @@
 // src/components/mobile/PendingUploadsPanel.js - Panneau uploads en attente (mobile)
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import logger from '../../utils/logger';
 import {
   UploadIcon,

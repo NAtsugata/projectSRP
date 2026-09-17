@@ -1,5 +1,5 @@
 // src/pages/AdminExpensesViewContainer.js
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useExpenses } from '../hooks/useExpenses';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';

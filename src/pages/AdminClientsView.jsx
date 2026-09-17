@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminClientsView.jsx
 // Admin view for managing clients (CRM)
 // =============================
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner, SkeletonList } from '../components/ui';
 import { ConfirmationModal } from '../components/SharedUI';

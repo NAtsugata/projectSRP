@@ -1,7 +1,6 @@
 // src/components/leave/LeaveRequestCard.js
 // Card pour afficher une demande de congé
 
-import React from 'react';
 import { Button } from '../ui';
 import { CheckIcon, XIcon, TrashIcon } from '../SharedUI';
 import { leaveStatusLabel, leaveStatusColor, normalizeLeaveStatus, LEAVE_STATUS } from '../../utils/leaveStatus';

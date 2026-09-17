@@ -1,7 +1,7 @@
 // src/components/mobile/NotificationPermissionPrompt.js
 // Composant pour demander la permission des notifications
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useMobileNotifications, MobileNotificationContainer, useMobileModal, MobileModalContainer } from './MobileNotifications';
 import { BellIcon, BellOffIcon, CheckCircleIcon } from '../SharedUI';
 import logger from '../../utils/logger';

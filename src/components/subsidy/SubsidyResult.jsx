@@ -1,7 +1,7 @@
 // src/components/subsidy/SubsidyResult.jsx
 // Affichage des résultats de calcul des primes CEE/MaPrimeRénov'
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { RESOURCE_THRESHOLDS } from '../../utils/subsidyData';
 import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
 import LegalNotices from './LegalNotices';

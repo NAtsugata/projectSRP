@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { UploadIcon, XIcon } from '../SharedUI';
 import { getUploadStats, getPendingUploads } from '../../utils/indexedDBCache';
 import logger from '../../utils/logger';

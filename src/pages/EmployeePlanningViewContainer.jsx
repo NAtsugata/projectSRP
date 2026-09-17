@@ -1,6 +1,6 @@
 // src/pages/EmployeePlanningViewContainer.js
 // Wrapper qui utilise les hooks React Query et passe les données à EmployeePlanningView
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useInterventions } from '../hooks/useInterventions';
 import { useUsers } from '../hooks/useUsers';
 import { useAuthStore } from '../store/authStore';

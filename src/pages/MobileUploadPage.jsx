@@ -1,5 +1,5 @@
 // src/pages/MobileUploadPage.js
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { storageService } from '../lib/supabase';
 import MobileFileInput from '../components/MobileFileInput';

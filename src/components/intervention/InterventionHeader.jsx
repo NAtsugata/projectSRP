@@ -1,7 +1,6 @@
 // src/components/intervention/InterventionHeader.js
 // Header moderne avec infos clés et actions rapides
 
-import React from 'react';
 import { ChevronLeftIcon, AlertTriangleIcon } from '../SharedUI';
 import './InterventionHeader.css';
 

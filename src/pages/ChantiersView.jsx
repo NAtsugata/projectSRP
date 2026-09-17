@@ -2,7 +2,7 @@
 // Suivi de chantier (MOE) : liste des chantiers + création (MOE uniquement).
 // Les entreprises/employés ne voient que les chantiers où un lot leur est assigné.
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chantierService } from '../services/chantierService';
 import { useAuthStore } from '../store/authStore';

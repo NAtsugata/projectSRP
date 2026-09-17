@@ -17,7 +17,6 @@
  * ============================================================
  */
 
-import React from 'react';
 import SubsidyModeSelector from '../components/subsidy/SubsidyModeSelector';
 import './CalculateurAidesView.css';
 

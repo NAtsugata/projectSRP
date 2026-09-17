@@ -1,7 +1,7 @@
 // src/components/subsidy/InfoTooltip.jsx
 // Bulle d'information contextuelle style CEDEO
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './InfoTooltip.css';
 
 const InfoTooltip = ({ title, children, position = 'top' }) => {

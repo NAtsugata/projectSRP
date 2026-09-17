@@ -2,7 +2,6 @@
 // FILE: src/pages/AdminContractsViewContainer.js
 // Container component for Admin Contracts View
 // =============================
-import React from 'react';
 import AdminContractsView from './AdminContractsView';
 import {
     useContracts,

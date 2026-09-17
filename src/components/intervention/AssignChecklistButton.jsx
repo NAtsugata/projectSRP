@@ -1,6 +1,6 @@
 // src/components/intervention/AssignChecklistButton.js
 // Bouton pour assigner une checklist à une intervention (pour admin)
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircleIcon, PlusIcon } from '../SharedUI';
 import logger from '../../utils/logger';
 

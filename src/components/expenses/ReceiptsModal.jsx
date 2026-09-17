@@ -1,7 +1,7 @@
 // src/components/expenses/ReceiptsModal.js
 // Modal de visualisation des justificatifs
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /**

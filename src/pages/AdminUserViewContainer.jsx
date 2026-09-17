@@ -1,5 +1,4 @@
 // src/pages/AdminUserViewContainer.js
-import React from 'react';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import { organizationService } from '../services/organizationService';

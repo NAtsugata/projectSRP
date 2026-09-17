@@ -1,7 +1,7 @@
 // src/components/subsidy/SubsidyModeSelector.jsx
 // Sélecteur Individuel / Copropriété
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ProjectTypeSelector from './ProjectTypeSelector';
 import SubsidyCalculator from './SubsidyCalculator';
 import SubsidyCoproCalculator from './SubsidyCoproCalculator';

@@ -1,6 +1,6 @@
 // src/pages/DocumentScannerView.jsx
 // Scanner de documents - Design moderne blanc/noir/cuivre
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   CameraIcon,
   CheckCircleIcon,

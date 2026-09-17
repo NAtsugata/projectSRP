@@ -1,7 +1,7 @@
 // src/pages/EmployeeLeaveView.js - Version refactorisée
 // Vue employé pour soumettre et consulter ses demandes de congés
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LeaveRequestForm, LeaveRequestList } from '../components/leave';
 import { Button } from '../components/ui';

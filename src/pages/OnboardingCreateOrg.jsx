@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { organizationService } from '../services/organizationService';
 import { authService } from '../lib/supabase';
 import { AlertTriangleIcon } from '../components/SharedUI';

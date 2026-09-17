@@ -1,7 +1,7 @@
 // src/components/SyncQualityIndicator.jsx
 // Indicateur visuel de qualité de synchronisation
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getSyncStatus, registerBackgroundSync, SYNC_TAGS } from '../utils/backgroundSync';
 import { getPendingCount } from '../utils/syncService';
 import logger from '../utils/logger';

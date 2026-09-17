@@ -1,7 +1,7 @@
 // src/components/agenda/AgendaFilters.js
 // Composant de filtres pour l'agenda
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../ui';
 import { FilterIcon, XIcon } from '../SharedUI';
 import './AgendaFilters.css';

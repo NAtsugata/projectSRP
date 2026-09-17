@@ -1,10 +1,8 @@
 // src/services/employeeAlertService.js
 // Service pour les alertes rapides des employés (malade, retard, etc.)
 
-import { supabase } from '../lib/supabase';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
-import { withOrgId } from '../utils/orgHelper';
 
 const STORAGE_KEY = 'employee_alerts';
 

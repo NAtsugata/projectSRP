@@ -1,7 +1,7 @@
 // src/components/leave/LeaveRequestList.js
 // Liste intelligente de demandes de congés avec recherche, tri et filtrage
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import LeaveRequestCard from './LeaveRequestCard';
 import { EmptyState } from '../ui';
 import { SearchIcon, FilterIcon } from '../SharedUI';

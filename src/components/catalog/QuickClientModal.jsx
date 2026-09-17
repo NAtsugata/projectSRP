@@ -2,9 +2,8 @@
 // FILE: src/components/catalog/QuickClientModal.jsx
 // Quick client creation modal for use within quote/invoice forms
 // =============================
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { clientService } from '../../services/clientService';
-import { withOrgId } from '../../utils/orgHelper';
 import './QuickClientModal.css';
 
 const INITIAL_CLIENT_FORM = {

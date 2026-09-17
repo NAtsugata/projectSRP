@@ -1,7 +1,6 @@
 // src/components/PermissionRoute.jsx
 // Composant pour proteger les routes par permission
 
-import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
 

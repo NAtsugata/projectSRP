@@ -1,9 +1,9 @@
 // src/components/agenda/ResourceView.js
 // Vue des interventions groupées par ressource (employé) - Version Admin améliorée
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, MapPinIcon } from '../SharedUI';
-import { getUrgentCount, hasSAV, getUserColor } from '../../utils/agendaHelpers';
+import { getUrgentCount, hasSAV } from '../../utils/agendaHelpers';
 import './ResourceView.css';
 
 /**

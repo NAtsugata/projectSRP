@@ -1,7 +1,6 @@
 // src/components/subsidy/LegalNotices.jsx
 // Mentions légales obligatoires pour les estimations de primes
 
-import React from 'react';
 import './LegalNotices.css';
 
 const LegalNotices = ({ calculationType = 'individual', generatedDate = new Date() }) => {

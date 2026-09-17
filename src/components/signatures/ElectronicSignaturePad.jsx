@@ -11,7 +11,7 @@
  * ====================================================================
  */
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import useElectronicSignature from '../../hooks/useElectronicSignature';
 import { checkBrowserSupport } from '../../lib/signature/signatureUtils';
 import './ElectronicSignaturePad.css';

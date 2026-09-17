@@ -1,7 +1,7 @@
 // src/components/planning/TeamStatistics.jsx
 // Statistiques des équipes pour le planning
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { UsersIcon, CheckCircleIcon, ClockIcon } from '../SharedUI';
 import './TeamStatistics.css';
 

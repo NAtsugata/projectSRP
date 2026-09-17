@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminCatalogView.jsx
 // Admin view for managing catalog items, categories, tax rates, and quote templates
 // =============================
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { LoadingSpinner } from '../components/ui';
 import { ConfirmationModal } from '../components/SharedUI';
 import './AdminCatalogView.css';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useInterventions } from '../hooks/useInterventions';
 import AdminArchiveView from './AdminArchiveView';
 

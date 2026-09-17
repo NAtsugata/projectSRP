@@ -3,12 +3,10 @@
 
 import {
   createMultiDayIntervention,
-  generateWorkingDays,
   calculateOptimalDuration
 } from './smartScheduler';
 import { autoAssignTechnicians, suggestBestTeams } from './autoAssignment';
 import { validateScheduling } from './conflictDetection';
-import logger from './logger';
 
 /**
  * Génère des suggestions complètes de planification pour une intervention

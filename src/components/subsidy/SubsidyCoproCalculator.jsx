@@ -1,7 +1,7 @@
 // src/components/subsidy/SubsidyCoproCalculator.jsx
 // Calculateur MaPrimeRénov' Copropriété
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { calculateFullCoproSubsidy } from '../../utils/subsidyCoproCalculations';
 import { COPRO_DISTRIBUTION_EXAMPLES } from '../../utils/subsidyCoproData';
 import SubsidyCoproResult from './SubsidyCoproResult';

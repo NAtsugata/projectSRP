@@ -4,7 +4,7 @@
  * Affiche aussi le nombre d'opérations en attente de synchronisation
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useOnlineStatusFull } from '../hooks/useOnlineStatus';
 
 export default function OfflineIndicator() {

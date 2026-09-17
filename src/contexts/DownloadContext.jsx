@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import { createContext, useState, useContext, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import logger from '../utils/logger';
 

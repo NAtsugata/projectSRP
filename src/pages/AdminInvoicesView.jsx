@@ -2,9 +2,9 @@
 // FILE: src/pages/AdminInvoicesView.jsx
 // Admin view for managing invoices and quotes
 // =============================
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { LoadingSpinner, SkeletonList } from '../components/ui';
+import { SkeletonList } from '../components/ui';
 import { ConfirmationModal } from '../components/SharedUI';
 import CatalogItemSelector from '../components/catalog/CatalogItemSelector';
 import TaxRateSelector from '../components/catalog/TaxRateSelector';

@@ -1,5 +1,5 @@
 // src/pages/ExpensesView.js - NOTES DE FRAIS EMPLOYÉ
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   PlusIcon,
   TrashIcon,

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useVault } from '../hooks/useVault';
 import { useUsers } from '../hooks/useUsers';
 import { storageService } from '../lib/supabase';

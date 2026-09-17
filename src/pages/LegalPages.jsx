@@ -1,7 +1,6 @@
 // src/pages/LegalPages.jsx
 // Pages légales obligatoires pour la commercialisation (RGPD, CGU, Mentions légales)
 
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const pageStyle = {

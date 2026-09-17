@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminInvoicesViewContainer.jsx
 // Container for invoices/quotes management
 // =============================
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useInvoices, useQuotes, useInvoiceStats } from '../hooks/useInvoices';
 import { useClients } from '../hooks/useClients';

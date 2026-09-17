@@ -1,7 +1,7 @@
 // src/components/planning/TeamGroupedView.jsx
 // Vue des interventions groupées par équipe
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { UsersIcon, ChevronDownIcon, ChevronRightIcon, ClockIcon, AlertTriangleIcon } from '../SharedUI';
 import './TeamGroupedView.css';
 

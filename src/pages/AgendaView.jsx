@@ -1,7 +1,7 @@
 // src/pages/AgendaView.js
 // Version améliorée de l'agenda avec dashboard, vue ressource, filtres sauvegardés
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   AgendaDay,
   DateNavigation,

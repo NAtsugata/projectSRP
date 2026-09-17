@@ -1,7 +1,6 @@
 // src/components/ui/LoadingSpinner.js
 // Composants de chargement réutilisables (Spinner + Skeleton)
 
-import React from 'react';
 import './LoadingSpinner.css';
 
 /**

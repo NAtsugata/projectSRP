@@ -4,7 +4,7 @@
 // Avec mode plein écran pour mobile
 // =============================
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 function SignaturePad({ onSave, onClear, initialValue = null, width = 300, height = 150 }) {

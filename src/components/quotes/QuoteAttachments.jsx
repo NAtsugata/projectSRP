@@ -2,7 +2,7 @@
 // FILE: src/components/quotes/QuoteAttachments.jsx
 // Composant pour gérer les pièces jointes des devis (images/PDF)
 // =============================
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import logger from '../../utils/logger';
 import './QuoteAttachments.css';

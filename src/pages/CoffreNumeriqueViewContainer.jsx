@@ -1,5 +1,4 @@
 // src/pages/CoffreNumeriqueViewContainer.js
-import React from 'react';
 import { useVault } from '../hooks/useVault';
 import { useAuthStore } from '../store/authStore';
 import CoffreNumeriqueView from './CoffreNumeriqueView';

@@ -1,7 +1,6 @@
 // src/components/ui/Button.js
 // Composant Button réutilisable avec variantes et états
 
-import React from 'react';
 import './Button.css';
 
 /**

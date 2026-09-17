@@ -1,7 +1,6 @@
 // src/components/leave/LeaveRequestForm.js
 // Formulaire de demande de congé
 
-import React from 'react';
 import { Button } from '../ui';
 import { PlusIcon } from '../SharedUI';
 import { useForm } from '../../hooks';

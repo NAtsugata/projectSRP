@@ -1,5 +1,5 @@
 // src/pages/AdminVaultView.jsx - Coffre-fort Administration avec Import/Export
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   DownloadIcon,
   TrashIcon,

@@ -2,7 +2,7 @@
 // FILE: src/components/quotes/QuoteLayoutEditor.jsx
 // Éditeur de mise en page avancé pour personnaliser les devis
 // =============================
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import './QuoteLayoutEditor.css';
 
 // Configuration par défaut des sections

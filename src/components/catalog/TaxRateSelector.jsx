@@ -2,7 +2,6 @@
 // FILE: src/components/catalog/TaxRateSelector.jsx
 // Dropdown component for selecting TVA rates
 // =============================
-import React from 'react';
 import { useTaxRates } from '../../hooks/useCatalog';
 import './TaxRateSelector.css';
 

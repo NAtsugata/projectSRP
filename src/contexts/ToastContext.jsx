@@ -1,7 +1,7 @@
 // src/contexts/ToastContext.js
 // Context pour gérer les notifications toast
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import './Toast.css';
 
 const ToastContext = createContext();

@@ -1,7 +1,7 @@
 // src/components/subsidy/HowItWorks.jsx
 // Explications détaillées du calcul des primes - Style CEDEO
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './HowItWorks.css';
 
 const HowItWorks = ({ calculationType = 'individual' }) => {

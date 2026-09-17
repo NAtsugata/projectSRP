@@ -1,7 +1,7 @@
 // src/components/intervention/SmartAlerts.js
 // Alertes intelligentes pour guider l'employé
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import './SmartAlerts.css';
 
 const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {

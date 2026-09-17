@@ -8,7 +8,7 @@ import { validateScheduling } from '../utils/conflictDetection';
 import { generateSchedulingSuggestions } from '../utils/schedulingSuggestions';
 import { syncWithDelta } from '../utils/deltaSync';
 import { smartSync } from '../utils/backgroundSync';
-import { cacheSet, cacheGet, cacheIsValid } from '../utils/smartCache';
+import { cacheSet, cacheGet } from '../utils/smartCache';
 import { STORES_ENUM } from '../utils/offlineStorage';
 import logger from '../utils/logger';
 

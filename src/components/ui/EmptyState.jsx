@@ -1,7 +1,6 @@
 // src/components/ui/EmptyState.js
 // Composant pour afficher un état vide avec style
 
-import React from 'react';
 import './EmptyState.css';
 
 /**

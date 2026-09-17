@@ -1,7 +1,6 @@
 // src/components/subsidy/SubsidyCoproResult.jsx
 // Affichage des résultats MaPrimeRénov' Copropriété
 
-import React from 'react';
 import { exportToPDF, preparePDFExport } from '../../utils/pdfExport';
 import LegalNotices from './LegalNotices';
 import HowItWorks from './HowItWorks';

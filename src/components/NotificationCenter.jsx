@@ -1,7 +1,7 @@
 // src/components/NotificationCenter.js
 // Centre de notifications avec historique et gestion des alertes
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NotificationCenter.css';
 

@@ -2,7 +2,7 @@
 // FILE: src/pages/AdminCatalogViewContainer.jsx
 // Container for catalog management
 // =============================
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   useCatalogItems,
   useCatalogCategories,

@@ -2,11 +2,10 @@
 // FILE: src/pages/InterventionDetailView.js — REFACTORÉ
 // Utilise les composants extraits pour une meilleure maintenabilité
 // =============================
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
-  FileTextIcon,
   LoaderIcon,
   ExpandIcon,
   RefreshCwIcon,
@@ -15,7 +14,6 @@ import {
 import { storageService } from '../lib/supabase';
 import {
   ImageGalleryOptimized,
-  ImageWithProgress,
   InterventionHeader,
   QuickActionsBar,
   SmartAlerts,
@@ -27,7 +25,6 @@ import {
   VoiceRecorder,
   StatusCard,
   ArrivalDeparture,
-  PVReception,
 } from '../components/intervention';
 import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';

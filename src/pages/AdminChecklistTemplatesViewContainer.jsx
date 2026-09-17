@@ -1,4 +1,3 @@
-import React from 'react';
 import { useChecklists } from '../hooks/useChecklists';
 import AdminChecklistTemplatesView from './AdminChecklistTemplatesView';
 import checklistService from '../services/checklistService';

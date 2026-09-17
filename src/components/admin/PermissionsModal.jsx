@@ -1,7 +1,7 @@
 // src/components/admin/PermissionsModal.jsx
 // Modal pour gerer les permissions d'un employe
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './PermissionsModal.css';
 
 // Icones

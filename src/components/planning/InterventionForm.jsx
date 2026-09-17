@@ -1,7 +1,7 @@
 // src/components/planning/InterventionForm.js
 // Formulaire de création/édition d'intervention
 
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../ui';
 import { PlusIcon, XIcon, FileTextIcon, CustomFileInput } from '../SharedUI';
 import { useFormDraft, DraftBanner } from '../../hooks/useFormDraft';

@@ -1,7 +1,6 @@
 // src/components/intervention/StatusCard.jsx
 // Carte de résumé rapide de l'intervention
 
-import React from 'react';
 import './StatusCard.css';
 
 const StatusCard = ({ intervention, report, stats }) => {

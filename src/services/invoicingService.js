@@ -3,7 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
-import { withOrgId, getOrgId } from '../utils/orgHelper';
+import { withOrgId } from '../utils/orgHelper';
 
 export const invoicingService = {
   // =====================================================

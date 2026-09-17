@@ -2,7 +2,6 @@
 // FILE: src/pages/QuoteEditorPage.jsx
 // Container page for the full-page quote editor
 // =============================
-import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import QuoteEditor from '../components/quotes/QuoteEditor';

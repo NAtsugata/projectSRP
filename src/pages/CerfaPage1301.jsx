@@ -4,7 +4,7 @@
 // Optimisé pour mobile
 // =============================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     fillCerfa1301,

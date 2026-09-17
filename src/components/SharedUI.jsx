@@ -2,7 +2,7 @@
 // ➕ Ajout des icônes manquantes: PaperPlaneIcon, CheckCircle2Icon, MicIcon, StopCircleIcon
 // (corrige l'erreur d'import pendant la build)
 
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import logger from '../utils/logger';
 
 // --- Icônes SVG de base ---

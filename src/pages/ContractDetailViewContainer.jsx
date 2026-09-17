@@ -2,7 +2,6 @@
 // FILE: src/pages/ContractDetailViewContainer.js
 // Container component for Contract Detail View
 // =============================
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ContractDetailView from './ContractDetailView';
 import {

@@ -1,9 +1,8 @@
 // src/components/admin/EmployeeAlertsPanel.jsx
 // Panneau admin pour voir les alertes des employés
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAlerts, markAlertAsRead, ALERT_TYPES, getUnreadCount } from '../../services/employeeAlertService';
-import { Button } from '../ui';
 import './EmployeeAlertsPanel.css';
 import logger from '../../utils/logger';
 

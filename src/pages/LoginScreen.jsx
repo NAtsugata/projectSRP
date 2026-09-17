@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { authService } from '../lib/supabase';
 import { MailIcon, LockIcon, AlertTriangleIcon } from '../components/SharedUI';
 import { useAuthStore } from '../store/authStore';

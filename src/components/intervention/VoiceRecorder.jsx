@@ -1,7 +1,7 @@
 // src/components/intervention/VoiceRecorder.js
 // Composant d'enregistrement de notes vocales
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '../ui';
 import { storageService } from '../../lib/supabase';
 import { MicIcon, StopCircleIcon, AlertTriangleIcon } from '../SharedUI';

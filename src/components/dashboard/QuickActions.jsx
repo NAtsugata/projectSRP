@@ -1,7 +1,6 @@
 // src/components/dashboard/QuickActions.js
 // Boutons d'actions rapides pour le dashboard
 
-import React from 'react';
 import { Button } from '../ui';
 import './QuickActions.css';
 

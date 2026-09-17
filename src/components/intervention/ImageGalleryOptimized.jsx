@@ -1,7 +1,7 @@
 // src/components/intervention/ImageGalleryOptimized.js
 // Galerie optimisée avec pagination pour chargement rapide
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LoaderIcon } from '../SharedUI';
 import { useDownload } from '../../hooks/useDownload';
 import logger from '../../utils/logger';

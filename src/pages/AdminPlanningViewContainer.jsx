@@ -1,5 +1,4 @@
 // src/pages/AdminPlanningViewContainer.js
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInterventions } from '../hooks/useInterventions';
 import { useUsers } from '../hooks/useUsers';

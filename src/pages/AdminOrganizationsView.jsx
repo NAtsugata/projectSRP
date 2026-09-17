@@ -1,5 +1,5 @@
 // src/pages/AdminOrganizationsView.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { EditIcon, XIcon, CheckIcon, PlusIcon } from '../components/SharedUI';
 import './AdminOrganizationsView.css';
 

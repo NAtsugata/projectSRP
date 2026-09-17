@@ -1,5 +1,4 @@
 // src/components/InterventionChecklist.js
-import React from 'react';
 
 /**
  * Affiche un formulaire de checklist dynamique basé sur un modèle.

@@ -1,7 +1,7 @@
 // src/components/employee/QuickAlertButton.jsx
 // Bouton d'alerte rapide pour les employés (malade, retard, etc.)
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ALERT_TYPES, sendAlert } from '../../services/employeeAlertService';
 import { Button } from '../ui';
 import './QuickAlertButton.css';

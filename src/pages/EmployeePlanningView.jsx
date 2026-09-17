@@ -1,7 +1,7 @@
 // src/pages/EmployeePlanningView.js - Version refactorisée
 // Planning employé avec réutilisation des composants
 
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { CoffeeIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
 import { useNavigate } from 'react-router-dom';
 import { InterventionList, PlanningGanttView } from '../components/planning';

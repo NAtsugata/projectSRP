@@ -1,7 +1,7 @@
 // src/components/SmartPlanningManager.jsx
 // Composant intégré : Planification Multi-Jours + Mode Hors Ligne
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useSmartPlanning from '../hooks/useSmartPlanning';
 import SyncQualityIndicator from './SyncQualityIndicator';
 // import MultiDayScheduler from './MultiDayScheduler'; // Temporairement désactivé

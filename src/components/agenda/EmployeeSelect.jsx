@@ -1,7 +1,7 @@
 // src/components/agenda/EmployeeSelect.js
 // Select avancé avec recherche et groupement pour les employés
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { XIcon, SearchIcon, UsersIcon, ChevronDownIcon } from '../SharedUI';
 import './EmployeeSelect.css';
 

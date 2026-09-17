@@ -3,7 +3,7 @@
 // lots (MOE), tâches (fait par l'entreprise / validé par la MOE), photos
 // contextualisées (zéro perte), journal d'audit (MOE), alertes ciblées (MOE).
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { chantierService } from '../services/chantierService';
 import { useAuthStore } from '../store/authStore';
@@ -11,7 +11,7 @@ import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
 import { LoadingSpinner } from '../components/ui';
 import {
-  DOC_CATEGORIES, DOC_CATEGORY_LABEL,
+  DOC_CATEGORIES,
   MAX_DOC_MB, MAX_PHOTO_MB, ALLOWED_DOC_EXTENSIONS, validateChantierFile,
 } from '../config/chantierPresets';
 import './ChantiersView.css';

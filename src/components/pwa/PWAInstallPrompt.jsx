@@ -1,6 +1,6 @@
 // src/components/pwa/PWAInstallPrompt.js
 // Composant pour faciliter l'installation de l'app et les mises à jour
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import logger from '../../utils/logger';
 import './PWAInstallPrompt.css';
 

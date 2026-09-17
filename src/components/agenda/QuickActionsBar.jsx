@@ -1,7 +1,7 @@
 // src/components/agenda/QuickActionsBar.jsx
 // Barre d'actions rapides pour l'admin
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { PlusIcon, UsersIcon, FilterIcon, DownloadIcon, RefreshCwIcon } from '../SharedUI';
 import './QuickActionsBar.css';
 

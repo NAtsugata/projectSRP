@@ -1,6 +1,6 @@
 // FILE: src/pages/IRShowerFormsView.jsx
 // Refactoré - Composants UI et hook Canvas extraits dans des modules séparés
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { storageService, supabase } from '../lib/supabase';
 import logger from '../utils/logger';
 import { safeStorage } from '../utils/safeStorage';

@@ -1,7 +1,7 @@
 // src/pages/AdminLeaveView.js - Version refactorisée
 // Gestion des demandes de congés avec composants modulaires
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { LeaveRequestList } from '../components/leave';
 import { LEAVE_STATUS } from '../utils/leaveStatus';
 import logger from '../utils/logger';

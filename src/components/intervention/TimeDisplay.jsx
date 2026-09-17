@@ -1,7 +1,7 @@
 // src/components/intervention/TimeDisplay.js
 // Affichage temps écoulé avec chronomètre live
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './TimeDisplay.css';
 
 const TimeDisplay = ({ arrivalTime, departureTime }) => {

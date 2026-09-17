@@ -1,5 +1,5 @@
 // src/components/intervention/PVReception.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import SignaturePad from '../SignaturePad';
 import { generatePVReceptionPDF, downloadPVPDF } from '../../utils/pvService';
 import logger from '../../utils/logger';

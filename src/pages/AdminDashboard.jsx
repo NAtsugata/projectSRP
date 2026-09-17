@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.js - Version refactorisée
 // Dashboard administrateur avec statistiques, activités et actions rapides
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   StatCard, RecentActivity, QuickActions, AlertCard,

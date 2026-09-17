@@ -1,7 +1,7 @@
 // src/components/intervention/ImageGallery.js
 // Galerie d'images mobile-first avec lightbox, zoom et swipe
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LoaderIcon } from '../SharedUI';
 import './ImageGallery.css';
 

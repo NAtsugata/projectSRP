@@ -1,7 +1,7 @@
 // src/components/UpdatePrompt.js
 // Composant qui force la mise à jour de l'app quand une nouvelle version est disponible
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import logger from '../utils/logger';
 import './UpdatePrompt.css';
 

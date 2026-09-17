@@ -1,7 +1,7 @@
 // src/components/admin/ShareDocumentModal.jsx
 // Modal pour partager un document du coffre-fort avec des employes
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import './ShareDocumentModal.css';
 
 // Icones

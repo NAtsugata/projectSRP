@@ -1,7 +1,7 @@
 // src/components/MultiDayScheduler.jsx
 // Composant de planification multi-jours intelligente
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createMultiDayIntervention } from '../utils/smartScheduler';
 import { generateSchedulingSuggestions } from '../utils/schedulingSuggestions';
 import { validateScheduling } from '../utils/conflictDetection';
