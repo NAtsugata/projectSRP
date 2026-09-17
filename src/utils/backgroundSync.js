@@ -4,6 +4,7 @@
 import logger from './logger';
 import { syncMultipleTables } from './deltaSync';
 import { STORES_ENUM } from './offlineStorage';
+import { EXPENSE_LIST_COLUMNS } from '../services/expenseService';
 
 /**
  * Tags de synchronisation
@@ -84,7 +85,7 @@ export const performSync = async (tag) => {
 
       case SYNC_TAGS.EXPENSES:
         result = await syncMultipleTables([
-          { table: 'expenses', store: STORES_ENUM.EXPENSES }
+          { table: 'expenses', store: STORES_ENUM.EXPENSES, options: { select: EXPENSE_LIST_COLUMNS } }
         ]);
         break;
 
@@ -98,7 +99,7 @@ export const performSync = async (tag) => {
       default:
         result = await syncMultipleTables([
           { table: 'interventions', store: STORES_ENUM.INTERVENTIONS },
-          { table: 'expenses', store: STORES_ENUM.EXPENSES },
+          { table: 'expenses', store: STORES_ENUM.EXPENSES, options: { select: EXPENSE_LIST_COLUMNS } },
           { table: 'profiles', store: STORES_ENUM.PROFILES },
           { table: 'maintenance_contracts', store: STORES_ENUM.CONTRACTS },
           { table: 'clients', store: STORES_ENUM.CLIENTS }

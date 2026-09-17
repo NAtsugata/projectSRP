@@ -14,6 +14,7 @@ import {
 } from '../components/SharedUI';
 import DocumentCropPreview from '../components/DocumentCropPreview';
 import { ReceiptsModal } from '../components/expenses';
+import expenseService from '../services/expenseService';
 import { detectDocument } from '../utils/jscanifyDetector';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
@@ -603,14 +604,19 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
                     <div className="expense-description">{expense.description}</div>
 
-                    {expense.receipts && expense.receipts.length > 0 && (
+                    {(expense.receipts_count || expense.receipts?.length || 0) > 0 && (
                       <button
                         type="button"
-                        onClick={() => setShowReceipts(expense.receipts)}
+                        onClick={async () => {
+                          const n = expense.receipts?.length
+                            ? expense.receipts
+                            : (await expenseService.getExpenseReceipts(expense.id)).data;
+                          setShowReceipts(n || []);
+                        }}
                         className="btn btn-sm btn-secondary"
                         style={{ width: '100%', marginBottom: '0.75rem' }}
                       >
-                        <FileTextIcon /> Voir les {expense.receipts.length} justificatif{expense.receipts.length > 1 ? 's' : ''}
+                        <FileTextIcon /> Voir les {expense.receipts_count || expense.receipts?.length} justificatif{(expense.receipts_count || expense.receipts?.length) > 1 ? 's' : ''}
                       </button>
                     )}
 
@@ -666,7 +672,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       )}
 
       {/* Receipts Modal */}
-      {showReceipts && (
+      {showReceipts?.length > 0 && (
         <ReceiptsModal
           receipts={showReceipts}
           onClose={() => setShowReceipts(null)}

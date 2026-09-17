@@ -380,10 +380,35 @@ export const clientService = {
    * @param {string} clientId - ID du client
    * @returns {Promise<{data: Array, error: Object}>}
    */
-  async getClientContracts(_clientId) {
-    // Note: maintenance_contracts n'a pas de client_id, retourner un tableau vide pour l'instant
-    // TODO: Ajouter client_id a maintenance_contracts si necessaire
-    return { data: [], error: null };
+  async getClientContracts(clientId) {
+    try {
+      // maintenance_contracts n'a pas de client_id : rapprochement par nom
+      // (insensible à la casse) sur le nom du client et sa raison sociale.
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('name, company_name')
+        .eq('id', clientId)
+        .single();
+      if (clientError) throw clientError;
+
+      const names = [client?.name, client?.company_name]
+        .filter(Boolean)
+        .map(n => n.replace(/[,()]/g, ' ').trim())
+        .filter(Boolean);
+      if (names.length === 0) return { data: [], error: null };
+
+      const { data, error } = await supabase
+        .from('maintenance_contracts')
+        .select('*')
+        .or(names.map(n => `client_name.ilike.${n}`).join(','))
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      return { data: data || [], error: null };
+    } catch (error) {
+      logger.error('❌ Erreur getClientContracts:', error);
+      return { data: null, error };
+    }
   },
 
   /**
@@ -401,12 +426,14 @@ export const clientService = {
 
       if (intError) throw intError;
 
+      const { data: contracts } = await clientService.getClientContracts(clientId);
+
       const stats = {
         totalInterventions: interventions?.length || 0,
         completedInterventions: interventions?.filter(i => i.status === 'completed').length || 0,
         pendingInterventions: interventions?.filter(i => i.status === 'pending').length || 0,
         inProgressInterventions: interventions?.filter(i => i.status === 'in_progress').length || 0,
-        activeContracts: 0 // maintenance_contracts n'a pas de client_id
+        activeContracts: (contracts || []).filter(c => c.status === 'active').length
       };
 
       return { data: stats, error: null };

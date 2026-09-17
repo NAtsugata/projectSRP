@@ -10,7 +10,22 @@ import { syncWithDelta } from '../utils/deltaSync';
 import { smartSync } from '../utils/backgroundSync';
 import { cacheSet, cacheGet } from '../utils/smartCache';
 import { STORES_ENUM } from '../utils/offlineStorage';
+import { interventionService } from '../services/interventionService';
 import logger from '../utils/logger';
+
+// Colonnes réelles de la table interventions : le planificateur produit aussi
+// des champs de travail (start_date, daily_plan, metadata, _confidence…) qui
+// ne doivent pas partir en base.
+const INTERVENTION_COLUMNS = [
+  'client', 'address', 'service', 'date', 'time', 'status', 'is_archived', 'report',
+  'client_phone', 'secondary_phone', 'client_email', 'ticket_number', 'km_start', 'km_end',
+  'scheduled_dates', 'admin_note', 'daily_assignments', 'client_id',
+];
+const toInterventionRow = (obj) => {
+  const row = Object.fromEntries(Object.entries(obj).filter(([k]) => INTERVENTION_COLUMNS.includes(k)));
+  if (!row.date && obj.start_date) row.date = obj.start_date;
+  return row;
+};
 
 /**
  * Hook pour la planification intelligente avec support hors ligne
@@ -177,9 +192,14 @@ export const useSmartPlanning = (options = {}) => {
 
       // 5. Sauvegarder
       if (isOnline) {
-        // En ligne: sauvegarder direct + sync
-        // TODO: Appel API saveIntervention
-        logger.log('[SmartPlanning] Sauvegarde en ligne');
+        // En ligne : persistance réelle + assignations des techniciens
+        const { data: saved, error: saveError } = await interventionService.createIntervention(
+          toInterventionRow(planned),
+          assignment.assignedUsers || []
+        );
+        if (saveError) throw saveError;
+        if (saved?.id) planned.id = saved.id;
+        logger.log('[SmartPlanning] Intervention sauvegardée en ligne:', planned.id);
 
         // Trigger sync
         smartSync('create', 'intervention');
@@ -237,7 +257,11 @@ export const useSmartPlanning = (options = {}) => {
       const updated = { ...existing, ...updates };
 
       if (isOnline) {
-        // TODO: Appel API update
+        const row = toInterventionRow(updates);
+        if (Object.keys(row).length > 0) {
+          const { error: updateError } = await interventionService.updateIntervention(interventionId, row);
+          if (updateError) throw updateError;
+        }
         smartSync('update', 'intervention');
       } else if (enableOfflineMode) {
         updated._pending_sync = true;

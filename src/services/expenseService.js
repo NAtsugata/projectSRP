@@ -22,6 +22,21 @@ import { withOrgId } from '../utils/orgHelper';
  * - updated_at: TIMESTAMP
  */
 
+// Colonnes des listes : tout sauf `receipts` (photos en base64, jusqu'à 2,4 Mo
+// par ligne) — les justificatifs se chargent à la demande via getExpenseReceipts.
+export const EXPENSE_LIST_COLUMNS =
+  'id, user_id, date, category, amount, description, status, admin_comment, reviewed_by, ' +
+  'reviewed_at, created_at, updated_at, is_paid, paid_date, paid_by, organization_id, receipts_count';
+
+const parseReceipts = (raw) => {
+  try {
+    const value = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+};
+
 const expenseService = {
   /**
    * Récupérer toutes les notes de frais d'un utilisateur
@@ -33,7 +48,7 @@ const expenseService = {
 
       let query = supabase
         .from('expenses')
-        .select('*', { count: 'exact' })
+        .select(EXPENSE_LIST_COLUMNS, { count: 'exact' })
         .eq('user_id', userId)
         .range(from, to)
         .order('date', { ascending: false });
@@ -61,7 +76,8 @@ const expenseService = {
       // Parser les receipts JSONB en tableaux
       const parsedData = data?.map(expense => ({
         ...expense,
-        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
+        receipts: [],
+        receipts_count: expense.receipts_count ?? 0
       })) || [];
 
       return { data: parsedData, error: null, count };
@@ -81,7 +97,7 @@ const expenseService = {
 
       let query = supabase
         .from('expenses')
-        .select('*', { count: 'exact' })
+        .select(EXPENSE_LIST_COLUMNS, { count: 'exact' })
         .range(from, to)
         .order('date', { ascending: false });
 
@@ -109,13 +125,32 @@ const expenseService = {
       // Parser les receipts JSONB en tableaux
       const parsedData = data?.map(expense => ({
         ...expense,
-        receipts: typeof expense.receipts === 'string' ? JSON.parse(expense.receipts || '[]') : (expense.receipts || [])
+        receipts: [],
+        receipts_count: expense.receipts_count ?? 0
       })) || [];
 
       return { data: parsedData, error: null, count };
     } catch (error) {
       logger.error('❌ Erreur getAllExpenses:', error);
       return { data: null, error, count: 0 };
+    }
+  },
+
+  /**
+   * Justificatifs d'une note de frais (chargés à la demande, hors des listes)
+   */
+  async getExpenseReceipts(expenseId) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('receipts')
+        .eq('id', expenseId)
+        .single();
+      if (error) throw error;
+      return { data: parseReceipts(data?.receipts), error: null };
+    } catch (error) {
+      logger.error('❌ Erreur getExpenseReceipts:', error);
+      return { data: [], error };
     }
   },
 

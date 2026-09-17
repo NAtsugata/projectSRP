@@ -13,6 +13,16 @@ import {
   DownloadIcon
 } from '../SharedUI';
 import ReceiptsModal from './ReceiptsModal';
+import expenseService from '../../services/expenseService';
+
+// Les listes ne contiennent plus les images : chargement à la demande
+const loadReceipts = async (expense) => {
+  if (expense.receipts?.length) return expense.receipts;
+  if (!expense.receipts_count) return [];
+  const { data } = await expenseService.getExpenseReceipts(expense.id);
+  return data || [];
+};
+const receiptsCount = (expense) => expense.receipts_count || expense.receipts?.length || 0;
 
 const UserExpensesAccordion = ({
   userName,
@@ -178,14 +188,15 @@ const UserExpensesAccordion = ({
         }
 
         // Justificatifs
-        if (expense.receipts && expense.receipts.length > 0) {
+        const receipts = await loadReceipts(expense);
+        if (receipts.length > 0) {
           yPos += 5;
           pdf.setFont(undefined, 'bold');
-          pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
+          pdf.text(`Justificatifs (${receipts.length}):`, margin, yPos);
           yPos += 10;
 
-          for (let i = 0; i < expense.receipts.length; i++) {
-            const receipt = expense.receipts[i];
+          for (let i = 0; i < receipts.length; i++) {
+            const receipt = receipts[i];
 
             try {
               if (yPos + 100 > pageHeight - margin) {
@@ -335,14 +346,15 @@ const UserExpensesAccordion = ({
       }
 
       // Justificatifs
-      if (expense.receipts && expense.receipts.length > 0) {
+      const receipts = await loadReceipts(expense);
+      if (receipts.length > 0) {
         yPos += 5;
         pdf.setFont(undefined, 'bold');
-        pdf.text(`Justificatifs (${expense.receipts.length}):`, margin, yPos);
+        pdf.text(`Justificatifs (${receipts.length}):`, margin, yPos);
         yPos += 10;
 
-        for (let i = 0; i < expense.receipts.length; i++) {
-          const receipt = expense.receipts[i];
+        for (let i = 0; i < receipts.length; i++) {
+          const receipt = receipts[i];
 
           try {
             if (yPos + 100 > pageHeight - margin) {
@@ -542,14 +554,14 @@ const UserExpensesAccordion = ({
                       <span>{formatDate(expense.date)}</span>
                     </div>
                     <div className="admin-expense-amount">{formatAmount(expense.amount)}</div>
-                    {expense.receipts && expense.receipts.length > 0 && (
+                    {receiptsCount(expense) > 0 && (
                       <button
                         type="button"
-                        onClick={() => setShowReceipts(expense.receipts)}
+                        onClick={async () => setShowReceipts(await loadReceipts(expense))}
                         className="admin-expense-receipts-btn"
                       >
                         <FileTextIcon style={{ width: '14px', height: '14px' }} />
-                        {expense.receipts.length} PJ
+                        {receiptsCount(expense)} PJ
                       </button>
                     )}
                   </div>
@@ -608,7 +620,7 @@ const UserExpensesAccordion = ({
         </div>
       )}
 
-      {showReceipts && (
+      {showReceipts?.length > 0 && (
         <ReceiptsModal
           receipts={showReceipts}
           onClose={() => setShowReceipts(null)}
