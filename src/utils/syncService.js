@@ -2,6 +2,7 @@
 // Service de synchronisation pour le mode hors ligne
 
 import { supabase } from '../lib/supabaseClient';
+import expenseService from '../services/expenseService';
 import {
   addToSyncQueue,
   getPendingSyncOperations,
@@ -68,7 +69,9 @@ const executeOperation = async (operation) => {
 
   switch (type) {
     case SYNC_OPERATION_TYPES.CREATE_EXPENSE:
-      return await supabase.from('expenses').insert([payload]).select().single();
+      // Passer par le service : mapping des colonnes (user_id…), statut,
+      // envoi des justificatifs dans Storage. L'insertion brute perdait la note.
+      return await expenseService.createExpense(payload);
 
     case SYNC_OPERATION_TYPES.UPDATE_EXPENSE:
       return await supabase

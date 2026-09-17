@@ -5,10 +5,24 @@
 import { supabase } from '../lib/supabaseClient';
 import { sanitizeFilename } from '../utils/sanitize';
 import { getOrgId } from '../utils/orgHelper';
+import { compressImage } from '../utils/imageCompression';
 import logger from '../utils/logger';
 
 // Durée de validité des signed URLs (1 heure)
 const SIGNED_URL_EXPIRY = 3600;
+const RECEIPTS_BUCKET = 'expense-receipts';
+// Cache mémoire des signed URLs : évite un aller-retour par image affichée
+const signedUrlCache = new Map();
+
+/** Convertit une data URL (base64) en Blob — utilisé pour les anciens justificatifs */
+export const dataUrlToBlob = (dataUrl) => {
+  const [header, payload] = String(dataUrl).split(',');
+  const mime = /data:([^;]+)/.exec(header)?.[1] || 'application/octet-stream';
+  const binary = atob(payload || '');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+};
 
 /**
  * Génère une signed URL pour accéder à un fichier privé
@@ -151,6 +165,77 @@ export const storageService = {
     if (onProgress) onProgress(100);
 
     return { publicURL: signedUrl, filePath, error: null };
+  },
+
+  /**
+   * Justificatif de note de frais → bucket dédié, arborescence canonique
+   * {org}/employees/{user}/expenses/{expense_id}/{horodatage}_{aléa}.{ext}
+   * L'image est compressée avant envoi (photos de téléphone : 3-5 Mo → ~300 ko).
+   * @param {File|Blob} file
+   * @param {{ userId: string, expenseId: string, name?: string }} ctx
+   * @returns {Promise<{ data: {bucket, path, name, size, mime}|null, error }>}
+   */
+  async uploadExpenseReceipt(file, { userId, expenseId, name }) {
+    const orgId = getOrgId();
+    if (!orgId) return { data: null, error: new Error('Organisation inconnue') };
+
+    let toUpload = file;
+    if (file.type?.startsWith('image/')) {
+      try {
+        toUpload = await compressImage(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1600, initialQuality: 0.85 });
+      } catch (e) {
+        logger.warn('[storage] compression impossible, envoi de l\'original:', e?.message);
+      }
+    }
+
+    const safeName = sanitizeFilename(name || file.name || 'justificatif.jpg');
+    const ext = (safeName.includes('.') ? safeName.split('.').pop() : (toUpload.type?.split('/')[1] || 'jpg')).toLowerCase();
+    const path = `${orgId}/employees/${userId}/expenses/${expenseId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from(RECEIPTS_BUCKET)
+      .upload(path, toUpload, { cacheControl: '3600', upsert: false, contentType: toUpload.type || undefined });
+    if (error) return { data: null, error };
+
+    return {
+      data: { bucket: RECEIPTS_BUCKET, path, name: safeName, size: toUpload.size, mime: toUpload.type || null },
+      error: null,
+    };
+  },
+
+  /**
+   * URL d'accès (signée, mise en cache) pour un fichier référencé par
+   * { bucket, path }. Les anciennes entrées { url } sont renvoyées telles quelles.
+   */
+  async resolveFileUrl(ref) {
+    if (!ref) return null;
+    if (ref.url && !ref.path) return ref.url;
+    const key = `${ref.bucket}/${ref.path}`;
+    const cached = signedUrlCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.url;
+    const url = await getSignedUrl(ref.bucket, ref.path);
+    signedUrlCache.set(key, { url, expiresAt: Date.now() + (SIGNED_URL_EXPIRY - 60) * 1000 });
+    return url;
+  },
+
+  /** Suppression groupée (meilleur effort : ne bloque jamais l'appelant) */
+  async removeFiles(bucket, paths) {
+    if (!paths?.length) return { error: null };
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) logger.warn(`[storage] suppression ${bucket} incomplète:`, error.message);
+    return { error };
+  },
+
+  /** Usage et quota de stockage de l'organisation (RPC org_storage_usage) */
+  async getOrganizationUsage() {
+    const { data, error } = await supabase.rpc('org_storage_usage');
+    if (error) return { data: null, error };
+    return { data: Array.isArray(data) ? data[0] : data, error: null };
+  },
+
+  /** Fichiers orphelins de l'organisation (admin) */
+  async listOrphans() {
+    return await supabase.rpc('storage_orphans');
   },
 
   /**

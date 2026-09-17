@@ -632,3 +632,13 @@
   display: flex;
   justify-content: flex-end;
 }
+
+
+/* Onglet Stockage */
+.storage-usage { margin: 1rem 0 1.5rem; }
+.storage-bar { height: 12px; border-radius: 6px; background: #e5e7eb; overflow: hidden; }
+.storage-bar-fill { height: 100%; border-radius: 6px; transition: width .3s ease; }
+.storage-table { width: 100%; max-width: 520px; border-collapse: collapse; margin-bottom: 1.5rem; }
+.storage-table td { padding: .35rem .5rem; border-bottom: 1px solid #f1f5f9; }
+.storage-table-size { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.settings-section h3 { margin-top: 1.5rem; }

@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { MENU_MODULES } from '../config/menuModules';
+import StorageSettingsPanel from '../components/admin/StorageSettingsPanel';
 import './OrganizationSettingsPage.css';
 
 const DEFAULT_INVOICE_SETTINGS = {
@@ -349,9 +350,18 @@ function OrganizationSettingsPage() {
         >
           📴 Mode hors ligne
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'storage' ? 'active' : ''}`}
+          onClick={() => setActiveTab('storage')}
+        >
+          💾 Stockage
+        </button>
       </div>
 
       <div className="settings-content">
+        {/* TAB: Stockage */}
+        {activeTab === 'storage' && <StorageSettingsPanel toast={toast} />}
+
         {/* TAB: Menu / Modules */}
         {activeTab === 'menu' && (
           <div className="settings-section">

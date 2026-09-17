@@ -377,8 +377,6 @@
   .pdf-page {
     background: var(--bg-primary);
   }
-}
-*/
 
 /* Responsive - panneau plus étroit */
 @media (max-width: 1200px) {

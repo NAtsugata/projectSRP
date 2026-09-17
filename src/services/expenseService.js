@@ -1,7 +1,8 @@
 // src/services/expenseService.js - SERVICE NOTES DE FRAIS
 import { supabase } from '../lib/supabase';
 import logger from '../utils/logger';
-import { withOrgId } from '../utils/orgHelper';
+import { withOrgId, getOrgId } from '../utils/orgHelper';
+import storageService, { dataUrlToBlob } from './storageService';
 
 /**
  * Service pour gérer les notes de frais des employés
@@ -35,6 +36,46 @@ const parseReceipts = (raw) => {
   } catch {
     return [];
   }
+};
+
+const RECEIPTS_BUCKET = 'expense-receipts';
+
+/**
+ * Enregistre les justificatifs d'une note de frais dans Storage
+ * ({org}/employees/{user}/expenses/{expense_id}/...) et dans expense_receipts.
+ * Accepte des data URL (formulaire / anciens base64), des Blob, ou des
+ * entrées déjà stockées ({ bucket, path }) qui sont conservées telles quelles.
+ * Retourne la liste de métadonnées à stocker dans expenses.receipts (sans image).
+ */
+const persistReceipts = async ({ receipts, userId, expenseId }) => {
+  const stored = [];
+  const rows = [];
+  for (let i = 0; i < (receipts || []).length; i++) {
+    const r = receipts[i];
+    if (r?.path && r?.bucket) { stored.push(r); continue; }
+    const isDataUrl = typeof r?.url === 'string' && r.url.startsWith('data:');
+    const blob = r instanceof Blob ? r : (r?.file instanceof Blob ? r.file : (isDataUrl ? dataUrlToBlob(r.url) : null));
+    if (!blob) { stored.push(r); continue; } // URL http (ancien flux Storage) : conservée
+    const { data, error } = await storageService.uploadExpenseReceipt(blob, { userId, expenseId, name: r?.name });
+    if (error) throw error;
+    stored.push({ id: r?.id || `${Date.now()}_${i}`, ...data });
+    rows.push({
+      expense_id: expenseId, organization_id: getOrgId(), user_id: userId,
+      storage_path: data.path, file_name: data.name, file_size: data.size, mime_type: data.mime,
+      original_index: i, migrated_from_base64: isDataUrl && !!r?._legacy,
+    });
+  }
+  if (rows.length) {
+    const { error } = await supabase.from('expense_receipts').insert(rows);
+    if (error) logger.warn('[expenses] métadonnées justificatifs non enregistrées:', error.message);
+  }
+  return stored;
+};
+
+/** Chemins Storage des justificatifs d'une note (à lire avant suppression) */
+const listExpenseFilePaths = async (expenseId) => {
+  const { data } = await supabase.from('expense_receipts').select('storage_path').eq('expense_id', expenseId);
+  return (data || []).map(f => f.storage_path).filter(Boolean);
 };
 
 const expenseService = {
@@ -147,10 +188,68 @@ const expenseService = {
         .eq('id', expenseId)
         .single();
       if (error) throw error;
-      return { data: parseReceipts(data?.receipts), error: null };
+      const receipts = parseReceipts(data?.receipts);
+      const resolved = await Promise.all(receipts.map(async (r) =>
+        (r?.path && r?.bucket) ? { ...r, url: await storageService.resolveFileUrl(r) } : r
+      ));
+      return { data: resolved, error: null };
     } catch (error) {
       logger.error('❌ Erreur getExpenseReceipts:', error);
       return { data: [], error };
+    }
+  },
+
+  /**
+   * Migration des anciens justificatifs (photos base64 en base) vers Storage.
+   * Ne supprime rien : l'original reste dans expenses.receipts_legacy_base64
+   * jusqu'à une purge explicite. Réservé aux administrateurs.
+   */
+  async migrateLegacyReceipts({ onProgress } = {}) {
+    const summary = { total: 0, migrated: 0, files: 0, skipped: 0, errors: [] };
+    try {
+      const { data: candidates, error } = await supabase
+        .from('expenses')
+        .select('id, user_id, receipts_count')
+        .gt('receipts_count', 0)
+        .order('date', { ascending: true });
+      if (error) throw error;
+      const { data: done } = await supabase
+        .from('expense_receipts').select('expense_id').not('storage_path', 'is', null);
+      const doneIds = new Set((done || []).map(d => d.expense_id));
+      const todo = (candidates || []).filter(c => !doneIds.has(c.id));
+      summary.total = todo.length;
+
+      for (let i = 0; i < todo.length; i++) {
+        const { id, user_id } = todo[i];
+        try {
+          const { data: row, error: e1 } = await supabase.from('expenses').select('receipts').eq('id', id).single();
+          if (e1) throw e1;
+          const receipts = parseReceipts(row?.receipts);
+          if (!receipts.some(r => typeof r?.url === 'string' && r.url.startsWith('data:'))) {
+            summary.skipped++;
+          } else {
+            // Métadonnées vides laissées par une migration précédente jamais terminée
+            await supabase.from('expense_receipts').delete().eq('expense_id', id).is('storage_path', null);
+            const stored = await persistReceipts({
+              receipts: receipts.map(r => ({ ...r, _legacy: true })), userId: user_id, expenseId: id,
+            });
+            const { error: e2 } = await supabase
+              .from('expenses')
+              .update({ receipts: stored, receipts_legacy_base64: row.receipts, updated_at: new Date().toISOString() })
+              .eq('id', id);
+            if (e2) throw e2;
+            summary.migrated++;
+            summary.files += stored.filter(r => r.path).length;
+          }
+        } catch (err) {
+          summary.errors.push({ id, message: err.message });
+        }
+        onProgress?.(i + 1, todo.length, summary);
+      }
+      return { data: summary, error: null };
+    } catch (error) {
+      logger.error('❌ Erreur migrateLegacyReceipts:', error);
+      return { data: summary, error };
     }
   },
 
@@ -159,13 +258,21 @@ const expenseService = {
    */
   async createExpense({ userId, date, category, amount, description, receipts = [] }) {
     try {
+      // Identifiant généré ici : les fichiers sont rangés sous {expense_id}
+      // avant même l'insertion de la ligne.
+      const expenseId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
+      const storedReceipts = expenseId
+        ? await persistReceipts({ receipts, userId, expenseId })
+        : receipts;
+
       const expenseData = {
+        ...(expenseId ? { id: expenseId } : {}),
         user_id: userId,
         date,
         category,
         amount,
         description,
-        receipts: JSON.stringify(receipts), // Stocker les photos en JSONB
+        receipts: storedReceipts, // métadonnées uniquement ({ bucket, path, name, size, mime })
         status: 'pending',
         admin_comment: null,
         reviewed_by: null,
@@ -293,6 +400,8 @@ const expenseService = {
       if (fetchError) throw fetchError;
       if (!expense) throw new Error('Note de frais introuvable ou déjà traitée');
 
+      const filePaths = await listExpenseFilePaths(expenseId);
+
       const { error: deleteError } = await supabase
         .from('expenses')
         .delete()
@@ -300,6 +409,7 @@ const expenseService = {
 
       if (deleteError) throw deleteError;
 
+      await storageService.removeFiles(RECEIPTS_BUCKET, filePaths);
       logger.log('✅ Note de frais supprimée:', expenseId);
       return { data: true, error: null };
     } catch (error) {
@@ -323,6 +433,8 @@ const expenseService = {
       if (fetchError) throw fetchError;
       if (!expense) throw new Error('Note de frais introuvable');
 
+      const filePaths = await listExpenseFilePaths(expenseId);
+
       const { error: deleteError } = await supabase
         .from('expenses')
         .delete()
@@ -330,6 +442,7 @@ const expenseService = {
 
       if (deleteError) throw deleteError;
 
+      await storageService.removeFiles(RECEIPTS_BUCKET, filePaths);
       logger.log('✅ Note de frais supprimée (admin):', expenseId);
       return { data: true, error: null };
     } catch (error) {
