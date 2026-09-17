@@ -249,3 +249,17 @@
 .dark-theme .org-admin-container {
   /* Overrides spécifiques si nécessaires */
 }
+
+
+/* Modal modules par organisation */
+.org-modules-modal { max-width: 720px; width: 95vw; max-height: 90vh; overflow: auto; }
+.org-modules-group h4 { margin: 1rem 0 .4rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+.org-module-row { display: grid; grid-template-columns: 1fr auto 160px 150px; gap: .5rem; align-items: center; padding: .4rem 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+.org-module-row.is-off .org-module-label { opacity: .55; }
+.org-module-toggle { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+.org-module-source { font-size: .75rem; padding: .1rem .5rem; border-radius: 999px; background: #e5e7eb; white-space: nowrap; }
+.org-module-source.source-plan { background: #dbeafe; } .org-module-source.source-addon { background: #dcfce7; }
+.org-module-source.source-trial { background: #fef3c7; } .org-module-source.source-manual { background: #ede9fe; }
+.org-module-source.source-none { background: #fee2e2; }
+.org-module-select, .org-module-date { padding: .25rem .4rem; font-size: .85rem; }
+@media (max-width: 640px) { .org-module-row { grid-template-columns: 1fr 1fr; } }

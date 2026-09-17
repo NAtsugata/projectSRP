@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { MENU_MODULES } from '../config/menuModules';
 import StorageSettingsPanel from '../components/admin/StorageSettingsPanel';
+import { useModules } from '../hooks/useModules';
 import './OrganizationSettingsPage.css';
 
 const DEFAULT_INVOICE_SETTINGS = {
@@ -32,6 +33,7 @@ function OrganizationSettingsPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('company');
+  const { hasModule } = useModules();
   const [formData, setFormData] = useState({});
   // Modules du menu masqués pour l'organisation (clés)
   const [hiddenModules, setHiddenModules] = useState([]);
@@ -374,18 +376,22 @@ function OrganizationSettingsPage() {
 
             <div className="modules-list">
               {MENU_MODULES.map((mod) => {
-                const visible = !hiddenModules.includes(mod.key);
+                const included = hasModule(mod.key);
+                const visible = included && !hiddenModules.includes(mod.key);
                 return (
-                  <label key={mod.key} className={`module-row ${visible ? '' : 'module-off'}`}>
+                  <label key={mod.key} className={`module-row ${visible ? '' : 'module-off'} ${included ? '' : 'module-locked-row'}`}>
                     <div className="module-info">
                       <span className="module-name">{mod.label}</span>
                       {mod.hint && <span className="module-hint">{mod.hint}</span>}
                     </div>
                     <span className="module-toggle">
-                      <span className="module-state">{visible ? 'Affiché' : 'Masqué'}</span>
+                      <span className="module-state">
+                        {included ? (visible ? 'Affiché' : 'Masqué') : '🔒 Non inclus dans votre abonnement'}
+                      </span>
                       <input
                         type="checkbox"
                         checked={visible}
+                        disabled={!included}
                         onChange={() => toggleModule(mod.key)}
                         aria-label={`Afficher ${mod.label}`}
                       />

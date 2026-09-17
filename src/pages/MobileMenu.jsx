@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
+import { useModules } from '../hooks/useModules';
+import { isHrefHidden, HREF_TO_MODULE } from '../config/menuModules';
 import {
     BriefcaseIcon,
     CalendarIcon,
@@ -94,13 +96,18 @@ const permissionBasedPages = [
 
 const MobileMenu = () => {
     const navigate = useNavigate();
-    const { profile } = useAuthStore();
+    const { profile, organization } = useAuthStore();
     const { hasPermission, isAdmin } = usePermissions();
+    const { hasModule, modules } = useModules();
+    const hiddenModules = organization?.settings?.hidden_modules || [];
+    const hiddenKey = hiddenModules.join(',');
+    const modulesKey = modules.filter(m => m.enabled).map(m => m.module_key).join(',');
+    const isAllowed = (href) => !isHrefHidden(href, hiddenModules) && hasModule(HREF_TO_MODULE[href]);
 
     // Construire la navigation finale
     const navigation = useMemo(() => {
         if (isAdmin) {
-            return adminNavigation;
+            return adminNavigation.filter(item => isAllowed(item.href));
         }
 
         // Commencer avec la nav de base
@@ -116,8 +123,9 @@ const MobileMenu = () => {
             }
         });
 
-        return nav;
-    }, [isAdmin, hasPermission]);
+        return nav.filter(item => isAllowed(item.href));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAdmin, hasPermission, hiddenKey, modulesKey]);
 
     const handleLogout = async () => {
         await authService.signOut();

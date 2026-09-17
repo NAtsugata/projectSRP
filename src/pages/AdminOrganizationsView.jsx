@@ -1,6 +1,8 @@
 // src/pages/AdminOrganizationsView.jsx
 import { useState } from 'react';
 import { EditIcon, XIcon, CheckIcon, PlusIcon } from '../components/SharedUI';
+import OrganizationModulesModal from '../components/admin/OrganizationModulesModal';
+import { useToast } from '../contexts/ToastContext';
 import './AdminOrganizationsView.css';
 
 const PLANS = ['free', 'starter', 'pro', 'enterprise'];
@@ -193,6 +195,8 @@ export default function AdminOrganizationsView({
 }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingOrg, setEditingOrg] = useState(null);
+    const [modulesOrg, setModulesOrg] = useState(null);
+    const toast = useToast();
 
     const activeCount = organizations.filter(o => o.is_active).length;
     const totalMembers = Object.values(memberCounts).reduce((s, c) => s + c, 0);
@@ -226,6 +230,14 @@ export default function AdminOrganizationsView({
                 />
             )}
 
+            {modulesOrg && (
+                <OrganizationModulesModal
+                    organization={modulesOrg}
+                    toast={toast}
+                    onClose={() => setModulesOrg(null)}
+                />
+            )}
+
             <div className="org-grid">
                 {organizations.map(org => (
                     <div key={org.id} className={`org-card ${!org.is_active ? 'org-card-inactive' : ''}`}>
@@ -237,6 +249,13 @@ export default function AdminOrganizationsView({
                                 </span>
                             </div>
                             <div className="org-card-actions">
+                                <button
+                                    onClick={() => setModulesOrg(org)}
+                                    className="btn-icon"
+                                    title="Modules vendus / activés"
+                                >
+                                    🧩
+                                </button>
                                 <button
                                     onClick={() => setEditingOrg(org)}
                                     className="btn-icon"

@@ -25,6 +25,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SectionErrorBoundary from './components/SectionErrorBoundary';
 import { PrivacyPolicyPage, LegalNoticePage, TermsOfServicePage } from './pages/LegalPages';
 import PermissionRoute from './components/PermissionRoute';
+import { withModule } from './components/ModuleGate';
 import './App.css';
 import AppLayout from './components/layout/AppLayout';
 
@@ -69,6 +70,36 @@ const CerfaPage1301 = lazy(() => import('./pages/CerfaPage1301'));
 const CalculateurAidesView = lazy(() => import('./pages/CalculateurAidesView'));
 
 
+
+
+// Pages protégées par module vendu séparément (voir docs/MODULES_ET_ABONNEMENTS.md)
+const GatedChantiersView = withModule('chantiers', ChantiersView);
+const GatedChantierDetailView = withModule('chantiers', ChantierDetailView);
+const GatedSmartPlanningManager = withModule('smart-planning', SmartPlanningManager);
+const GatedAgendaViewContainer = withModule('agenda', AgendaViewContainer);
+const GatedAdminArchiveViewContainer = withModule('archives', AdminArchiveViewContainer);
+const GatedChecklistViewContainer = withModule('checklists', ChecklistViewContainer);
+const GatedAdminChecklistTemplatesViewContainer = withModule('checklists', AdminChecklistTemplatesViewContainer);
+const GatedIRShowerFormsViewContainer = withModule('ir-docs', IRShowerFormsViewContainer);
+const GatedAdminLeaveViewContainer = withModule('leaves', AdminLeaveViewContainer);
+const GatedEmployeeLeaveViewContainer = withModule('leaves', EmployeeLeaveViewContainer);
+const GatedAdminExpensesViewContainer = withModule('expenses', AdminExpensesViewContainer);
+const GatedExpensesViewContainer = withModule('expenses', ExpensesViewContainer);
+const GatedAdminVaultViewContainer = withModule('vault', AdminVaultViewContainer);
+const GatedCoffreNumeriqueViewContainer = withModule('vault', CoffreNumeriqueViewContainer);
+const GatedMyDocumentsViewContainer = withModule('documents', MyDocumentsViewContainer);
+const GatedAdminMonthlyExportViewContainer = withModule('monthly-export', AdminMonthlyExportViewContainer);
+const GatedAdminClientsViewContainer = withModule('clients', AdminClientsViewContainer);
+const GatedAdminInvoicesViewContainer = withModule('invoices', AdminInvoicesViewContainer);
+const GatedQuoteEditorPage = withModule('invoices', QuoteEditorPage);
+const GatedAdminCatalogViewContainer = withModule('catalog', AdminCatalogViewContainer);
+const GatedAdminContractsViewContainer = withModule('contracts', AdminContractsViewContainer);
+const GatedContractDetailViewContainer = withModule('contracts', ContractDetailViewContainer);
+const GatedCerfaManager = withModule('cerfa', CerfaManager);
+const GatedCerfaPage = withModule('cerfa', CerfaPage);
+const GatedCerfaPage15498 = withModule('cerfa', CerfaPage15498);
+const GatedCerfaPage1301 = withModule('cerfa', CerfaPage1301);
+const GatedCalculateurAidesView = withModule('aides', CalculateurAidesView);
 
 // --- Application principale ---
 function App() {
@@ -375,7 +406,7 @@ function App() {
                   } />
                   <Route path="agenda" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AgendaViewContainer />
+                      <GatedAgendaViewContainer />
                     </Suspense>
                   } />
                   <Route
@@ -395,14 +426,14 @@ function App() {
                   } />
                   <Route path="archives" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
+                      <GatedAdminArchiveViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                     </Suspense>
                   } />
                   <Route
                     path="leaves"
                     element={
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminLeaveViewContainer />
+                        <GatedAdminLeaveViewContainer />
                       </Suspense>
                     }
                   />
@@ -415,48 +446,48 @@ function App() {
                     path="vault"
                     element={
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminVaultViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
+                        <GatedAdminVaultViewContainer showToast={showToast} showConfirmationModal={showConfirmationModal} />
                       </Suspense>
                     }
                   />
                   <Route path="documents" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <MyDocumentsViewContainer />
+                      <GatedMyDocumentsViewContainer />
                     </Suspense>
                   } />
                   <Route path="checklist-templates" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminChecklistTemplatesViewContainer showToast={showToast} />
+                      <GatedAdminChecklistTemplatesViewContainer showToast={showToast} />
                     </Suspense>
                   } />
                   <Route path="expenses" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminExpensesViewContainer showConfirmationModal={showConfirmationModal} />
+                      <GatedAdminExpensesViewContainer showConfirmationModal={showConfirmationModal} />
                     </Suspense>
                   } />
                   <Route path="monthly-export" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminMonthlyExportViewContainer />
+                      <GatedAdminMonthlyExportViewContainer />
                     </Suspense>
                   } />
                   <Route path="contracts" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminContractsViewContainer />
+                      <GatedAdminContractsViewContainer />
                     </Suspense>
                   } />
                   <Route path="contracts/:contractId" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ContractDetailViewContainer />
+                      <GatedContractDetailViewContainer />
                     </Suspense>
                   } />
                   <Route path="chantiers" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ChantiersView />
+                      <GatedChantiersView />
                     </Suspense>
                   } />
                   <Route path="chantiers/:chantierId" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ChantierDetailView />
+                      <GatedChantierDetailView />
                     </Suspense>
                   } />
                   <Route path="organizations" element={
@@ -466,32 +497,32 @@ function App() {
                   } />
                   <Route path="clients" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminClientsViewContainer />
+                      <GatedAdminClientsViewContainer />
                     </Suspense>
                   } />
                   <Route path="invoices" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminInvoicesViewContainer />
+                      <GatedAdminInvoicesViewContainer />
                     </Suspense>
                   } />
                   <Route path="quotes/new" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <QuoteEditorPage />
+                      <GatedQuoteEditorPage />
                     </Suspense>
                   } />
                   <Route path="quotes/:id" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <QuoteEditorPage />
+                      <GatedQuoteEditorPage />
                     </Suspense>
                   } />
                   <Route path="catalog" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AdminCatalogViewContainer />
+                      <GatedAdminCatalogViewContainer />
                     </Suspense>
                   } />
                   <Route path="multi-day-planning" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <SmartPlanningManager />
+                      <GatedSmartPlanningManager />
                     </Suspense>
                   } />
                   <Route path="settings" element={
@@ -507,7 +538,7 @@ function App() {
                   <Route path="ir-docs" element={
                     <SectionErrorBoundary section="ir-docs" title="Erreur documents IR">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <IRShowerFormsViewContainer />
+                      <GatedIRShowerFormsViewContainer />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -524,35 +555,35 @@ function App() {
                   <Route path="cerfa" element={
                     <SectionErrorBoundary section="cerfa" title="Erreur CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaManager />
+                      <GatedCerfaManager />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form" element={
                     <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage />
+                      <GatedCerfaPage />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
                     <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage15498 />
+                      <GatedCerfaPage15498 />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-1301" element={
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage1301 />
+                      <GatedCerfaPage1301 />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="calculateur-aides" element={
                     <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CalculateurAidesView />
+                      <GatedCalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -575,41 +606,41 @@ function App() {
                   } />
                   <Route path="agenda" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <AgendaViewContainer />
+                      <GatedAgendaViewContainer />
                     </Suspense>
                   } />
                   <Route
                     path="leaves"
                     element={
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <EmployeeLeaveViewContainer />
+                        <GatedEmployeeLeaveViewContainer />
                       </Suspense>
                     }
                   />
                   <Route path="vault" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CoffreNumeriqueViewContainer />
+                      <GatedCoffreNumeriqueViewContainer />
                     </Suspense>
                   } />
                   <Route path="documents" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <MyDocumentsViewContainer />
+                      <GatedMyDocumentsViewContainer />
                     </Suspense>
                   } />
                   <Route path="checklists" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ChecklistViewContainer />
+                      <GatedChecklistViewContainer />
                     </Suspense>
                   } />
                   <Route path="expenses" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ExpensesViewContainer />
+                      <GatedExpensesViewContainer />
                     </Suspense>
                   } />
                   <Route path="ir-docs" element={
                     <SectionErrorBoundary section="ir-docs" title="Erreur documents IR">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <IRShowerFormsViewContainer />
+                      <GatedIRShowerFormsViewContainer />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -626,35 +657,35 @@ function App() {
                   <Route path="cerfa" element={
                     <SectionErrorBoundary section="cerfa" title="Erreur CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaManager />
+                      <GatedCerfaManager />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form" element={
                     <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage />
+                      <GatedCerfaPage />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
                     <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage15498 />
+                      <GatedCerfaPage15498 />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-1301" element={
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CerfaPage1301 />
+                      <GatedCerfaPage1301 />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="calculateur-aides" element={
                     <SectionErrorBoundary section="calculateur-aides" title="Erreur calculateur">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <CalculateurAidesView />
+                      <GatedCalculateurAidesView />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -662,12 +693,12 @@ function App() {
                   {/* Suivi de chantier — accès restreint (RLS : lots assignés) */}
                   <Route path="chantiers" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ChantiersView />
+                      <GatedChantiersView />
                     </Suspense>
                   } />
                   <Route path="chantiers/:chantierId" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <ChantierDetailView />
+                      <GatedChantierDetailView />
                     </Suspense>
                   } />
 
@@ -682,70 +713,70 @@ function App() {
                   <Route path="clients" element={
                     <PermissionRoute permission="manage_clients">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminClientsViewContainer />
+                        <GatedAdminClientsViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="contracts" element={
                     <PermissionRoute permission="view_contracts">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminContractsViewContainer />
+                        <GatedAdminContractsViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="contracts/:contractId" element={
                     <PermissionRoute permission="view_contracts">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <ContractDetailViewContainer />
+                        <GatedContractDetailViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="invoices" element={
                     <PermissionRoute permission="view_invoices">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminInvoicesViewContainer />
+                        <GatedAdminInvoicesViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="catalog" element={
                     <PermissionRoute permission="access_catalog">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminCatalogViewContainer />
+                        <GatedAdminCatalogViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="admin-vault" element={
                     <PermissionRoute permission="access_admin_vault">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminVaultViewContainer />
+                        <GatedAdminVaultViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="archives" element={
                     <PermissionRoute permission="view_all_interventions">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminArchiveViewContainer />
+                        <GatedAdminArchiveViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="checklist-templates" element={
                     <PermissionRoute permission="manage_checklist_templates">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminChecklistTemplatesViewContainer />
+                        <GatedAdminChecklistTemplatesViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="admin-expenses" element={
                     <PermissionRoute permission="approve_expenses">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminExpensesViewContainer />
+                        <GatedAdminExpensesViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />
                   <Route path="admin-leaves" element={
                     <PermissionRoute permission="approve_leave_requests">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                        <AdminLeaveViewContainer />
+                        <GatedAdminLeaveViewContainer />
                       </Suspense>
                     </PermissionRoute>
                   } />

@@ -20,6 +20,7 @@ export const CORE_HREFS = new Set([
 // Modules optionnels, dans l'ordre d'affichage souhaité dans les réglages
 export const MENU_MODULES = [
   { key: 'chantiers', label: 'Suivi de Chantier', hint: 'Chantiers, lots, zones (MOE)', hrefs: ['/chantiers'] },
+  { key: 'smart-planning', label: 'Planning intelligent', hint: 'Planification multi-jours', hrefs: ['/multi-day-planning'] },
   { key: 'agenda', label: 'Agenda', hint: 'Vue agenda / calendrier', hrefs: ['/agenda'] },
   { key: 'leaves', label: 'Congés', hint: 'Demandes et validation des congés', hrefs: ['/leaves', '/admin-leaves'] },
   { key: 'expenses', label: 'Dépenses', hint: 'Notes de frais', hrefs: ['/expenses', '/admin-expenses'] },

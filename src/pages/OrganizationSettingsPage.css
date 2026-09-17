@@ -642,3 +642,6 @@
 .storage-table td { padding: .35rem .5rem; border-bottom: 1px solid #f1f5f9; }
 .storage-table-size { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .settings-section h3 { margin-top: 1.5rem; }
+
+.module-locked-row { opacity: .6; }
+.module-locked-row .module-state { font-size: .8rem; }

@@ -21,7 +21,8 @@ import {
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
-import { isHrefHidden } from '../../config/menuModules';
+import { isHrefHidden, HREF_TO_MODULE } from '../../config/menuModules';
+import { useModules } from '../../hooks/useModules';
 import useTheme from '../../hooks/useTheme';
 import ThemeToggle from '../ThemeToggle';
 import { MobileThemeToggleCompact } from '../MobileThemeSelector';
@@ -34,6 +35,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const { hasPermission, isAdmin } = usePermissions();
+    const { hasModule, modules } = useModules();
+    const modulesKey = modules.filter(m => m.enabled).map(m => m.module_key).join(',');
     const { isDark } = useTheme();
     const { organization } = useAuthStore();
 
@@ -149,10 +152,10 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             });
         }
 
-        // Retirer les modules désactivés pour l'organisation
-        return nav.filter(item => !isHrefHidden(item.href, hiddenModules));
+        // Retirer les modules masqués par l'entreprise et ceux non inclus dans l'abonnement
+        return nav.filter(item => !isHrefHidden(item.href, hiddenModules) && hasModule(HREF_TO_MODULE[item.href]));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAdmin, hasPermission, hiddenKey]);
+    }, [isAdmin, hasPermission, hiddenKey, modulesKey]);
 
     const handleMenuNavigation = (href) => {
         navigate(href);

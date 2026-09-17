@@ -1884,3 +1884,12 @@ body {
         font-size: 0.875rem;
     }
 }
+
+/* Écran « module non inclus dans l'abonnement » */
+.module-locked { display: flex; justify-content: center; padding: 2rem 1rem; }
+.module-locked-card { max-width: 520px; width: 100%; text-align: center; padding: 2rem 1.5rem; border-radius: 12px;
+  background: var(--bg-secondary, #fff); box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.module-locked-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+.module-locked-lead { font-weight: 600; margin: .5rem 0; }
+.module-locked-desc { opacity: .8; }
+.module-locked-help { margin: 1rem 0 1.25rem; opacity: .85; }
