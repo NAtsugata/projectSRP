@@ -23,7 +23,7 @@
   --text-primary: #1f1410;        /* Brun très foncé - Presque noir */
   --text-secondary: #57473d;      /* Brun moyen */
   --text-tertiary: #8b7968;       /* Brun clair */
-  --text-muted: #bfb3a8;          /* Beige grisé */
+  --text-muted: #8a7a6c;          /* Brun grisé (≥ 3:1 sur pêche, blanc et crème) */
   --text-inverse: #ffffff;        /* Blanc pour boutons/fonds colorés */
   --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
   --text-on-white-bg: #1f1410;    /* Texte sombre sur fond blanc */
@@ -155,9 +155,9 @@
   --color-info: #a68968;          /* Brun sable clair */
 
   /* === Couleurs métier (lumineux) === */
-  --color-copper: #d4a574;        /* Cuivre doré - LUMINEUX */
-  --color-copper-dark: #b87333;   /* Cuivre classique */
-  --color-copper-light: #e6c299;  /* Cuivre champagne */
+  --color-copper: #b87333;        /* Cuivre base (texte blanc lisible dessus) */
+  --color-copper-dark: #9a5f28;   /* Cuivre foncé */
+  --color-copper-light: #d4a574;  /* Cuivre clair (accents/texte sur fond sombre) */
 
   /* === Composants spécifiques === */
   --scanner-bg: #1a1310;

@@ -32,7 +32,7 @@
 
 .global-stat .stat-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -197,7 +197,7 @@
 
 .card-time {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .card-center {
@@ -217,7 +217,7 @@
 
 .card-service {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-tertiary);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -226,7 +226,7 @@
 
 .card-address {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin: 0.25rem 0 0 0;
   white-space: nowrap;
   overflow: hidden;
@@ -263,8 +263,8 @@
 }
 
 .badge-status {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
 }
 
 .badge-à-venir {
@@ -289,9 +289,9 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 0.75rem;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .team-grouped-empty .empty-icon {

@@ -67,7 +67,7 @@
 
 .toolbar-btn-primary {
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   border: none;
 }
 
@@ -148,7 +148,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   margin-bottom: 1rem;
 }
 
@@ -361,7 +361,7 @@
 
 .vault-documents-count {
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.75rem;
@@ -506,7 +506,7 @@
 
 .btn-icon:hover {
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   border-color: var(--color-copper);
 }
 
@@ -531,7 +531,7 @@
 
 .btn-icon-share:hover {
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
 }
 
 .btn-icon-share svg {
@@ -554,7 +554,7 @@
 
 .btn-icon-danger:hover {
   background: var(--color-danger);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   border-color: var(--color-danger);
 }
 
@@ -616,7 +616,7 @@
 }
 
 .import-modal-header h3 {
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
@@ -633,7 +633,7 @@
 .import-modal-close {
   background: transparent;
   border: none;
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   width: 2rem;
   height: 2rem;
   cursor: pointer;
@@ -779,7 +779,7 @@
   font-weight: 500;
   background: var(--color-copper);
   border: none;
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   cursor: pointer;
   font-family: inherit;
 }
@@ -837,9 +837,9 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs seront automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .admin-vault,

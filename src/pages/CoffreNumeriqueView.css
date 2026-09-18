@@ -647,9 +647,9 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs sont automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .coffre-view,

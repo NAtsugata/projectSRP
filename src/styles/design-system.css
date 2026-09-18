@@ -349,7 +349,11 @@
 /* ==================== DARK MODE SUPPORT ==================== */
 /* Thème sombre activé - Harmonisation complète */
 
-/* Classe pour forcer le thème sombre */
+/* Classe pour forcer le thème sombre.
+   Spécificité (0,2,0) volontaire : la palette sombre est identique quelle que
+   soit la préférence système (prefers-color-scheme) et l'ordre des feuilles. */
+:root[data-theme="dark"],
+:root.dark-theme,
 [data-theme="dark"],
 .dark-theme {
   /* Backgrounds - Tons sombres avec touches de cuivre */
@@ -361,8 +365,8 @@
   /* Text Colors - Tons clairs pour contraste */
   --text-primary: #e5e7eb;        /* Blanc cassé */
   --text-secondary: #9ca3af;      /* Gris clair */
-  --text-tertiary: #6b7280;       /* Gris moyen */
-  --text-muted: #4b5563;          /* Gris sombre */
+  --text-tertiary: #7c8493;       /* Gris moyen clair (≥ 3.9:1 sur surfaces sombres) */
+  --text-muted: #6b7280;          /* Gris moyen (≥ 3:1 sur fond sombre) */
   --text-inverse: #111827;        /* Noir pour fond clair */
   --text-on-colored-bg: #ffffff;  /* Texte blanc sur boutons/fonds colorés */
   --text-on-white-bg: #e5e7eb;    /* Texte clair sur fond sombre */
@@ -373,10 +377,10 @@
   --border-color-dark: #3a4048;   /* Gris moyen */
 
   /* Primary Color - Cuivre plus lumineux pour le dark */
-  --color-copper: #d4a574;        /* Cuivre clair */
-  --color-copper-light: #e5c8a8;  /* Cuivre très clair */
-  --color-copper-dark: #b87333;   /* Cuivre standard */
-  --color-primary: #d4a574;
+  --color-copper: #b87333;        /* Cuivre base : texte blanc lisible (3.8:1) */
+  --color-copper-light: #d4a574;  /* Cuivre clair : accents/texte sur fond sombre */
+  --color-copper-dark: #9a5f28;   /* Cuivre foncé */
+  --color-primary: #b87333;
 
   /* Shadows - Plus subtils sur fond sombre */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -406,8 +410,8 @@
     /* Text Colors */
     --text-primary: #e5e7eb;
     --text-secondary: #9ca3af;
-    --text-tertiary: #6b7280;
-    --text-muted: #4b5563;
+    --text-tertiary: #7c8493;
+    --text-muted: #6b7280;
     --text-inverse: #111827;
     --text-on-colored-bg: #ffffff;
     --text-on-white-bg: #e5e7eb;
@@ -418,10 +422,10 @@
     --border-color-dark: #3a4048;
 
     /* Primary Color */
-    --color-copper: #d4a574;
-    --color-copper-light: #e5c8a8;
-    --color-copper-dark: #b87333;
-    --color-primary: #d4a574;
+    --color-copper: #b87333;
+    --color-copper-light: #d4a574;
+    --color-copper-dark: #9a5f28;
+    --color-primary: #b87333;
 
     /* Shadows */
     --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);

@@ -4,23 +4,20 @@
    ============================= */
 
 .quote-editor {
-  --primary: #818cf8;
+  /* Palette locale : suit le thème clair/sombre de l'application */
+  --primary: #6366f1;
   --primary-hover: var(--color-copper);
   --primary-light: rgba(184, 115, 51, 0.15);
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
 
-  --bg-main: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.8);
-  --bg-input: rgba(15, 23, 42, 0.8);
+  --bg-main: var(--bg-primary);
+  --bg-card: var(--bg-secondary);
+  --bg-input: var(--bg-primary);
   --bg-hover: rgba(184, 115, 51, 0.1);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-
-  --border: rgba(148, 163, 184, 0.2);
+  --border: var(--border-color);
   --radius: 8px;
 
   display: grid;
@@ -425,7 +422,7 @@
   grid-template-columns: 70px 1fr 70px 80px 90px 70px 100px 40px;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--bg-tertiary);
   font-size: 0.65rem;
   font-weight: 600;
   color: var(--text-muted) !important;
@@ -625,13 +622,13 @@
 }
 
 .quote-editor .btn-secondary {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--bg-secondary) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border) !important;
 }
 
 .quote-editor .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--bg-tertiary) !important;
 }
 
 .quote-editor .btn-sm {
@@ -791,4 +788,11 @@
 /* Attachments section styling */
 .quote-attachments-section {
   margin-top: 1.5rem;
+}
+
+/* Mode sombre : accents plus lumineux sur fond sombre */
+[data-theme="dark"] .quote-editor {
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
 }

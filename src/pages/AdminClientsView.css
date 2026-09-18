@@ -846,96 +846,60 @@
    ========================================== */
 
 /* Appliquer le theme sombre quand les variables sont definies */
-@media (prefers-color-scheme: dark) {
-  .stat-card,
-  .client-card,
-  .client-detail-panel,
-  .modal-content,
-  .panel-header {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
+  [data-theme="dark"] .stat-card, [data-theme="dark"] .client-card, [data-theme="dark"] .client-detail-panel, [data-theme="dark"] .modal-content, [data-theme="dark"] .panel-header {
     background: var(--bg-primary, #1e293b) !important;
     color: var(--text-primary, #f8fafc) !important;
   }
 
-  .client-card.inactive {
+  [data-theme="dark"] .client-card.inactive {
     background: var(--bg-secondary, #334155) !important;
   }
 
-  .btn-export,
-  .filter-btn,
-  .btn-secondary,
-  .btn-close,
-  .btn-icon {
+  [data-theme="dark"] .btn-export, [data-theme="dark"] .filter-btn, [data-theme="dark"] .btn-secondary, [data-theme="dark"] .btn-close, [data-theme="dark"] .btn-icon {
     background: var(--bg-secondary, #334155) !important;
     color: var(--text-primary, #f8fafc) !important;
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
 
-  .search-box input,
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
+  [data-theme="dark"] .search-box input, [data-theme="dark"] .form-group input, [data-theme="dark"] .form-group select, [data-theme="dark"] .form-group textarea {
     background: var(--bg-secondary, #334155) !important;
     color: var(--text-primary, #f8fafc) !important;
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
 
-  .panel-header,
-  .modal-header {
+  [data-theme="dark"] .panel-header, [data-theme="dark"] .modal-header {
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
 
-  .panel-section {
+  [data-theme="dark"] .panel-section {
     border-color: var(--border-color-light, rgba(148, 163, 184, 0.1)) !important;
   }
 
-  .mini-stat,
-  .contact-item,
-  .intervention-item {
+  [data-theme="dark"] .mini-stat, [data-theme="dark"] .contact-item, [data-theme="dark"] .intervention-item {
     background: var(--bg-secondary, #334155) !important;
   }
 
-  .intervention-item:hover,
-  .client-card:hover {
+  [data-theme="dark"] .intervention-item:hover, [data-theme="dark"] .client-card:hover {
     background: var(--bg-tertiary, #475569) !important;
   }
 
-  .client-name,
-  .panel-header h2,
-  .panel-section h3,
-  .modal-header h2,
-  .contact-name,
-  .intervention-title,
-  .stat-value,
-  .mini-stat-value,
-  .form-section-title,
-  .info-item span:not(.type-badge):not(.type-standard):not(.type-vip):not(.type-prospect) {
+  [data-theme="dark"] .client-name, [data-theme="dark"] .panel-header h2, [data-theme="dark"] .panel-section h3, [data-theme="dark"] .modal-header h2, [data-theme="dark"] .contact-name, [data-theme="dark"] .intervention-title, [data-theme="dark"] .stat-value, [data-theme="dark"] .mini-stat-value, [data-theme="dark"] .form-section-title, [data-theme="dark"] .info-item span:not(.type-badge):not(.type-standard):not(.type-vip):not(.type-prospect) {
     color: var(--text-primary, #f8fafc) !important;
   }
 
-  .company-name,
-  .client-detail,
-  .stat-label,
-  .mini-stat-label,
-  .contact-role,
-  .contact-email,
-  .contact-phone,
-  .intervention-date,
-  .info-item label,
-  .form-group label,
-  .client-notes,
-  .no-contacts,
-  .no-interventions {
+  [data-theme="dark"] .company-name, [data-theme="dark"] .client-detail, [data-theme="dark"] .stat-label, [data-theme="dark"] .mini-stat-label, [data-theme="dark"] .contact-role, [data-theme="dark"] .contact-email, [data-theme="dark"] .contact-phone, [data-theme="dark"] .intervention-date, [data-theme="dark"] .info-item label, [data-theme="dark"] .form-group label, [data-theme="dark"] .client-notes, [data-theme="dark"] .no-contacts, [data-theme="dark"] .no-interventions {
     color: var(--text-secondary, #cbd5e1) !important;
   }
 
-  .form-section-title {
+  [data-theme="dark"] .form-section-title {
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
 
-  .modal-footer {
+  [data-theme="dark"] .modal-footer {
     border-color: var(--border-color, rgba(148, 163, 184, 0.15)) !important;
   }
-}
+
 
 /* Support explicite via classe .dark-theme sur body ou html */
 .dark-theme .stat-card,
@@ -1109,28 +1073,19 @@ body[data-theme="dark"] .info-item .type-prospect {
   color: #1e3a8a !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  .type-standard,
-  .type-badge.type-standard,
-  .client-type.type-standard,
-  .info-item .type-standard {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
+  [data-theme="dark"] .type-standard, [data-theme="dark"] .type-badge.type-standard, [data-theme="dark"] .client-type.type-standard, [data-theme="dark"] .info-item .type-standard {
     background: #e5e7eb !important;
     color: #1f2937 !important;
   }
 
-  .type-vip,
-  .type-badge.type-vip,
-  .client-type.type-vip,
-  .info-item .type-vip {
+  [data-theme="dark"] .type-vip, [data-theme="dark"] .type-badge.type-vip, [data-theme="dark"] .client-type.type-vip, [data-theme="dark"] .info-item .type-vip {
     background: #fcd34d !important;
     color: #78350f !important;
   }
 
-  .type-prospect,
-  .type-badge.type-prospect,
-  .client-type.type-prospect,
-  .info-item .type-prospect {
+  [data-theme="dark"] .type-prospect, [data-theme="dark"] .type-badge.type-prospect, [data-theme="dark"] .client-type.type-prospect, [data-theme="dark"] .info-item .type-prospect {
     background: var(--color-copper-light) !important;
     color: #1e3a8a !important;
   }
-}
+

@@ -26,7 +26,7 @@
 .chantier-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
 .chantier-card-top { display: flex; justify-content: space-between; align-items: center; }
 .chantier-card-name { margin: .2rem 0 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #111827); }
-.chantier-card-client { margin: 0; font-weight: 600; color: #374151; font-size: .85rem; }
+.chantier-card-client { margin: 0; font-weight: 600; color: var(--text-secondary); font-size: .85rem; }
 .chantier-card-address { margin: 0; color: var(--text-tertiary, #6b7280); font-size: .8rem; }
 .chantier-lots-count { font-size: .78rem; color: var(--text-tertiary, #6b7280); }
 
@@ -38,16 +38,16 @@
 
 /* Barre d'avancement */
 .chantier-progress { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
-.chantier-progress-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.chantier-progress-bar { flex: 1; height: 8px; background: var(--bg-tertiary); border-radius: 999px; overflow: hidden; }
 .chantier-progress-fill { height: 100%; background: linear-gradient(90deg, #b87333, #d99a5b); border-radius: 999px; transition: width .3s; }
-.chantier-progress-label { font-size: .8rem; font-weight: 700; color: #374151; min-width: 34px; text-align: right; }
+.chantier-progress-label { font-size: .8rem; font-weight: 700; color: var(--text-secondary); min-width: 34px; text-align: right; }
 .chantier-progress-label.big { font-size: 1.5rem; }
 .chantier-global-progress { display: flex; flex-direction: column; align-items: flex-end; }
 
 /* Onglets */
 .chantier-tabs { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 2px solid var(--border-color, #e5e7eb); margin-bottom: 1rem; }
 .chantier-tabs button {
-  background: none; border: none; padding: .6rem .9rem; font-weight: 600; color: #64748b;
+  background: none; border: none; padding: .6rem .9rem; font-weight: 600; color: var(--text-tertiary);
   cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
 }
 .chantier-tabs button.active { color: var(--color-copper, #b87333); border-bottom-color: var(--color-copper, #b87333); }
@@ -85,7 +85,7 @@
 .task-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .6rem .8rem; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: var(--bg-primary, #fff); }
 .task-main { display: flex; flex-direction: column; }
 .task-title { font-weight: 600; }
-.task-meta { font-size: .78rem; color: #6b7280; }
+.task-meta { font-size: .78rem; color: var(--text-tertiary); }
 .task-actions { display: flex; align-items: center; gap: .5rem; }
 .task-badge { font-size: .72rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; }
 .tb-a_faire { background: #f3f4f6; color: #374151; }
@@ -102,9 +102,9 @@
 .media-item img { width: 100%; height: 150px; object-fit: cover; }
 .media-placeholder { height: 150px; display: flex; align-items: center; justify-content: center; font-size: 2rem; background: #f3f4f6; }
 .media-item figcaption { display: flex; flex-direction: column; gap: .1rem; padding: .5rem .6rem; font-size: .76rem; }
-.media-lot { font-weight: 700; color: #374151; }
-.media-date, .media-author { color: #6b7280; }
-.media-caption { color: #111827; margin-top: .2rem; }
+.media-lot { font-weight: 700; color: var(--text-secondary); }
+.media-date, .media-author { color: var(--text-tertiary); }
+.media-caption { color: var(--text-primary); margin-top: .2rem; }
 .media-flag { color: #b91c1c; font-weight: 700; }
 .media-deleted { opacity: .55; }
 .media-actions { padding: 0 .6rem .5rem; }
@@ -113,17 +113,17 @@
 
 /* Journal */
 .journal-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
-.journal-row { display: grid; grid-template-columns: 160px 160px 1fr 1fr; gap: .5rem; padding: .5rem .3rem; border-bottom: 1px solid #f1f5f9; font-size: .82rem; align-items: center; }
-.journal-date { color: #6b7280; }
-.journal-type { font-weight: 700; color: #374151; }
-.journal-actor { color: #111827; }
-.journal-ctx { color: #6b7280; }
+.journal-row { display: grid; grid-template-columns: 160px 160px 1fr 1fr; gap: .5rem; padding: .5rem .3rem; border-bottom: 1px solid var(--border-color); font-size: .82rem; align-items: center; }
+.journal-date { color: var(--text-tertiary); }
+.journal-type { font-weight: 700; color: var(--text-secondary); }
+.journal-actor { color: var(--text-primary); }
+.journal-ctx { color: var(--text-tertiary); }
 
 /* Lots prédéfinis (création rapide) */
 .preset-lots { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
 .preset-chip {
   background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #d1d5db);
-  color: #374151; padding: .3rem .65rem; border-radius: 999px; font-size: .82rem;
+  color: var(--text-secondary); padding: .3rem .65rem; border-radius: 999px; font-size: .82rem;
   font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s, color .12s;
 }
 .preset-chip:hover { border-color: var(--color-copper, #b87333); }
@@ -134,7 +134,7 @@
 /* Documents de référence (MOE) */
 .doc-cat-block { margin-bottom: 1rem; }
 .doc-cat-block h4 {
-  margin: 0 0 .4rem; font-size: .95rem; color: #374151;
+  margin: 0 0 .4rem; font-size: .95rem; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: .02em; font-weight: 700;
 }
 .doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .4rem; }
@@ -148,8 +148,8 @@
 }
 .doc-icon { font-size: 1.4rem; flex-shrink: 0; }
 .doc-meta { display: flex; flex-direction: column; min-width: 0; }
-.doc-title { font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doc-sub { font-size: .76rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-title { font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-sub { font-size: .76rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Versions et obsolescence */
 .doc-group { list-style: none; }
@@ -162,14 +162,14 @@
 .doc-obsolete .doc-title, .doc-obsolete .doc-icon { opacity: .6; }
 .doc-actions { display: flex; gap: .7rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
 .doc-history { margin: .15rem 0 .4rem 2.4rem; }
-.doc-history-toggle { font-size: .78rem; color: #6b7280; }
+.doc-history-toggle { font-size: .78rem; color: var(--text-tertiary); }
 .doc-history-list { margin-top: .35rem; }
 .doc-history-list .doc-row { padding: .35rem .6rem; background: #f9fafb; }
 
 /* Assignation d'intervenant par lot (création) */
 .lot-assign-list { display: flex; flex-direction: column; gap: .4rem; margin-top: .35rem; }
 .lot-assign-row { display: flex; align-items: center; gap: .6rem; }
-.lot-assign-name { flex: 1; font-size: .85rem; font-weight: 600; color: #374151; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lot-assign-name { flex: 1; font-size: .85rem; font-weight: 600; color: var(--text-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lot-assign-select { flex: 1.2; }
 
 /* Formulaires */

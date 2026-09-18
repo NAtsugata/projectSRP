@@ -333,17 +333,17 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
   const getStatusBadge = (expense) => {
     if (expense.is_paid) {
-      return { icon: '💰', label: 'Payé', color: '#6366f1', bg: '#eff6ff' };
+      return { icon: '💰', label: 'Payé', color: '#4338ca', bg: '#eff6ff' };
     }
     switch (expense.status) {
       case 'pending':
-        return { icon: <ClockIcon />, label: 'En attente', color: '#f59e0b', bg: '#fef3c7' };
+        return { icon: <ClockIcon />, label: 'En attente', color: '#b45309', bg: '#fef3c7' };
       case 'approved':
-        return { icon: <CheckCircleIcon />, label: 'Approuvé', color: '#10b981', bg: '#d1fae5' };
+        return { icon: <CheckCircleIcon />, label: 'Approuvé', color: '#047857', bg: '#d1fae5' };
       case 'rejected':
-        return { icon: <XCircleIcon />, label: 'Rejeté', color: '#ef4444', bg: '#fee2e2' };
+        return { icon: <XCircleIcon />, label: 'Rejeté', color: '#b91c1c', bg: '#fee2e2' };
       default:
-        return { icon: <ClockIcon />, label: 'Inconnu', color: '#64748b', bg: '#f1f5f9' };
+        return { icon: <ClockIcon />, label: 'Inconnu', color: '#475569', bg: '#f1f5f9' };
     }
   };
 
@@ -538,22 +538,22 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       <div className="stats-mini-grid">
         <div className="stats-mini-card" style={{ background: '#fef3c7' }}>
           <div className="label" style={{ color: '#92400e' }}>⏳ EN ATTENTE</div>
-          <div className="value" style={{ color: '#f59e0b' }}>{stats.pending.count}</div>
+          <div className="value" style={{ color: '#b45309' }}>{stats.pending.count}</div>
           <div className="subvalue" style={{ color: '#92400e' }}>{formatAmount(stats.pending.total)}</div>
         </div>
         <div className="stats-mini-card" style={{ background: '#d1fae5' }}>
           <div className="label" style={{ color: '#065f46' }}>✅ APPROUVÉ</div>
-          <div className="value" style={{ color: '#10b981' }}>{stats.approved.count}</div>
+          <div className="value" style={{ color: '#047857' }}>{stats.approved.count}</div>
           <div className="subvalue" style={{ color: '#065f46' }}>{formatAmount(stats.approved.total)}</div>
         </div>
         <div className="stats-mini-card" style={{ background: '#eff6ff' }}>
           <div className="label" style={{ color: '#1e3a8a' }}>💰 PAYÉ</div>
-          <div className="value" style={{ color: '#6366f1' }}>{stats.paid.count}</div>
+          <div className="value" style={{ color: '#4338ca' }}>{stats.paid.count}</div>
           <div className="subvalue" style={{ color: '#1e3a8a' }}>{formatAmount(stats.paid.total)}</div>
         </div>
         <div className="stats-mini-card" style={{ background: '#fee2e2' }}>
           <div className="label" style={{ color: '#991b1b' }}>❌ REJETÉ</div>
-          <div className="value" style={{ color: '#ef4444' }}>{stats.rejected.count}</div>
+          <div className="value" style={{ color: '#b91c1c' }}>{stats.rejected.count}</div>
           <div className="subvalue" style={{ color: '#991b1b' }}>{formatAmount(stats.rejected.total)}</div>
         </div>
       </div>

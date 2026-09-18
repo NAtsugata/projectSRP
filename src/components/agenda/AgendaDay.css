@@ -45,7 +45,7 @@
 
 /* All-day section */
 .agenda-allday-section {
-  background: #fff;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 0.75rem;
@@ -109,7 +109,7 @@
 
 .badge-warn {
   background: #f59e0b;
-  color: var(--text-primary);
+  color: #1f2937;
 }.badge-sav {background: var(--color-copper);
   color: var(--text-on-colored-bg);}
 
@@ -120,7 +120,7 @@
   gap: 0;
   position: relative;
   min-height: 560px;
-  background: #fff;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 0.75rem;
@@ -149,7 +149,7 @@
 
 .events-col {
   position: relative;
-  background: linear-gradient(to bottom, transparent 50%, #f9fafb 50%);
+  background: linear-gradient(to bottom, transparent 50%, var(--bg-secondary) 50%);
   background-size: 100% calc(100% / 14);
 }
 
@@ -221,7 +221,7 @@
 
 /* Empty state */
 .agenda-day-empty {
-  background: #fff;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 2rem;
@@ -280,3 +280,6 @@
     padding: 0.0625rem 0.25rem;
   }
 }
+
+/* Mode sombre : carte d'évènement teintée au lieu du bleu pâle */
+[data-theme="dark"] .event-card { background: rgba(66, 133, 244, 0.22); }

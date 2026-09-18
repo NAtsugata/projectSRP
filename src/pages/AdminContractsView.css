@@ -755,9 +755,9 @@
 /* Les couleurs sont maintenant gérées par les variables CSS */
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs seront automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .contracts-view,

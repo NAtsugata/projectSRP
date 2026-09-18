@@ -347,11 +347,11 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
-  .admin-dashboard {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
+  [data-theme="dark"] .admin-dashboard {
     background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   }
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .admin-dashboard,

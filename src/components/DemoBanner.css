@@ -154,11 +154,11 @@
 }
 
 /* Mode sombre (si l'application le supporte) */
-@media (prefers-color-scheme: dark) {
-  .demo-banner {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
+  [data-theme="dark"] .demo-banner {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
-}
+
 
 /* Réduction des animations pour accessibilité */
 @media (prefers-reduced-motion: reduce) {

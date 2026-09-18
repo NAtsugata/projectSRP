@@ -349,7 +349,7 @@ export default function MyDocumentsView({
           font-weight: 600;
           font-size: 1rem;
           margin-bottom: 0.5rem;
-          color: #1f2937;
+          color: var(--text-primary);
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -547,10 +547,10 @@ export default function MyDocumentsView({
       {filteredDocuments.length === 0 ? (
         <div className="empty-state">
           <FolderIcon className="empty-icon" />
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#1f2937' }}>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Aucun document
           </h3>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             {searchTerm || selectedCategory !== 'all'
               ? 'Aucun document ne correspond à vos critères'
               : isAdmin

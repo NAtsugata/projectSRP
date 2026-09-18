@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="fr">
   <head>
+    <script>
+      // Applique le thème avant le premier rendu (évite le flash et garantit
+      // que [data-theme] est toujours présent pour les feuilles de style).
+      (function () {
+        try {
+          var saved = localStorage.getItem('app-theme');
+          var dark = saved === 'dark' || ((!saved || saved === 'auto') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.classList.add(dark ? 'dark-theme' : 'light-theme');
+        } catch (e) { /* stockage indisponible : thème clair par défaut */ }
+      })();
+    </script>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="/logo192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />

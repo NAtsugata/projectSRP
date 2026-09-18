@@ -181,7 +181,7 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   background: #ef4444;
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -216,7 +216,7 @@
   display: inline-block;
   padding: 0.625rem 1.25rem;
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   font-weight: 500;
   border-radius: 8px;
   cursor: pointer;
@@ -248,7 +248,7 @@
 .btn-save {
   padding: 0.75rem 2rem;
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   font-weight: 500;
   border: none;
   border-radius: 8px;
@@ -442,7 +442,7 @@
 .btn-sync {
   padding: 0.875rem 2rem;
   background: linear-gradient(135deg, var(--color-copper), var(--color-copper-dark));
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   font-weight: 600;
   font-size: 1rem;
   border: none;
@@ -503,9 +503,9 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs sont automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .organization-settings-page,

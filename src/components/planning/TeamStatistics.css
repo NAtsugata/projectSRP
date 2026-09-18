@@ -4,7 +4,7 @@
   background: var(--bg-primary);
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   overflow: hidden;
 }/* Header */
 .stats-header {display: flex;
@@ -31,8 +31,8 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
-  background: #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .stat-card {
@@ -44,7 +44,7 @@
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-primary);
 }
 
 .stat-card.completed .stat-value {
@@ -52,7 +52,7 @@
 }
 
 .stat-card.in-progress .stat-value {
-  color: #f59e0b;
+  color: #b45309;
 }
 
 .stat-card.upcoming .stat-value {
@@ -61,7 +61,7 @@
 
 .stat-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-tertiary);
   margin-top: 0.25rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -71,7 +71,7 @@
 /* Barre de progression */
 .stats-progress-section {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .progress-header {
@@ -79,7 +79,7 @@
   justify-content: space-between;
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
-  color: #475569;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -90,7 +90,7 @@
 
 .progress-bar {
   height: 8px;
-  background: #e2e8f0;
+  background: var(--bg-tertiary);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -105,7 +105,7 @@
 /* Sections */
 .stats-section {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .stats-section:last-child {
@@ -115,7 +115,7 @@
 .stats-section h4 {
   margin: 0 0 0.75rem 0;
   font-size: 0.875rem;
-  color: #475569;
+  color: var(--text-secondary);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -150,7 +150,7 @@
 .emp-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -158,7 +158,7 @@
 
 .emp-count {
   font-size: 0.6875rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .emp-bar-container {
@@ -167,7 +167,7 @@
 
 .emp-bar {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
   display: flex;
@@ -200,7 +200,7 @@
 }
 
 .emp-in-progress {
-  color: #f59e0b;
+  color: #b45309;
   display: flex;
   align-items: center;
   gap: 0.125rem;
@@ -227,7 +227,7 @@
 
 .svc-name {
   font-size: 0.8125rem;
-  color: #475569;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,7 +239,7 @@
 
 .svc-bar {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -254,7 +254,7 @@
 .svc-count {
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-primary);
   text-align: right;
 }
 
@@ -274,7 +274,7 @@
 
 .day-label {
   font-size: 0.8125rem;
-  color: #475569;
+  color: var(--text-secondary);
   text-transform: capitalize;
 }
 
@@ -284,7 +284,7 @@
 
 .day-bar {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -299,7 +299,7 @@
 .day-count {
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-primary);
   text-align: right;
 }
 
@@ -335,3 +335,7 @@
     padding: 0.75rem 1rem;
   }
 }
+
+/* Mode sombre : ambre lumineux */
+[data-theme="dark"] .stat-card.in-progress .stat-value,
+[data-theme="dark"] .emp-in-progress { color: #fbbf24; }

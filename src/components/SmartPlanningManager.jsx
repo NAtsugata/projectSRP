@@ -140,17 +140,18 @@ const SmartPlanningManager = ({ intervention, onSuccess, onCancel }) => {
         <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
           <h2>🎉 Système de Planification Multi-Jours Activé !</h2>
 
-          <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '24px' }}>
+          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
             Tous les systèmes sont opérationnels et prêts à être utilisés.
           </p>
 
           <div style={{
             background: '#f3f4f6',
+            color: '#1f2937',
             padding: '20px',
             borderRadius: '12px',
             marginBottom: '24px'
           }}>
-            <h3 style={{ marginTop: 0 }}>📊 État du Système</h3>
+            <h3 style={{ marginTop: 0, color: '#1f2937' }}>📊 État du Système</h3>
             <ul style={{ margin: 0 }}>
               <li>✅ <strong>Connexion</strong> : {isOnline ? '🟢 En ligne' : '🔴 Hors ligne'}</li>
               <li>✅ <strong>Utilisateurs chargés</strong> : {users.length}</li>
@@ -162,11 +163,12 @@ const SmartPlanningManager = ({ intervention, onSuccess, onCancel }) => {
 
           <div style={{
             background: '#dbeafe',
+            color: '#1f2937',
             padding: '20px',
             borderRadius: '12px',
             marginBottom: '24px'
           }}>
-            <h3 style={{ marginTop: 0 }}>🚀 Fonctionnalités Disponibles</h3>
+            <h3 style={{ marginTop: 0, color: '#1f2937' }}>🚀 Fonctionnalités Disponibles</h3>
             <ul style={{ margin: 0 }}>
               <li>✅ Mode Hors Ligne V2 (Delta Sync, Cache Intelligent)</li>
               <li>✅ Planification Multi-Jours (1-30 jours)</li>
@@ -180,11 +182,12 @@ const SmartPlanningManager = ({ intervention, onSuccess, onCancel }) => {
 
           <div style={{
             background: '#fef3c7',
+            color: '#1f2937',
             padding: '20px',
             borderRadius: '12px',
             borderLeft: '4px solid #f59e0b'
           }}>
-            <h3 style={{ marginTop: 0 }}>📝 Prochaines Étapes</h3>
+            <h3 style={{ marginTop: 0, color: '#1f2937' }}>📝 Prochaines Étapes</h3>
             <p>
               Le système est prêt. Pour créer le formulaire de planification complet :
             </p>

@@ -212,34 +212,34 @@
 }
 
 /* Mode sombre (optionnel) */
-@media (prefers-color-scheme: dark) {
-  .sync-quality-indicator {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
+  [data-theme="dark"] .sync-quality-indicator {
     background: #1e1e1e;
   }
 
-  .sync-quality-label {
+  [data-theme="dark"] .sync-quality-label {
     color: #e0e0e0;
   }
 
-  .sync-details {
+  [data-theme="dark"] .sync-details {
     background: #2a2a2a;
     border-top-color: #444;
   }
 
-  .sync-detail-label {
+  [data-theme="dark"] .sync-detail-label {
     color: #aaa;
   }
 
-  .sync-detail-value {
+  [data-theme="dark"] .sync-detail-value {
     color: #e0e0e0;
   }
 
-  .sync-quality-meter {
+  [data-theme="dark"] .sync-quality-meter {
     background: #444;
   }
 
-  .sync-quality-percentage {
+  [data-theme="dark"] .sync-quality-percentage {
     color: #e0e0e0;
     text-shadow: 0 0 2px black;
   }
-}
+

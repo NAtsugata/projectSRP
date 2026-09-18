@@ -129,7 +129,7 @@
 
 .settings-actions .btn-primary {
   background: var(--color-copper) !important;
-  color: var(--bg-primary) !important;
+  color: var(--text-on-colored-bg) !important;
   border: none !important;
   box-shadow: 0 4px 6px rgba(184, 115, 51, 0.3);
 }
@@ -247,9 +247,9 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs sont automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .company-settings-container,

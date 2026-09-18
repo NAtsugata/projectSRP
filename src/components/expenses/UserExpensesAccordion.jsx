@@ -433,16 +433,17 @@ const UserExpensesAccordion = ({
       border: '1px solid currentColor'
     };
 
+    // Couleurs définies dans ExpensesStyles.css (variantes clair/sombre)
     if (expense.is_paid) {
-      return { ...base, backgroundColor: 'rgba(99, 102, 241, 0.3)', color: '#6366f1' };
+      return { ...base, backgroundColor: 'rgba(99, 102, 241, 0.3)', color: 'var(--expense-paid-fg, #4338ca)' };
     }
     if (expense.status === 'approved') {
-      return { ...base, backgroundColor: 'rgba(16, 185, 129, 0.3)', color: '#059669' };
+      return { ...base, backgroundColor: 'rgba(16, 185, 129, 0.3)', color: 'var(--expense-approved-fg, #047857)' };
     }
     if (expense.status === 'rejected') {
-      return { ...base, backgroundColor: 'rgba(239, 68, 68, 0.3)', color: '#dc2626' };
+      return { ...base, backgroundColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--expense-rejected-fg, #b91c1c)' };
     }
-    return { ...base, backgroundColor: 'rgba(245, 158, 11, 0.3)', color: '#d97706' };
+    return { ...base, backgroundColor: 'rgba(245, 158, 11, 0.3)', color: 'var(--expense-pending-fg, #92400e)' };
   };
 
   const getStatusLabel = (expense) => {

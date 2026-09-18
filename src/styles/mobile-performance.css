@@ -573,7 +573,7 @@ body {
 }
 
 /* ✅ OPTIMISATION BATTERIE (DARK MODE AUTO) */
-@media (prefers-color-scheme: dark) and (max-width: 768px) {
+@media (max-width: 768px) {
     /* Note: dark-theme.css est désactivé, mais on garde la structure */
     /* pour activation future si besoin */
 }

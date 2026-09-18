@@ -316,6 +316,17 @@ body {
     box-shadow: 0 0 0 3px rgba(184, 115, 51, 0.1);
 }
 
+/* Mode sombre : champs et libellés suivent le thème */
+[data-theme="dark"] .form-group label {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .form-control {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
 /* Header & Navigation - Mobile First */
 .app-header {
     background-color: white;

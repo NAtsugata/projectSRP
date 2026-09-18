@@ -641,3 +641,8 @@
   }
 }
 */
+
+/* Panneau à fond coloré : les titres héritent du blanc quel que soit le thème
+   (les règles globales h1-h4 imposaient la couleur de texte du thème). */
+.agenda-dashboard h1, .agenda-dashboard h2, .agenda-dashboard h3, .agenda-dashboard h4,
+.agenda-dashboard .dashboard-title { color: inherit; }

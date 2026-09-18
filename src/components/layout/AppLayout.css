@@ -603,3 +603,8 @@
 .dark-mode-layout .mobile-header-logo h1 {
     color: #fff;
 }
+
+/* ========== NAVIGATION - MODE SOMBRE ========== */
+[data-theme="dark"] .nav-link { color: var(--text-secondary); }
+[data-theme="dark"] .nav-link:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+[data-theme="dark"] .nav-link.active { background: rgba(184, 115, 51, 0.18); color: var(--color-copper-light); }

@@ -589,12 +589,22 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs seront automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .admin-planning-view,
 .dark-theme .admin-planning-view {
   /* Overrides spécifiques si nécessaires */
+}
+
+/* ==================== MODE SOMBRE ==================== */
+[data-theme="dark"] .planning-header {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+}
+[data-theme="dark"] .planning-title {
+  background: linear-gradient(135deg, var(--color-copper-light), var(--text-primary));
+  background-clip: text;
+  -webkit-background-clip: text;
 }

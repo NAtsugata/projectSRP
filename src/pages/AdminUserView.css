@@ -116,7 +116,7 @@
   min-width: 52px;
   border-radius: 14px;
   background: linear-gradient(135deg, var(--color-copper) 0%, var(--color-copper-dark) 100%);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,7 +183,7 @@
 
 .badge-permissions {
   background: linear-gradient(135deg, var(--color-copper-light) 0%, var(--color-copper) 100%);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
 }
 
 .badge-permissions svg {
@@ -216,7 +216,7 @@
 
 .btn-permissions:hover {
   background: var(--color-copper);
-  color: var(--bg-primary);
+  color: var(--text-on-colored-bg);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(184, 115, 51, 0.25);
 }
@@ -336,9 +336,9 @@
 }
 
 /* ==================== DARK MODE SUPPORT ==================== */
-@media (prefers-color-scheme: dark) {
+/* thème sombre de l'application (ex-@media prefers-color-scheme) */
   /* Les couleurs seront automatiquement gérées par les variables CSS */
-}
+
 
 /* Support explicite via classe .dark-theme */
 [data-theme="dark"] .admin-user-view,

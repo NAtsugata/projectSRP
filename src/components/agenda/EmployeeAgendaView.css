@@ -285,7 +285,7 @@
 }
 
 .summary-separator {
-  color: var(--color-gray-300);
+  color: var(--text-muted);
 }
 
 .summary-urgent .summary-number {
@@ -945,3 +945,9 @@
     animation: none;
   }
 }
+
+/* Mode sombre */
+[data-theme="dark"] .next-address,
+[data-theme="dark"] .view-toggle { background: var(--bg-tertiary); }
+[data-theme="dark"] .next-action-btn.details { background: var(--bg-tertiary); }
+[data-theme="dark"] .next-action-btn.details:hover { background: var(--border-color-dark, var(--bg-tertiary)); }

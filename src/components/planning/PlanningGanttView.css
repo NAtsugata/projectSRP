@@ -837,3 +837,36 @@
     font-size: 1rem;
   }
 }
+
+/* ==================== MODE SOMBRE ==================== */
+[data-theme="dark"] .gantt-team-cell {
+  background: var(--bg-secondary);
+  border-right-color: var(--border-color);
+}
+[data-theme="dark"] .gantt-team-cell.header-cell {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .team-name,
+[data-theme="dark"] .team-member-name,
+[data-theme="dark"] .day-num { color: var(--text-primary); }
+[data-theme="dark"] .day-name { color: var(--text-tertiary); }
+[data-theme="dark"] .gantt-day-cell { border-right-color: var(--border-color); }
+[data-theme="dark"] .gantt-day-cell.header-cell { background: var(--bg-tertiary); }
+[data-theme="dark"] .gantt-day-cell.has-items { background: var(--bg-primary); }
+/* Couleurs opaques : le conteneur de la grille est clair, une teinte translucide
+   redonnerait un fond pâle sous un texte clair. */
+[data-theme="dark"] .gantt-day-cell.weekend { background: #1a1b12; }
+[data-theme="dark"] .gantt-day-cell.weekend.header-cell { background: #2f2e1a; color: #fde047; }
+[data-theme="dark"] .gantt-day-cell.today,
+[data-theme="dark"] .gantt-day-cell.today.has-items { background: #10232a; }
+[data-theme="dark"] .gantt-day-cell.today.header-cell { background: #14363f; }
+[data-theme="dark"] .team-count { background: var(--bg-tertiary); color: var(--color-copper-light); }
+[data-theme="dark"] .overflow-indicator {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color-dark, var(--border-color));
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .gantt-empty { background: var(--bg-secondary); color: var(--text-secondary); }
+[data-theme="dark"] .gantt-legend { background: var(--bg-secondary); border-top-color: var(--border-color); }
+[data-theme="dark"] .legend-item { color: var(--text-secondary); }
