@@ -3,6 +3,7 @@
 // Les admins peuvent voir tous les documents de tous les utilisateurs
 
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import logger from '../utils/logger';
 import {
   CameraIcon,
@@ -18,7 +19,7 @@ import { useDownload } from '../hooks/useDownload';
 import { storageService } from '../lib/supabase';
 
 // Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
-const DocumentScannerView = React.lazy(() => import('./DocumentScannerView'));
+const DocumentScannerView = lazyWithRetry(() => import('./DocumentScannerView'));
 
 const CATEGORIES = [
   { value: 'facture', label: '💰 Facture', color: '#10b981' },

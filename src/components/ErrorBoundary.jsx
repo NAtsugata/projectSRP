@@ -3,6 +3,7 @@
 
 import React from 'react';
 import logger from '../utils/logger';
+import { isChunkLoadError, reloadOnceForFreshBuild } from '../utils/lazyWithRetry';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -20,6 +21,10 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // Fichier JS introuvable (nouvelle version déployée ou réseau coupé) :
+    // recharger une fois suffit dans l'immense majorité des cas.
+    if (isChunkLoadError(error) && reloadOnceForFreshBuild()) return;
+
     // Log l'erreur pour le monitoring
     logger.error('🚨 ErrorBoundary a capturé une erreur:', error, errorInfo);
 
@@ -64,7 +69,7 @@ class ErrorBoundary extends React.Component {
             borderRadius: '8px',
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
           }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{isChunkLoadError(this.state.error) ? '🔄' : '⚠️'}</div>
 
             <h1 style={{
               fontSize: '1.5rem',
@@ -72,14 +77,16 @@ class ErrorBoundary extends React.Component {
               color: '#1f2937',
               marginBottom: '0.5rem'
             }}>
-              Une erreur s'est produite
+              {isChunkLoadError(this.state.error) ? 'Mise à jour ou connexion instable' : "Une erreur s'est produite"}
             </h1>
 
             <p style={{
               color: '#6b7280',
               marginBottom: '1.5rem'
             }}>
-              Nous sommes désolés, quelque chose s'est mal passé. Vous pouvez essayer de recharger la page ou revenir en arrière.
+              {isChunkLoadError(this.state.error)
+                ? "Une partie de l'application n'a pas pu être chargée : une nouvelle version vient d'être publiée ou votre connexion a été coupée. Rechargez la page pour continuer."
+                : "Nous sommes désolés, quelque chose s'est mal passé. Vous pouvez essayer de recharger la page ou revenir en arrière."}
             </p>
 
             {import.meta.env.MODE === 'development' && this.state.error && (
