@@ -1,8 +1,12 @@
 # Assistant planning et suivi Odoo
 
-L'assistant est disponible pour les administrateurs dans le bouton flottant « Assistant planning », sur ordinateur et mobile. Aucun fournisseur d'IA ni API payante n'est appelé. Il reconnaît des commandes françaises structurées, pas toutes les formulations d'une conversation libre.
+L'assistant est disponible pour les administrateurs dans le bouton flottant « Assistant planning », sur ordinateur et mobile. Aucun fournisseur d'IA ni API payante n'est appelé. Il reconnaît plusieurs formulations françaises ; les phrases ambiguës ouvrent des champs de complément en conservant les informations reconnues.
 
 Exemple : « Tiemoko et Seb rendez-vous chez Leneutre demain et après-demain à 9h pendant 1h ». Les personnes et le client doivent exister dans l'entité courante. Un prénom abrégé ambigu demande une précision. Les dates sont calculées en Europe/Paris. Sans heure ni durée, l'interface propose un créneau de 1h, affiché avant création.
+
+L'ordre « Rendezvous demain 8h30 chez madame Leneutre pour Tiemoko » est aussi pris en charge. Formats reconnus : RDV/rendez-vous, chez/pour/avec, civilités, prénoms dans les noms attachés, 8h30/08:30/8 heures 30/huit heures et demie, durées telles que 1h30, jours de semaine, dates numériques ou avec mois français, dans deux jours, matin et après-midi. Les horaires contradictoires, jours incompatibles avec une date et contraintes non reconnues demandent une précision. Une demande d'annulation ou déplacement renvoie vers la fiche existante.
+
+Le bouton « Compléter avec des champs » donne toujours accès aux intervenants et clients de l'entité, à une ou plusieurs dates, à l'heure et à la durée. Les informations sont revérifiées sur les données fraîches avant proposition, puis par la base lors de la création. Ce parcours permet d'aboutir même si la phrase libre n'est pas comprise. Aucune promesse de compréhension universelle : l'utilisateur vérifie les noms et les dates avant création.
 
 La création groupée vérifie à nouveau les appartenances, absences, congés et chevauchements côté base. Toutes les interventions et affectations du lot sont enregistrées ensemble. Une même demande rejouée ne crée pas de doublon. Les interventions anciennes sans heure ou durée bloquent prudemment la journée des personnes affectées. Horaires proposés : 08h–12h et 13h–18h. Les jours explicitement demandés peuvent inclure un week-end.
 
@@ -12,7 +16,7 @@ La page « Devis Odoo » est protégée côté serveur par l'identité du titula
 
 ## Validation du 1 novembre 2026
 
-- 48 tests locaux réussis : sécurité du connecteur, CERFA, classement des factures, parser et disponibilités, suivi existant.
+- 68 tests locaux réussis : sécurité du connecteur, CERFA, classement des factures, formulations françaises, complément guidé, horaires, dates et disponibilités, suivi existant.
 - Compilation des modules internes et CSS réussie ; le build Vite complet est effectué par Vercel.
 - Test réel du RPC sous rôle authenticated dans une transaction intégralement annulée : création, rejeu idempotent, refus d'un chevauchement. Aucun rendez-vous d'essai conservé.
 - Contrôle des composants réels avec données fictives : demande avec deux intervenants et deux dates, confirmation groupée, liens des rendez-vous et factures. Aucun débordement horizontal à 390 pixels. Le build Vercel du commit 29eeeab a réussi.
