@@ -1,0 +1,3 @@
+[functions.srp-odoo]
+# The MCP caller has its own bearer token; the handler validates every request.
+verify_jwt = false

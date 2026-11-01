@@ -16,6 +16,7 @@ import {
 } from '../utils/cerfaService';
 import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
+import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
 import { parseFrenchAddress } from '../utils/cerfaData';
@@ -395,6 +396,7 @@ function CerfaPage1301() {
 
             {/* Formulaire */}
             <div className="cerfa-form">
+                <OdooCerfaImport type="1301" onImport={data => setFormData(prev => ({ ...prev, ...data }))} />
                 {/* SECTION: Client */}
                 <section className="form-section">
                     <h2>👤 Client / Donneur d'ordre</h2>

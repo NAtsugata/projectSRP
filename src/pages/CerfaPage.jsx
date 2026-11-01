@@ -19,6 +19,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { getOrgId, withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
+import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
 import { mergeCerfaDefaults, parseCerfaImport, isoCerfaDate } from '../utils/cerfaData';
@@ -509,6 +510,7 @@ function CerfaPage() {
 
                 {/* Body */}
                 <div className="cerfa-page-body">
+                <OdooCerfaImport type="15497" onImport={data => setFormData(prev => ({ ...prev, ...data }))} />
 
                     {/* Section 1: INTERVENANT */}
                     <section className="cerfa-section">
