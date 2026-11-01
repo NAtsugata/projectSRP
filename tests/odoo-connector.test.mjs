@@ -14,11 +14,11 @@ function fixture(overrides = {}) {
         const data = options.body ? JSON.parse(options.body) : null;
         if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', user_metadata: { is_admin: true } });
         if (url.includes('/rest/v1/profiles')) return Response.json([profile]);
-        if (url.endsWith('/res.partner/fields_get')) return Response.json(Object.fromEntries(data.allfields.map(name => [name, { type: 'char' }])));
-        if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'] }]);
+        if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.map(name => [name, { type: 'char' }])));
+        if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'], company_registry: '12345678901234' }]);
         if (url.endsWith('/res.partner/search_read')) {
             const id = data.domain.find(item => Array.isArray(item) && item[0] === 'id')?.[2];
-            return Response.json([{ id: id || 7, name: id === 2 ? 'Entreprise Test' : 'Société Alice & Fils', street: id === 2 ? '422 route de Digne' : '12 bis rue des Lilas', zip: '04660', city: 'Champtercier', email: 'test@example.com', country_id: [75, 'France'], l10n_fr_siret: '12345678901234' }]);
+            return Response.json([{ id: id || 7, name: id === 2 ? 'Entreprise Test' : 'Société Alice & Fils', street: id === 2 ? '422 route de Digne' : '12 bis rue des Lilas', zip: '04660', city: 'Champtercier', email: 'test@example.com', country_id: [75, 'France'], l10n_fr_siret: id === 2 ? false : '12345678901234' }]);
         }
         throw new Error('Unexpected outbound request');
     };
@@ -57,6 +57,15 @@ test('setup status reveals missing variable names, never secret values', async (
     assert.equal(result.configured, false);
     assert.ok(result.missing.includes('ODOO_API_KEY'));
     assert.equal(JSON.stringify(result).includes(token), false);
+});
+
+test('root MCP transport requires the same secret and cannot bypass user authorization', async () => {
+    const f = fixture();
+    const response = await f.app({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, { Authorization: `Bearer ${token}` });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).result.tools.length, 3);
+    assert.equal(f.calls.length, 0);
+    assert.equal((await f.app({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, { Authorization: '' })).status, 401);
 });
 
 test('contact search is bounded, company scoped and read only', async () => {

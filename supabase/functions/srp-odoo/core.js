@@ -8,6 +8,10 @@ const positiveId = value => { if (!Number.isSafeInteger(value) || value < 1) thr
 const checkType = value => { if (!Object.hasOwn(TYPES, value)) throw new HttpError(400, 'Type de CERFA invalide'); return value; };
 const text = value => typeof value === 'string' ? value : '';
 const label = value => Array.isArray(value) ? text(value[1]) : '';
+const siret = row => {
+    const value = text(row.l10n_fr_siret || row.company_registry).replace(/\s/g, '');
+    return /^\d{14}$/.test(value) ? value : '';
+};
 const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = value => Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), char => char.charCodeAt(0));
 
@@ -68,11 +72,12 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         return rows.map(row => ({ id: row.id, name: text(row.name), address: [row.street, row.street2, row.zip, row.city].filter(Boolean).join(' '), city: text(row.city) }));
     };
     const getCompany = async () => {
-        const [row] = await odoo('res.company', 'search_read', { domain: [['id', '=', config().companyId]], fields: ['id', 'name', 'partner_id'], limit: 1 });
+        const available = await odoo('res.company', 'fields_get', { allfields: ['id', 'name', 'partner_id', 'company_registry'], attributes: ['type'] });
+        const [row] = await odoo('res.company', 'search_read', { domain: [['id', '=', config().companyId]], fields: ['id', 'name', 'partner_id', 'company_registry'].filter(field => Object.hasOwn(available, field)), limit: 1 });
         if (!row || !Array.isArray(row.partner_id)) throw new HttpError(502, 'Entreprise Odoo introuvable');
         const [partner] = await odoo('res.partner', 'search_read', { domain: [['id', '=', row.partner_id[0]]], fields: await partnerFields(), limit: 1 });
         if (!partner) throw new HttpError(502, 'Adresse de l’entreprise introuvable');
-        return { companyName: text(row.name), address: [partner.street, partner.street2, [partner.zip, partner.city].filter(Boolean).join(' ')].filter(Boolean).join(', '), phone: text(partner.phone), email: text(partner.email), siret: text(partner.l10n_fr_siret) };
+        return { companyName: text(row.name), address: [partner.street, partner.street2, [partner.zip, partner.city].filter(Boolean).join(' ')].filter(Boolean).join(', '), phone: text(partner.phone), email: text(partner.email), siret: siret(partner) || siret(row) };
     };
     const prefill = async ({ clientId, type, details = '' }) => {
         positiveId(clientId); checkType(type);
@@ -122,10 +127,13 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         try {
             if (origin && !allowedOrigins.includes(origin)) throw new HttpError(403, 'Origine non autorisée');
             if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-            const isMcp = new URL(request.url).pathname.endsWith('/mcp');
+            const mcpAuthorized = await secretMatches((request.headers.get('authorization') || '').replace(/^Bearer /, ''));
+            // Accept the same authenticated MCP transport at the function root,
+            // as well as /mcp, for clients that cannot append a function subpath.
+            const isMcp = new URL(request.url).pathname.endsWith('/mcp') || mcpAuthorized;
             let profile;
             if (isMcp) {
-                if (!await secretMatches((request.headers.get('authorization') || '').replace(/^Bearer /, ''))) throw new HttpError(401, 'Accès refusé');
+                if (!mcpAuthorized) throw new HttpError(401, 'Accès refusé');
                 requireValue(get('ODOO_ORGANIZATION_ID'), 'ODOO_ORGANIZATION_ID');
             } else profile = await authorizeUser(request);
             if (request.method !== 'POST') return json({ error: 'Méthode non autorisée' }, 405, { ...cors, Allow: 'POST,OPTIONS' });

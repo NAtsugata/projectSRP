@@ -36,6 +36,7 @@ Dans Personnaliser → Connecteurs → Ajouter un connecteur personnalisé :
 
 - Nom : **SRP — Odoo et CERFA**
 - URL : `https://hvswbkbwomvwhnqglmbe.supabase.co/functions/v1/srp-odoo/mcp`
+- Le même transport est aussi accepté à la racine `.../srp-odoo` avec le même jeton, notamment pour le test intégré Supabase.
 - Authentification : identifiant fixe dans les en-têtes de requête (sans OAuth)
 - En-tête : `Authorization`
 - Valeur : `Bearer ` suivi de votre `SRP_MCP_TOKEN`
@@ -52,4 +53,6 @@ Exemple de demande : « Recherche le client Martin et prépare son CERFA 15498 �
 4. Claude liste les trois outils et renvoie un lien réellement utilisable.
 5. Vérifier qu'une session non autorisée ne peut pas ouvrir ce lien.
 
-La préparation est testée avec des réponses Odoo simulées ; la validation en direct nécessite la clé créée par l'utilisateur et reste à effectuer. Aucun test local ne doit être présenté comme une connexion Odoo réelle réussie.
+Le 1 novembre 2026, la clé créée par l'utilisateur a été enregistrée dans les secrets Supabase. Un appel réel de `lire_entreprise` depuis le test de fonction Supabase a renvoyé les coordonnées de SRP et son SIRET avec `isError: false`. Le SIRET est récupéré dans `company_registry` lorsque le champ français du contact est absent, sans confondre un SIREN à neuf chiffres avec un SIRET.
+
+Les scénarios locaux passent (32 tests). La publication de l'interface sur le domaine principal attend la réauthentification par passkey demandée par Vercel ; le parcours complet du formulaire et l'ajout du connecteur dans le compte Claude restent à valider. Le test réel de la clé ne vaut pas validation de ces deux étapes.
