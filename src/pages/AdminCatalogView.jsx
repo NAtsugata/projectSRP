@@ -569,7 +569,7 @@ function AdminCatalogView({
             </div>
           ) : (
             <div className="catalog-table-wrapper">
-              <table className="catalog-table">
+              <div className="workspace-table-scroll" role="region" aria-label="Catalogue : faire défiler les colonnes" tabIndex={0}><table className="catalog-table">
                 <thead>
                   <tr>
                     <th></th>
@@ -635,7 +635,7 @@ function AdminCatalogView({
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>

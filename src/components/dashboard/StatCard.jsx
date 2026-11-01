@@ -85,7 +85,9 @@ const StatCard = ({
       onClick={onClick}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
-      onKeyPress={isClickable ? (e) => e.key === 'Enter' && onClick() : undefined}
+      onKeyDown={isClickable ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick(); }
+      } : undefined}
     >
       {icon && (
         <div className="stat-card-icon">

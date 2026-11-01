@@ -22,8 +22,8 @@ const COLORS = {
 };
 
 const CHART_THEME = {
-  textColor: '#94a3b8',
-  gridColor: 'rgba(148, 163, 184, 0.1)',
+  textColor: 'var(--text-secondary)',
+  gridColor: 'var(--border-color)',
 };
 
 // Tooltip personnalisé dark mode

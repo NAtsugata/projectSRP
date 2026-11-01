@@ -19,6 +19,8 @@ import {
 } from '../components/SharedUI';
 import logger from '../utils/logger';
 import './AdminDashboard.css';
+import UpcomingInterventions from '../components/dashboard/UpcomingInterventions';
+import { localDateKey } from '../utils/workspaceTracking';
 
 export default function AdminDashboard({
   interventions = [],
@@ -35,11 +37,11 @@ export default function AdminDashboard({
   // Calcul des statistiques
   const stats = useMemo(() => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = localDateKey(now);
 
     // Interventions
     const activeInterventions = interventions.filter(i => !i.is_archived);
-    const todayInterventions = activeInterventions.filter(i => i.date === today);
+    const todayInterventions = activeInterventions.filter(i => i.date === today || i.scheduled_dates?.includes(today));
     const urgentInterventions = activeInterventions.filter(i =>
       i.additional_needs?.some(need => need.isUrgent)
     );
@@ -50,11 +52,12 @@ export default function AdminDashboard({
 
     // Interventions terminées cette semaine
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+    startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    startOfWeek.setHours(0, 0, 0, 0);
     const completedThisWeek = interventions.filter(i => {
       if (!i.is_archived || !i.archived_at) return false;
       const archivedDate = new Date(i.archived_at);
-      return archivedDate >= startOfWeek;
+      return archivedDate >= startOfWeek && archivedDate <= now;
     }).length;
 
     logger.log('AdminDashboard: Statistiques calculées', {
@@ -88,8 +91,9 @@ export default function AdminDashboard({
       activities.push({
         icon: <BriefcaseIcon />,
         title: `Intervention créée: ${i.client}`,
-        description: `${i.service} - ${i.address}`,
+        description: [i.service, i.address].filter(Boolean).join(' · '),
         time: formatRelativeTime(i.created_at),
+        timestamp: new Date(i.created_at).getTime() || 0,
         variant: 'primary'
       });
     });
@@ -105,14 +109,12 @@ export default function AdminDashboard({
         title: `Demande de congé: ${l.user_name}`,
         description: `Du ${formatDate(l.start_date)} au ${formatDate(l.end_date)}`,
         time: formatRelativeTime(l.created_at),
+        timestamp: new Date(l.created_at).getTime() || 0,
         variant: l.status === 'En attente' ? 'warning' : 'success'
       });
     });
 
-    return activities.sort((a, b) => {
-      // Trier par time (plus récent d'abord)
-      return 0; // Déjà trié
-    }).slice(0, 5);
+    return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
   }, [interventions, leaveRequests]);
 
   // Actions rapides
@@ -231,10 +233,11 @@ export default function AdminDashboard({
     <div className="admin-dashboard">
       {/* Header */}
       <div className="dashboard-header">
-        <h2 className="dashboard-title">Tableau de Bord</h2>
+        <div><h2 className="dashboard-title">Tableau de bord</h2>
         <p className="dashboard-description">
-          Vue d'ensemble de l'activité de votre entreprise
-        </p>
+          Votre activité, en un coup d’œil.
+        </p></div>
+        <button className="btn btn-primary" onClick={() => navigate('/planning?new=true')}><PlusIcon /> Nouvelle intervention</button>
       </div>
 
       {/* Alerts */}
@@ -260,7 +263,7 @@ export default function AdminDashboard({
           value={stats.todayInterventions}
           label="Interventions aujourd'hui"
           icon={<CalendarIcon />}
-          variant="danger"
+          variant="info"
           onClick={() => navigate('/planning')}
         />
 
@@ -274,7 +277,7 @@ export default function AdminDashboard({
 
         <StatCard
           value={stats.pendingLeaves}
-          label="Demandes de congés"
+          label="Congés à valider"
           icon={<CalendarIcon />}
           variant="secondary"
           onClick={() => navigate('/leaves')}
@@ -297,7 +300,9 @@ export default function AdminDashboard({
         />
       </div>
 
-      {/* Résumé infographique du mois */}
+      <div className="workspace-overview">
+        <UpcomingInterventions interventions={interventions} />
+
       <SummaryInfoGraphic
         interventions={interventions}
         expenses={expenses}
@@ -306,6 +311,27 @@ export default function AdminDashboard({
         cerfaCount={cerfaCount}
       />
 
+      </div>
+      {/* Content Grid */}
+      <div className="dashboard-content">
+        {/* Recent Activity */}
+        <div className="dashboard-section">
+          <RecentActivity
+            activities={recentActivities}
+            title="Activité récente"
+            maxItems={5}
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="dashboard-section">
+          <QuickActions
+            actions={quickActions}
+            title="Actions rapides"
+          />
+        </div>
+      </div>
+      <details className="workspace-analytics"><summary>Analyses détaillées<span>Activité, dépenses, contrats et équipe</span></summary>
       {/* KPI Gauges */}
       <div className="dashboard-kpi-row">
         <KPIGauges interventions={interventions} leaveRequests={leaveRequests} users={users} expenses={expenses} contracts={contracts} />
@@ -335,25 +361,7 @@ export default function AdminDashboard({
         <WeeklyActivityChart interventions={interventions} />
       </div>
 
-      {/* Content Grid */}
-      <div className="dashboard-content">
-        {/* Recent Activity */}
-        <div className="dashboard-section">
-          <RecentActivity
-            activities={recentActivities}
-            title="Activité récente"
-            maxItems={5}
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="dashboard-section">
-          <QuickActions
-            actions={quickActions}
-            title="Actions rapides"
-          />
-        </div>
-      </div>
+      </details>
     </div>
   );
 }

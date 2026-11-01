@@ -1,3 +1,4 @@
+import { defaultPlanningView } from '../utils/workspaceTracking';
 // src/pages/EmployeePlanningView.js - Version refactorisée
 // Planning employé avec réutilisation des composants
 
@@ -18,7 +19,7 @@ const VIEW_MODES = {
 export default function EmployeePlanningView({ interventions, loading = false, userId, userName, users = [] }) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState(() => {
-    return localStorage.getItem('employeePlanningViewMode') || VIEW_MODES.GANTT;
+    return defaultPlanningView('employeePlanningViewMode');
   });
 
   const handleViewModeChange = useCallback((mode) => {

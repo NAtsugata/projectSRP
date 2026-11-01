@@ -12,6 +12,7 @@ import { LoadingSpinner, EmptyState } from '../components/ui';
 import { BuildingIcon } from '../components/SharedUI';
 import { PRESET_LOTS } from '../config/chantierPresets';
 import './ChantiersView.css';
+import { filterChantiers, isLateChantier, chantierProgress } from '../utils/workspaceTracking';
 
 const STATUS_LABELS = {
   preparation: 'Préparation',
@@ -27,10 +28,7 @@ const STATUS_CLASS = {
   clos: 'chantier-status-closed',
 };
 
-function lotsProgress(lots = []) {
-  if (!lots.length) return 0;
-  return Math.round(lots.reduce((s, l) => s + (l.progress || 0), 0) / lots.length);
-}
+const lotsProgress = chantierProgress;
 
 export default function ChantiersView() {
   const navigate = useNavigate();
@@ -49,6 +47,13 @@ export default function ChantiersView() {
   const [dupFrom, setDupFrom] = useState('');
   const [customLot, setCustomLot] = useState('');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sort, setSort] = useState('deadline');
+  const visibleChantiers = useMemo(() => filterChantiers(chantiers, search, statusFilter, sort), [chantiers, search, statusFilter, sort]);
+  const tracking = useMemo(() => ({ active: chantiers.filter(item => item.status === 'en_cours').length,
+    late: chantiers.filter(item => isLateChantier(item)).length,
+    completed: chantiers.filter(item => ['receptionne', 'clos'].includes(item.status)).length }), [chantiers]);
 
   const assignableUsers = useMemo(
     () => (users || []).filter((u) => (u.employee_status || 'actif') !== 'licencié'),
@@ -141,6 +146,24 @@ export default function ChantiersView() {
           </button>
         )}
       </div>
+
+      <div className="workspace-tracking-stats" aria-label="Vue d’ensemble des chantiers">
+        <div className="workspace-tracking-stat"><strong>{chantiers.length}</strong><span>Chantiers au total</span></div>
+        <div className="workspace-tracking-stat"><strong>{tracking.active}</strong><span>En cours</span></div>
+        <div className={`workspace-tracking-stat ${tracking.late ? 'is-late' : ''}`}><strong>{tracking.late}</strong><span>Échéances dépassées</span></div>
+        <div className="workspace-tracking-stat"><strong>{tracking.completed}</strong><span>Réceptionnés ou clos</span></div>
+      </div>
+      <div className="workspace-filter-bar">
+        <label>Rechercher un chantier<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Nom, client, adresse…" /></label>
+        <label>Statut<select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+          <option value="all">Tous les statuts</option><option value="late">Échéance dépassée</option>
+          {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select></label>
+        <label>Trier par<select value={sort} onChange={event => setSort(event.target.value)}>
+          <option value="deadline">Échéance la plus proche</option><option value="name">Nom du chantier</option><option value="progress">Avancement décroissant</option>
+        </select></label>
+      </div>
+      <p className="workspace-result-count" role="status">{visibleChantiers.length} chantier{visibleChantiers.length > 1 ? 's' : ''} affiché{visibleChantiers.length > 1 ? 's' : ''} sur {chantiers.length}</p>
 
       {showCreate && (
         <div className="modal-overlay" onClick={() => setShowCreate(false)}>
@@ -257,9 +280,11 @@ export default function ChantiersView() {
           title="Aucun chantier"
           message={isAdmin ? 'Créez votre premier chantier pour commencer le suivi.' : 'Aucun lot ne vous est assigné pour le moment.'}
         />
+      ) : visibleChantiers.length === 0 ? (
+        <div className="empty-state"><h3>Aucun chantier trouvé</h3><p>Essayez un autre nom ou un autre statut.</p><button className="btn btn-secondary" onClick={() => { setSearch(''); setStatusFilter('all'); }}>Réinitialiser les filtres</button></div>
       ) : (
         <div className="chantiers-grid">
-          {chantiers.map((c) => {
+          {visibleChantiers.map((c) => {
             const prog = lotsProgress(c.chantier_lots);
             return (
               <button key={c.id} className="chantier-card" onClick={() => navigate(`/chantiers/${c.id}`)}>
@@ -275,10 +300,14 @@ export default function ChantiersView() {
                 {c.client_name && <p className="chantier-card-client">{c.client_name}</p>}
                 {c.address && <p className="chantier-card-address">📍 {c.address}</p>}
                 <div className="chantier-progress">
-                  <div className="chantier-progress-bar">
+                  <div className="chantier-progress-bar" role="progressbar" aria-label="Avancement du chantier" aria-valuenow={prog} aria-valuemin={0} aria-valuemax={100}>
                     <div className="chantier-progress-fill" style={{ width: `${prog}%` }} />
                   </div>
                   <span className="chantier-progress-label">{prog}%</span>
+                </div>
+                <div className="workspace-chantier-footer">
+                  {c.end_date ? <time dateTime={c.end_date} className={isLateChantier(c) ? 'workspace-overdue' : ''}>{isLateChantier(c) ? 'Échéance dépassée · ' : 'Fin prévue · '}{new Date(c.end_date + 'T00:00:00').toLocaleDateString('fr-FR')}</time> : <span>Échéance à définir</span>}
+                  <span>Voir le suivi →</span>
                 </div>
               </button>
             );

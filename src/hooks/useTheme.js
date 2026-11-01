@@ -1,184 +1,46 @@
-/**
- * ====================================================================
- * HOOK: useTheme
- * ====================================================================
- * Hook React pour gérer le thème (clair/sombre)
- * Fonctionnalités:
- * - Toggle entre light et dark
- * - Persistence dans localStorage
- * - Support du prefers-color-scheme
- * - Application automatique au DOM
- * ====================================================================
- */
-
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'app-theme';
-const THEMES = {
-  LIGHT: 'light',
-  DARK: 'dark',
-  AUTO: 'auto',
-};
-
-/**
- * Hook pour gérer le thème de l'application
- * @returns {Object} Fonctions et état du thème
- */
-export function useTheme() {
-  // État du thème (light, dark, auto)
-  const [theme, setTheme] = useState(() => {
-    // Récupérer le thème depuis localStorage
-    const savedTheme = localStorage.getItem(STORAGE_KEY);
-    if (savedTheme && Object.values(THEMES).includes(savedTheme)) {
-      return savedTheme;
-    }
-    // Par défaut: auto (détection système)
-    return THEMES.AUTO;
-  });
-
-  // Thème effectif (résolu si auto)
-  const [effectiveTheme, setEffectiveTheme] = useState(() => {
-    if (theme === THEMES.AUTO) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? THEMES.DARK
-        : THEMES.LIGHT;
-    }
-    return theme;
-  });
-
-  /**
-   * Appliquer le thème au DOM
-   */
-  const applyTheme = useCallback((themeToApply) => {
-    const root = document.documentElement;
-
-    // Retirer les anciennes classes
-    root.classList.remove('dark-theme', 'light-theme');
-    root.removeAttribute('data-theme');
-
-    // Appliquer la nouvelle classe et data-attribute
-    if (themeToApply === THEMES.DARK) {
-      root.classList.add('dark-theme');
-      root.setAttribute('data-theme', 'dark');
-    } else {
-      root.classList.add('light-theme');
-      root.setAttribute('data-theme', 'light');
-    }
-  }, []);
-
-  /**
-   * Écouter les changements de préférence système
-   */
-  useEffect(() => {
-    if (theme !== THEMES.AUTO) return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handleChange = (e) => {
-      const newTheme = e.matches ? THEMES.DARK : THEMES.LIGHT;
-      setEffectiveTheme(newTheme);
-      applyTheme(newTheme);
-    };
-
-    // Écouter les changements
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange);
-    };
-  }, [theme, applyTheme]);
-
-  /**
-   * Appliquer le thème effectif au DOM
-   */
-  useEffect(() => {
-    applyTheme(effectiveTheme);
-  }, [effectiveTheme, applyTheme]);
-
-  /**
-   * Sauvegarder le thème dans localStorage
-   */
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
-
-  /**
-   * Basculer vers le mode sombre
-   */
-  const setDarkMode = useCallback(() => {
-    setTheme(THEMES.DARK);
-    setEffectiveTheme(THEMES.DARK);
-  }, []);
-
-  /**
-   * Basculer vers le mode clair
-   */
-  const setLightMode = useCallback(() => {
-    setTheme(THEMES.LIGHT);
-    setEffectiveTheme(THEMES.LIGHT);
-  }, []);
-
-  /**
-   * Basculer vers le mode auto (système)
-   */
-  const setAutoMode = useCallback(() => {
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? THEMES.DARK
-      : THEMES.LIGHT;
-    setTheme(THEMES.AUTO);
-    setEffectiveTheme(systemTheme);
-  }, []);
-
-  /**
-   * Toggle entre light et dark (ne passe jamais en auto)
-   */
-  const toggleTheme = useCallback(() => {
-    if (effectiveTheme === THEMES.LIGHT) {
-      setDarkMode();
-    } else {
-      setLightMode();
-    }
-  }, [effectiveTheme, setDarkMode, setLightMode]);
-
-  /**
-   * Définir un thème spécifique
-   */
-  const setCustomTheme = useCallback((newTheme) => {
-    if (!Object.values(THEMES).includes(newTheme)) {
-      console.error('Thème invalide:', newTheme);
-      return;
-    }
-
-    setTheme(newTheme);
-
-    if (newTheme === THEMES.AUTO) {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? THEMES.DARK
-        : THEMES.LIGHT;
-      setEffectiveTheme(systemTheme);
-    } else {
-      setEffectiveTheme(newTheme);
-    }
-  }, []);
-
-  return {
-    // État
-    theme, // 'light', 'dark', ou 'auto'
-    effectiveTheme, // 'light' ou 'dark' (résolu)
-    isDark: effectiveTheme === THEMES.DARK,
-    isLight: effectiveTheme === THEMES.LIGHT,
-    isAuto: theme === THEMES.AUTO,
-
-    // Actions
-    toggleTheme,
-    setDarkMode,
-    setLightMode,
-    setAutoMode,
-    setTheme: setCustomTheme,
-
-    // Constantes
-    THEMES,
-  };
+const CHANGE_EVENT = 'srp-theme-change';
+const THEMES = { LIGHT: 'light', DARK: 'dark', AUTO: 'auto' };
+let fallbackTheme = THEMES.LIGHT;
+function getTheme() {
+  try { const saved = localStorage.getItem(STORAGE_KEY); return Object.values(THEMES).includes(saved) ? saved : fallbackTheme; }
+  catch { return fallbackTheme; }
 }
-
+function subscribeTheme(callback) {
+  const onStorage = event => { if (event.key === STORAGE_KEY || event.key === null) callback(); };
+  window.addEventListener(CHANGE_EVENT, callback);
+  window.addEventListener('storage', onStorage);
+  return () => { window.removeEventListener(CHANGE_EVENT, callback); window.removeEventListener('storage', onStorage); };
+}
+function subscribeSystem(callback) {
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  media.addEventListener('change', callback);
+  return () => media.removeEventListener('change', callback);
+}
+const getSystemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+export function useTheme() {
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, () => THEMES.LIGHT);
+  const systemDark = useSyncExternalStore(subscribeSystem, getSystemDark, () => false);
+  const effectiveTheme = theme === THEMES.AUTO ? (systemDark ? THEMES.DARK : THEMES.LIGHT) : theme;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark-theme', effectiveTheme === THEMES.DARK);
+    root.classList.toggle('light-theme', effectiveTheme === THEMES.LIGHT);
+    root.setAttribute('data-theme', effectiveTheme);
+  }, [effectiveTheme]);
+  const setCustomTheme = useCallback(value => {
+    if (!Object.values(THEMES).includes(value)) return;
+    fallbackTheme = value;
+    try { localStorage.setItem(STORAGE_KEY, value); } catch { /* Theme remains available for this session. */ }
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+  }, []);
+  const setDarkMode = useCallback(() => setCustomTheme(THEMES.DARK), [setCustomTheme]);
+  const setLightMode = useCallback(() => setCustomTheme(THEMES.LIGHT), [setCustomTheme]);
+  const setAutoMode = useCallback(() => setCustomTheme(THEMES.AUTO), [setCustomTheme]);
+  const toggleTheme = useCallback(() => setCustomTheme(effectiveTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK), [effectiveTheme, setCustomTheme]);
+  return { theme, effectiveTheme, isDark: effectiveTheme === THEMES.DARK, isLight: effectiveTheme === THEMES.LIGHT,
+    isAuto: theme === THEMES.AUTO, toggleTheme, setDarkMode, setLightMode, setAutoMode, setTheme: setCustomTheme, THEMES };
+}
 export default useTheme;
