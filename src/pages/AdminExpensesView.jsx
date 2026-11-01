@@ -1,10 +1,21 @@
 // src/pages/AdminExpensesView.js - GESTION ADMIN NOTES DE FRAIS
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { expensePeriod, expensePeriodFilters, expenseStatus, numericAmount } from '../utils/dashboardSummary';
 import { UserExpensesAccordion } from '../components/expenses';
 import '../components/expenses/ExpensesStyles.css';
 
 export default function AdminExpensesView({ users = [], expenses = [], onApproveExpense, onRejectExpense, onDeleteExpense, onMarkAsPaid, filters: _filters, onUpdateFilters }) {
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterStatus = expenseStatus(searchParams);
+  const period = expensePeriod(searchParams);
+  const setFilterStatus = status => {
+    setSearchParams(previous => {
+      const next = new URLSearchParams(previous);
+      if (status === 'all') next.delete('status'); else next.set('status', status);
+      return next;
+    });
+  };
 
   // Calcul des stats côté client (instantané, pas d'appel API)
   const globalStats = useMemo(() => {
@@ -14,11 +25,11 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     const rejected = expenses.filter(e => e.status === 'rejected');
 
     return {
-      pending: { count: pending.length, total: pending.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      approved: { count: approved.length, total: approved.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      paid: { count: paid.length, total: paid.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + (e.amount || 0), 0) },
-      total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+      pending: { count: pending.length, total: pending.reduce((sum, e) => sum + numericAmount(e.amount), 0) },
+      approved: { count: approved.length, total: approved.reduce((sum, e) => sum + numericAmount(e.amount), 0) },
+      paid: { count: paid.length, total: paid.reduce((sum, e) => sum + numericAmount(e.amount), 0) },
+      rejected: { count: rejected.length, total: rejected.reduce((sum, e) => sum + numericAmount(e.amount), 0) },
+      total: expenses.reduce((sum, e) => sum + numericAmount(e.amount), 0)
     };
   }, [expenses]);
 
@@ -34,19 +45,13 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
     { value: 'other', label: '📋 Autres', color: '#64748b' }
   ];
 
-  const handlePeriodChange = (period) => {
-    if (!onUpdateFilters) return;
-    if (period === 'all') {
-      onUpdateFilters({});
-    } else if (period === '3m') {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 3);
-      onUpdateFilters({ startDate: d.toISOString().split('T')[0] });
-    } else if (period === '6m') {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 6);
-      onUpdateFilters({ startDate: d.toISOString().split('T')[0] });
-    }
+  const handlePeriodChange = nextPeriod => {
+    setSearchParams(previous => {
+      const next = new URLSearchParams(previous);
+      next.set('period', nextPeriod);
+      return next;
+    });
+    onUpdateFilters?.(expensePeriodFilters(nextPeriod));
   };
 
   // Regroupement par utilisateur
@@ -93,7 +98,7 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
   };
 
   return (
-    <div>
+    <div className="admin-expenses-view">
       <style>{`
         .user-accordion {
           background: var(--bg-primary, white);
@@ -182,42 +187,33 @@ export default function AdminExpensesView({ users = [], expenses = [], onApprove
         <select
           className="form-control"
           onChange={(e) => handlePeriodChange(e.target.value)}
-          defaultValue="3m"
+          value={period}
+          aria-label="Période des dépenses"
           style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid #ddd', minWidth: '150px' }}
         >
+          <option value="month">Ce mois</option>
           <option value="3m">3 derniers mois</option>
           <option value="6m">6 derniers mois</option>
           <option value="all">Tout (peut être long)</option>
         </select>
       </div>
 
-      {/* Statistiques globales */}
-      <div className="expense-stats-grid">
-        <div className="stat-card warning">
-          <div className="stat-label">EN ATTENTE</div>
-          <div className="stat-value">{globalStats.pending.count}</div>
-          <div className="stat-subvalue">{formatAmount(globalStats.pending.total)}</div>
-        </div>
-        <div className="stat-card success">
-          <div className="stat-label">APPROUVÉ</div>
-          <div className="stat-value">{globalStats.approved.count}</div>
-          <div className="stat-subvalue">{formatAmount(globalStats.approved.total)}</div>
-        </div>
-        <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
-          <div className="stat-label">💰 PAYÉ</div>
-          <div className="stat-value">{globalStats.paid.count}</div>
-          <div className="stat-subvalue">{formatAmount(globalStats.paid.total)}</div>
-        </div>
-        <div className="stat-card danger">
-          <div className="stat-label">REJETÉ</div>
-          <div className="stat-value">{globalStats.rejected.count}</div>
-          <div className="stat-subvalue">{formatAmount(globalStats.rejected.total)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">TOTAL</div>
-          <div className="stat-value">{expenses.length}</div>
-          <div className="stat-subvalue">{formatAmount(globalStats.total)}</div>
-        </div>
+      {/* Chaque carte applique le filtre correspondant, sans confondre quantité et montant. */}
+      <div className="expense-stats-grid" aria-label="Suivi des notes de frais">
+        {[
+          ['pending', 'En attente', globalStats.pending],
+          ['approved', 'Approuvées', globalStats.approved],
+          ['paid', 'Payées', globalStats.paid],
+          ['rejected', 'Rejetées', globalStats.rejected],
+          ['all', 'Toutes les notes', { count: expenses.length, total: globalStats.total }],
+        ].map(([status, label, stat]) => (
+          <button key={status} type="button" className={`stat-card expense-filter-card ${filterStatus === status ? 'is-selected' : ''}`} aria-pressed={filterStatus === status} onClick={() => setFilterStatus(status)}>
+            <span className="stat-label">{label}</span>
+            <span className="stat-value">{stat.count}<span className="summary-unit"> {stat.count === 1 ? 'note' : 'notes'}</span></span>
+            <span className="expense-card-amount"><span>Montant total</span><strong>{formatAmount(stat.total)}</strong></span>
+            <span className="summary-action">Afficher les notes <span aria-hidden="true">→</span></span>
+          </button>
+        ))}
       </div>
 
       {/* Filtres */}

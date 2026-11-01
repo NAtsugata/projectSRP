@@ -3,7 +3,7 @@
 // Admin view for managing maintenance contracts
 // =============================
 import React, { useState, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { prepareCerfaDataFromContract } from '../utils/cerfaService';
 import './AdminContractsView.css';
 import logger from '../utils/logger';
@@ -64,7 +64,11 @@ function AdminContractsView({
     const [showModal, setShowModal] = useState(false);
     const [editingContract, setEditingContract] = useState(null);
     const [formData, setFormData] = useState(INITIAL_FORM);
-    const [filters, setFilters] = useState({ status: '', type: '' });
+    const [searchParams] = useSearchParams();
+    const requestedStatus = searchParams.get('status') || '';
+    const linkedStatus = Object.hasOwn(STATUS_LABELS, requestedStatus) ? requestedStatus : '';
+    const [filters, setFilters] = useState({ status: linkedStatus, type: '' });
+    React.useEffect(() => { setFilters(previous => ({ ...previous, status: linkedStatus })); }, [linkedStatus]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, contractId: null, contractName: '' });

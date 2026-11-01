@@ -94,6 +94,24 @@
 .app-layout .workspace-overview .summary-icon { font-size:20px; }
 .app-layout .workspace-overview .summary-value { font-size:18px; overflow-wrap:anywhere; }
 .app-layout .workspace-overview .summary-label { font-size:11px; white-space:normal; overflow:visible; text-overflow:clip; line-height:1.4; }
+.app-layout .workspace-overview .summary-link { display:grid; grid-template-columns:24px minmax(0,1fr); align-items:start; gap:8px; color:var(--text-primary); text-decoration:none; min-height:128px; }
+.app-layout .workspace-overview .summary-link:hover { background:var(--bg-primary); border-color:var(--color-primary); transform:none; box-shadow:var(--shadow-sm); }
+.app-layout .workspace-overview .summary-link:focus-visible { outline:3px solid var(--color-primary); outline-offset:3px; }
+.app-layout .summary-unit { font-size:12px; font-weight:600; color:var(--text-secondary); letter-spacing:0; }
+.app-layout .summary-data { gap:5px; }
+.app-layout .summary-period { font-size:10px; color:var(--text-tertiary); }
+.app-layout .summary-amount { grid-column:1 / -1; width:100%; margin-top:7px; padding-top:9px; border-top:1px solid var(--border-color-dark); display:flex; flex-direction:column; gap:4px; }
+.app-layout .summary-amount > span { font-size:10px; color:var(--text-secondary); }
+.app-layout .summary-amount > strong { font-size:16px; line-height:1.4; font-weight:700; color:var(--color-primary); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.app-layout .summary-action { grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; font-size:11px; font-weight:600; color:var(--color-primary); line-height:1.5; }
+.app-layout .summary-icon { line-height:1.4; }
+.app-layout .expense-filter-card { flex-direction:column; align-items:flex-start; gap:8px; padding:18px; text-align:left; color:var(--text-primary); font:inherit; cursor:pointer; }
+.app-layout .expense-filter-card:hover,.app-layout .expense-filter-card.is-selected { border-color:var(--color-primary); }
+.app-layout .expense-filter-card .stat-value { line-height:1.3; }
+.app-layout .expense-card-amount { display:flex; flex-direction:column; gap:4px; width:100%; border-top:1px solid var(--border-color); padding-top:9px; }
+.app-layout .expense-card-amount > span { font-size:11px; color:var(--text-secondary); }
+.app-layout .expense-card-amount > strong { font-size:17px; color:var(--text-primary); font-variant-numeric:tabular-nums; }
+.app-layout .expense-filter-card .summary-action { width:100%; }
 .app-layout .workspace-overview .chart-card { margin:0; padding:20px; }
 .app-layout .workspace-section-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:20px; }
 .app-layout .workspace-section-heading h3 { font-size:16px; letter-spacing:-.3px; margin:0; }

@@ -1,5 +1,7 @@
 // src/pages/AdminExpensesViewContainer.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { expensePeriod, expensePeriodFilters } from '../utils/dashboardSummary';
 import { useExpenses } from '../hooks/useExpenses';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../contexts/ToastContext';
@@ -7,12 +9,10 @@ import AdminExpensesView from './AdminExpensesView';
 
 const AdminExpensesViewContainer = ({ showConfirmationModal }) => {
     const toast = useToast();
-    // Default filter: last 3 months to avoid loading too much data
-    const [filters, setFilters] = useState(() => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 3);
-        return { startDate: d.toISOString().split('T')[0] };
-    });
+    const [searchParams] = useSearchParams();
+    const period = expensePeriod(searchParams);
+    const [filters, setFilters] = useState(() => expensePeriodFilters(period));
+    useEffect(() => { setFilters(expensePeriodFilters(period)); }, [period]);
 
     const { expenses, isLoading, error, approveExpense, rejectExpense, deleteExpense, markAsPaid } = useExpenses(null, filters);
     const { users } = useUsers();
