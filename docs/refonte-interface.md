@@ -1,6 +1,6 @@
 # Refonte du portail SRP
 
-La navigation, les couleurs, les cartes, les formulaires et les listes partagent désormais une interface claire avec des accents orange SRP, et une variante anthracite. Le logo existant est conservé. Le thème choisi se synchronise entre les commandes du menu et celles du téléphone.
+La navigation, la connexion, les couleurs, les cartes, les formulaires et les listes partagent désormais une interface claire avec des accents orange SRP, et une variante anthracite. Le logo existant est conservé. Le thème choisi se synchronise entre les commandes du menu et celles du téléphone.
 
 ## Utilisation
 
@@ -19,8 +19,8 @@ Les changements d’interface n’ajoutent aucune dépendance et ne modifient ni
 - Aperçu de contrôle local avec les véritables composants d’interface et des données fictives clairement identifiées : tableau de bord, clients, facturation, catalogue et chantiers. Contrôles aux largeurs de téléphone de 320 et 390 pixels, navigation du menu mobile, recherche de pages, filtres de chantier, réinitialisation et synchronisation du thème.
 - Aucune erreur de console relevée dans cet aperçu. Le contrôle ne constitue pas une validation des services distants ou des fonctions PDF.
 
-## Vérifications restantes sur l’environnement connecté
+## Déploiement et vérifications restantes
 
-L’installation exacte des dépendances et `npm run build` n’ont pas pu être exécutés dans la session locale, faute d’accès réseau et de dépendances disponibles dans le cache. L’aperçu de contrôle utilise des dépendances React de cache et remplace ses services de données ; il est séparé du code livré et ne contient aucune simulation dans la branche applicative.
+L’installation exacte des dépendances et `npm run build` n’ont pas pu être exécutés dans la session locale, faute d’accès réseau et de dépendances disponibles dans le cache. Le premier déploiement Vercel de la refonte (commit `63a9726`) a ensuite terminé son build complet avec le statut Ready. La page de connexion a été ouverte sur le déploiement hébergé. L’aperçu de contrôle local utilise des dépendances React de cache et remplace ses services de données ; il est séparé du code livré et ne contient aucune simulation dans la branche applicative.
 
-Avant publication, exécuter `npm ci`, `npm run build` et les tests du dépôt dans l’environnement habituel, puis vérifier les principales actions avec un compte autorisé sur le déploiement de prévisualisation Vercel : connexion, création et modification, fichiers, signatures, PDF et mode hors ligne. L’accès du connecteur à l’équipe Vercel doit être validé pour consulter les résultats du déploiement depuis cette connexion.
+Avant publication en production, vérifier les principales actions avec un compte autorisé sur le déploiement de prévisualisation Vercel : connexion, création et modification, fichiers, signatures, PDF et mode hors ligne. Le compte ouvert sur le domaine de production n’est pas automatiquement connecté sur le domaine de prévisualisation. L’accès du connecteur à l’équipe Vercel reste à valider ; l’état Ready du premier déploiement a été vérifié depuis la session Chrome autorisée de l’utilisateur.
