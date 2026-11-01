@@ -6,6 +6,14 @@ Le retour du gérant est interprété localement, sans fournisseur d'IA ni API p
 
 Le suivi métier reste distinct de la facturation. Les devis et factures Odoo sont en lecture seule et restent accessibles uniquement au titulaire de la connexion. Une facture finale ne clôture pas silencieusement le suivi métier. Pour les interventions, les statuts usuels sont synchronisés avec le planning ; En attente et Procédure sont conservés dans le suivi métier. Pour les chantiers, Planifié et En cours se reflètent dans la phase technique ; la fin du suivi ne vaut pas réception administrative du chantier.
 
+## Revue immédiate des anciens dossiers
+
+L'ouverture du suivi affiche d'abord « Anciens à qualifier ». Les interventions actives dont la date est passée depuis au moins sept jours, sans nouvelle date future et sans décision humaine enregistrée, remontent immédiatement. Les chantiers actifs anciens sont aussi inclus. Le bandeau du portail demande « Que faut-il en faire ? ». Cette revue reste accessible sans activer les relances globales.
+
+L'inventaire est calculé en lecture seule, paginé et limité à l'entité de l'administrateur. Ouvrir la liste n'inscrit aucun dossier. Une réponse explicite inscrit uniquement le dossier choisi, puis utilise la même commande transactionnelle que le suivi habituel. « À reprendre » propose À traiter ; attente, procédure, annulation et fin restent disponibles avec motif et prochaine action. Une annulation ou une fin exige une confirmation. Après réponse, le dossier quitte la revue des anciens et son historique reste disponible dans le suivi.
+
+Un jeton de version protège contre une modification de la source entre l'affichage et la décision. Une autre décision déjà enregistrée rend l'ancien formulaire périmé. Le rejeu exact d'une décision ne crée pas de doublon, y compris après une clôture. Tests réels dans une transaction annulée : lecture sans écriture, inscription d'un seul dossier, absence d'activation globale, rejeu, refus d'une décision périmée, confirmation terminale et absence d'inscription orpheline après échec. Aucun ancien dossier réel n'a été classé automatiquement.
+
 ## Relances
 
 L'activation désigne le compte administrateur qui l'effectue comme responsable initial et inscrit les interventions et chantiers actifs de son entité. Les devis Odoo non entièrement facturés sont inscrits lorsqu'ils sont consultés, par lots de 25. Leurs anciens marquages En cours sont conservés. L'activation globale SRP n'a pas été exécutée : la vérification automatique d'autorisation demande un accord explicite pour cette création durable sur tous les dossiers de l'entité.

@@ -10,6 +10,7 @@ export function workflowSourceUrl(item) {
 }
 export function interpretManagerReply(message, now = new Date()) {
     const text = normalizePlanningText(message), statuses = [];
+    if (/\b(?:a reprendre|reprendre|a replanifier|reprogrammer)\b/.test(text)) statuses.push('todo');
     const negated = /\b(?:pas|non|jamais|ne)\b/.test(text);
     if (/\b(?:attent[es]?|attend|attendons|attends|attendre|standby|stand by|piece|materiel)\b/.test(text)) statuses.push('waiting');
     if (/\b(?:procedure|assurance|litige|expertise|administratif|administrative)\b/.test(text)) statuses.push('procedure');

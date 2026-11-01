@@ -5,6 +5,11 @@ const now=new Date('2026-11-01T12:00:00Z');
 test('waiting for a part Friday proposes waiting and a dated next action',()=>{
  assert.deepEqual(interpretManagerReply('On attend la pièce vendredi',now),{status:'waiting',nextReview:'2026-11-06',needsClarification:false});
 });
+test('an old intervention to resume proposes to-do rather than completion',()=>{
+ assert.equal(interpretManagerReply('À reprendre',now).status,'todo');
+ assert.equal(interpretManagerReply('À replanifier',now).status,'todo');
+ assert.equal(interpretManagerReply('Ne pas reprendre',now).status,'');
+});
 test('administrative procedure remains distinct from completion and payment',()=>{
  assert.equal(interpretManagerReply('Le dossier est chez l’assurance',now).status,'procedure');
  assert.equal(interpretManagerReply('Facture payée',now).status,'');

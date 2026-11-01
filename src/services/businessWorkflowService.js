@@ -11,6 +11,14 @@ export async function workflowCommand(action,payload={}) {
     const scope=planningIdentity();
     return (await checked(supabase.rpc('business_workflow_command',{p_action:action,p_payload:payload}),scope)).data;
 }
+export async function listLegacyWorkflowItems({page=0,type=''}={}) {
+    const scope=planningIdentity();
+    return (await checked(supabase.rpc('business_workflow_legacy',{p_page:page,p_type:type}),scope)).data;
+}
+export async function reviewLegacyWorkflowItem(payload) {
+    const scope=planningIdentity();
+    return (await checked(supabase.rpc('business_workflow_review_legacy',{p_payload:payload}),scope)).data;
+}
 export async function getWorkflowSettings() {
     const scope=planningIdentity();
     return (await checked(supabase.from('business_workflow_settings').select('*').eq('organization_id',scope.org).maybeSingle(),scope)).data;
