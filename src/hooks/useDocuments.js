@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import scannedDocumentsService from '../services/scannedDocumentsService';
 import logger from '../utils/logger';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Hook pour gérer les documents scannés avec React Query
@@ -9,6 +10,7 @@ import logger from '../utils/logger';
  */
 export function useDocuments(userId) {
     const queryClient = useQueryClient();
+    const profile = useAuthStore(s => s.profile);
 
     // Query pour récupérer les documents scannés
     const {
@@ -17,20 +19,27 @@ export function useDocuments(userId) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['scannedDocuments', userId],
+        queryKey: ['scannedDocuments', profile?.organization_id, profile?.id, userId],
+        enabled: !!profile?.id && !!profile?.organization_id,
         queryFn: async () => {
             const result = userId
                 ? await scannedDocumentsService.getUserDocuments(userId)
                 : await scannedDocumentsService.getAllDocuments();
 
             if (result.error) throw result.error;
+            const current = useAuthStore.getState().profile;
+            if (current?.id !== profile?.id || current?.organization_id !== profile?.organization_id) throw new Error('La session a changé.');
             return result.data;
         },
     });
 
     // Mutation pour sauvegarder des documents scannés
     const saveMutation = useMutation({
-        mutationFn: ({ documents, metadata }) => scannedDocumentsService.saveDocuments(documents, metadata),
+        mutationFn: async ({ documents, metadata }) => {
+            const result = await scannedDocumentsService.saveDocuments(documents, metadata);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },

@@ -19,7 +19,7 @@ import { useDownload } from '../hooks/useDownload';
 import { storageService } from '../lib/supabase';
 
 // Lazy load DocumentScannerView to avoid loading onnxruntime-web (heavy) on initial load
-const DocumentScannerView = lazyWithRetry(() => import('./DocumentScannerView'));
+const DocumentScannerView = lazyWithRetry(() => import('../components/scanner/FreeDocumentScanner'));
 
 const CATEGORIES = [
   { value: 'facture', label: '💰 Facture', color: '#10b981' },
@@ -73,12 +73,12 @@ export default function MyDocumentsView({
       );
     }
 
-    return docs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return [...docs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [scannedDocuments, selectedCategory, selectedUser, searchTerm, isAdmin]);
 
   // Stats
   const stats = useMemo(() => {
-    const myDocs = isAdmin ? scannedDocuments : scannedDocuments.filter(d => d.user_id === profile.id);
+    const myDocs = isAdmin ? scannedDocuments : scannedDocuments.filter(d => d.user_id === profile?.id);
     const totalSize = myDocs.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
 
     return {
@@ -92,30 +92,17 @@ export default function MyDocumentsView({
     };
   }, [scannedDocuments, profile, isAdmin]);
 
-  const handleSaveScannedDocs = useCallback(async (docs) => {
-    if (!docs || docs.length === 0) return;
-
-    try {
-      // Demander les infos pour les documents
-      const title = prompt('Titre du document(s):') || 'Document scanné';
-      const categoryInput = prompt(
-        'Catégorie:\n' + CATEGORIES.map((c, i) => `${i + 1}. ${c.label}`).join('\n')
-      );
-      const categoryIndex = parseInt(categoryInput) - 1;
-      const category = CATEGORIES[categoryIndex]?.value || 'autre';
-
-      await onSaveDocuments(docs, {
-        title,
-        category,
-        user_id: profile.id
-      });
-
-      setShowScanner(false);
-      alert(`✅ ${docs.length} document(s) sauvegardé(s)`);
-    } catch (error) {
-      logger.error('Erreur sauvegarde:', error);
-      alert('❌ Erreur lors de la sauvegarde');
-    }
+  const handleSaveScannedDocs = useCallback(async (docs, metadata = {}) => {
+    if (!docs?.length || !profile?.id || !onSaveDocuments) throw new Error('Session indisponible. Reconnectez-vous.');
+    const result = await onSaveDocuments(docs, {
+      title: metadata.title || 'Document scanné',
+      category: metadata.category || 'autre',
+      user_id: profile.id
+    });
+    if (result?.error) throw result.error;
+    if (!result?.data?.length) throw new Error('Le document n’a pas été enregistré. Vos pages sont conservées.');
+    setShowScanner(false);
+    return result;
   }, [onSaveDocuments, profile]);
 
   // Supprimer un document
@@ -202,6 +189,7 @@ export default function MyDocumentsView({
     return (
       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement du scanner...</p></div>}>
         <DocumentScannerView
+          key={`${profile?.organization_id}:${profile?.id}`}
           onSave={handleSaveScannedDocs}
           onClose={() => setShowScanner(false)}
         />
@@ -476,16 +464,7 @@ export default function MyDocumentsView({
       {/* Header */}
       <div className="docs-header">
         <h2 className="view-title">📂 {isAdmin ? 'Tous les Documents' : 'Mes Documents'}</h2>
-        {/* TEMPORAIREMENT DÉSACTIVÉ - Scanner de documents hors application */}
-        {/*
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowScanner(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <CameraIcon /> Scanner un document
-        </button>
-        */}
+        {isAdmin && <button className="btn btn-primary" onClick={() => setShowScanner(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CameraIcon /> Scanner un document</button>}
       </div>
 
       {/* Stats */}
