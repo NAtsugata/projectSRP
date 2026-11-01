@@ -16,6 +16,7 @@ La page « Devis Odoo » est protégée côté serveur par l'identité du titula
 - Compilation des modules internes et CSS réussie ; le build Vite complet est effectué par Vercel.
 - Test réel du RPC sous rôle authenticated dans une transaction intégralement annulée : création, rejeu idempotent, refus d'un chevauchement. Aucun rendez-vous d'essai conservé.
 - Contrôle des composants réels avec données fictives : demande avec deux intervenants et deux dates, confirmation groupée, liens des rendez-vous et factures. Aucun débordement horizontal à 390 pixels. Le build Vercel du commit 29eeeab a réussi.
+- Production : commit 5791183 publié sur https://portail-srp.vercel.app, build de 21 secondes réussi. Lecture réelle de 25 devis et factures dans la session du titulaire. L'assistant a chargé le planning réel et proposé deux dates pour Sébastien chez Leneutre, sans enregistrement. « Tiemoko » n'a pas été reconnu dans les profils de l'entité et a déclenché une demande de précision. Contrôle du portail publié à 390 pixels CSS sans débordement horizontal.
 - Fonction SQL SECURITY INVOKER, exécution anonyme révoquée ; RLS activée sur les deux nouvelles tables.
 - Les avis de sécurité Supabase ne signalent pas ces nouveaux objets. Des avertissements antérieurs sur 54 fonctions SECURITY DEFINER appelables par les comptes connectés et la protection des mots de passe compromis restent à examiner avant une commercialisation. La présence d'un avertissement n'établit pas à elle seule une fuite ; les contrôles de chaque fonction doivent être revus.
 

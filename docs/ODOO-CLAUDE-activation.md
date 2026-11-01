@@ -56,7 +56,7 @@ Exemple de demande : « Recherche le client Martin et prépare son CERFA 15498 �
 
 Le 1 novembre 2026, la clé créée par l'utilisateur a été enregistrée dans les secrets Supabase. Un appel réel de `lire_entreprise` depuis le test de fonction Supabase a renvoyé les coordonnées de SRP et son SIRET avec `isError: false`. Le SIRET est récupéré dans `company_registry` lorsque le champ français du contact est absent, sans confondre un SIREN à neuf chiffres avec un SIRET.
 
-Le connecteur est connecté dans Claude avec trois outils en lecture seule et une approbation requise. La publication de l’interface sur le domaine principal attend la réauthentification par passkey demandée par Vercel. Les vérifications et limites du planning et des devis sont décrites dans PLANNING-ET-DEVIS.md.
+Le connecteur est connecté dans Claude avec trois outils en lecture seule et une approbation requise. Le 1 novembre 2026, le commit 5791183 a été publié sur le domaine principal après une promotion Vercel réussie. Dans la session du titulaire, les devis Odoo réels et la proposition de rendez-vous ont été vérifiés sans créer de rendez-vous. Les vérifications et limites du planning et des devis sont décrites dans PLANNING-ET-DEVIS.md.
 
 ## Isolation de cette connexion
 
