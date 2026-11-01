@@ -16,7 +16,7 @@ export function timeMinutes(value) {
 }
 export const minutesTime = value => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 
-export function parsePlanningCommand(message, { employees = [], clients = [], now = new Date() } = {}) {
+export function parsePlanningCommand(message, { employees = [], clients = [], now = new Date(), staffChoices = {} } = {}) {
     const normalized = normalizePlanningText(message);
     const marker = normalized.match(/\b(?:rendez[ -]?vous|rdv|chez)\b/);
     if (!marker) return { error: 'Indiquez les intervenants, puis « rendez-vous chez [client] demain ». Les propositions à traiter sont aussi disponibles ci-dessous.' };
@@ -24,18 +24,24 @@ export function parsePlanningCommand(message, { employees = [], clients = [], no
     let clientPart = normalized.slice(marker.index + marker[0].length).replace(/^\s*chez\s+/, '');
     clientPart = clientPart.split(/\b(?:demain|apres[ -]demain|aujourd hui|a\s+\d|le\s+\d|pendant|duree)\b/)[0].trim();
     const teamWords = peoplePart.split(/\s+(?:et|avec)\s+|[,;+]/).map(value => value.replace(/^(?:planifie|programme|mets|met|ajoute|pour)\s+/, '').trim()).filter(Boolean);
-    const staff = [], missing = [], ambiguous = [];
+    const staff = [], missing = [], ambiguous = [], staffQuestions = [];
     for (const word of teamWords) {
         const terms = word.split(' ').filter(Boolean);
         const candidates = employees.filter(employee => {
             const name = normalizePlanningText(employee.full_name);
-            return name === word || terms.every(term => term.length >= 3 && name.split(' ').some(token => token.startsWith(term)));
+            // Legacy profiles sometimes store first and last names without spaces.
+            // Keep short abbreviations as prefixes; require 4 letters for an interior match.
+            return name === word || terms.every(term => term.length >= 3 && (name.split(/[\s-]+/).some(token => token.startsWith(term)) || term.length >= 4 && name.replace(/[\s-]+/g, '').includes(term)));
         });
+        const chosen = employees.find(employee => employee.id === staffChoices[word]);
+        if (chosen) { staff.push(chosen); continue; }
         if (candidates.length === 1) staff.push(candidates[0]);
-        else if (candidates.length > 1) ambiguous.push(word);
-        else missing.push(word);
+        else {
+            if (candidates.length > 1) ambiguous.push(word); else missing.push(word);
+            staffQuestions.push({ word, candidates: (candidates.length ? candidates : employees).map(({ id, full_name }) => ({ id, full_name })) });
+        }
     }
-    if (!staff.length || missing.length || ambiguous.length) return { error: ambiguous.length ? `Plusieurs personnes correspondent à « ${ambiguous.join(', ')} ». Écrivez leur nom complet.` : `Intervenants à préciser${missing.length ? ' : ' + missing.join(', ') : ''}. Exemple : « Tiemoko et Sébastien rendez-vous chez Leneutre demain ».` };
+    if (!staff.length || missing.length || ambiguous.length) return { staffQuestions, error: ambiguous.length ? `Plusieurs personnes correspondent à « ${ambiguous.join(', ')} ». Choisissez la bonne personne ci-dessous.` : `Intervenants à préciser${missing.length ? ' : ' + missing.join(', ') : ''}. Choisissez un nom enregistré ci-dessous ou corrigez votre demande.` };
     const target = normalizePlanningText(clientPart);
     if (target.length < 3) return { error: 'Précisez le nom du client après « rendez-vous chez ».' };
     const matches = clients.filter(client => normalizePlanningText(`${client.name} ${client.company_name || ''}`).includes(target));

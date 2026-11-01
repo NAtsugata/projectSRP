@@ -12,6 +12,7 @@ export default function PlanningAssistant({ profile }) {
     const [context, setContext] = useState(null), [plan, setPlan] = useState(null);
     const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState(null);
     const [changed, setChanged] = useState(false), [suggestion, setSuggestion] = useState('');
+    const [staffChoices, setStaffChoices] = useState({}), [staffQuestions, setStaffQuestions] = useState([]);
     const requestId = useRef(null), trigger = useRef(null), input = useRef(null), alive = useRef(true);
     const queryClient = useQueryClient();
     useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -33,12 +34,13 @@ export default function PlanningAssistant({ profile }) {
     }, [open, profile.id, profile.organization_id, queryClient]);
 
     async function prepare(event) {
-        event?.preventDefault(); setBusy(true); setError(''); setResult(null); setPlan(null);
+        event?.preventDefault(); setBusy(true); setError(''); setResult(null); setPlan(null); setStaffQuestions([]);
         try {
             const fresh = await loadPlanningContext();
-            const proposal = proposePlanning(parsePlanningCommand(text, fresh), fresh);
-            if (proposal.error) throw new Error(proposal.error);
+            const proposal = proposePlanning(parsePlanningCommand(text, { ...fresh, staffChoices }), fresh);
             if (!alive.current) return;
+            setContext(fresh);
+            if (proposal.error) { setStaffQuestions(proposal.staffQuestions || []); setError(proposal.error); return; }
             setContext(fresh); setPlan(proposal); setChanged(false); requestId.current = crypto.randomUUID();
         } catch (e) { if (alive.current) setError(e.message); }
         finally { if (alive.current) setBusy(false); }
@@ -75,9 +77,10 @@ export default function PlanningAssistant({ profile }) {
             <header><div><h2 id="planning-assistant-title">Assistant planning</h2><small>Votre entité · Sans API payante</small></div><button aria-label="Fermer l’assistant" onClick={() => { setOpen(false); trigger.current?.focus(); }}>✕</button></header>
             <div className="planning-assistant-body">
                 <p>Indiquez les personnes, le client et les dates. Je propose les créneaux disponibles ; vous vérifiez puis créez les rendez-vous.</p>
-                <form onSubmit={prepare}><label htmlFor="planning-message">Votre demande</label><textarea disabled={busy} ref={input} id="planning-message" value={text} onChange={e => setText(e.target.value)} placeholder="Tiemoko et Seb rendez-vous chez Leneutre demain et après-demain à 9h pendant 1h" required maxLength={1000} /><button disabled={busy}>Proposer les rendez-vous</button></form>
+                <form onSubmit={prepare}><label htmlFor="planning-message">Votre demande</label><textarea disabled={busy} ref={input} id="planning-message" value={text} onChange={e => { setText(e.target.value); setStaffChoices({}); setStaffQuestions([]); setPlan(null); setError(''); }} placeholder="Tiemoko et Seb rendez-vous chez Leneutre demain et après-demain à 9h pendant 1h" required maxLength={1000} /><button disabled={busy}>Proposer les rendez-vous</button></form>
                 <p className="planning-assistant-note">Horaires proposés : 08h–12h et 13h–18h. Durée par défaut : 1h. Les anciennes interventions sans durée bloquent la journée des personnes affectées.</p>
                 <div aria-live="polite">{busy && <p>Vérification du planning…</p>}{error && <p role="alert">{error}</p>}{changed && plan && <p>Le planning a changé. Les disponibilités seront revérifiées avant création.</p>}</div>
+                {staffQuestions.length > 0 && <form onSubmit={prepare}><h3>Préciser les intervenants</h3>{staffQuestions.map(question => <label key={question.word}>Qui désignez-vous par « {question.word} » ?<select required disabled={busy} value={staffChoices[question.word] || ''} onChange={e => setStaffChoices(previous => ({ ...previous, [question.word]: e.target.value }))}><option value="">Choisir une personne de votre entité</option>{question.candidates.map(person => <option key={person.id} value={person.id}>{person.full_name}</option>)}</select></label>)}<button disabled={busy}>Reprendre la demande</button></form>}
                 {plan && <div><h3>{plan.client.name}</h3><p>{plan.staff.map(p => p.full_name).join(' et ')}</p>{plan.bookings.map((booking, i) => <article className="planning-assistant-card" key={booking.date + i}>
                     <strong>{dayLabel(booking.date)}</strong>
                     <label>Heure<input disabled={busy} type="time" value={booking.time} step="900" onChange={e => edit(i, 'time', e.target.value)} /></label>

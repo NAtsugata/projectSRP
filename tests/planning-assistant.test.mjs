@@ -15,6 +15,28 @@ test('ambiguous staff or clients require clarification', () => {
     assert.match(parsePlanningCommand('seb rdv Leneutre demain', { ...context, employees: [...context.employees, { id: 'd', full_name: 'Sebastien Dupont' }] }).error, /Plusieurs personnes/);
     assert.match(parsePlanningCommand('seb rdv Leneutre demain', { ...context, clients: [...context.clients, { id: 'd', name: 'Leneutre SARL' }] }).error, /Plusieurs clients/);
 });
+test('a first name inside a concatenated legacy name resolves the real profile', () => {
+    const joined = { ...context, employees: [{ id: 'a', full_name: 'duponttiemoko' }, context.employees[1]] };
+    const parsed = parsePlanningCommand('tiemoko et seb rendezvous leneutre demain et apres demain', joined);
+    assert.equal(parsed.error, undefined);
+    assert.deepEqual(parsed.staff.map(p => p.id), ['a', 'b']);
+    assert.equal(proposePlanning(parsed, {}).bookings.length, 2);
+    assert.equal(parsePlanningCommand('dupont tiemoko et seb rdv leneutre demain', joined).staff.length, 2);
+});
+test('ambiguous matches expose scoped choices and resume with the selected identity', () => {
+    const team = [...context.employees, { id: 'd', full_name: 'duponttiemoko' }];
+    const first = parsePlanningCommand('tiemoko et seb rdv Leneutre demain', { ...context, employees: team });
+    assert.deepEqual(first.staffQuestions[0].candidates.map(p => p.id), ['a','d']);
+    const selected = parsePlanningCommand('tiemoko et seb rdv Leneutre demain', { ...context, employees: team, staffChoices: { tiemoko: 'd' } });
+    assert.deepEqual(selected.staff.map(p => p.id), ['d','b']);
+    assert.ok(parsePlanningCommand('tiemoko et seb rdv Leneutre demain', { ...context, employees: team, staffChoices: { tiemoko: 'foreign-tenant-id' } }).error);
+});
+test('unknown names offer real entity profiles without silently replacing them', () => {
+    const result = parsePlanningCommand('inconnu et seb rdv Leneutre demain', context);
+    assert.ok(result.error);
+    assert.deepEqual(result.staffQuestions[0].candidates.map(p => p.id), ['a','b']);
+    assert.ok(parsePlanningCommand('ali rdv Leneutre demain', { ...context, employees: [{ id: 'x', full_name: 'Salim' }] }).error);
+});
 test('Paris dates work across UTC midnight and daylight saving changes', () => {
     assert.equal(parisDay(new Date('2026-10-31T23:30:00Z')), '2026-11-01');
     assert.deepEqual(parsePlanningCommand('seb rdv Leneutre après-demain', { ...context, now: new Date('2026-10-24T23:30:00Z') }).dates, ['2026-10-27']);
