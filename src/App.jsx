@@ -44,6 +44,7 @@ const ContractDetailViewContainer = lazyWithRetry(() => import('./pages/Contract
 const AdminMonthlyExportViewContainer = lazyWithRetry(() => import('./pages/AdminMonthlyExportViewContainer'));
 const AdminOrganizationsViewContainer = lazyWithRetry(() => import('./pages/AdminOrganizationsViewContainer'));
 const AdminClientsViewContainer = lazyWithRetry(() => import('./pages/AdminClientsViewContainer'));
+const BusinessFollowupsPage = lazyWithRetry(() => import('./pages/BusinessFollowupsPage'));
 const OdooQuotesView = lazyWithRetry(() => import('./pages/OdooQuotesView'));
 const GatedOdooQuotesView = withModule('invoices', OdooQuotesView);
 const AdminInvoicesViewContainer = lazyWithRetry(() => import('./pages/AdminInvoicesViewContainer'));
@@ -503,6 +504,7 @@ function App() {
                       <GatedAdminClientsViewContainer />
                     </Suspense>
                   } />
+                  <Route path="followups" element={<Suspense fallback={<div>Chargement du suivi…</div>}><BusinessFollowupsPage /></Suspense>} />
                   <Route path="odoo-quotes" element={<Suspense fallback={<div>Chargement des devis…</div>}><GatedOdooQuotesView /></Suspense>} />
                   <Route path="invoices" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
@@ -735,6 +737,7 @@ function App() {
                       </Suspense>
                     </PermissionRoute>
                   } />
+                  <Route path="followups" element={<Suspense fallback={<div>Chargement du suivi…</div>}><BusinessFollowupsPage /></Suspense>} />
                   <Route path="odoo-quotes" element={<Suspense fallback={<div>Chargement des devis…</div>}><GatedOdooQuotesView /></Suspense>} />
                   <Route path="invoices" element={
                     <PermissionRoute permission="view_invoices">

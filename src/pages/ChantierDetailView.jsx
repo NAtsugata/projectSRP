@@ -15,6 +15,7 @@ import {
   MAX_DOC_MB, MAX_PHOTO_MB, ALLOWED_DOC_EXTENSIONS, validateChantierFile,
 } from '../config/chantierPresets';
 import './ChantiersView.css';
+import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
 import { chantierProgress, isLateChantier } from '../utils/workspaceTracking';
 
 const LOT_STATUS = { a_demarrer: 'À démarrer', en_cours: 'En cours', termine: 'Terminé', valide: 'Validé' };
@@ -99,6 +100,7 @@ export default function ChantierDetailView() {
         </div>
       </div>
 
+      <BusinessWorkflowSource type="chantier" sourceKey={chantier.id} />
       <div className="workspace-tracking-stats" aria-label="Suivi du chantier">
         <button className="workspace-tracking-stat" onClick={() => setTab('tasks')}><strong>{tasks.filter(task => ['a_faire', 'en_cours'].includes(task.status)).length}</strong><span>Tâches à suivre</span></button>
         <button className="workspace-tracking-stat" onClick={() => setTab('tasks')}><strong>{tasks.filter(task => task.status === 'fait').length}</strong><span>Tâches à valider</span></button>

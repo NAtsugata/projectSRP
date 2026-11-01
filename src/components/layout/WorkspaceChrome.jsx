@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { normalizeSearch } from '../../utils/workspaceTracking';
 
 const GROUPS = [
-  ['Activité', ['/dashboard', '/planning', '/chantiers', '/agenda', '/multi-day-planning']],
+  ['Activité', ['/dashboard', '/followups', '/planning', '/chantiers', '/agenda', '/multi-day-planning']],
   ['Gestion', ['/clients', '/contracts', '/invoices', '/odoo-quotes', '/catalog', '/expenses', '/admin-expenses']],
   ['Équipe', ['/users', '/leaves', '/admin-leaves']],
   ['Documents', ['/vault', '/admin-vault', '/documents', '/archives', '/checklists', '/checklist-templates', '/monthly-export', '/ir-docs', '/cerfa', '/calculateur-aides']],

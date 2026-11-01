@@ -32,6 +32,7 @@ import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
+import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 

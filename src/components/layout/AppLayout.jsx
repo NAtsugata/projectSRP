@@ -17,6 +17,7 @@ import {
     BuildingIcon,
     SettingsIcon
 } from '../SharedUI';
+import BusinessWorkflowAlert from '../BusinessWorkflowAlert';
 import PlanningAssistant from '../PlanningAssistant';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
@@ -75,6 +76,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
         { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { name: 'À suivre', href: '/followups', icon: CheckCircleIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
         { name: 'Devis Odoo', href: '/odoo-quotes', icon: FileTextIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Facturation', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -209,6 +211,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             {/* Main Content */}
             <main className="main-content" id="workspace-main" tabIndex={-1}>
                 <WorkspaceHeader navigation={navigation} profile={profile} />
+                <BusinessWorkflowAlert />
                 <div className="workspace-page"><Outlet /></div>
             </main>
 

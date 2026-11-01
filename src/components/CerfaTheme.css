@@ -1,0 +1,32 @@
+/* CERFA forms use the portal theme; the official PDF keeps its own paper/ink. */
+:root :is(.cerfa-page,.cerfa-modal){color:var(--text-primary,#172033)!important;color-scheme:normal}
+:root .cerfa-page{background:var(--bg-secondary,#f3f6fa)!important}
+:root :is(.cerfa-page-container,.cerfa-modal){background:var(--bg-primary,#fff)!important;border:1px solid var(--border-color,#cbd5e1);box-shadow:0 12px 40px #0002}
+:root :is(.cerfa-page,.cerfa-modal) :is(h1,h2,h3,h4){color:var(--text-primary,#172033)!important;text-shadow:none}
+:root :is(.cerfa-page-header,.cerfa-modal-header,.cerfa-page-footer,.cerfa-modal-footer,.cerfa-tabs){background:var(--bg-secondary,#f3f6fa)!important;border-color:var(--border-color,#cbd5e1)!important}
+:root :is(.cerfa-page,.cerfa-modal) :is(.cerfa-form-group label,.cerfa-checkbox span,.cerfa-radio span,.cerfa-modal-title p,.cerfa-tab){color:var(--text-secondary,#475569)!important}
+:root :is(.cerfa-page,.cerfa-modal) .cerfa-section{border-color:var(--border-color,#cbd5e1)!important}
+:root :is(.cerfa-page,.cerfa-modal) .cerfa-form-group :is(input,select,textarea){background:var(--bg-primary,#fff)!important;color:var(--text-primary,#172033)!important;border-color:var(--border-color,#94a3b8)!important}
+:root :is(.cerfa-page,.cerfa-modal) .cerfa-form-group :is(input,textarea)::placeholder{color:var(--text-secondary,#64748b)!important;opacity:1}
+:root :is(.cerfa-page,.cerfa-modal) select option{background:var(--bg-primary,#fff)!important;color:var(--text-primary,#172033)!important}
+:root :is(.cerfa-page,.cerfa-modal) :is(.cerfa-checkbox,.cerfa-radio,.cerfa-btn-secondary,.cerfa-close-btn){background:var(--bg-secondary,#f3f6fa)!important;color:var(--text-primary,#172033)!important;border-color:var(--border-color,#cbd5e1)!important}
+:root :is(.cerfa-page,.cerfa-modal) .cerfa-btn-primary{background:#9a4e13!important;color:#fff!important}
+:root[data-theme=light] :is(.cerfa-page,.cerfa-modal) :is(label,p,small,span,div,h4,strong)[style*="color: rgba(255"],
+:root[data-theme=light] :is(.cerfa-page,.cerfa-modal) :is(label,p,small,span,div,h4,strong)[style*="color: rgb(255"],
+:root[data-theme=light] :is(.cerfa-page,.cerfa-modal) :is(label,p,small,span,div,h4,strong)[style*="color: white"]{color:var(--text-secondary,#475569)!important}
+:root :is(.cerfa-page,.cerfa-modal) :is(input,select,textarea):focus-visible{outline:2px solid var(--color-primary,#b45309);outline-offset:2px}
+:root :is(.cerfa-page,.cerfa-modal) canvas{background:#fff;color-scheme:light}
+:root .cerfa-page.cerfa-1301{display:block;max-width:100%;color:var(--text-primary,#172033)}
+.cerfa-1301> :is(.cerfa-header,.cerfa-form,.cerfa-footer){max-width:860px;width:100%;margin:0 auto 20px;min-width:0}
+.cerfa-1301 .cerfa-form{background:var(--bg-primary,#fff);padding:24px;border-radius:14px;border:1px solid var(--border-color,#cbd5e1)}
+.cerfa-1301 .form-section{padding:0 0 20px;margin-bottom:20px;border-bottom:1px solid var(--border-color,#cbd5e1)}
+.cerfa-1301 .form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cerfa-1301 .form-group{min-width:0;margin-bottom:12px}
+.cerfa-1301 label{color:var(--text-secondary,#475569);display:block;font-size:14px;margin-bottom:6px}
+:root .cerfa-1301 .form-group :is(input:not([type=checkbox]),select,textarea){box-sizing:border-box;width:100%;min-height:44px;padding:10px;background:var(--bg-primary,#fff)!important;color:var(--text-primary,#172033)!important;border:1px solid var(--border-color,#94a3b8);border-radius:8px}
+.cerfa-1301 .checkbox-label{display:flex;align-items:flex-start;gap:10px;min-height:36px;line-height:1.5}
+.cerfa-1301 .checkbox-label input{flex-shrink:0;width:18px;height:18px;margin-top:2px}
+.cerfa-1301 :is(.checkbox-grid,.elements-grid){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cerfa-1301 :is(.section-info,.cerfa-subtitle,.cerfa-footer){color:var(--text-secondary,#475569)}
+.cerfa-1301 .form-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+@media(max-width:640px){.cerfa-1301 .cerfa-form{padding:16px}.cerfa-1301 :is(.form-row,.checkbox-grid,.elements-grid){grid-template-columns:minmax(0,1fr)}.cerfa-1301 .cerfa-header{padding:16px}.cerfa-1301 .form-actions button{width:100%}}
