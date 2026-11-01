@@ -3,8 +3,9 @@
 // Service pour remplir les formulaires CERFA
 // =============================
 
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import logger from './logger';
+import { parseFrenchAddress, frenchCerfaDate } from './cerfaData';
 import { safeStorage } from './safeStorage';
 
 // Importer les PDF comme assets (Webpack les gère automatiquement)
@@ -18,6 +19,19 @@ import cerfa1301PdfAsset from '../assets/cerfa_1301-sd.pdf';
 
 // Utiliser l'asset importé comme chemin principal
 const CERFA_PATH = cerfaPdfAsset;
+
+// pdf-lib can leave references to removed widgets in older source templates.
+function flattenCerfaForm(pdfDoc, form) {
+    form.flatten();
+    for (const page of pdfDoc.getPages()) {
+        const annotations = page.node.Annots();
+        for (let index = (annotations?.size() || 0) - 1; index >= 0; index--) {
+            const annotation = pdfDoc.context.lookup(annotations.get(index));
+            if (!annotation || annotation.get(PDFName.of('Subtype')) === PDFName.of('Widget')) annotations.remove(index);
+        }
+    }
+    pdfDoc.catalog.delete(PDFName.of('AcroForm'));
+}
 
 // Informations entreprise par défaut (SRP)
 const DEFAULT_COMPANY_INFO = {
@@ -164,11 +178,13 @@ export const resetFicheCounter = (cerfaType = '15497', startNumber = 0) => {
  * @returns {Object} Informations entreprise
  */
 export const getCompanyInfo = () => {
-    const saved = safeStorage.getJSON(STORAGE_KEY_COMPANY, null);
-    if (saved) {
-        return { ...DEFAULT_COMPANY_INFO, ...saved };
+    const saved = safeStorage.getJSON(STORAGE_KEY_COMPANY, {}) || {};
+    const legacy = {};
+    for (const [field, key] of Object.entries({ companyName: 'companyName', address: 'companyAddress', siret: 'companySiret', phone: 'companyPhone', email: 'companyEmail' })) {
+        const value = safeStorage.getItem(key);
+        if (value != null) legacy[field] = value;
     }
-    return { ...DEFAULT_COMPANY_INFO };
+    return { ...DEFAULT_COMPANY_INFO, ...legacy, ...saved, companyName: saved.companyName ?? saved.name ?? legacy.companyName ?? DEFAULT_COMPANY_INFO.companyName };
 };
 
 /**
@@ -176,7 +192,7 @@ export const getCompanyInfo = () => {
  * @param {Object} info - Informations à sauvegarder
  */
 export const saveCompanyInfo = (info) => {
-    const success = safeStorage.setJSON(STORAGE_KEY_COMPANY, info);
+    const success = safeStorage.setJSON(STORAGE_KEY_COMPANY, { ...getCompanyInfo(), ...info, companyName: info.companyName ?? info.name ?? getCompanyInfo().companyName });
     if (!success) {
         logger.error('Erreur sauvegarde company info');
     }
@@ -260,7 +276,7 @@ export const inspectCerfa1301Fields = async () => {
  * @param {Object} data - Données pour remplir le formulaire
  * @returns {Promise<Blob>} PDF rempli en Blob
  */
-export const fillCerfa15497 = async (data) => {
+export const fillCerfa15497 = async (data, { flatten = true } = {}) => {
     try {
         // Utiliser le numéro de fiche fourni (ne pas incrémenter ici, c'est fait dans CerfaPage)
         const ficheNumber = data.ficheNo || data.ficheNumber || '';
@@ -302,12 +318,12 @@ export const fillCerfa15497 = async (data) => {
                 const field = form.getTextField(fieldName);
                 if (field) {
                     // Toujours écrire, même si vide (pour debug)
-                    const textValue = value ? String(value) : '';
+                    const textValue = value == null ? '' : String(value);
                     field.setText(textValue);
                     // Forcer la couleur du texte en noir pour visibilité
-                    field.setFontColor(rgb(0, 0, 0));
+
                     // Mettre à jour l'apparence du champ
-                    field.updateAppearances();
+
                     if (textValue) {
                         logger.log(`[CERFA] ✓ Rempli: ${fieldName} = "${textValue}"`);
                     }
@@ -322,10 +338,10 @@ export const fillCerfa15497 = async (data) => {
         // Helper pour cocher une case
         const checkBox = (fieldName, shouldCheck) => {
             try {
-                if (shouldCheck) {
+                {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
-                        field.check();
+                        if (shouldCheck) field.check(); else field.uncheck();
                         logger.log(`[CERFA] ✓ Coché: ${fieldName}`);
                     }
                 }
@@ -381,8 +397,8 @@ export const fillCerfa15497 = async (data) => {
         fillTextField('Equipement_ID', equipementId);
         // Support des deux formats: CerfaGeneratorModal (fluide) et CerfaPage (fluideDesignation)
         fillTextField('Equipement_Fluide', data.fluide || data.fluideDesignation || data.typeFluide || '');
-        fillTextField('Equipement_Charge', data.charge || data.fluideChargeInitiale || data.chargeInitiale || '');
-        fillTextField('Equipement_teqCO2', data.teqCO2 || '');
+        fillTextField('Equipement_Charge', data.charge ?? data.fluideChargeInitiale ?? data.chargeInitiale ?? '');
+        fillTextField('Equipement_teqCO2', data.teqCO2 ?? '');
 
         // Nature de l'intervention (cases à cocher)
         checkBox('Case_MiseService', data.natureMiseEnService);
@@ -393,7 +409,7 @@ export const fillCerfa15497 = async (data) => {
         checkBox('Case_Modif', data.modification);
         checkBox('Case_Assemblage', data.assemblage);
         checkBox('Case_Autre', data.natureAutre);
-        fillTextField('Autre', data.autreNature || '');
+        fillTextField('Autre', data.natureAutreTexte || data.autreNature || '');
 
         // Détecteur
         fillTextField('Detecteur_ID', data.detecteurId || '');
@@ -406,7 +422,8 @@ export const fillCerfa15497 = async (data) => {
         }
 
         // Date du contrôle
-        const dateIntervention = data.dateIntervention || data.maintenanceDate || new Date().toLocaleDateString('fr-FR');
+        const dateIntervention = frenchCerfaDate(data.dateIntervention || data.maintenanceDate || new Date().toLocaleDateString('fr-FR'));
+        if (!dateIntervention) throw new Error('Date d’intervention invalide');
         const dateParts = dateIntervention.split('/');
         if (dateParts.length === 3) {
             fillTextField('Controle_Jour', dateParts[0]);
@@ -416,7 +433,7 @@ export const fillCerfa15497 = async (data) => {
 
         // Fuite détectée
         checkBox('Case_Fuite_Oui', data.fuiteDetectee === 'oui' || data.fuiteDetectee === true);
-        checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false || !data.fuiteDetectee);
+        checkBox('Case_Fuite_Non', data.fuiteDetectee === 'non' || data.fuiteDetectee === false);
 
         // Catégorie de fluide et seuils (cases à cocher section 6)
         // Déterminer automatiquement la catégorie basée sur le fluide et les quantités
@@ -511,25 +528,25 @@ export const fillCerfa15497 = async (data) => {
 
         // Quantités de fluide (section 11) - Manipulation du fluide frigorigène
         // Quantité chargée totale (A+B+C)
-        fillTextField('11_Quantite', data.quantiteChargeeTotal || data.quantiteFluide || '');
+        fillTextField('11_Quantite', data.quantiteChargeeTotal ?? data.quantiteFluide ?? '');
         // A - Fluide vierge
-        fillTextField('11_QA', data.fluideVierge || data.quantiteRecuperee || data.fluideQuantiteRecuperee || '');
+        fillTextField('11_QA', data.fluideVierge ?? data.quantiteRecuperee ?? data.fluideQuantiteRecuperee ?? '');
         // B - Fluide recyclé (récupéré et réintroduit)
-        fillTextField('11_QB', data.fluideRecycle || data.quantiteChargee || '');
+        fillTextField('11_QB', data.fluideRecycle ?? data.quantiteChargee ?? '');
         // C - Fluide régénéré
-        fillTextField('11_QC', data.fluideRegenere || data.quantiteAjoutee || data.fluideQuantiteAjoutee || '');
+        fillTextField('11_QC', data.fluideRegenere ?? data.quantiteAjoutee ?? data.fluideQuantiteAjoutee ?? '');
         // D - Fluide destiné au traitement
-        fillTextField('11_QD', data.fluideTraitement || data.quantiteD || '');
+        fillTextField('11_QD', data.fluideTraitement ?? data.quantiteD ?? '');
         // D+E total (quantité récupérée totale)
-        fillTextField('11_QDE', data.quantiteRecupereeTotal || data.quantiteDE || data.fluideQuantiteReintroduite || '');
+        fillTextField('11_QDE', data.quantiteRecupereeTotal ?? data.quantiteDE ?? data.fluideQuantiteReintroduite ?? '');
         // E - Fluide conservé pour réutilisation
-        fillTextField('11_QE', data.fluideConserve || data.quantiteE || '');
+        fillTextField('11_QE', data.fluideConserve ?? data.quantiteE ?? '');
         // Dénomination du fluide si changement
-        fillTextField('11_Denom', data.denominationChangement || data.denominationFluide || data.fluide || data.fluideDesignation || '');
+        fillTextField('11_Denom', data.denominationChangement ?? data.denominationFluide ?? data.fluide ?? data.fluideDesignation ?? '');
         // N° BSFF (Trackdéchets)
-        fillTextField('11_BSFF', data.bsffNumber || '');
+        fillTextField('11_BSFF', data.bsffNumber ?? '');
         // Identification du/des contenants
-        fillTextField('11_Contenant_ID', data.contenantId || '');
+        fillTextField('11_Contenant_ID', data.contenantId ?? '');
 
         // Classification des déchets (section 12)
         // Fluides non inflammables
@@ -564,7 +581,7 @@ export const fillCerfa15497 = async (data) => {
         form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
-        form.flatten();
+        if (flatten) flattenCerfaForm(pdfDoc, form);
 
         // ===== INTÉGRATION DES SIGNATURES (après flatten) =====
         // Les signatures sont des images base64 dessinées sur le PDF
@@ -641,7 +658,7 @@ export const fillCerfa15497 = async (data) => {
  * @param {Object} data - Données pour remplir le formulaire
  * @returns {Promise<Blob>} PDF rempli en Blob
  */
-export const fillCerfa15498 = async (data) => {
+export const fillCerfa15498 = async (data, { flatten = true } = {}) => {
     try {
         // Utiliser le numéro de fiche fourni
         const ficheNumber = data.ficheNo || data.ficheNumber || '';
@@ -672,7 +689,7 @@ export const fillCerfa15498 = async (data) => {
             try {
                 const field = form.getTextField(fieldName);
                 if (field) {
-                    const textValue = value ? String(value) : '';
+                    const textValue = value == null ? '' : String(value);
                     field.setText(textValue);
                     if (textValue) {
                         logger.log(`[CERFA 15498] ✓ Rempli: ${fieldName} = "${textValue}"`);
@@ -688,10 +705,10 @@ export const fillCerfa15498 = async (data) => {
         // Helper pour cocher une case
         const checkBox = (fieldName, shouldCheck) => {
             try {
-                if (shouldCheck) {
+                {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
-                        field.check();
+                        if (shouldCheck) field.check(); else field.uncheck();
                         logger.log(`[CERFA 15498] ✓ Coché: ${fieldName}`);
                     }
                 }
@@ -763,7 +780,7 @@ export const fillCerfa15498 = async (data) => {
         form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
-        form.flatten();
+        if (flatten) flattenCerfaForm(pdfDoc, form);
 
         // ===== INTÉGRATION DES SIGNATURES (après flatten) =====
         const pages = pdfDoc.getPages();
@@ -952,20 +969,19 @@ export const prepareCerfaDataFromIntervention = (intervention, profile = {}) => 
     const equipmentInfo = getEquipmentInfo(intervention.id) || {};
 
     // Parser le nom client (essayer de séparer prénom/nom)
-    const clientParts = (intervention.client || '').split(' ');
-    const clientFirstName = clientParts.shift() || '';
-    const clientName = clientParts.join(' ') || clientFirstName;
+    const clientFirstName = '';
+    const clientName = intervention.client || '';
 
     // Parser l'adresse (essayer d'extraire code postal et ville)
-    const addressMatch = (intervention.address || '').match(/^(.+?),?\s*(\d{5})?\s*(.+)?$/);
+    const address = parseFrenchAddress(intervention.address);
 
     return {
         // Client
         clientName: clientName,
         clientFirstName: clientFirstName,
-        clientAddress: addressMatch ? addressMatch[1] : intervention.address || '',
-        clientPostalCode: addressMatch?.[2] || '',
-        clientCity: addressMatch?.[3] || '',
+        clientAddress: address.street,
+        clientPostalCode: address.postalCode,
+        clientCity: address.city,
 
         // Équipement (depuis les infos sauvegardées ou vide)
         equipmentType: equipmentInfo.type || 'Chaudière gaz',
@@ -1014,20 +1030,19 @@ export const prepareCerfaDataFromContract = (contract, profile = {}) => {
     const equipmentInfo = getEquipmentInfo(contract.id) || {};
 
     // Parser le nom client
-    const clientParts = (contract.client_name || '').split(' ');
-    const clientFirstName = clientParts.shift() || '';
-    const clientName = clientParts.join(' ') || clientFirstName;
+    const clientFirstName = '';
+    const clientName = contract.client_name || '';
 
     // Parser l'adresse
-    const addressMatch = (contract.client_address || '').match(/^(.+?),?\s*(\d{5})?\s*(.+)?$/);
+    const address = parseFrenchAddress(contract.client_address);
 
     return {
         // Client
         clientName: clientName,
         clientFirstName: clientFirstName,
-        clientAddress: addressMatch ? addressMatch[1] : contract.client_address || '',
-        clientPostalCode: addressMatch?.[2] || '',
-        clientCity: addressMatch?.[3] || '',
+        clientAddress: address.street,
+        clientPostalCode: address.postalCode,
+        clientCity: address.city,
 
         // Équipement
         equipmentType: equipmentInfo.type || 'Chaudière gaz',
@@ -1083,7 +1098,7 @@ export const prepareCerfaDataFromContract = (contract, profile = {}) => {
  * @param {Object} data - Données pour remplir le formulaire
  * @returns {Promise<Blob>} PDF rempli en Blob
  */
-export const fillCerfa1301 = async (data) => {
+export const fillCerfa1301 = async (data, { flatten = true } = {}) => {
     try {
         const ficheNumber = data.ficheNo || data.ficheNumber || '';
         logger.log('[CERFA 1301] Génération attestation TVA 10%:', ficheNumber);
@@ -1108,12 +1123,18 @@ export const fillCerfa1301 = async (data) => {
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const form = pdfDoc.getForm();
 
+        // The source groups have distinct on-values but omit the Radio flag.
+        // Repair only these verified groups, preserving their existing widgets.
+        for (const name of ['cac1', 'cac2', 'cac3']) {
+            form.getField(name).acroField.setFlag(1 << 15);
+        }
+
         // Helper pour remplir un champ texte de manière sécurisée
         const fillTextField = (fieldName, value) => {
             try {
                 const field = form.getTextField(fieldName);
                 if (field) {
-                    const textValue = value ? String(value) : '';
+                    const textValue = value == null ? '' : String(value);
                     field.setText(textValue);
                     if (textValue) {
                         logger.log(`[CERFA 1301] ✓ Rempli: ${fieldName} = "${textValue}"`);
@@ -1129,10 +1150,10 @@ export const fillCerfa1301 = async (data) => {
         // Helper pour cocher une case
         const checkBox = (fieldName, shouldCheck) => {
             try {
-                if (shouldCheck) {
+                {
                     const field = form.getCheckBox(fieldName);
                     if (field) {
-                        field.check();
+                        if (shouldCheck) field.check(); else field.uncheck();
                         logger.log(`[CERFA 1301] ✓ Coché: ${fieldName}`);
                     }
                 }
@@ -1156,78 +1177,47 @@ export const fillCerfa1301 = async (data) => {
         fillTextField('a5', data.clientCodePostal || '');
         fillTextField('a4', data.clientVille || '');
 
-        // --- ADRESSE DE L'IMMEUBLE (si différente) ---
-        // cac1 (y=621): Case "même adresse"
-        // a5a (y=606): Adresse immeuble si différente de l'adresse du client
-        // a7 (y=534, x=91): Adresse 2
-        // a8 (y=534, x=293): Commune 2
-        // a9 (y=534, x=450): Code postal 2
-        if (data.memeAdresse) {
-            checkBox('cac1', true);
-        } else {
-            // Adresse différente - remplir les champs a5a, a7, a8, a9
-            fillTextField('a5a', data.immeubleAdresse || '');
-            fillTextField('a7', data.immeubleAdresse || '');
-            fillTextField('a8', data.immeubleVille || '');
-            fillTextField('a9', data.immeubleCodePostal || '');
-        }
+        // Export values verified against this template's AcroForm and widget positions.
+        const selectRadio = (name, option) => {
+            const group = form.getRadioGroup(name);
+            group.clear();
+            if (option) group.select(option);
+        };
+        selectRadio('cac1', data.natureMaison ? '1' : data.natureImmeubleCollectif ? '2' : data.natureAppartement ? '3' : data.natureAutreLocal ? '4' : null);
+        fillTextField('a5a', data.natureAutreLocal ? data.autreNatureTexte : '');
+        selectRadio('cac2', data.usageLocal || '1');
+        fillTextField('a6', data.usageLocal === '3' ? data.milliemes : '');
+        fillTextField('a7', data.memeAdresse ? '' : data.immeubleAdresse);
+        fillTextField('a8', data.memeAdresse ? '' : data.immeubleVille);
+        fillTextField('a9', data.memeAdresse ? '' : data.immeubleCodePostal);
+        selectRadio('cac3', data.qualiteProprietaire ? '1' : data.qualiteLocataire ? '2' : data.qualiteAutre ? '3' : null);
+        fillTextField('a10', data.qualiteAutre ? data.qualiteAutreTexte : '');
 
-        // --- QUALITÉ DU CLIENT ---
-        // cac2 (y=590): Local affecté à l'habitation (toujours coché pour TVA 10%)
-        // a10 (y=524): Qualité "autre" si ni propriétaire ni locataire
-        checkBox('cac2', true); // Local à usage d'habitation
-
-        // Qualité: propriétaire, locataire ou autre
-        if (data.qualiteAutre && data.qualiteAutreTexte) {
-            fillTextField('a10', data.qualiteAutreTexte);
-        }
-
-        // --- MILLIÈMES (parties communes) ---
-        // a6 (y=567): Proportion en millièmes (si applicable)
-        if (data.milliemes) {
-            fillTextField('a6', data.milliemes);
-        }
-
-        // --- ATTESTATIONS OBLIGATOIRES ---
-        // cac3 (y=528): Immeuble achevé depuis plus de 2 ans
-        // cac4 (y=478): Les travaux n'aboutissent pas à un immeuble neuf
-        // cac5 (y=458): Pas plus de 5 des 6 éléments
-        checkBox('cac3', data.immeubleplus2ans !== false);
-        checkBox('cac4', data.pasImmeubleNeuf !== false);
-        checkBox('cac5', data.moins6Elements !== false);
-
-        // --- ÉLÉMENTS DE SECOND ŒUVRE ---
-        // cac6-cac10 sont sur la même ligne (y=437-448)
-        // cac6 (x=274): Planchers non porteurs
-        // cac7 (x=97): Huisseries extérieures
-        // cac8 (x=191): Cloisons intérieures
-        // cac9 (x=278): Installations sanitaires et plomberie
-        // cac10 (x=439): Installations électriques
+        checkBox('cac4', data.pasImmeubleNeuf === true);
+        checkBox('cac5', data.moins6Elements === true);
         checkBox('cac6', data.elemPlanchers);
         checkBox('cac7', data.elemHuisseries);
         checkBox('cac8', data.elemCloisons);
         checkBox('cac9', data.elemSanitaires || data.elemPlomberie);
         checkBox('cac10', data.elemElectriques);
-
-        // cac11 (y=427): Chauffage
-        // cac12-cac15: Autres attestations
         checkBox('cac11', data.elemChauffage);
-        checkBox('cac12', data.travauxEntretien);
-        checkBox('cac13', data.travauxAmelioration);
-        checkBox('cac14', data.travauxTransformation);
-        checkBox('cac15', data.travauxAmenagement);
+        // These are specific attestations, not "entretien/amélioration/transformation".
+        checkBox('cac12', data.pasAugmentationSurface === true);
+        checkBox('cac13', data.pasSurelevation === true);
+        checkBox('cac14', data.travauxEnergetiques === true);
+        checkBox('cac15', data.travauxInduits === true);
 
         // --- DATE ET LIEU ---
         // a11 (y=160, x=263): Lieu
         // a12 (y=160, x=370): Date
         fillTextField('a11', data.lieu || '');
-        fillTextField('a12', data.dateAttestation || new Date().toLocaleDateString('fr-FR'));
+        fillTextField('a12', frenchCerfaDate(data.dateAttestation || new Date().toLocaleDateString('fr-FR')));
 
         // Mettre à jour toutes les apparences des champs avant aplatissement
         form.updateFieldAppearances();
 
         // Aplatir le formulaire pour figer les données
-        form.flatten();
+        if (flatten) flattenCerfaForm(pdfDoc, form);
 
         // ===== INTÉGRATION DE LA SIGNATURE (après flatten, comme CERFA 15497) =====
         const pages = pdfDoc.getPages();
@@ -1282,25 +1272,24 @@ export const prepareCerfa1301DataFromIntervention = (intervention) => {
     const companyInfo = getCompanyInfo();
 
     // Parser le nom client
-    const clientParts = (intervention.client || '').split(' ');
-    const clientPrenom = clientParts.shift() || '';
-    const clientNom = clientParts.join(' ') || clientPrenom;
+    const clientPrenom = '';
+    const clientNom = intervention.client || '';
 
     // Parser l'adresse
-    const addressMatch = (intervention.address || '').match(/^(.+?),?\s*(\d{5})?\s*(.+)?$/);
+    const address = parseFrenchAddress(intervention.address);
 
     return {
         // Client
         clientNom: clientNom,
         clientPrenom: clientPrenom,
-        clientAdresse: addressMatch ? addressMatch[1] : intervention.address || '',
-        clientCodePostal: addressMatch?.[2] || '',
-        clientVille: addressMatch?.[3] || '',
+        clientAdresse: address.street,
+        clientCodePostal: address.postalCode,
+        clientVille: address.city,
 
         // Immeuble (même adresse par défaut)
-        immeubleAdresse: addressMatch ? addressMatch[1] : intervention.address || '',
-        immeubleCodePostal: addressMatch?.[2] || '',
-        immeubleVille: addressMatch?.[3] || '',
+        immeubleAdresse: address.street,
+        immeubleCodePostal: address.postalCode,
+        immeubleVille: address.city,
 
         // Nature des locaux
         natureMaison: true,

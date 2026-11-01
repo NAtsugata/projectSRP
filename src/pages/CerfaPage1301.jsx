@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { parseFrenchAddress } from '../utils/cerfaData';
 
 const DRAFT_KEY = 'cerfa_1301_draft';
 
@@ -90,13 +91,13 @@ function CerfaPage1301() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo('1301'));
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
     // Rafraîchir le numéro de fiche
     const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+        setFicheInfo(getCurrentFicheInfo('1301'));
     }, []);
 
     // Charger les informations entreprise par défaut
@@ -133,24 +134,20 @@ function CerfaPage1301() {
 
             if (error) throw error;
 
-            // Parser le nom client
-            const clientParts = (data.client || '').split(' ');
-            const clientPrenom = clientParts.shift() || '';
-            const clientNom = clientParts.join(' ') || clientPrenom;
-
-            // Parser l'adresse
-            const addressMatch = (data.address || '').match(/^(.+?),?\s*(\d{5})?\s*(.+)?$/);
+            const clientPrenom = '';
+            const clientNom = data.client || '';
+            const address = parseFrenchAddress(data.address);
 
             setFormData(prev => ({
                 ...prev,
                 clientNom: clientNom,
                 clientPrenom: clientPrenom,
-                clientAdresse: addressMatch ? addressMatch[1] : data.address || '',
-                clientCodePostal: addressMatch?.[2] || '',
-                clientVille: addressMatch?.[3] || '',
-                immeubleAdresse: addressMatch ? addressMatch[1] : data.address || '',
-                immeubleCodePostal: addressMatch?.[2] || '',
-                immeubleVille: addressMatch?.[3] || '',
+                clientAdresse: address.street,
+                clientCodePostal: address.postalCode,
+                clientVille: address.city,
+                immeubleAdresse: address.street,
+                immeubleCodePostal: address.postalCode,
+                immeubleVille: address.city,
                 descriptionTravaux: data.description || data.notes || '',
             }));
 
@@ -507,6 +504,20 @@ function CerfaPage1301() {
                         </>
                     )}
 
+                    <div className="form-group">
+                        <label htmlFor="cerfa-local-usage">Usage des locaux</label>
+                        <select id="cerfa-local-usage" value={formData.usageLocal || '1'} onChange={e => updateField('usageLocal', e.target.value)}>
+                            <option value="1">Local exclusivement ou principalement affecté à l’habitation</option>
+                            <option value="2">Pièces d’habitation dans un local affecté pour moins de 50 % à cet usage</option>
+                            <option value="3">Parties communes d’un immeuble d’habitation</option>
+                            <option value="4">Local transformé en habitation</option>
+                        </select>
+                    </div>
+                    {formData.usageLocal === '3' && <div className="form-group">
+                        <label htmlFor="cerfa-milliemes">Proportion en millièmes</label>
+                        <input id="cerfa-milliemes" type="text" inputMode="numeric" value={formData.milliemes || ''} onChange={e => updateField('milliemes', e.target.value)} />
+                    </div>}
+
                     {/* Qualité du client */}
                     <h3 style={{marginTop: '1rem', marginBottom: '0.5rem'}}>Qualité</h3>
                     <div className="checkbox-grid">
@@ -665,6 +676,20 @@ function CerfaPage1301() {
                             />
                             <span>Les travaux ne portent pas sur plus de <strong>5 des 6 éléments</strong> de second œuvre</span>
                         </label>
+                    </div>
+
+                    <div className="attestation-list">
+                        {[
+                            ['pasAugmentationSurface', 'Les travaux n’augmentent pas la surface de plancher de plus de 10 %'],
+                            ['pasSurelevation', 'Les travaux ne consistent pas en une surélévation ou une addition de construction'],
+                            ['travauxEnergetiques', 'Les travaux respectent les critères d’amélioration de la qualité énergétique du formulaire'],
+                            ['travauxInduits', 'Les travaux sont induits et indissociablement liés aux travaux énergétiques à 5,5 %'],
+                        ].map(([field, label]) => (
+                            <label className="checkbox-label attestation" key={field}>
+                                <input type="checkbox" checked={Boolean(formData[field])} onChange={e => updateField(field, e.target.checked)} />
+                                <span>{label}</span>
+                            </label>
+                        ))}
                     </div>
 
                     {tooManyElements && (

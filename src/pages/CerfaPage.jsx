@@ -21,6 +21,7 @@ import { getOrgId, withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { mergeCerfaDefaults, parseCerfaImport, isoCerfaDate } from '../utils/cerfaData';
 
 const DRAFT_KEY = 'cerfa_15497_draft';
 
@@ -272,26 +273,18 @@ function CerfaPage() {
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
+        const companyInfo = getCompanyInfo();
+        let imported = {};
         const data = searchParams.get('data');
         if (data) {
-            try {
-                const parsedData = JSON.parse(decodeURIComponent(data));
-                setFormData(prev => ({ ...prev, ...parsedData }));
-            } catch (e) {
-                logger.error('Erreur de parsing des données CERFA:', e);
-            }
+            try { imported = parseCerfaImport(data); }
+            catch (error) { logger.error('Données CERFA invalides:', error); }
         }
-
-        // Charger les infos entreprise sauvegardées
-        const companyInfo = getCompanyInfo();
-        if (companyInfo) {
-            setFormData(prev => ({
-                ...prev,
-                intervenantNom: companyInfo.companyName || prev.intervenantNom,
-                intervenantAdresse: companyInfo.address || prev.intervenantAdresse,
-                intervenantSiret: companyInfo.siret || prev.intervenantSiret,
-            }));
-        }
+        setFormData(prev => mergeCerfaDefaults(prev, {
+                intervenantNom: companyInfo.companyName, intervenantAdresse: companyInfo.address,
+                intervenantSiret: companyInfo.siret, intervenantTel: companyInfo.phone,
+                intervenantAttestation: companyInfo.attestationNumber,
+            }, imported));
     }, [searchParams]);
 
     // Gérer les changements de formulaire
@@ -353,6 +346,7 @@ function CerfaPage() {
             await downloadCerfa(pdfBlob, filename);
 
             // Enregistrer dans Supabase Storage
+            let onlineSaved = false;
             try {
                 // Chemin préfixé par l'organisation (requis par les politiques RLS multi-tenant)
                 const orgId = getOrgId();
@@ -376,13 +370,14 @@ function CerfaPage() {
                             file_path: filePath,
                             file_name: filename,
                             client_name: formData.detenteurNom || '',
-                            intervention_date: formData.dateIntervention || null,
+                            intervention_date: isoCerfaDate(formData.dateIntervention) || null,
                             notes: formData.observations || ''
                         }));
                     if (dbError) {
                         logger.error('[CERFA] Échec enregistrement en base:', dbError.message);
                         alert('⚠️ Le PDF est sauvegardé en ligne mais n\'apparaîtra pas dans le Gestionnaire CERFA (erreur d\'enregistrement : ' + dbError.message + ')');
                     } else {
+                        onlineSaved = true;
                         logger.log('[CERFA] Document enregistré dans Supabase');
                     }
                 }
@@ -401,9 +396,9 @@ function CerfaPage() {
             });
 
             // Effacer le brouillon après génération réussie
-            try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+            try { if (onlineSaved) sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
 
-            showToast(`CERFA ${ficheNumber} généré avec succès !`, 'success');
+            showToast(`CERFA ${ficheNumber} généré${onlineSaved ? ' et enregistré en ligne' : ' ; sauvegarde en ligne à réessayer'}.`, onlineSaved ? 'success' : 'info');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche
         } catch (error) {
             logger.error('Erreur génération CERFA:', error);
@@ -416,7 +411,7 @@ function CerfaPage() {
     // Réinitialiser le compteur (admin)
     const handleResetCounter = useCallback(() => {
         if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA à 0 ?')) {
-            resetFicheCounter(0);
+            resetFicheCounter('15497', 0);
             refreshFicheInfo();
             showToast('Compteur réinitialisé', 'success');
             setShowAdminReset(false);
