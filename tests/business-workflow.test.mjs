@@ -21,12 +21,15 @@ test('negation and conflicting statuses require a manager choice',()=>{
   assert.equal(interpretManagerReply(text,now).needsClarification,true,text);
  }
 });
-test('terminal statuses require reason and confirmation',()=>{
+test('terminal statuses require confirmation; only completion permits an optional reason',()=>{
  for(const status of ['completed','cancelled']){
   assert.ok(validateWorkflowReply({status,reason:'Retour gérant',confirmed:false},now));
   assert.equal(validateWorkflowReply({status,reason:'Retour gérant',confirmed:true},now),'');
  }
- assert.ok(validateWorkflowReply({status:'completed',reason:'',confirmed:true},now));
+ for (const reason of ['', ' ', 'ok']) assert.equal(validateWorkflowReply({status:'completed',reason,confirmed:true},now),'');
+ assert.ok(validateWorkflowReply({status:'completed',reason:'',confirmed:false},now));
+ assert.ok(validateWorkflowReply({status:'completed',reason:'x'.repeat(2001),confirmed:true},now));
+ for (const status of ['todo','planned','in_progress','waiting','procedure','cancelled']) assert.ok(validateWorkflowReply({status,reason:'',confirmed:true,nextReview:'2026-11-06'},now));
  assert.equal(terminalWorkflowStatus('waiting'),false);
 });
 test('waiting and procedures require a valid future review date',()=>{

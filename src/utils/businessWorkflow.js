@@ -33,7 +33,7 @@ export function interpretManagerReply(message, now = new Date()) {
 }
 export function validateWorkflowReply({ status, reason, nextReview, confirmed }, now = new Date()) {
     if (!WORKFLOW_STATUSES[status]) return 'Choisissez le statut à appliquer.';
-    if (String(reason || '').trim().length < 3 || String(reason).length > 2000) return 'Précisez un motif de 3 à 2000 caractères.';
+    if ((status !== 'completed' && String(reason || '').trim().length < 3) || String(reason || '').length > 2000) return 'Précisez un motif de 3 à 2000 caractères.';
     if (terminalWorkflowStatus(status)) return confirmed ? '' : 'Confirmez explicitement l’annulation ou la fin des travaux.';
     if (['waiting','procedure'].includes(status) && !nextReview) return 'Choisissez la date du prochain contrôle.';
     if (nextReview) {

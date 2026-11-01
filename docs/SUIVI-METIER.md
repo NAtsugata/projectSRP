@@ -33,3 +33,7 @@ Les révisions empêchent d'écraser une décision concurrente ; un identifiant 
 ## CERFA en mode clair
 
 Les formulaires utilisaient des fonds sombres fixes avec des textes hérités du mode clair. Les formulaires 15497, 15498, 1301 et la fenêtre CERFA utilisent désormais les couleurs du thème. Le 1301 reçoit aussi une mise en page dédiée, avec colonnes adaptées au mobile. Contrôle des trois écrans sur fond blanc et texte foncé, puis en sombre ; aucun débordement horizontal à 390 pixels. Le moteur de remplissage des PDF officiels est inchangé et ses tests passent.
+
+## Motif facultatif pour la fin des travaux
+
+Le statut Terminé accepte un motif vide ou court, dans la limite de 2000 caractères. La confirmation explicite reste obligatoire. Les autres statuts conservent leur motif obligatoire de 3 à 2000 caractères, notamment Annulé. La règle est appliquée dans le formulaire et dans la commande transactionnelle, y compris pour les anciens dossiers. La facturation Odoo reste séparée.
