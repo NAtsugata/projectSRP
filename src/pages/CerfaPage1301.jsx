@@ -19,11 +19,13 @@ import SignaturePad from '../components/SignaturePad';
 import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { currentCerfaStorageKey } from '../utils/currentCerfaScope';
 import { parseFrenchAddress } from '../utils/cerfaData';
 
-const DRAFT_KEY = 'cerfa_1301_draft';
+
 
 function CerfaPage1301() {
+    const DRAFT_KEY = currentCerfaStorageKey('cerfa_1301_draft');
     const [searchParams] = useSearchParams();
     const [formData, setFormData] = useState({
         // CLIENT / DONNEUR D'ORDRE
@@ -162,17 +164,17 @@ function CerfaPage1301() {
     // Sauvegarder le brouillon
     const saveDraft = useCallback(() => {
         try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+            DRAFT_KEY && localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
             logger.log('[CERFA 1301] Brouillon sauvegardé');
         } catch (e) {
             logger.error('Erreur sauvegarde brouillon:', e);
         }
-    }, [formData]);
+    }, [formData, DRAFT_KEY]);
 
     // Restaurer le brouillon
     const restoreDraft = () => {
         try {
-            const draft = localStorage.getItem(DRAFT_KEY);
+            const draft = (DRAFT_KEY ? localStorage.getItem(DRAFT_KEY) : null);
             if (draft) {
                 const parsed = JSON.parse(draft);
                 setFormData(prev => ({ ...prev, ...parsed }));
@@ -186,7 +188,7 @@ function CerfaPage1301() {
 
     // Effacer le brouillon
     const clearDraft = () => {
-        localStorage.removeItem(DRAFT_KEY);
+        DRAFT_KEY && localStorage.removeItem(DRAFT_KEY);
         setDraftRestored(false);
     };
 

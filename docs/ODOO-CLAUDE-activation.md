@@ -20,6 +20,7 @@ Tableau de bord : https://supabase.com/dashboard/project/hvswbkbwomvwhnqglmbe/fu
 | `ODOO_API_KEY` | Clé API créée dans les préférences de votre compte Odoo ; ne pas la transmettre dans une conversation |
 | `ODOO_COMPANY_ID` | Identifiant numérique de la société SRP dans Odoo, à vérifier avant activation |
 | `ODOO_ORGANIZATION_ID` | Identifiant de votre organisation affiché dans « Configuration de la connexion » du bloc Odoo d'un CERFA, une fois connecté au portail |
+| `ODOO_OWNER_USER_ID` | Identifiant Supabase Auth du titulaire autorisé ; même un autre administrateur de cette organisation est refusé |
 | `PORTAL_URL` | `https://portail-srp.vercel.app` |
 | `SRP_MCP_TOKEN` | Secret aléatoire d'au moins 32 caractères, différent de la clé Odoo |
 | `ALLOWED_ORIGINS` | Facultatif : autres origines exactes autorisées, séparées par des virgules, sans slash final |
@@ -55,4 +56,14 @@ Exemple de demande : « Recherche le client Martin et prépare son CERFA 15498 �
 
 Le 1 novembre 2026, la clé créée par l'utilisateur a été enregistrée dans les secrets Supabase. Un appel réel de `lire_entreprise` depuis le test de fonction Supabase a renvoyé les coordonnées de SRP et son SIRET avec `isError: false`. Le SIRET est récupéré dans `company_registry` lorsque le champ français du contact est absent, sans confondre un SIREN à neuf chiffres avec un SIRET.
 
-Les scénarios locaux passent (32 tests). La publication de l'interface sur le domaine principal attend la réauthentification par passkey demandée par Vercel ; le parcours complet du formulaire et l'ajout du connecteur dans le compte Claude restent à valider. Le test réel de la clé ne vaut pas validation de ces deux étapes.
+Le connecteur est connecté dans Claude avec trois outils en lecture seule et une approbation requise. La publication de l’interface sur le domaine principal attend la réauthentification par passkey demandée par Vercel. Les vérifications et limites du planning et des devis sont décrites dans PLANNING-ET-DEVIS.md.
+
+## Isolation de cette connexion
+
+La connexion déployée est dédiée à SRP. Le serveur exige l'identité Auth exacte du titulaire, son appartenance à l'organisation configurée et son rôle administrateur. Ces trois contrôles s'appliquent aussi au statut et aux liens préremplis ; le rôle super-administrateur d'un autre compte ne les contourne pas. Les liens sont liés au titulaire et à l'entité et deviennent invalides si le titulaire configuré change.
+
+Le jeton du connecteur Claude est un identifiant technique privé associé à cette connexion SRP. Il ne dépend pas de l'onglet Chrome ouvert : il autorise les trois outils depuis le compte Claude où il a été installé. Sa possession permet de l'utiliser ; le révoquer exige sa rotation et la mise à jour du connecteur Claude. Il n'accorde ni modification d'Odoo ni signature automatique.
+
+Les brouillons des trois pages CERFA sont séparés par identifiant d'entité, identifiant d'utilisateur et type de formulaire. Les formulaires sont remontés lors d'un changement d'identité ou d'entité. Les anciens brouillons sans propriétaire explicite restent conservés dans leur ancien stockage ; ils ne sont pas automatiquement attribués à un utilisateur.
+
+Avant commercialisation : chaque client doit disposer de sa propre connexion et de ses propres secrets, résolus côté serveur. Cette configuration SRP unique ne doit pas être réutilisée comme connexion commune du SaaS. L'audit global des politiques RLS, du stockage des documents et des autres caches locaux du logiciel reste distinct de ces contrôles du connecteur.

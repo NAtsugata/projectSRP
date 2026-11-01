@@ -22,9 +22,10 @@ import SignaturePad from '../components/SignaturePad';
 import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { currentCerfaStorageKey } from '../utils/currentCerfaScope';
 import { mergeCerfaDefaults, parseCerfaImport, isoCerfaDate } from '../utils/cerfaData';
 
-const DRAFT_KEY = 'cerfa_15497_draft';
+
 
 // GWP (Global Warming Potential) des fluides frigorigènes - pour calcul teqCO2
 const GWP_VALUES = {
@@ -104,6 +105,7 @@ const calculateControlFrequency = (fluidType, chargeKg, teqCO2) => {
 };
 
 function CerfaPage() {
+    const DRAFT_KEY = currentCerfaStorageKey('cerfa_15497_draft');
     const [searchParams] = useSearchParams();
     const [formData, setFormData] = useState({
         // INTERVENANT
@@ -210,16 +212,16 @@ function CerfaPage() {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             try {
-                sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+                DRAFT_KEY && sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
             } catch (e) { /* quota exceeded, ignore */ }
         }, 1000);
         return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-    }, [formData, draftRestored]);
+    }, [formData, draftRestored, DRAFT_KEY]);
 
     // Restaurer le brouillon au montage
     useEffect(() => {
         try {
-            const draft = sessionStorage.getItem(DRAFT_KEY);
+            const draft = (DRAFT_KEY ? sessionStorage.getItem(DRAFT_KEY) : null);
             if (draft) {
                 const parsed = JSON.parse(draft);
                 // Ne restaurer que si le brouillon a du contenu significatif
@@ -232,7 +234,7 @@ function CerfaPage() {
             }
         } catch (e) { /* ignore parse errors */ }
         setDraftRestored(true);
-    }, []);  
+    }, [DRAFT_KEY]);
 
     // Calcul automatique du teqCO2 basé sur le fluide et la charge
     const calculatedTeqCO2 = useMemo(() => {
@@ -397,7 +399,7 @@ function CerfaPage() {
             });
 
             // Effacer le brouillon après génération réussie
-            try { if (onlineSaved) sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+            try { if (onlineSaved) DRAFT_KEY && sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
 
             showToast(`CERFA ${ficheNumber} généré${onlineSaved ? ' et enregistré en ligne' : ' ; sauvegarde en ligne à réessayer'}.`, onlineSaved ? 'success' : 'info');
             refreshFicheInfo(); // Mettre à jour le numéro pour la prochaine fiche

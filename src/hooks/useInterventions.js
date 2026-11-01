@@ -3,6 +3,9 @@ import { interventionService } from '../services/interventionService';
 import { clientService } from '../services/clientService';
 import { cacheInterventions, getCachedInterventions } from '../utils/offlineStorage';
 import { queueOperation, SYNC_OPERATION_TYPES } from '../utils/syncService';
+import { useAuthStore } from '../store/authStore';
+import { useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import logger from '../utils/logger';
 
 /**
@@ -13,6 +16,16 @@ import logger from '../utils/logger';
  */
 export function useInterventions(userId = null, isArchived = false) {
     const queryClient = useQueryClient();
+    const profile = useAuthStore(state => state.profile);
+    const org = profile?.organization_id;
+    const identity = profile?.id;
+    useEffect(() => {
+        if (!org) return;
+        const channel = supabase.channel(`interventions-${org}-${identity}-${userId}-${isArchived}`).on('postgres_changes', {
+            event: '*', schema: 'public', table: 'interventions', filter: `organization_id=eq.${org}`,
+        }, () => queryClient.invalidateQueries({ queryKey: ['interventions'] })).subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [org, identity, userId, isArchived, queryClient]);
 
     // Query pour récupérer les interventions
     const {
@@ -21,15 +34,16 @@ export function useInterventions(userId = null, isArchived = false) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['interventions', userId, isArchived],
+        queryKey: ['interventions', org, identity, userId, isArchived],
+        enabled: !!org && !!identity,
         queryFn: async () => {
             // Si hors ligne, utiliser le cache
             if (!navigator.onLine) {
                 logger.log('[useInterventions] Mode offline - utilisation du cache');
                 const cached = await getCachedInterventions();
-                let filtered = cached;
+                let filtered = cached.filter(i => i.organization_id === org);
                 if (userId) {
-                    filtered = cached.filter(i =>
+                    filtered = filtered.filter(i =>
                         i.assigned_users?.some(u => u.id === userId) || i.user_id === userId
                     );
                 }
@@ -40,7 +54,7 @@ export function useInterventions(userId = null, isArchived = false) {
             }
 
             // En ligne : récupérer depuis Supabase
-            const { data, error } = await interventionService.getInterventions(userId, isArchived);
+            const { data, error } = await interventionService.getInterventions(userId, isArchived, org);
 
             if (error) throw error;
 
@@ -49,11 +63,10 @@ export function useInterventions(userId = null, isArchived = false) {
                 cacheInterventions(data).catch(e => logger.warn('[useInterventions] Cache failed:', e));
             }
 
-            return data || [];
+            return (data || []).filter(i => i.organization_id === org);
         },
         staleTime: 2 * 60 * 1000, // 2 minutes - interventions changent modérément
         gcTime: 10 * 60 * 1000,   // 10 minutes en cache
-        placeholderData: (previousData) => previousData,
         networkMode: 'offlineFirst',
     });
 

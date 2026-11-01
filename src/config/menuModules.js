@@ -30,7 +30,7 @@ export const MENU_MODULES = [
   { key: 'checklists', label: 'Checklists', hint: 'Listes de contrôle', hrefs: ['/checklists', '/checklist-templates'] },
   { key: 'contracts', label: 'Contrats', hint: 'Contrats de maintenance', hrefs: ['/contracts'] },
   { key: 'clients', label: 'Clients', hint: 'Fichier clients', hrefs: ['/clients'] },
-  { key: 'invoices', label: 'Facturation', hint: 'Devis et factures', hrefs: ['/invoices'] },
+  { key: 'invoices', label: 'Facturation', hint: 'Devis et factures', hrefs: ['/invoices', '/odoo-quotes'] },
   { key: 'catalog', label: 'Catalogue', hint: 'Articles et prestations', hrefs: ['/catalog'] },
   { key: 'monthly-export', label: 'Export Comptable', hint: 'Export mensuel', hrefs: ['/monthly-export'] },
   { key: 'ir-docs', label: 'IR Douche', hint: 'Formulaires IR Douche', hrefs: ['/ir-docs'] },

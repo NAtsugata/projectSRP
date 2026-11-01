@@ -5,14 +5,15 @@ import { createConnector } from '../supabase/functions/srp-odoo/core.js';
 
 const token = 'unit-test-token-that-is-over-thirty-two-characters';
 function fixture(overrides = {}) {
-    const settings = { ODOO_URL: 'https://srp04.odoo.com', ODOO_API_KEY: 'odoo-secret-for-tests', ODOO_COMPANY_ID: '1', ODOO_ORGANIZATION_ID: 'org-a', PORTAL_URL: 'https://portal.example.com', SRP_MCP_TOKEN: token, SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'public-key', ...overrides };
+    const settings = { ODOO_URL: 'https://srp04.odoo.com', ODOO_API_KEY: 'odoo-secret-for-tests', ODOO_COMPANY_ID: '1', ODOO_ORGANIZATION_ID: 'org-a', ODOO_OWNER_USER_ID: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', PORTAL_URL: 'https://portal.example.com', SRP_MCP_TOKEN: token, SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'public-key', ...overrides };
     const calls = [];
     let currentTime = 1000000;
     const profile = { organization_id: 'org-a', is_admin: true };
+    const user = { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', user_metadata: { is_admin: true } };
     const fetcher = async (url, options) => {
         calls.push({ url, ...options });
         const data = options.body ? JSON.parse(options.body) : null;
-        if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', user_metadata: { is_admin: true } });
+        if (url.endsWith('/auth/v1/user')) return Response.json(user);
         if (url.includes('/rest/v1/profiles')) return Response.json([profile]);
         if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.map(name => [name, { type: 'char' }])));
         if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'], company_registry: '12345678901234' }]);
@@ -25,7 +26,7 @@ function fixture(overrides = {}) {
     const handler = createConnector({ env: key => settings[key], fetcher, cryptoApi: webcrypto, now: () => currentTime });
     const app = async (body, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer user-jwt', Origin: settings.PORTAL_URL, ...headers }, body: JSON.stringify(body) }));
     const mcp = async (method, args, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...headers }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: args }) }));
-    return { handler, app, mcp, settings, calls, profile, expire: () => { currentTime += 600001; } };
+    return { handler, app, mcp, settings, calls, profile, user, expire: () => { currentTime += 600001; } };
 }
 
 test('all transports fail closed without their credentials', async () => {
@@ -49,6 +50,33 @@ test('another organization and untrusted origin cannot read Odoo', async () => {
     assert.equal((await f.app({ action: 'search_clients', query: 'Alice' })).status, 403);
     assert.equal((await f.app({ action: 'status' }, { Origin: 'https://evil.example' })).status, 403);
     assert.equal(f.calls.filter(call => call.url.includes('odoo.com')).length, 0);
+});
+
+test('another administrator in the same entity cannot use this owner connection', async () => {
+    const f = fixture();
+    f.user.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    f.profile.is_super_admin = true;
+    for (const action of ['status', 'search_clients', 'prefill', 'redeem']) {
+        assert.equal((await f.app({ action, clientId: 7, type: '1301', query: 'Alice', organization_id: 'org-a' })).status, 403);
+    }
+    assert.equal(f.calls.some(call => call.url.includes('odoo.com')), false);
+});
+
+test('missing owner configuration denies both transports without contacting Odoo', async () => {
+    const f = fixture({ ODOO_OWNER_USER_ID: '' });
+    assert.equal((await f.app({ action: 'status' })).status, 503);
+    assert.equal((await f.mcp('tools/list')).status, 503);
+    assert.equal(f.calls.some(call => call.url.includes('odoo.com')), false);
+});
+
+test('a prefill link is invalidated if its configured owner changes', async () => {
+    const f = fixture();
+    const prepared = await (await f.mcp('tools/call', { name: 'preparer_cerfa', arguments: { clientId: 7, type: '1301' } })).json();
+    const link = new URLSearchParams(new URL(prepared.result.structuredContent.url).hash.slice(1)).get('odoo');
+    f.settings.ODOO_OWNER_USER_ID = f.user.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    const before = f.calls.filter(call => call.url.includes('odoo.com')).length;
+    assert.equal((await f.app({ action: 'redeem', token: link })).status, 400);
+    assert.equal(f.calls.filter(call => call.url.includes('odoo.com')).length, before);
 });
 
 test('setup status reveals missing variable names, never secret values', async () => {

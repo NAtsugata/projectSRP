@@ -21,11 +21,13 @@ import SignaturePad from '../components/SignaturePad';
 import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { currentCerfaStorageKey } from '../utils/currentCerfaScope';
 import { mergeCerfaDefaults, parseCerfaImport, company15498Defaults } from '../utils/cerfaData';
 
-const DRAFT_KEY_15498 = 'cerfa_15498_draft';
+
 
 function CerfaPage15498() {
+    const DRAFT_KEY_15498 = currentCerfaStorageKey('cerfa_15498_draft');
     const [searchParams] = useSearchParams();
     const [formData, setFormData] = useState({
         // ACQUÉREUR (Client)
@@ -106,16 +108,16 @@ function CerfaPage15498() {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             try {
-                sessionStorage.setItem(DRAFT_KEY_15498, JSON.stringify(formData));
+                DRAFT_KEY_15498 && sessionStorage.setItem(DRAFT_KEY_15498, JSON.stringify(formData));
             } catch (e) { /* quota exceeded, ignore */ }
         }, 1000);
         return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-    }, [formData, draftRestored]);
+    }, [formData, draftRestored, DRAFT_KEY_15498]);
 
     // Restaurer le brouillon au montage
     useEffect(() => {
         try {
-            const draft = sessionStorage.getItem(DRAFT_KEY_15498);
+            const draft = (DRAFT_KEY_15498 ? sessionStorage.getItem(DRAFT_KEY_15498) : null);
             if (draft) {
                 const parsed = JSON.parse(draft);
                 const hasContent = parsed.acq_nom || parsed.details ||
@@ -127,7 +129,7 @@ function CerfaPage15498() {
             }
         } catch (e) { /* ignore parse errors */ }
         setDraftRestored(true);
-    }, []);  
+    }, [DRAFT_KEY_15498]);
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
@@ -280,7 +282,7 @@ function CerfaPage15498() {
             });
 
             // Effacer le brouillon après génération réussie
-            try { if (onlineSaved) sessionStorage.removeItem(DRAFT_KEY_15498); } catch (e) { /* ignore */ }
+            try { if (onlineSaved) DRAFT_KEY_15498 && sessionStorage.removeItem(DRAFT_KEY_15498); } catch (e) { /* ignore */ }
 
             showToast(`CERFA 15498 ${ficheNumber} généré${onlineSaved ? ' et enregistré en ligne' : ' ; sauvegarde en ligne à réessayer'}.`, onlineSaved ? 'success' : 'info');
             refreshFicheInfo();

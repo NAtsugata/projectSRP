@@ -44,6 +44,8 @@ const ContractDetailViewContainer = lazyWithRetry(() => import('./pages/Contract
 const AdminMonthlyExportViewContainer = lazyWithRetry(() => import('./pages/AdminMonthlyExportViewContainer'));
 const AdminOrganizationsViewContainer = lazyWithRetry(() => import('./pages/AdminOrganizationsViewContainer'));
 const AdminClientsViewContainer = lazyWithRetry(() => import('./pages/AdminClientsViewContainer'));
+const OdooQuotesView = lazyWithRetry(() => import('./pages/OdooQuotesView'));
+const GatedOdooQuotesView = withModule('invoices', OdooQuotesView);
 const AdminInvoicesViewContainer = lazyWithRetry(() => import('./pages/AdminInvoicesViewContainer'));
 const AdminCatalogViewContainer = lazyWithRetry(() => import('./pages/AdminCatalogViewContainer'));
 const QuoteEditorPage = lazyWithRetry(() => import('./pages/QuoteEditorPage'));
@@ -501,6 +503,7 @@ function App() {
                       <GatedAdminClientsViewContainer />
                     </Suspense>
                   } />
+                  <Route path="odoo-quotes" element={<Suspense fallback={<div>Chargement des devis…</div>}><GatedOdooQuotesView /></Suspense>} />
                   <Route path="invoices" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <GatedAdminInvoicesViewContainer />
@@ -563,21 +566,21 @@ function App() {
                   <Route path="cerfa-form" element={
                     <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage />
+                      <GatedCerfaPage key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
                     <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage15498 />
+                      <GatedCerfaPage15498 key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-1301" element={
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage1301 />
+                      <GatedCerfaPage1301 key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -665,21 +668,21 @@ function App() {
                   <Route path="cerfa-form" element={
                     <SectionErrorBoundary section="cerfa-form" title="Erreur formulaire CERFA">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage />
+                      <GatedCerfaPage key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-15498" element={
                     <SectionErrorBoundary section="cerfa-form-15498" title="Erreur formulaire CERFA 15498">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage15498 />
+                      <GatedCerfaPage15498 key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
                   <Route path="cerfa-form-1301" element={
                     <SectionErrorBoundary section="cerfa-form-1301" title="Erreur formulaire CERFA 1301">
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
-                      <GatedCerfaPage1301 />
+                      <GatedCerfaPage1301 key={`${profile?.organization_id || 'none'}:${profile?.id || 'none'}`} />
                     </Suspense>
                     </SectionErrorBoundary>
                   } />
@@ -732,6 +735,7 @@ function App() {
                       </Suspense>
                     </PermissionRoute>
                   } />
+                  <Route path="odoo-quotes" element={<Suspense fallback={<div>Chargement des devis…</div>}><GatedOdooQuotesView /></Suspense>} />
                   <Route path="invoices" element={
                     <PermissionRoute permission="view_invoices">
                       <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>

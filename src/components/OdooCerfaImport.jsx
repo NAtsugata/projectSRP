@@ -3,19 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuthStore } from '../store/authStore';
 import { company15498Defaults } from '../utils/cerfaData';
 import './OdooCerfaImport.css';
-
-async function requestOdoo(body) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('Connectez-vous au portail');
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/srp-odoo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-        body: JSON.stringify(body), signal: AbortSignal.timeout(45000),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'Connexion Odoo indisponible');
-    return result;
-}
+import { requestOdoo } from '../services/odooService';
 
 export default function OdooCerfaImport({ type, onImport }) {
     const profile = useAuthStore(state => state.profile);
@@ -33,14 +21,15 @@ export default function OdooCerfaImport({ type, onImport }) {
     useEffect(() => {
         alive.current = true;
         let cancelled = false;
+        setStatus(null);
         if (!admin) return () => { alive.current = false; };
         requestOdoo({ action: 'status' }).then(result => {
             if (!cancelled) setStatus(result);
-        }).catch(() => {
-            if (!cancelled) setStatus({ configured: false, missing: ['Connexion serveur à activer'] });
+        }).catch(error => {
+            if (!cancelled) setStatus(error.status === 403 ? { forbidden: true } : { configured: false, missing: ['Connexion serveur à activer'] });
         });
         return () => { cancelled = true; alive.current = false; };
-    }, [admin, profile?.id]);
+    }, [admin, profile?.id, profile?.organization_id]);
 
     const apply = useCallback(result => {
         if (result.type !== type) throw new Error('Ce lien correspond à un autre type de CERFA');
@@ -67,7 +56,7 @@ export default function OdooCerfaImport({ type, onImport }) {
         return () => { cancelled = true; };
     }, [admin, status?.configured, type, apply]);
 
-    if (!admin) return null;
+    if (!admin || status?.forbidden) return null;
     const search = async () => {
         setBusy(true); setError(''); setMessage(''); setClients([]);
         try {

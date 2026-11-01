@@ -17,6 +17,7 @@ import {
     BuildingIcon,
     SettingsIcon
 } from '../SharedUI';
+import PlanningAssistant from '../PlanningAssistant';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -74,6 +75,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
         { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { name: 'Devis Odoo', href: '/odoo-quotes', icon: FileTextIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Facturation', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
         { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -238,6 +240,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 </div>
             </div>
 
+            {(profile?.is_admin || profile?.is_super_admin) && <PlanningAssistant key={`${profile.organization_id}:${profile.id}`} profile={profile} />}
             <WorkspaceMenu open={showMobileMenu} onClose={() => setShowMobileMenu(false)} navigation={navigation} />
 
             {/* Centre de Notifications */}

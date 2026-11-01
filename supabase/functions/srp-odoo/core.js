@@ -1,3 +1,5 @@
+import { createQuoteReader } from './quotes.js';
+
 const TYPES = { '15497': '/cerfa-form', '15498': '/cerfa-form-15498', '1301': '/cerfa-form-1301' };
 const PARTNER_FIELDS = ['id', 'name', 'street', 'street2', 'zip', 'city', 'country_id', 'phone', 'email', 'l10n_fr_siret'];
 const VERSIONS = ['2026-07-28', '2025-11-25', '2025-06-18', '2025-03-26'];
@@ -41,7 +43,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
             if (parts.length !== 2) throw new Error();
             const plain = await cryptoApi.subtle.decrypt({ name: 'AES-GCM', iv: unb64(parts[0]) }, await tokenKey(), unb64(parts[1]));
             const payload = JSON.parse(new TextDecoder().decode(plain));
-            if (!Number.isFinite(payload.exp) || payload.exp <= now() || payload.org !== get('ODOO_ORGANIZATION_ID')) throw new Error();
+            if (!Number.isFinite(payload.exp) || payload.exp <= now() || payload.org !== get('ODOO_ORGANIZATION_ID') || !payload.owner || payload.owner !== get('ODOO_OWNER_USER_ID')) throw new Error();
             return payload;
         } catch { throw new HttpError(400, 'Lien expiré ou invalide. Demandez un nouveau lien dans Claude.'); }
     };
@@ -107,10 +109,12 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         if (!response.ok) throw new HttpError(401, 'Session expirée');
         const user = await response.json();
         if (!/^[\da-f-]{36}$/i.test(user.id || '')) throw new HttpError(401, 'Session invalide');
+        if (user.id !== requireValue(get('ODOO_OWNER_USER_ID'), 'ODOO_OWNER_USER_ID')) throw new HttpError(403, 'Connexion réservée au titulaire');
         const profileResponse = await fetcher(`${base}/rest/v1/profiles?id=eq.${user.id}&select=organization_id,is_admin,is_super_admin`, { headers, signal: AbortSignal.timeout(10000) });
         if (!profileResponse.ok) throw new HttpError(403, 'Profil inaccessible');
         const [profile] = await profileResponse.json();
         if (!profile || !(profile.is_admin === true || profile.is_super_admin === true)) throw new HttpError(403, 'Accès réservé à l’administrateur');
+        if (profile.organization_id !== requireValue(get('ODOO_ORGANIZATION_ID'), 'ODOO_ORGANIZATION_ID')) throw new HttpError(403, 'Organisation non autorisée');
         return profile;
     };
     const tools = [
@@ -118,7 +122,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         { name: 'lire_entreprise', description: 'Lire les coordonnées de la société Odoo configurée.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true } },
         { name: 'preparer_cerfa', description: 'Préparer un lien privé valable 10 minutes vers un CERFA prérempli. Aucune signature ni validation technique automatique. Le PDF sera généré depuis le portail après vérification.', inputSchema: { type: 'object', properties: { clientId: { type: 'integer', minimum: 1 }, type: { type: 'string', enum: Object.keys(TYPES) }, details: { type: 'string', maxLength: 3000 } }, required: ['clientId', 'type'], additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true } },
     ];
-    const missingConfig = () => ['ODOO_URL', 'ODOO_API_KEY', 'ODOO_COMPANY_ID', 'ODOO_ORGANIZATION_ID', 'PORTAL_URL', 'SRP_MCP_TOKEN'].filter(key => !get(key) || key === 'SRP_MCP_TOKEN' && get(key).length < 32);
+    const missingConfig = () => ['ODOO_URL', 'ODOO_API_KEY', 'ODOO_COMPANY_ID', 'ODOO_ORGANIZATION_ID', 'ODOO_OWNER_USER_ID', 'PORTAL_URL', 'SRP_MCP_TOKEN'].filter(key => !get(key) || key === 'SRP_MCP_TOKEN' && get(key).length < 32);
     return async function handle(request) {
         const origin = request.headers.get('origin');
         const allowedOrigins = [get('PORTAL_URL') || 'https://portail-srp.vercel.app', ...get('ALLOWED_ORIGINS').split(',')].filter(Boolean);
@@ -135,6 +139,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
             if (isMcp) {
                 if (!mcpAuthorized) throw new HttpError(401, 'Accès refusé');
                 requireValue(get('ODOO_ORGANIZATION_ID'), 'ODOO_ORGANIZATION_ID');
+                requireValue(get('ODOO_OWNER_USER_ID'), 'ODOO_OWNER_USER_ID');
             } else profile = await authorizeUser(request);
             if (request.method !== 'POST') return json({ error: 'Méthode non autorisée' }, 405, { ...cors, Allow: 'POST,OPTIONS' });
             if (!request.headers.get('content-type')?.includes('application/json')) throw new HttpError(415, 'JSON requis');
@@ -148,6 +153,10 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
                 if (!get('ODOO_ORGANIZATION_ID') || profile.organization_id !== get('ODOO_ORGANIZATION_ID')) throw new HttpError(403, 'Organisation non autorisée');
                 if (body.action === 'search_clients') return json({ clients: await searchClients(body.query) }, 200, cors);
                 if (body.action === 'prefill') return json(await prefill(body), 200, cors);
+                if (body.action === 'quotes') {
+                    const { companyId, origin } = config();
+                    return json(await createQuoteReader({ odoo, companyId, origin })(body), 200, cors);
+                }
                 if (body.action === 'redeem') return json(await prefill(await open(body.token)), 200, cors);
                 throw new HttpError(400, 'Action inconnue');
             }
@@ -176,7 +185,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
                     await prefill(args); // Verify the record and field mapping before issuing a link.
                     const portal = new URL(requireValue(get('PORTAL_URL'), 'PORTAL_URL'));
                     if (portal.protocol !== 'https:') throw new HttpError(503, 'Portail HTTPS requis');
-                    const token = await seal({ clientId: args.clientId, type: args.type, details: args.details || '', org: get('ODOO_ORGANIZATION_ID'), exp: now() + 600000 });
+                    const token = await seal({ clientId: args.clientId, type: args.type, details: args.details || '', org: get('ODOO_ORGANIZATION_ID'), owner: get('ODOO_OWNER_USER_ID'), exp: now() + 600000 });
                     result = { url: `${portal.origin}${TYPES[args.type]}#odoo=${token}`, expiresInMinutes: 10, instruction: 'Ouvrir dans le portail connecté, vérifier puis générer le PDF. Aucune donnée enregistrée ni signée automatiquement.' };
                     break;
                 }

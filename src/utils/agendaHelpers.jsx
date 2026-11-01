@@ -16,7 +16,7 @@ const palette = [
  */
 export const parseTimeToMin = (hhmm) => {
   if (!hhmm || typeof hhmm !== "string") return null;
-  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (!m) return null;
   const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
   const minutes = Math.max(0, Math.min(59, parseInt(m[2], 10)));
@@ -74,7 +74,7 @@ export const layoutEvents = (events) => {
       parseTimeToMin("08:00");
     const end =
       parseTimeToMin(e.time_end) ??
-      (start !== null ? start + 60 : parseTimeToMin("09:00"));
+      (start !== null ? start + (Number(e.duration_minutes) > 0 ? Number(e.duration_minutes) : 60) : parseTimeToMin("09:00"));
     return { ...e, _start: start, _end: end };
   });
 
