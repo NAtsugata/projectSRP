@@ -37,3 +37,7 @@ Les formulaires utilisaient des fonds sombres fixes avec des textes hérités du
 ## Motif facultatif pour la fin des travaux
 
 Le statut Terminé accepte un motif vide ou court, dans la limite de 2000 caractères. La confirmation explicite reste obligatoire. Les autres statuts conservent leur motif obligatoire de 3 à 2000 caractères, notamment Annulé. La règle est appliquée dans le formulaire et dans la commande transactionnelle, y compris pour les anciens dossiers. La facturation Odoo reste séparée.
+
+## Préserver les choix pendant la saisie
+
+La saisie du motif conserve le statut et la date choisis. L’analyse du texte reste une suggestion : le bouton Utiliser cette proposition applique explicitement le statut et le contrôle proposés. Modifier le retour invalide la confirmation et la demande précédente pour enregistrer le contenu effectivement vérifié.

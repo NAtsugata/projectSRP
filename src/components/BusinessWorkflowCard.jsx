@@ -13,10 +13,7 @@ export default function BusinessWorkflowCard({item,onSaved,compact=false}) {
     useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
     const due=item.due_at && new Date(item.due_at)<=new Date() && !terminalWorkflowStatus(item.status);
     function change(patch) {request.current=null;setConfirmed(false);setNotice('');if(patch.status!==undefined)setStatus(patch.status);if(patch.reason!==undefined)setReason(patch.reason);if(patch.nextReview!==undefined)setNextReview(patch.nextReview);}
-    function analyze(value) {
-        const result=interpretManagerReply(value); change({reason:value,status:result.status,nextReview:result.nextReview});
-        setNotice(result.needsClarification ? 'Vérifiez et choisissez le statut à appliquer.' : `Proposition : ${WORKFLOW_STATUSES[result.status]}. Vérifiez avant d’appliquer.`);
-    }
+    const suggestion=reason.trim()?interpretManagerReply(reason):null;
     async function save(event) {
         event.preventDefault(); const fields={status,reason,nextReview:terminalWorkflowStatus(status)?'':nextReview,confirmed};
         const invalid=validateWorkflowReply(fields); if(invalid){setError(invalid);return;}
@@ -40,7 +37,9 @@ export default function BusinessWorkflowCard({item,onSaved,compact=false}) {
         <button type="button" disabled={busy} onClick={()=>{request.current=null;setEditing(v=>!v);setStatus(item.status);setError('');setConfirmed(false);}}>{editing?'Fermer le retour':'Répondre / changer le statut'}</button>
         {editing && <form onSubmit={save}>
             <div className="business-workflow-actions">{[...(item.legacy?['todo']:[]),'waiting','procedure','completed','cancelled'].map(s=><button key={s} type="button" disabled={busy} aria-pressed={status===s} onClick={()=>change({status:s})}>{item.legacy && s==='todo'?'À reprendre':WORKFLOW_STATUSES[s]}</button>)}</div>
-            <label htmlFor={`workflow-reason-${item.id}`}>Retour du gérant / motif{status==='completed'?' (facultatif)':''}</label><textarea id={`workflow-reason-${item.id}`} required={status!=='completed'} minLength={status==='completed'?undefined:3} maxLength={2000} disabled={busy} value={reason} onChange={e=>analyze(e.target.value)} placeholder="On attend la pièce vendredi" />
+            <label htmlFor={`workflow-reason-${item.id}`}>Retour du gérant / motif{status==='completed'?' (facultatif)':''}</label><textarea id={`workflow-reason-${item.id}`} required={status!=='completed'} minLength={status==='completed'?undefined:3} maxLength={2000} disabled={busy} value={reason} onChange={e=>change({reason:e.target.value})} placeholder="On attend la pièce vendredi" />
+            {suggestion && <p role="status">{suggestion.needsClarification?'Choisissez le statut à appliquer. Votre sélection est conservée.':`Suggestion : ${WORKFLOW_STATUSES[suggestion.status]}. Votre sélection est conservée.`}</p>}
+            {suggestion && !suggestion.needsClarification && <button type="button" disabled={busy} onClick={()=>change({status:suggestion.status,nextReview:suggestion.nextReview})}>Utiliser cette proposition</button>}
             {notice && <p role="status">{notice}</p>}
             <label htmlFor={`workflow-status-${item.id}`}>Statut à appliquer</label><select id={`workflow-status-${item.id}`} required disabled={busy} value={status} onChange={e=>change({status:e.target.value})}><option value="">Choisir le statut</option>{Object.entries(WORKFLOW_STATUSES).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>
             {!terminalWorkflowStatus(status) && <><label htmlFor={`workflow-review-${item.id}`}>Prochain contrôle</label><input id={`workflow-review-${item.id}`} required={['waiting','procedure'].includes(status)} type="date" min={shiftPlanningDay(parisDay(),1)} max={shiftPlanningDay(parisDay(),366)} disabled={busy} value={nextReview} onChange={e=>change({nextReview:e.target.value})}/></>}
