@@ -228,8 +228,10 @@ export const getCachedProfiles = async () => {
 /**
  * Sauvegarde les dépenses pour le mode offline
  */
-export const cacheExpenses = async (expenses) => {
-  await saveToStore(STORES.EXPENSES, expenses);
+export const cacheExpenses = async (expenses,scope) => {
+  if(!scope?.id || !scope.org)return;
+  const rows=expenses.filter(row=>row.organization_id===scope.org && (scope.admin || row.user_id===scope.id));
+  await saveToStore(STORES.META,{key:`expenses:${scope.org}:${scope.id}:${scope.admin?'admin':'employee'}`,value:rows});
   await saveToStore(STORES.META, { key: 'lastSync_expenses', value: Date.now() });
   logger.log(`[OfflineDB] ${expenses.length} dépenses en cache`);
 };
@@ -237,8 +239,10 @@ export const cacheExpenses = async (expenses) => {
 /**
  * Récupère les dépenses du cache
  */
-export const getCachedExpenses = async () => {
-  return getAllFromStore(STORES.EXPENSES);
+export const getCachedExpenses = async (scope) => {
+  if(!scope?.id || !scope.org)return [];
+  const snapshot=await getFromStore(STORES.META,`expenses:${scope.org}:${scope.id}:${scope.admin?'admin':'employee'}`);
+  return (snapshot?.value || []).filter(row=>row.organization_id===scope.org && (scope.admin || row.user_id===scope.id));
 };
 
 /**

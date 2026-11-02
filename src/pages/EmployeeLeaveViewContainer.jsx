@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import EmployeeLeaveView from './EmployeeLeaveView';
 import logger from '../utils/logger';
+import { personalRequestId,requestScope,submitPersonalRequest } from '../services/personalRequestService';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Container pour EmployeeLeaveView qui gère la logique de données avec React Query
@@ -12,20 +14,21 @@ import logger from '../utils/logger';
 const EmployeeLeaveViewContainer = () => {
     const { profile } = useAuthStore();
     const toast = useToast();
+    const queries=useQueryClient();
 
     // Récupérer les demandes de congés avec le hook
     const {
         leaveRequests,
         isLoading,
         error,
-        createLeaveRequest,
         // isCreating unused - available for future loading state UI
     } = useLeaveRequests(profile?.id);
 
     // Handler pour soumettre une demande de congé
     const handleSubmitRequest = async (requestData) => {
         try {
-            await createLeaveRequest(requestData);
+            await submitPersonalRequest('leave',{startDate:requestData.start_date,endDate:requestData.end_date,reason:requestData.reason},{id:personalRequestId('leave'),scope:requestScope()});
+            queries.invalidateQueries({queryKey:['leaveRequests']});
             toast?.success('Demande de congé créée avec succès');
             return true;
         } catch (error) {
