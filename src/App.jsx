@@ -63,6 +63,7 @@ const AgendaViewContainer = lazyWithRetry(() => import('./pages/AgendaViewContai
 const InterventionDetailViewContainer = lazyWithRetry(() => import('./pages/InterventionDetailViewContainer'));
 const IRShowerFormsViewContainer = lazyWithRetry(() => import('./pages/IRShowerFormsViewContainer'));
 const ExpensesViewContainer = lazyWithRetry(() => import('./pages/ExpensesViewContainer'));
+const PersonalRequestsPage = lazyWithRetry(() => import('./pages/PersonalRequestsPage'));
 const ChecklistViewContainer = lazyWithRetry(() => import('./pages/ChecklistViewContainer'));
 const MyDocumentsViewContainer = lazyWithRetry(() => import('./pages/MyDocumentsViewContainer'));
 const MobileDiagnosticsPageContainer = lazyWithRetry(() => import('./pages/MobileDiagnosticsPageContainer'));
@@ -553,6 +554,7 @@ function App() {
                       <MobileDiagnosticsPageContainer />
                     </Suspense>
                   } />
+                  <Route path="my-requests" element={<Suspense fallback={<div>Chargement de mes demandes…</div>}><PersonalRequestsPage /></Suspense>} />
                   <Route path="menu" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <MobileMenu />
@@ -655,6 +657,7 @@ function App() {
                       <MobileDiagnosticsPageContainer />
                     </Suspense>
                   } />
+                  <Route path="my-requests" element={<Suspense fallback={<div>Chargement de mes demandes…</div>}><PersonalRequestsPage /></Suspense>} />
                   <Route path="menu" element={
                     <Suspense fallback={<div className="loading-container"><div className="loading-spinner"></div><p>Chargement...</p></div>}>
                       <MobileMenu />

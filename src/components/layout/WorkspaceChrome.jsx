@@ -5,7 +5,7 @@ import { normalizeSearch } from '../../utils/workspaceTracking';
 const GROUPS = [
   ['Activité', ['/dashboard', '/followups', '/planning', '/chantiers', '/agenda', '/multi-day-planning']],
   ['Gestion', ['/clients', '/contracts', '/invoices', '/odoo-quotes', '/catalog', '/expenses', '/admin-expenses']],
-  ['Équipe', ['/users', '/leaves', '/admin-leaves']],
+  ['Équipe', ['/my-requests', '/users', '/leaves', '/admin-leaves']],
   ['Documents', ['/vault', '/admin-vault', '/documents', '/archives', '/checklists', '/checklist-templates', '/monthly-export', '/ir-docs', '/cerfa', '/calculateur-aides']],
 ];
 const LABELS = {

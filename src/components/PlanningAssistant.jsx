@@ -8,8 +8,8 @@ import PlanningManualForm from './PlanningManualForm';
 import './PlanningAssistant.css';
 
 const dayLabel = date => new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-export default function PlanningAssistant({ profile }) {
-    const [open, setOpen] = useState(false), [text, setText] = useState('');
+export default function PlanningAssistant({ profile, initialOpen = false, hideTrigger = false, onClose }) {
+    const [open, setOpen] = useState(initialOpen), [text, setText] = useState('');
     const [context, setContext] = useState(null), [plan, setPlan] = useState(null);
     const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState(null);
     const [changed, setChanged] = useState(false), [suggestion, setSuggestion] = useState('');
@@ -22,7 +22,7 @@ export default function PlanningAssistant({ profile }) {
         input.current?.focus();
         let cancelled = false;
         loadPlanningContext().then(data => { if (!cancelled) setContext(data); }).catch(e => { if (!cancelled) setError(e.message); });
-        const onKey = e => { if (e.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+        const onKey = e => { if (e.key === 'Escape') { setOpen(false); trigger.current?.focus(); onClose?.(); } };
         document.addEventListener('keydown', onKey);
         const channel = supabase.channel(`assistant-${profile.organization_id}-${profile.id}`).on('postgres_changes', {
             event: '*', schema: 'public', table: 'interventions', filter: `organization_id=eq.${profile.organization_id}`,
@@ -97,9 +97,9 @@ export default function PlanningAssistant({ profile }) {
         setSuggestion(`Créneau suggéré : ${proposal.bookings[0].time || 'aucun disponible'} demain. Ouvrez l’intervention existante pour la déplacer.`);
     }
     return <>
-        <button className="planning-assistant-trigger" ref={trigger} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="planning-assistant">✦ Assistant planning</button>
+        {!hideTrigger && <button className="planning-assistant-trigger" ref={trigger} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="planning-assistant">✦ Assistant planning</button>}
         {open && <section className="planning-assistant-panel" id="planning-assistant" role="dialog" aria-labelledby="planning-assistant-title">
-            <header><div><h2 id="planning-assistant-title">Assistant planning</h2><small>Votre entité · Sans API payante</small></div><button aria-label="Fermer l’assistant" onClick={() => { setOpen(false); trigger.current?.focus(); }}>✕</button></header>
+            <header><div><h2 id="planning-assistant-title">Assistant planning</h2><small>Votre entité · Sans API payante</small></div><button aria-label="Fermer l’assistant" onClick={() => { setOpen(false); trigger.current?.focus(); onClose?.(); }}>✕</button></header>
             <div className="planning-assistant-body">
                 <p>Décrivez le rendez-vous dans l’ordre qui vous vient. Je propose les créneaux ; si une information manque, vous pouvez la compléter dans les champs.</p>
                 <form onSubmit={prepare}><label htmlFor="planning-message">Votre demande</label><textarea disabled={busy} ref={input} id="planning-message" value={text} onChange={e => { setText(e.target.value); setPlan(null); setManualOpen(false); setUnsupportedIntent(false); setError(''); }} placeholder="Rendez-vous demain 8h30 chez madame Leneutre pour Tiemoko" required maxLength={1000} /><button disabled={busy}>Proposer les rendez-vous</button></form>

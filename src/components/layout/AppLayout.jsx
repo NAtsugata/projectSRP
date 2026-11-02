@@ -18,7 +18,7 @@ import {
     SettingsIcon
 } from '../SharedUI';
 import BusinessWorkflowAlert from '../BusinessWorkflowAlert';
-import PlanningAssistant from '../PlanningAssistant';
+import RequestAssistant from '../RequestAssistant';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -46,8 +46,11 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     // Vérifier si le mode démo est actif
     const isDemoMode = organization?.settings?.demo_mode === true;
 
+    const allowedRequestKinds = ['leave', 'expense'].filter(kind => { const module = kind === 'leave' ? 'leaves' : 'expenses'; return hasModule(module) && !isHrefHidden(`/${module}`, organization?.settings?.hidden_modules || []); });
+
     // Navigation de base pour les employes
     const baseNavigation = [
+        { name: 'Mes demandes', href: '/my-requests', icon: FileTextIcon },
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
         { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
@@ -63,6 +66,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
 
     // Navigation complete admin
     const adminNavigation = [
+        { name: 'Mes demandes', href: '/my-requests', icon: FileTextIcon },
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -244,7 +248,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 </div>
             </div>
 
-            {(profile?.is_admin || profile?.is_super_admin) && <PlanningAssistant key={`${profile.organization_id}:${profile.id}`} profile={profile} />}
+            {profile?.id && profile?.organization_id && <RequestAssistant key={`${profile.organization_id}:${profile.id}`} profile={profile} allowedKinds={allowedRequestKinds} canPlan={isAdmin} />}
             <WorkspaceMenu open={showMobileMenu} onClose={() => setShowMobileMenu(false)} navigation={navigation} />
 
             {/* Centre de Notifications */}
