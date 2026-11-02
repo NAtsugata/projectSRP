@@ -688,7 +688,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       />
 
       <div className="intervention-content">
-        <WorkInstructions interventionId={intervention.id} fallback={intervention.service} />
+        <WorkInstructions key={`${profile?.id}:${intervention.id}`} interventionId={intervention.id} fallback={intervention.service} isAdmin={isAdmin} />
         {/* CARTE DE RÉSUMÉ */}
         <StatusCard
           intervention={intervention}

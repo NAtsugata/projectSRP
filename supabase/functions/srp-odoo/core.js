@@ -75,7 +75,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         const rows = await odoo('res.partner', 'search_read', { domain: [['active', '=', true], ...companyDomain(), ['name', 'ilike', query.trim()]], fields, limit: 15, order: 'name' });
         return rows.map(row => ({ id: row.id, name: text(row.name), address: [row.street, row.street2, row.zip, row.city].filter(Boolean).join(' '), city: text(row.city) }));
     };
-    const workInstructions = async ({ interventionId }, profile, userId, authorization) => {
+    const workInstructions = async ({ interventionId, orderReference }, profile, userId, authorization) => {
         if (!Number.isSafeInteger(interventionId) || interventionId < 1) throw new HttpError(400, 'Intervention invalide');
         const base = requireValue(get('SUPABASE_URL'), 'SUPABASE_URL');
         const headers = { Authorization: authorization, apikey: requireValue(get('SUPABASE_ANON_KEY'), 'SUPABASE_ANON_KEY') };
@@ -88,14 +88,18 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         const [intervention] = await response.json();
         if (!intervention) throw new HttpError(404, 'Intervention introuvable');
         const assigned = (intervention.intervention_assignments || []).some(item => item.user_id === userId);
+        const admin=profile.is_admin===true || profile.is_super_admin===true;
+        if(orderReference && (!admin || typeof orderReference!=='string' || orderReference.length>100))throw new HttpError(403,'Sélection de devis réservée au responsable');
         if (!(profile.is_admin === true || profile.is_super_admin === true || assigned)) throw new HttpError(403, 'Cette intervention ne vous est pas affectée');
         const client = text(intervention.client).trim();
         if (!client) return { interventionId, client: '', orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
         const domain=[['company_id', '=', config().companyId], ['partner_id.name', '=ilike', client], ['state', '=', 'sale']];
-        const orders = await odoo('sale.order', 'search_read', {
+        const availableOrders = await odoo('sale.order', 'search_read', {
             domain,
-            fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: 1,
+            fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: admin?100:1,
         });
+        const orders=orderReference?availableOrders.filter(order=>order.name===orderReference):availableOrders.slice(0,1);
+        if(orderReference && !orders.length)throw new HttpError(404,'Devis validé introuvable pour ce client');
         if (!orders.length) return { interventionId, client, orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
         const lineFields = await odoo('sale.order.line', 'fields_get', { allfields: ['id','order_id','name','product_uom_qty','product_uom','product_uom_id','display_type','sequence'], attributes: ['type'] });
         const unitField = Object.hasOwn(lineFields,'product_uom_id') ? 'product_uom_id' : Object.hasOwn(lineFields,'product_uom') ? 'product_uom' : null;
@@ -106,6 +110,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         if (lines.length >= 2000) throw new HttpError(409, 'Trop de lignes de devis ; affinez le chantier dans Odoo');
         return {
             interventionId, client, fallback: text(intervention.service), syncedAt: new Date().toISOString(),
+            choices: admin?availableOrders.map(order=>({reference:text(order.name),date:order.date_order || null})):[],
             orders: orders.map(order => ({
                 reference: text(order.name), date: order.date_order || null, state: text(order.state),
                 lines: lines.filter(line => relatedId(line.order_id) === order.id && !line.display_type)
