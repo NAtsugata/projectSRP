@@ -32,7 +32,25 @@ function normalizeSchedule(value) {
 function collectDetails(text, now) {
     let rest = text;
     const today = parisDay(now), dates = new Set(), errors = [];
-    const lengths = [...text.matchAll(durationPattern())];
+    // Expand ranges before individual dates so intermediate days are retained.
+    const addRange = (start,end) => {
+        if (start>end || start<today || end>shiftPlanningDay(start,13)) { errors.push('Choisissez une période de 1 à 14 jours à venir.'); return; }
+        for(let day=start;day<=end;day=shiftPlanningDay(day,1)) dates.add(day);
+    };
+    rest = rest.replace(/\bdu\s+(\d{1,2})\s+au\s+(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?\b/g,(match,a,b,month,year)=>{
+        const m=months.indexOf(month);if(m<0)return match;
+        const prefix=`${year || today.slice(0,4)}-${String(m+1).padStart(2,'0')}-`;
+        addRange(prefix+a.padStart(2,'0'),prefix+b.padStart(2,'0'));return ' ';
+    });
+    rest = rest.replace(/\b(?:de|du)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(?:a|au)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/g,(_,a,b)=>{
+        const current=new Date(`${today}T12:00:00Z`).getUTCDay(),offset=(weekdays.indexOf(a)-current+7)%7;
+        const start=shiftPlanningDay(today,offset);addRange(start,shiftPlanningDay(start,(weekdays.indexOf(b)-weekdays.indexOf(a)+7)%7));return ' ';
+    });
+    rest = rest.replace(/\bdu\s+(\d{1,2})(?:\/(\d{1,2}))?\s+au\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/g,(_,a,m,b,n,y)=>{
+        addRange(`${y || today.slice(0,4)}-${(m || n).padStart(2,'0')}-${a.padStart(2,'0')}`,`${y || today.slice(0,4)}-${n.padStart(2,'0')}-${b.padStart(2,'0')}`);return ' ';
+    });
+    rest = rest.replace(/\b(?:a partir de\s+)?demain\s+(?:pendant|durant)\s+(\d+)\s+jours?\b/g,(_,n)=>{addRange(shiftPlanningDay(today,1),shiftPlanningDay(today,Number(n)));return ' ';});
+    const lengths = [...rest.matchAll(durationPattern())];
     const duration = lengths.length ? Number(lengths[0][1]) * (lengths[0][2].startsWith('h') ? 60 : 1) + Number(lengths[0][3] || 0) : 60;
     const durations = lengths.map(m => Number(m[1]) * (m[2].startsWith('h') ? 60 : 1) + Number(m[3] || 0));
     if (new Set(durations).size > 1) errors.push('Plusieurs durées sont indiquées. Faites une demande par durée.');
@@ -106,7 +124,7 @@ export function validatePlanningDraft(draft, { employees = [], clients = [], now
     return { client, staff: ids.map(id => staff.find(p => p.id === id)), dates, time, duration, period: ['morning','afternoon'].includes(draft.period) ? draft.period : '' };
 }
 
-export function parsePlanningCommand(message, context = {}) {
+function parseSingleCommand(message, context = {}) {
     const { employees = [], clients = [], now = new Date(), staffChoices = {} } = context;
     const text = normalizeSchedule(message), details = collectDetails(text, now), cleaned = details.rest;
     const draft = { staffIds: [], clientId: '', dates: details.dates, time: details.time || '', duration: details.duration, period: details.period };
@@ -141,4 +159,33 @@ export function parsePlanningCommand(message, context = {}) {
     if (details.errors.length) return { draft, error: details.errors[0] };
     const parsed = validatePlanningDraft(draft, context);
     return { ...parsed, draft };
+}
+
+export function parsePlanningCommand(message, context = {}) {
+    const fullDay=/\b(?:toute la journee|journee complete|journee entiere|toute une journee)\b/;
+    const parts=normalizeSchedule(String(message).replace(/\n/g,' ; ')).split(/\s*(?:;|\bpuis\b|\bensuite\b|\bet (?=chez\b))\s*/).filter(Boolean);
+    const requests=[];let previous=null;
+    for(let part of parts){
+        const allDay=fullDay.test(part);part=part.replace(fullDay,' ');
+        let parsed=parseSingleCommand(part,context);
+        if(previous && parsed.error && !parsed.unsupportedIntent){
+            if(parsed.staffQuestions?.some(q=>q.word!=='intervenant'))return parsed;
+            const details=collectDetails(part,context.now || new Date());
+            if(details.errors.length)return {...parsed,error:details.errors[0]};
+            const draft={...parsed.draft};
+            if(!draft.staffIds.length)draft.staffIds=previous.draft.staffIds;
+            if(!draft.dates.length)draft.dates=previous.draft.dates;
+            if(!draft.clientId && !/\bchez\b/.test(part))draft.clientId=previous.draft.clientId;
+            parsed={...validatePlanningDraft(draft,context),draft};
+        }
+        if(parsed.error)return parsed;
+        previous=parsed;
+        if(allDay){
+            if(parsed.time || parsed.duration!==60 || parsed.period)return {...parsed,error:'Pour une journée complète, retirez l’heure, la durée ou la demi-journée indiquée.'};
+            requests.push({...parsed,time:'08:00',duration:240,period:'morning'},{...parsed,time:'13:00',duration:300,period:'afternoon'});
+        }else requests.push(parsed);
+    }
+    if(!requests.length)return parseSingleCommand(message,context);
+    if(requests.reduce((n,r)=>n+r.dates.length,0)>14)return {...requests[0],error:'Un lot peut contenir 14 rendez-vous maximum. Réduisez la période ou le nombre de chantiers.'};
+    return {...requests[0],requests};
 }

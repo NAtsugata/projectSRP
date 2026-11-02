@@ -3,6 +3,26 @@ import assert from 'node:assert/strict';
 import { parsePlanningCommand, validatePlanningDraft, proposePlanning, slotAvailable, parisDay, planningBacklog } from '../src/utils/planningAssistant.js';
 const context = { employees: [{ id: 'a', full_name: 'Tiemoko Traoré' }, { id: 'b', full_name: 'Reymond Sébastien' }], clients: [{ id: 'c', name: 'Leneutre' }], now: new Date('2026-11-01T12:00:00Z') };
 
+test('full days create morning and afternoon on every requested date',()=>{
+    const parsed=parsePlanningCommand('Tiemoko chez Leneutre demain et après-demain toute la journée',context);
+    assert.equal(parsed.error,undefined);
+    const plan=proposePlanning(parsed,context);
+    assert.equal(plan.bookings.length,4);
+    assert.deepEqual(plan.bookings.map(b=>[b.time,b.duration]),[['08:00',240],['08:00',240],['13:00',300],['13:00',300]]);
+});
+test('date ranges include intermediate dates',()=>{
+    for(const phrase of ['du 2 au 4 novembre','du 2 au 4/11','du 02/11 au 04/11','de lundi à mercredi','du lundi au mercredi','demain pendant trois jours']){
+        const parsed=parsePlanningCommand(`Tiemoko chez Leneutre ${phrase}`,context);
+        assert.equal(parsed.error,undefined);assert.deepEqual(parsed.dates,['2026-11-02','2026-11-03','2026-11-04']);
+    }
+});
+test('multiple sites reserve each previous slot within the proposed batch',()=>{
+    const ctx={...context,clients:[...context.clients,{id:'d',name:'Dupont'}]};
+    const parsed=parsePlanningCommand('Tiemoko chez Leneutre demain puis chez Dupont',ctx);
+    assert.equal(parsed.error,undefined);const plan=proposePlanning(parsed,ctx);
+    assert.equal(plan.bookings.length,2);assert.deepEqual(plan.bookings.map(b=>[b.clientId,b.time]),[['c','08:00'],['d','09:00']]);
+});
+
 test('the reported sentence preserves 08:30 and resolves people after the client', () => {
     const result = parsePlanningCommand('Rendezvous demain 8h30 chez madame leneutre pour tiemoko', context);
     assert.equal(result.error, undefined);

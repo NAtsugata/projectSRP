@@ -22,6 +22,15 @@ export function slotAvailable({ date, time, duration, staffIds, period }, { inte
 
 export function proposePlanning(parsed, context) {
     if (parsed.error) return parsed;
+    if(parsed.requests){
+        const bookings=[],conflicts=[];
+        for(const request of parsed.requests){
+            const extra=bookings.filter(b=>b.time).map(b=>({date:b.date,time:b.time,duration_minutes:b.duration,intervention_assignments:b.staffIds.map(user_id=>({user_id}))}));
+            const next=proposePlanning({...request,requests:undefined},{...context,interventions:[...(context.interventions || []),...extra]});
+            bookings.push(...next.bookings.map(b=>({...b,clientName:request.client.name,staffNames:request.staff.map(p=>p.full_name).join(' et ')})));conflicts.push(...next.conflicts);
+        }
+        return {...parsed,bookings,conflicts};
+    }
     const staffIds = parsed.staff.map(person => person.id);
     const bookings = [], conflicts = [];
     for (const date of parsed.dates) {

@@ -109,6 +109,7 @@ export default function PlanningAssistant({ profile, initialOpen = false, hideTr
                 {manualOpen && manualDraft && context && <PlanningManualForm context={context} draft={manualDraft} busy={busy} onChange={patch => setManualDraft(previous => ({ ...previous, ...patch }))} onSubmit={prepareManual} />}
                 {plan && <div><h3>{plan.client.name}</h3><p>{plan.staff.map(p => p.full_name).join(' et ')}</p>{plan.bookings.map((booking, i) => <article className="planning-assistant-card" key={booking.date + i}>
                     <strong>{dayLabel(booking.date)}</strong>
+                    <p>{booking.clientName || plan.client.name} · {booking.staffNames || plan.staff.map(p=>p.full_name).join(' et ')}</p>
                     <label>Heure<input disabled={busy} type="time" value={booking.time} step="900" onChange={e => edit(i, 'time', e.target.value)} /></label>
                     <label>Durée (min)<input disabled={busy} type="number" min="15" max="480" step="15" value={booking.duration} onChange={e => edit(i, 'duration', Number(e.target.value))} /></label>
                     {!booking.time && <p>Aucun créneau trouvé pour cette journée.</p>}
