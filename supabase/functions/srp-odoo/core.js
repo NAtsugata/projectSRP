@@ -91,15 +91,11 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         if (!(profile.is_admin === true || profile.is_super_admin === true || assigned)) throw new HttpError(403, 'Cette intervention ne vous est pas affectée');
         const client = text(intervention.client).trim();
         if (!client) return { interventionId, client: '', orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
-        const references=[...new Set((`${intervention.ticket_number || ''} ${intervention.service || ''}`).match(/\bS\d{3,}\b/gi) || [])].map(value=>value.toUpperCase());
-        if(references.length>1)throw new HttpError(409,'Plusieurs références de devis figurent sur cette intervention. Précisez le devis concerné.');
         const domain=[['company_id', '=', config().companyId], ['partner_id.name', '=ilike', client], ['state', '=', 'sale']];
-        if(references.length)domain.push(['name','=',references[0]]);
         const orders = await odoo('sale.order', 'search_read', {
             domain,
-            fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: 10,
+            fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: 1,
         });
-        if(orders.length>1)throw new HttpError(409,'Plusieurs devis validés existent pour ce client. Ajoutez la référence du devis (ex. S00470) dans le numéro de ticket de cette intervention pour afficher uniquement ses travaux.');
         if (!orders.length) return { interventionId, client, orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
         const lineFields = await odoo('sale.order.line', 'fields_get', { allfields: ['id','order_id','name','product_uom_qty','product_uom','product_uom_id','display_type','sequence'], attributes: ['type'] });
         const unitField = Object.hasOwn(lineFields,'product_uom_id') ? 'product_uom_id' : Object.hasOwn(lineFields,'product_uom') ? 'product_uom' : null;
