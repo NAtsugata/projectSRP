@@ -168,7 +168,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         <>
             <DemoBanner />
             <a className="workspace-skip-link" href="#workspace-main">Aller au contenu</a>
-            <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0', '--workspace-demo-offset': isDemoMode ? '44px' : '0px' }}>
+            <div className={`app-layout ${!isAdmin ? 'employee-portal' : ''} ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0', '--workspace-demo-offset': isDemoMode ? '44px' : '0px' }}>
                 {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
@@ -177,6 +177,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                         <h1>Portail SRP</h1>
                     </div>
                     <p>{profile?.full_name}</p>
+                    {!isAdmin && <span className="field-space-badge">Espace collaborateur</span>}
                 </div>
                 <nav className="sidebar-nav" aria-label="Navigation principale"><NavigationGroups navigation={navigation} /></nav>
                 <div className="sidebar-footer">
@@ -194,7 +195,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             <div className="mobile-header">
                 <div className="mobile-header-logo">
                     <img src="/logo192.png" alt="SRP" className="mobile-logo-img" />
-                    <h1>SRP</h1>
+                    <h1>SRP{!isAdmin && <small className="field-mobile-subtitle">Mon espace</small>}</h1>
                 </div>
                 <div className="mobile-header-actions">
                     <MobileThemeToggleCompact />

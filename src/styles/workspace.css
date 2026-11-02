@@ -277,3 +277,11 @@
   .app-layout .main-content { width:100%; margin:0; padding:0; }
   .workspace-page { padding:0; max-width:none; }
 }
+
+/* Employee shell: the same navigation and permissions, with a calmer field workspace. */
+.employee-portal .field-space-badge{display:inline-block;font-size:10px;font-weight:650;letter-spacing:.3px;color:var(--text-secondary);border:1px solid var(--border-color);border-radius:20px;padding:6px 9px;margin-top:10px}
+.employee-portal .field-mobile-subtitle{display:block;font-size:9px;font-weight:500;letter-spacing:.3px;color:var(--text-secondary);margin-top:3px}
+.employee-portal .sidebar-header{background:var(--bg-primary)}
+.employee-portal .workspace-page>.employee-planning-view{max-width:1280px;margin:0 auto;min-width:0}
+.employee-portal .workspace-page :is(.employee-leave-view,.employee-agenda-view){max-width:1280px;margin-left:auto;margin-right:auto}
+.employee-portal .mobile-nav-button.active{background:var(--color-primary-50);border-radius:12px}

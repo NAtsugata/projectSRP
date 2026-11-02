@@ -76,6 +76,8 @@ const QuickAlertButton = ({
     <>
       {/* Bouton principal */}
       <button
+        type="button"
+        aria-label="Signaler un problème"
         className="quick-alert-trigger"
         onClick={handleOpen}
         title="Signaler un problème"
@@ -88,6 +90,9 @@ const QuickAlertButton = ({
       {isOpen && (
         <div className="quick-alert-overlay" onClick={handleClose}>
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Signaler un problème"
             className="quick-alert-modal"
             onClick={(e) => e.stopPropagation()}
           >
@@ -101,7 +106,7 @@ const QuickAlertButton = ({
               <>
                 <div className="quick-alert-header">
                   <h3>Signaler un problème</h3>
-                  <button className="close-btn" onClick={handleClose}>×</button>
+                  <button className="close-btn" aria-label="Fermer le signalement" onClick={handleClose}>×</button>
                 </div>
 
                 {/* Sélection du type */}
