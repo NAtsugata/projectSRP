@@ -33,6 +33,7 @@ import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
+import WorkInstructions from '../components/WorkInstructions';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 
@@ -687,6 +688,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
       />
 
       <div className="intervention-content">
+        <WorkInstructions interventionId={intervention.id} fallback={intervention.service} />
         {/* CARTE DE RÉSUMÉ */}
         <StatusCard
           intervention={intervention}

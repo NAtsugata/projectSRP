@@ -8,4 +8,8 @@ Le brouillon est transmis dans l'état du routeur, expire après trente minutes 
 
 Le formulaire utilise les colonnes présentes dans la base : aucun champ type ou days_count n'est ajouté aux congés. Leur qualification et décompte restent du ressort du responsable. L'assistant planning est conservé pour les responsables. Les formulaires historiques restent disponibles.
 
-Vérifications : 100 tests automatisés réussis ; compilation locale des modules et styles ; essai navigateur avec données fictives pour les dates françaises, le préremplissage, la conservation après panne, la nouvelle tentative, le suivi et le changement de compte ; viewport mobile de 390 px sans débordement horizontal. Les insertions de validation de schéma en base ont été annulées dans une transaction. Aucun congé ni remboursement réel n'a été créé pour tester.
+Vérifications : 102 tests automatisés réussis ; compilation locale des modules et styles ; essai navigateur avec données fictives pour les dates françaises, le préremplissage, la conservation après panne, la nouvelle tentative, le suivi et le changement de compte ; viewport mobile de 390 px sans débordement horizontal. Les insertions de validation de schéma en base ont été annulées dans une transaction. Aucun congé ni remboursement réel n'a été créé pour tester.
+
+## Désignations automatiques pour les employés
+
+À l'ouverture d'une intervention, le portail recherche automatiquement les devis Odoo actifs portant exactement le même client. Il affiche aux employés affectés la référence, les désignations, quantités et unités. Les prix, remises, taxes, totaux, factures et liens Odoo ne font jamais partie de la réponse. Un employé non affecté est refusé par la fonction serveur avant toute lecture Odoo. Les écrans administratifs Odoo restent réservés au titulaire configuré.

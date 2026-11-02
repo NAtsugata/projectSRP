@@ -10,11 +10,15 @@ function fixture(overrides = {}) {
     let currentTime = 1000000;
     const profile = { organization_id: 'org-a', is_admin: true };
     const user = { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', user_metadata: { is_admin: true } };
+    const assignment = { userId: user.id };
     const fetcher = async (url, options) => {
         calls.push({ url, ...options });
         const data = options.body ? JSON.parse(options.body) : null;
         if (url.endsWith('/auth/v1/user')) return Response.json(user);
         if (url.includes('/rest/v1/profiles')) return Response.json([profile]);
+        if (url.includes('/rest/v1/interventions')) return Response.json([{ id: 42, client: 'Client Démo', service: 'Entretien', intervention_assignments: [{ user_id: assignment.userId }] }]);
+        if (url.endsWith('/sale.order/search_read')) return Response.json([{ id: 80, name: 'S080', partner_id: [7, 'Client Démo'], date_order: '2026-11-02', state: 'sale' }]);
+        if (url.endsWith('/sale.order.line/search_read')) return Response.json([{ id: 81, order_id: [80, 'S080'], name: 'Remplacer le circulateur', product_uom_qty: 1, product_uom: [1, 'Unité'], display_type: false, sequence: 10 }]);
         if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.map(name => [name, { type: 'char' }])));
         if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'], company_registry: '12345678901234' }]);
         if (url.endsWith('/res.partner/search_read')) {
@@ -26,7 +30,7 @@ function fixture(overrides = {}) {
     const handler = createConnector({ env: key => settings[key], fetcher, cryptoApi: webcrypto, now: () => currentTime });
     const app = async (body, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer user-jwt', Origin: settings.PORTAL_URL, ...headers }, body: JSON.stringify(body) }));
     const mcp = async (method, args, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...headers }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: args }) }));
-    return { handler, app, mcp, settings, calls, profile, user, expire: () => { currentTime += 600001; } };
+    return { handler, app, mcp, settings, calls, profile, user, assignment, expire: () => { currentTime += 600001; } };
 }
 
 test('all transports fail closed without their credentials', async () => {
@@ -42,6 +46,28 @@ test('verified user profile controls access, editable metadata does not', async 
     f.profile.is_admin = false;
     assert.equal((await f.app({ action: 'prefill', clientId: 7, type: '1301' })).status, 403);
     assert.equal(f.calls.filter(call => call.url.includes('odoo.com')).length, 0);
+});
+
+test('an assigned employee receives automatic work designations without financial fields', async () => {
+    const f = fixture();
+    f.user.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    f.assignment.userId = f.user.id;
+    f.profile.is_admin = false;
+    const response = await f.app({ action: 'work_instructions', interventionId: 42 });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.orders[0].lines[0].designation, 'Remplacer le circulateur');
+    assert.equal(result.orders[0].lines[0].quantity, 1);
+    assert.equal(JSON.stringify(result).match(/price|amount|total|discount|tax/), null);
+});
+
+test('an unassigned employee cannot read work instructions or contact Odoo', async () => {
+    const f = fixture();
+    f.user.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    f.profile.is_admin = false;
+    const response = await f.app({ action: 'work_instructions', interventionId: 42 });
+    assert.equal(response.status, 403);
+    assert.equal(f.calls.some(call => call.url.includes('odoo.com')), false);
 });
 
 test('another organization and untrusted origin cannot read Odoo', async () => {
