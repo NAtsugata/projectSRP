@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
-import { createConnector } from '../supabase/functions/srp-odoo/core.js';
+import { createConnector,isTechnicalDesignation } from '../supabase/functions/srp-odoo/core.js';
+
+test('commercial text embedded inside designations is not published to employees',()=>{
+    for(const text of ['Préparation murs 10€/m²','Remise 11.73%','Acompte (réf : Fact/2025/1)','Prix HT : 12 euros'])assert.equal(isTechnicalDesignation(text),false);
+    assert.equal(isTechnicalDesignation('PAC 3,5kW - câble 20 m'),true);
+});
 
 const token = 'unit-test-token-that-is-over-thirty-two-characters';
 function fixture(overrides = {}) {
@@ -19,7 +24,7 @@ function fixture(overrides = {}) {
         if (url.includes('/rest/v1/interventions')) return Response.json([{ id: 42, client: 'Client Démo', service: 'Entretien', intervention_assignments: [{ user_id: assignment.userId }] }]);
         if (url.endsWith('/sale.order/search_read')) return Response.json([{ id: 80, name: 'S080', partner_id: [7, 'Client Démo'], date_order: '2026-11-02', state: 'sale' }]);
         if (url.endsWith('/sale.order.line/search_read')) return Response.json([{ id: 81, order_id: [80, 'S080'], name: 'Remplacer le circulateur', product_uom_qty: 1, product_uom: [1, 'Unité'], display_type: false, sequence: 10 }]);
-        if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.map(name => [name, { type: 'char' }])));
+        if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.filter(name=>name!=='product_uom_id').map(name => [name, { type: 'char' }])));
         if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'], company_registry: '12345678901234' }]);
         if (url.endsWith('/res.partner/search_read')) {
             const id = data.domain.find(item => Array.isArray(item) && item[0] === 'id')?.[2];

@@ -11,6 +11,7 @@ const checkType = value => { if (!Object.hasOwn(TYPES, value)) throw new HttpErr
 const text = value => typeof value === 'string' ? value : '';
 const label = value => Array.isArray(value) ? text(value[1]) : '';
 const relatedId = value => Array.isArray(value) ? value[0] : value;
+export const isTechnicalDesignation = value => !/(?:€|\beuros?\b|\b(?:prix|tarif|remise|acompte|factur\w*|total|tva|ttc)\b)/i.test(String(value || ''));
 const siret = row => {
     const value = text(row.l10n_fr_siret || row.company_registry).replace(/\s/g, '');
     return /^\d{14}$/.test(value) ? value : '';
@@ -95,9 +96,11 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
             fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: 10,
         });
         if (!orders.length) return { interventionId, client, orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
+        const lineFields = await odoo('sale.order.line', 'fields_get', { allfields: ['id','order_id','name','product_uom_qty','product_uom','product_uom_id','display_type','sequence'], attributes: ['type'] });
+        const unitField = Object.hasOwn(lineFields,'product_uom_id') ? 'product_uom_id' : Object.hasOwn(lineFields,'product_uom') ? 'product_uom' : null;
         const lines = await odoo('sale.order.line', 'search_read', {
             domain: [['order_id', 'in', orders.map(order => order.id)], ['company_id', '=', config().companyId]],
-            fields: ['id', 'order_id', 'name', 'product_uom_qty', 'product_uom', 'display_type', 'sequence'], order: 'order_id desc, sequence, id', limit: 2000,
+            fields: ['id', 'order_id', 'name', 'product_uom_qty', 'display_type', 'sequence', ...(unitField?[unitField]:[])].filter(field=>Object.hasOwn(lineFields,field)), order: 'order_id desc, sequence, id', limit: 2000,
         });
         if (lines.length >= 2000) throw new HttpError(409, 'Trop de lignes de devis ; affinez le chantier dans Odoo');
         return {
@@ -105,8 +108,8 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
             orders: orders.map(order => ({
                 reference: text(order.name), date: order.date_order || null, state: text(order.state),
                 lines: lines.filter(line => relatedId(line.order_id) === order.id && !line.display_type)
-                    .map(line => ({ designation: text(line.name).trim(), quantity: Number(line.product_uom_qty), unit: label(line.product_uom) }))
-                    .filter(line => line.designation),
+                    .map(line => ({ designation: text(line.name).trim(), quantity: Number(line.product_uom_qty), unit: unitField ? label(line[unitField]) : '' }))
+                    .filter(line => line.designation && isTechnicalDesignation(line.designation)),
             })).filter(order => order.lines.length),
         };
     };
