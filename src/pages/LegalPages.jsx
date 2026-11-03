@@ -8,7 +8,7 @@ const pageStyle = {
   margin: '0 auto',
   padding: '2rem 1.5rem',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  color: '#1f2937',
+  color: 'var(--text-primary)',
   lineHeight: '1.7',
 };
 
@@ -18,14 +18,16 @@ const headerStyle = {
   gap: '1rem',
   marginBottom: '2rem',
   paddingBottom: '1rem',
-  borderBottom: '2px solid #e5e7eb',
+  borderBottom: '1px solid var(--border-color)',
 };
 
 const backBtnStyle = {
   padding: '0.5rem 1rem',
-  backgroundColor: '#f3f4f6',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
+  backgroundColor: 'var(--bg-secondary)',
+  color: 'var(--color-primary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '10px',
+  minHeight: '44px',
   cursor: 'pointer',
   fontSize: '0.875rem',
 };
@@ -38,7 +40,7 @@ const h2Style = {
   fontSize: '1.25rem',
   fontWeight: '600',
   marginBottom: '0.75rem',
-  color: '#111827',
+  color: 'var(--text-primary)',
 };
 
 /**

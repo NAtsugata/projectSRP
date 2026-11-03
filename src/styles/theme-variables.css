@@ -1,21 +1,21 @@
 /* SRP workspace palette shared by every page, including scanners and dialogs. */
 :root, .light-theme, .warm-copper-theme, html[data-theme="light"] {
   color-scheme: light;
-  --bg-app: #f5f6f8;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fb;
-  --bg-tertiary: #eef1f5;
-  --text-primary: #172033;
-  --text-secondary: #526078;
-  --text-tertiary: #647086;
-  --text-muted: #647086;
+  --bg-app: #faf6f1;
+  --bg-primary: #fffdfa;
+  --bg-secondary: #f8f0e8;
+  --bg-tertiary: #eee2d7;
+  --text-primary: #382419;
+  --text-secondary: #765947;
+  --text-tertiary: #866651;
+  --text-muted: #866651;
   --text-inverse: #ffffff;
   --text-on-colored-bg: #ffffff;
   --text-on-white-bg: #172033;
-  --border-color: #e3e7ee;
-  --border-color-light: #edf0f5;
-  --border-color-dark: #cbd3df;
-  --card-bg: #ffffff;
+  --border-color: #eadace;
+  --border-color-light: #f0e5dc;
+  --border-color-dark: #cbb3a1;
+  --card-bg: #fffdfa;
   --color-primary: #bc5709;
   --color-primary-light: #df761b;
   --color-primary-dark: #934006;
@@ -64,21 +64,21 @@
 }
 .dark-theme, .dark-copper-theme, html[data-theme="dark"] {
   color-scheme: dark;
-  --bg-app: #14181f;
-  --bg-primary: #1d232d;
-  --bg-secondary: #202833;
-  --bg-tertiary: #2a3443;
-  --text-primary: #f0f3f9;
-  --text-secondary: #b8c3d4;
-  --text-tertiary: #a4b1c5;
-  --text-muted: #a4b1c5;
+  --bg-app: #191513;
+  --bg-primary: #241e1a;
+  --bg-secondary: #2d251f;
+  --bg-tertiary: #3a2e26;
+  --text-primary: #fff2e8;
+  --text-secondary: #d3baaa;
+  --text-tertiary: #c5a68f;
+  --text-muted: #c5a68f;
   --text-inverse: #191b20;
   --text-on-colored-bg: #191b20;
   --text-on-white-bg: #f0f3f9;
-  --border-color: #333e4f;
-  --border-color-light: #2a3443;
-  --border-color-dark: #526078;
-  --card-bg: #1d232d;
+  --border-color: #4a382c;
+  --border-color-light: #382b23;
+  --border-color-dark: #76543f;
+  --card-bg: #241e1a;
   --color-primary: #f2aa50;
   --color-primary-light: #f8c07a;
   --color-primary-dark: #e89531;

@@ -1640,7 +1640,7 @@ export default function IRShowerFormsView({ profile }) {
   );
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
+    <div className="ir-shower-workspace" style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
       {styles}
 
       {/* BARRE D'ACTIONS */}

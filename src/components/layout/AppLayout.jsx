@@ -36,6 +36,7 @@ import '../../styles/workspace-polish.css';
 import '../../styles/workspace-finish.css';
 import '../../styles/workspace-copper.css';
 import '../../styles/workspace-luminous.css';
+import '../../styles/workspace-pages.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const { pathname } = useLocation();
@@ -219,7 +220,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             </div>
 
             {/* Main Content */}
-            <main className="main-content" id="workspace-main" tabIndex={-1}>
+            <main className="main-content" id="workspace-main" data-workspace-section={pathname.split('/')[1] || 'dashboard'} tabIndex={-1}>
                 <WorkspaceHeader navigation={navigation} profile={profile} isAdmin={isAdmin} allowedKinds={allowedRequestKinds} />
                 <BusinessWorkflowAlert />
                 <div className="workspace-page"><WorkspaceLaunchpad navigation={navigation} profile={profile} isAdmin={isAdmin} allowedKinds={allowedRequestKinds} /><Outlet /></div>
