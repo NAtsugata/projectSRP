@@ -1,0 +1,32 @@
+/* Selected direction: luminous ivory surfaces and satin copper accents. */
+.app-layout:not(.dark-mode-layout) {--bg-app:#faf6f1;--bg-primary:#fffdfa;--bg-secondary:#f8f0e8;--border-color:#eadace;--text-primary:#382419;--text-secondary:#765947;--text-tertiary:#866651}
+.app-layout:not(.dark-mode-layout) .desktop-nav {background:linear-gradient(180deg,#fffaf5,#f7eee4);border-right:1px solid #e7d4c3;color:#6b4531;box-shadow:4px 0 22px #9b552008}
+.app-layout:not(.dark-mode-layout) .desktop-nav .sidebar-logo h1 {color:#ad4519;text-shadow:none}
+.app-layout:not(.dark-mode-layout) .desktop-nav .sidebar-header {border-bottom-color:#eadace}
+.app-layout:not(.dark-mode-layout) .desktop-nav .sidebar-header p {color:#765947}
+.app-layout:not(.dark-mode-layout) .desktop-nav .workspace-nav-group h2 {color:#8a6348}
+.app-layout:not(.dark-mode-layout) .desktop-nav .nav-link {color:#6b4531}
+.app-layout:not(.dark-mode-layout) .desktop-nav .nav-link:hover {background:#f6e4d5;color:#85320f}
+.app-layout:not(.dark-mode-layout) .desktop-nav .nav-link.active {background:linear-gradient(110deg,#f9dbc2,#ffecdc);color:#85320f;box-shadow:inset 3px 0 #bb5b28;font-weight:750}
+.app-layout:not(.dark-mode-layout) .desktop-nav .sidebar-footer {border-color:#eadace}
+.app-layout:not(.dark-mode-layout) .desktop-nav .logout-button {color:#765947;border-color:#ddc7b5;background:#fffaf5}
+.app-layout:not(.dark-mode-layout) .desktop-nav .field-space-badge {color:#85320f;background:#f9e3d0;border-color:#ddbd9e}
+.app-layout:not(.dark-mode-layout) .workspace-topbar {background:#fffdfa;box-shadow:0 3px 15px #8b481008}
+.app-layout:not(.dark-mode-layout) .workspace-welcome {background:radial-gradient(ellipse at 95% 0,#f2ceac88,transparent 65%),linear-gradient(115deg,#fffaf4,#f8e8d8);color:#382419;box-shadow:inset 0 1px #fff}
+.app-layout:not(.dark-mode-layout) .workspace-welcome .workspace-eyebrow {color:#945027}
+.app-layout:not(.dark-mode-layout) .workspace-launchpad .workspace-welcome h2 {color:#382419;-webkit-text-fill-color:#382419}
+.app-layout:not(.dark-mode-layout) .workspace-launchpad .workspace-welcome h2 span {color:#ad4519;-webkit-text-fill-color:#ad4519}
+.app-layout:not(.dark-mode-layout) .workspace-welcome p,.app-layout:not(.dark-mode-layout) .workspace-welcome time {color:#76503a}
+.app-layout:not(.dark-mode-layout) .workspace-welcome button {background:#fff9f0;color:#853d1a;border-color:#d7b494}
+.app-layout:not(.dark-mode-layout) .workspace-welcome button:hover {background:#f8dfca}
+.app-layout:not(.dark-mode-layout) .workspace-welcome::after {background:#bd7443;box-shadow:none}
+.app-layout:not(.dark-mode-layout) .workspace-page :is(.dashboard-section,.chart-card,.stat-card,.client-card,.invoice-card,.document-library-card,.field-next,.field-week) {background:linear-gradient(145deg,#fffefd,#fffaf5);border-color:#e8d7c9;box-shadow:0 5px 18px #89502b0c}
+.app-layout:not(.dark-mode-layout) .workspace-page .stat-card {border-top:1px solid #e8d7c9}
+.app-layout:not(.dark-mode-layout) .workspace-actions-dialog {background:#fffdfa;box-shadow:0 20px 70px #5b301c30;border-color:#e0c6af}
+.app-layout:not(.dark-mode-layout) .document-scan-hero {background:radial-gradient(ellipse at 100% 0,#edc39b88,transparent 65%),linear-gradient(120deg,#fff9f1,#f7e6d4);color:#61391f;border:1px solid #e1c4a8}
+.app-layout:not(.dark-mode-layout) .document-scan-hero::after {border-color:#b3733a20;box-shadow:0 0 0 55px #bb793309,0 0 0 110px #bb793306}
+.app-layout:not(.dark-mode-layout) .document-scan-hero h2 {color:#382419;-webkit-text-fill-color:#382419}
+.app-layout:not(.dark-mode-layout) .document-hero-icon {color:#a34d20;background:#f7ddc5;border-color:#d6ac86}
+.app-layout:not(.dark-mode-layout) .document-scan-hero p,.app-layout:not(.dark-mode-layout) .document-hero-copy>small,.app-layout:not(.dark-mode-layout) .document-paper-label {color:#76503a}
+.app-layout:not(.dark-mode-layout) .document-hero-actions button {color:#853d1a;border-color:#cbaa8b;background:#fffaf3}
+.app-layout:not(.dark-mode-layout) .document-hero-actions button:first-child {background:var(--copper-button-bg);color:var(--copper-button-text);border-color:#a9471c;box-shadow:0 4px 12px #a34d2025}

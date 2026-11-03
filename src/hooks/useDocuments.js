@@ -19,7 +19,7 @@ export function useDocuments(userId) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['scannedDocuments', profile?.organization_id, profile?.id, userId],
+        queryKey: ['scannedDocuments', profile?.organization_id, profile?.id, profile?.is_admin, userId],
         enabled: !!profile?.id && !!profile?.organization_id,
         queryFn: async () => {
             const result = userId
@@ -50,7 +50,11 @@ export function useDocuments(userId) {
 
     // Mutation pour supprimer un document
     const deleteMutation = useMutation({
-        mutationFn: (id) => scannedDocumentsService.deleteDocument(id),
+        mutationFn: async (id) => {
+            const result = await scannedDocumentsService.deleteDocument(id);
+            if (result.error) throw result.error;
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['scannedDocuments'] });
         },
@@ -78,8 +82,8 @@ export function useDocuments(userId) {
         // Fonctions
         refetch,
         saveDocuments,
-        deleteDocument: deleteMutation.mutate,
-        updateDocument: updateMutation.mutate,
+        deleteDocument: deleteMutation.mutateAsync,
+        updateDocument: updateMutation.mutateAsync,
 
         // États des mutations
         isSaving: saveMutation.isPending,

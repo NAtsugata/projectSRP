@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { normalizeSearch } from '../../utils/workspaceTracking';
+import { WorkspaceQuickActions } from './WorkspaceExperience';
 
 const GROUPS = [
   ['Activité', ['/dashboard', '/followups', '/planning', '/chantiers', '/agenda', '/multi-day-planning']],
@@ -38,7 +39,7 @@ export function NavigationGroups({ navigation, onNavigate }) {
     </section>
   ));
 }
-export function WorkspaceHeader({ navigation, profile }) {
+export function WorkspaceHeader({ navigation, profile, isAdmin, allowedKinds }) {
   const { pathname } = useLocation();
   const [query, setQuery] = useState('');
   const input = useRef(null);
@@ -72,6 +73,7 @@ export function WorkspaceHeader({ navigation, profile }) {
           </div>
         )}
       </div>
+      <WorkspaceQuickActions navigation={navigation} isAdmin={isAdmin} allowedKinds={allowedKinds} />
       <div className="workspace-profile" title={profile?.full_name}>
         <span className="workspace-avatar" aria-hidden="true">{(profile?.full_name || 'SRP').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
         <span>{profile?.full_name || 'Mon espace'}<small>Portail SRP</small></span>

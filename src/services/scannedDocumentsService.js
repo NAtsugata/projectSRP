@@ -36,7 +36,7 @@ const escapeSQLLike = (str) => {
  * - metadata: JSONB
  */
 
-const SCANNED_DOC_LIST_COLUMNS = 'id, user_id, title, description, file_url, file_name, file_size, file_type, thumbnail_url, tags, category, created_at';
+const SCANNED_DOC_LIST_COLUMNS = 'id, organization_id, user_id, title, description, file_url, file_name, file_size, file_type, thumbnail_url, tags, category, created_at';
 
 const scannedDocumentsService = {
   /**

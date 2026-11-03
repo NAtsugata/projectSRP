@@ -14,6 +14,8 @@ const MyDocumentsViewContainer = () => {
         saveDocuments,
         deleteDocument,
         updateDocument,
+        error,
+        refetch,
     } = useDocuments(profile?.is_admin ? null : profile?.id);
 
     if (authLoading || docsLoading) {
@@ -24,8 +26,10 @@ const MyDocumentsViewContainer = () => {
         );
     }
 
+    if (error) return <section role="alert"><h2>Documents indisponibles</h2><p>Impossible de charger vos documents. Réessayez avant de scanner.</p><button type="button" onClick={()=>refetch()}>Réessayer</button></section>;
     return (
         <MyDocumentsView
+            key={`${profile?.organization_id}:${profile?.id}:${profile?.is_admin}`}
             scannedDocuments={scannedDocuments}
             profile={profile}
             users={users}

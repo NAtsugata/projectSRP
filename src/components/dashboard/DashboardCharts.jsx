@@ -10,14 +10,14 @@ import {
 import './DashboardCharts.css';
 
 const COLORS = {
-  primary: '#3b82f6',
+  primary: 'var(--chart-primary, #3b82f6)',
   success: '#10b981',
   warning: '#f59e0b',
   danger: '#ef4444',
-  info: '#8b5cf6',
+  info: 'var(--chart-secondary, #8b5cf6)',
   secondary: '#64748b',
-  cyan: '#06b6d4',
-  pink: '#ec4899',
+  cyan: 'var(--chart-tertiary, #06b6d4)',
+  pink: 'var(--chart-quaternary, #ec4899)',
   orange: '#f97316',
 };
 

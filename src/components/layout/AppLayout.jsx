@@ -30,8 +30,12 @@ import { MobileThemeToggleCompact } from '../MobileThemeSelector';
 import { DemoBanner } from '../DemoBanner';
 import './AppLayout.css';
 import { NavigationGroups, WorkspaceHeader, WorkspaceMenu } from './WorkspaceChrome';
+import { WorkspaceLaunchpad } from './WorkspaceExperience';
 import '../../styles/workspace.css';
 import '../../styles/workspace-polish.css';
+import '../../styles/workspace-finish.css';
+import '../../styles/workspace-copper.css';
+import '../../styles/workspace-luminous.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const { pathname } = useLocation();
@@ -216,9 +220,9 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
 
             {/* Main Content */}
             <main className="main-content" id="workspace-main" tabIndex={-1}>
-                <WorkspaceHeader navigation={navigation} profile={profile} />
+                <WorkspaceHeader navigation={navigation} profile={profile} isAdmin={isAdmin} allowedKinds={allowedRequestKinds} />
                 <BusinessWorkflowAlert />
-                <div className="workspace-page"><Outlet /></div>
+                <div className="workspace-page"><WorkspaceLaunchpad navigation={navigation} profile={profile} isAdmin={isAdmin} allowedKinds={allowedRequestKinds} /><Outlet /></div>
             </main>
 
             {/* Mobile Bottom Nav */}
