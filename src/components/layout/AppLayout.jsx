@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import {
     BriefcaseIcon,
     CalendarIcon,
@@ -14,10 +14,11 @@ import {
     FileTextIcon,
     CheckCircleIcon,
     DollarSignIcon,
-    ChevronDownIcon,
     BuildingIcon,
     SettingsIcon
 } from '../SharedUI';
+import BusinessWorkflowAlert from '../BusinessWorkflowAlert';
+import RequestAssistant from '../RequestAssistant';
 import NotificationCenter, { NotificationBadge } from '../NotificationCenter';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -28,10 +29,13 @@ import ThemeToggle from '../ThemeToggle';
 import { MobileThemeToggleCompact } from '../MobileThemeSelector';
 import { DemoBanner } from '../DemoBanner';
 import './AppLayout.css';
+import { NavigationGroups, WorkspaceHeader, WorkspaceMenu } from './WorkspaceChrome';
+import '../../styles/workspace.css';
+import '../../styles/workspace-polish.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const { pathname } = useLocation();
+    useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [pathname]);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const { hasPermission, isAdmin } = usePermissions();
@@ -43,8 +47,11 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     // Vérifier si le mode démo est actif
     const isDemoMode = organization?.settings?.demo_mode === true;
 
+    const allowedRequestKinds = ['leave', 'expense'].filter(kind => { const module = kind === 'leave' ? 'leaves' : 'expenses'; return hasModule(module) && !isHrefHidden(`/${module}`, organization?.settings?.hidden_modules || []); });
+
     // Navigation de base pour les employes
     const baseNavigation = [
+        { name: 'Mes demandes', href: '/my-requests', icon: FileTextIcon },
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
         { name: 'Agenda', href: '/agenda', icon: CalendarIcon, color: 'text-purple-500', bg: 'bg-purple-50' },
@@ -60,6 +67,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
 
     // Navigation complete admin
     const adminNavigation = [
+        { name: 'Mes demandes', href: '/my-requests', icon: FileTextIcon },
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboardIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
         { name: 'Planning', href: '/planning', icon: BriefcaseIcon, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         { name: 'Chantiers', href: '/chantiers', icon: BuildingIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -73,6 +81,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         { name: 'Checklists', href: '/checklist-templates', icon: CheckCircleIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Contrats', href: '/contracts', icon: FileTextIcon, color: 'text-violet-500', bg: 'bg-violet-50' },
         { name: 'Clients', href: '/clients', icon: UsersIcon, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { name: 'À suivre', href: '/followups', icon: CheckCircleIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
+        { name: 'Devis Odoo', href: '/odoo-quotes', icon: FileTextIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Facturation', href: '/invoices', icon: DollarSignIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         { name: 'Catalogue', href: '/catalog', icon: FolderIcon, color: 'text-blue-500', bg: 'bg-blue-50' },
         { name: 'Export Comptable', href: '/monthly-export', icon: DollarSignIcon, color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -157,15 +167,13 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAdmin, hasPermission, hiddenKey, modulesKey]);
 
-    const handleMenuNavigation = (href) => {
-        navigate(href);
-        setShowMobileMenu(false);
-    };
+
 
     return (
         <>
             <DemoBanner />
-            <div className={`app-layout ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0' }}>
+            <a className="workspace-skip-link" href="#workspace-main">Aller au contenu</a>
+            <div className={`app-layout ${!isAdmin ? 'employee-portal' : ''} ${isDark ? 'dark-mode-layout' : ''}`} style={{ marginTop: isDemoMode ? '44px' : '0', '--workspace-demo-offset': isDemoMode ? '44px' : '0px' }}>
                 {/* Desktop Sidebar */}
             <div className="desktop-nav">
                 <div className="sidebar-header">
@@ -174,41 +182,16 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                         <h1>Portail SRP</h1>
                     </div>
                     <p>{profile?.full_name}</p>
+                    {!isAdmin && <span className="field-space-badge">Espace collaborateur</span>}
                 </div>
-                <nav className="sidebar-nav">
-                    {navigation.map((item) => (
-                        item.isExternal ? (
-                            <a
-                                key={item.name}
-                                href={item.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="nav-link"
-                            >
-                                <item.icon className="nav-icon" />
-                                {item.name}
-                            </a>
-                        ) : (
-                            <NavLink
-                                key={item.name}
-                                to={item.href}
-                                className={({ isActive }) =>
-                                    `nav-link ${isActive ? 'active' : ''}`
-                                }
-                            >
-                                <item.icon className="nav-icon" />
-                                {item.name}
-                            </NavLink>
-                        )
-                    ))}
-                </nav>
+                <nav className="sidebar-nav" aria-label="Navigation principale"><NavigationGroups navigation={navigation} /></nav>
                 <div className="sidebar-footer">
                     <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
                         <ThemeToggle showLabel={true} />
                     </div>
                     <button onClick={handleLogout} className="logout-button">
                         <LogOutIcon className="nav-icon" />
-                        Deconnexion
+                        Déconnexion
                     </button>
                 </div>
             </div>
@@ -217,7 +200,7 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
             <div className="mobile-header">
                 <div className="mobile-header-logo">
                     <img src="/logo192.png" alt="SRP" className="mobile-logo-img" />
-                    <h1>SRP</h1>
+                    <h1>SRP{!isAdmin && <small className="field-mobile-subtitle">Mon espace</small>}</h1>
                 </div>
                 <div className="mobile-header-actions">
                     <MobileThemeToggleCompact />
@@ -225,15 +208,17 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                         count={0}
                         onClick={() => setShowNotifications(true)}
                     />
-                    <button onClick={handleLogout} className="btn-icon-logout">
+                    <button onClick={handleLogout} className="btn-icon-logout" aria-label="Se déconnecter">
                         <LogOutIcon />
                     </button>
                 </div>
             </div>
 
             {/* Main Content */}
-            <main className="main-content">
-                <Outlet />
+            <main className="main-content" id="workspace-main" tabIndex={-1}>
+                <WorkspaceHeader navigation={navigation} profile={profile} />
+                <BusinessWorkflowAlert />
+                <div className="workspace-page"><Outlet /></div>
             </main>
 
             {/* Mobile Bottom Nav */}
@@ -254,6 +239,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                     ))}
                     <button
                         className={`mobile-nav-button ${showMobileMenu ? 'active' : ''}`}
+                        aria-label="Ouvrir toutes les pages"
+                        aria-expanded={showMobileMenu}
                         onClick={() => setShowMobileMenu(!showMobileMenu)}
                     >
                         <MenuIcon />
@@ -262,47 +249,8 @@ const AppLayout = ({ profile, handleLogout, lastNotification }) => {
                 </div>
             </div>
 
-            {/* Mobile Menu Overlay (Bottom Sheet) */}
-            <div className={`mobile-menu-overlay ${showMobileMenu ? 'open' : ''}`} onClick={() => setShowMobileMenu(false)}>
-                <div className="mobile-menu-sheet" onClick={(e) => e.stopPropagation()}>
-                    <div className="mobile-menu-header">
-                        <h3>Menu</h3>
-                        <button onClick={() => setShowMobileMenu(false)} className="close-menu-btn">
-                            <ChevronDownIcon />
-                        </button>
-                    </div>
-                    <div className="mobile-menu-grid">
-                        {navigation.map((item) => (
-                            item.isExternal ? (
-                                <a
-                                    key={item.name}
-                                    href={item.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="menu-grid-item"
-                                    onClick={() => setShowMobileMenu(false)}
-                                >
-                                    <div className={`menu-icon-wrapper ${item.bg} ${item.color}`}>
-                                        <item.icon size={24} />
-                                    </div>
-                                    <span className="menu-item-label">{item.name}</span>
-                                </a>
-                            ) : (
-                                <button
-                                    key={item.name}
-                                    onClick={() => handleMenuNavigation(item.href)}
-                                    className={`menu-grid-item ${location.pathname === item.href ? 'active' : ''}`}
-                                >
-                                    <div className={`menu-icon-wrapper ${item.bg} ${item.color}`}>
-                                        <item.icon size={24} />
-                                    </div>
-                                    <span className="menu-item-label">{item.name}</span>
-                                </button>
-                            )
-                        ))}
-                    </div>
-                </div>
-            </div>
+            {profile?.id && profile?.organization_id && <RequestAssistant key={`${profile.organization_id}:${profile.id}`} profile={profile} allowedKinds={allowedRequestKinds} canPlan={isAdmin} />}
+            <WorkspaceMenu open={showMobileMenu} onClose={() => setShowMobileMenu(false)} navigation={navigation} />
 
             {/* Centre de Notifications */}
             <NotificationCenter

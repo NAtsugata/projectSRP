@@ -14,7 +14,10 @@ import { getConnectionState } from '../utils/connectionMonitor';
  */
 export function useExpenses(userId = null, filters = {}, limit = 1000) {
     const queryClient = useQueryClient();
-    const { user } = useAuthStore();
+    const { user,profile } = useAuthStore();
+    const scope={id:profile?.id,org:profile?.organization_id,admin:!!(profile?.is_admin || profile?.is_super_admin)};
+    const assertScope=()=>{const p=useAuthStore.getState().profile;if(p?.id!==scope.id || p?.organization_id!==scope.org)throw new Error('La session a changé. Rouvrez cet écran.');};
+    const checked=async result=>{const value=await result;assertScope();if(value?.error)throw value.error;return value;};
 
     // Query pour récupérer les notes de frais
     const {
@@ -23,13 +26,14 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['expenses', userId, filters, limit],
+        queryKey: ['expenses', scope.org,scope.id,scope.admin,userId, filters, limit],
+        enabled:!!scope.id && !!scope.org,
         queryFn: async () => {
             // Offline confirmé par les deux sources — aller directement au cache
             if (!navigator.onLine && !getConnectionState()) {
-                const cached = await getCachedExpenses();
+                const cached = await getCachedExpenses(scope);
                 if (cached && cached.length > 0) {
-                    return userId ? cached.filter(e => e.user_id === userId) : cached;
+                    assertScope();return userId ? cached.filter(e => e.user_id === userId) : cached;
                 }
                 return [];
             }
@@ -47,23 +51,24 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                     data = result.data || [];
                 }
 
-                if (data.length > 0) {
-                    cacheExpenses(data).catch(e => logger.warn('[useExpenses] Cache failed:', e));
+                assertScope();
+                if (data.length >= 0) {
+                    cacheExpenses(data,scope).catch(e => logger.warn('[useExpenses] Cache failed:', e));
                 }
                 return data;
             } catch (err) {
                 // Supabase inaccessible — fallback sur le cache plutôt que spinner infini
-                const cached = await getCachedExpenses();
+                const cached = await getCachedExpenses(scope);
                 if (cached && cached.length > 0) {
                     logger.warn('[useExpenses] Supabase inaccessible, données en cache utilisées');
-                    return userId ? cached.filter(e => e.user_id === userId) : cached;
+                    assertScope();return userId ? cached.filter(e => e.user_id === userId) : cached;
                 }
                 throw err;
             }
         },
         staleTime: 3 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
-        placeholderData: (previousData) => previousData,
+        placeholderData: undefined,
         networkMode: 'always',
         retry: 1,
         retryDelay: 2000,
@@ -82,7 +87,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.CREATE_EXPENSE, newExpense);
                 return { data: tempExpense };
             }
-            return expenseService.createExpense(newExpense);
+            return checked(expenseService.createExpense(newExpense));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -97,7 +102,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.UPDATE_EXPENSE, { id, updates });
                 return { data: { id, ...updates } };
             }
-            return expenseService.updateExpense(id, updates);
+            return checked(expenseService.updateExpense(id, updates));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -112,7 +117,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
                 await queueOperation(SYNC_OPERATION_TYPES.DELETE_EXPENSE, { id });
                 return { data: null };
             }
-            return expenseService.deleteExpense(id);
+            return checked(expenseService.deleteExpense(id));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -121,7 +126,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
 
     // Mutation pour approuver une note de frais (optimisé - sans refetch)
     const approveMutation = useMutation({
-        mutationFn: ({ id, comment }) => expenseService.approveExpense(id, user?.id, comment),
+        mutationFn: ({ id, comment }) => checked(expenseService.approveExpense(id, user?.id, comment)),
         onSuccess: (response) => {
             if (response.data) {
                 // Mettre à jour TOUTES les queries expenses en cache (sans refetch)
@@ -137,7 +142,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
 
     // Mutation pour rejeter une note de frais (optimisé - sans refetch)
     const rejectMutation = useMutation({
-        mutationFn: ({ id, comment }) => expenseService.rejectExpense(id, user?.id, comment),
+        mutationFn: ({ id, comment }) => checked(expenseService.rejectExpense(id, user?.id, comment)),
         onSuccess: (response) => {
             if (response.data) {
                 // Mettre à jour TOUTES les queries expenses en cache (sans refetch)
@@ -153,7 +158,7 @@ export function useExpenses(userId = null, filters = {}, limit = 1000) {
 
     // Mutation pour marquer comme payée (optimisé - sans refetch)
     const markAsPaidMutation = useMutation({
-        mutationFn: (id) => expenseService.markAsPaid(id, user?.id),
+        mutationFn: (id) => checked(expenseService.markAsPaid(id, user?.id)),
         onSuccess: (response) => {
             if (response.data) {
                 // Mettre à jour TOUTES les queries expenses en cache (sans refetch)

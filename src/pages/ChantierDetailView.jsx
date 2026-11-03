@@ -15,6 +15,8 @@ import {
   MAX_DOC_MB, MAX_PHOTO_MB, ALLOWED_DOC_EXTENSIONS, validateChantierFile,
 } from '../config/chantierPresets';
 import './ChantiersView.css';
+import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
+import { chantierProgress, isLateChantier } from '../utils/workspaceTracking';
 
 const LOT_STATUS = { a_demarrer: 'À démarrer', en_cours: 'En cours', termine: 'Terminé', valide: 'Validé' };
 const TASK_STATUS = { a_faire: 'À faire', en_cours: 'En cours', fait: 'Fait', valide: 'Validé' };
@@ -70,10 +72,7 @@ export default function ChantierDetailView() {
 
   const lots = useMemo(() => chantier?.chantier_lots || [], [chantier]);
   const zones = useMemo(() => chantier?.chantier_zones || [], [chantier]);
-  const globalProgress = useMemo(() => {
-    if (!lots.length) return 0;
-    return Math.round(lots.reduce((s, l) => s + (l.progress || 0), 0) / lots.length);
-  }, [lots]);
+  const globalProgress = useMemo(() => chantierProgress(lots), [lots]);
 
   if (loading) return <LoadingSpinner text="Chargement du chantier..." />;
   if (!chantier) {
@@ -101,7 +100,15 @@ export default function ChantierDetailView() {
         </div>
       </div>
 
-      <div className="chantier-tabs">
+      <BusinessWorkflowSource type="chantier" sourceKey={chantier.id} />
+      <div className="workspace-tracking-stats" aria-label="Suivi du chantier">
+        <button className="workspace-tracking-stat" onClick={() => setTab('tasks')}><strong>{tasks.filter(task => ['a_faire', 'en_cours'].includes(task.status)).length}</strong><span>Tâches à suivre</span></button>
+        <button className="workspace-tracking-stat" onClick={() => setTab('tasks')}><strong>{tasks.filter(task => task.status === 'fait').length}</strong><span>Tâches à valider</span></button>
+        <button className="workspace-tracking-stat" onClick={() => setTab('overview')}><strong>{lots.filter(lot => lot.status === 'valide').length} / {lots.length}</strong><span>Lots validés</span></button>
+        <button className="workspace-tracking-stat" onClick={() => setTab('docs')}><strong>{documents.length}</strong><span>Documents du chantier</span></button>
+      </div>
+      {chantier.end_date && <p className="workspace-result-count">Fin prévue : <time dateTime={chantier.end_date} className={isLateChantier(chantier) ? 'workspace-overdue' : ''}>{new Date(chantier.end_date + 'T00:00:00').toLocaleDateString('fr-FR')}{isLateChantier(chantier) ? ' · Échéance dépassée' : ''}</time></p>}
+      <div className="chantier-tabs" aria-label="Sections du chantier">
         <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Vue d'ensemble</button>
         <button className={tab === 'tasks' ? 'active' : ''} onClick={() => setTab('tasks')}>Tâches</button>
         <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}>Documents</button>

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useInterventions } from '../hooks/useInterventions';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
-import { profileService } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 import AgendaView from './AgendaView';
 import { EmployeeAgendaView } from '../components/agenda';
 
@@ -26,10 +26,11 @@ const AgendaViewContainer = () => {
 
     // Récupérer la liste des employés (seulement pour les admins)
     const { data: employees = [], isLoading: employeesLoading } = useQuery({
-        queryKey: ['employees'],
+        queryKey: ['employees', profile?.organization_id, profile?.id],
         queryFn: async () => {
-            const profiles = await profileService.getAllProfiles();
-            return profiles.data || [];
+            const { data, error } = await supabase.from('profiles').select('*').eq('organization_id', profile.organization_id);
+            if (error) throw error;
+            return data || [];
         },
         enabled: isAdmin, // Seulement charger pour les admins
     });

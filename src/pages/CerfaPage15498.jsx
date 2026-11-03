@@ -18,12 +18,16 @@ import {
 import { supabase } from '../lib/supabase';
 import { getOrgId, withOrgId } from '../utils/orgHelper';
 import SignaturePad from '../components/SignaturePad';
+import OdooCerfaImport from '../components/OdooCerfaImport';
 import '../components/CerfaGeneratorModal.css';
 import logger from '../utils/logger';
+import { currentCerfaStorageKey } from '../utils/currentCerfaScope';
+import { mergeCerfaDefaults, parseCerfaImport, company15498Defaults } from '../utils/cerfaData';
 
-const DRAFT_KEY_15498 = 'cerfa_15498_draft';
+
 
 function CerfaPage15498() {
+    const DRAFT_KEY_15498 = currentCerfaStorageKey('cerfa_15498_draft');
     const [searchParams] = useSearchParams();
     const [formData, setFormData] = useState({
         // ACQUÉREUR (Client)
@@ -88,14 +92,14 @@ function CerfaPage15498() {
     });
     const [isGenerating, setIsGenerating] = useState(false);
     const [toast, setToast] = useState(null);
-    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo());
+    const [ficheInfo, setFicheInfo] = useState(() => getCurrentFicheInfo('15498'));
     const [showAdminReset, setShowAdminReset] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
     const saveTimerRef = useRef(null);
 
     // Rafraîchir le numéro de fiche après génération
     const refreshFicheInfo = useCallback(() => {
-        setFicheInfo(getCurrentFicheInfo());
+        setFicheInfo(getCurrentFicheInfo('15498'));
     }, []);
 
     // Auto-save brouillon dans sessionStorage (debounce 1s)
@@ -104,16 +108,16 @@ function CerfaPage15498() {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
             try {
-                sessionStorage.setItem(DRAFT_KEY_15498, JSON.stringify(formData));
+                DRAFT_KEY_15498 && sessionStorage.setItem(DRAFT_KEY_15498, JSON.stringify(formData));
             } catch (e) { /* quota exceeded, ignore */ }
         }, 1000);
         return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-    }, [formData, draftRestored]);
+    }, [formData, draftRestored, DRAFT_KEY_15498]);
 
     // Restaurer le brouillon au montage
     useEffect(() => {
         try {
-            const draft = sessionStorage.getItem(DRAFT_KEY_15498);
+            const draft = (DRAFT_KEY_15498 ? sessionStorage.getItem(DRAFT_KEY_15498) : null);
             if (draft) {
                 const parsed = JSON.parse(draft);
                 const hasContent = parsed.acq_nom || parsed.details ||
@@ -125,34 +129,18 @@ function CerfaPage15498() {
             }
         } catch (e) { /* ignore parse errors */ }
         setDraftRestored(true);
-    }, []);  
+    }, [DRAFT_KEY_15498]);
 
     // Charger les données depuis les paramètres URL ou localStorage
     useEffect(() => {
+        const companyInfo = getCompanyInfo();
+        let imported = {};
         const data = searchParams.get('data');
         if (data) {
-            try {
-                const parsedData = JSON.parse(decodeURIComponent(data));
-                setFormData(prev => ({ ...prev, ...parsedData }));
-            } catch (e) {
-                logger.error('Erreur parsing données URL:', e);
-            }
+            try { imported = parseCerfaImport(data); }
+            catch (error) { logger.error('Données CERFA invalides:', error); }
         }
-
-        // Charger les infos entreprise sauvegardées
-        const companyInfo = getCompanyInfo();
-        if (companyInfo) {
-            setFormData(prev => ({
-                ...prev,
-                inst_raison: companyInfo.name || prev.inst_raison,
-                inst_num: companyInfo.address?.split(',')[0] || prev.inst_num,
-                inst_voie: companyInfo.address?.split(',')[0] || prev.inst_voie,
-                inst_commune: companyInfo.address?.split(',')[1]?.trim() || prev.inst_commune,
-                inst_siret: companyInfo.siret || prev.inst_siret,
-                inst_tel: companyInfo.phone || prev.inst_tel,
-                inst_attestation: companyInfo.attestationNumber || prev.inst_attestation,
-            }));
-        }
+        setFormData(prev => mergeCerfaDefaults(prev, company15498Defaults(companyInfo), imported));
     }, [searchParams]);
 
     // Toast notification
@@ -245,6 +233,7 @@ function CerfaPage15498() {
             await downloadCerfa(pdfBlob, filename);
 
             // Enregistrer dans Supabase Storage
+            let onlineSaved = false;
             try {
                 // Chemin préfixé par l'organisation (requis par les politiques RLS multi-tenant)
                 const orgId = getOrgId();
@@ -275,6 +264,7 @@ function CerfaPage15498() {
                         logger.error('[CERFA 15498] Échec enregistrement en base:', dbError.message);
                         alert('⚠️ Le PDF est sauvegardé en ligne mais n\'apparaîtra pas dans le Gestionnaire CERFA (erreur d\'enregistrement : ' + dbError.message + ')');
                     } else {
+                        onlineSaved = true;
                         logger.log('[CERFA 15498] Document enregistré dans Supabase');
                     }
                 }
@@ -292,9 +282,9 @@ function CerfaPage15498() {
             });
 
             // Effacer le brouillon après génération réussie
-            try { sessionStorage.removeItem(DRAFT_KEY_15498); } catch (e) { /* ignore */ }
+            try { if (onlineSaved) DRAFT_KEY_15498 && sessionStorage.removeItem(DRAFT_KEY_15498); } catch (e) { /* ignore */ }
 
-            showToast(`CERFA 15498 ${ficheNumber} généré avec succès !`, 'success');
+            showToast(`CERFA 15498 ${ficheNumber} généré${onlineSaved ? ' et enregistré en ligne' : ' ; sauvegarde en ligne à réessayer'}.`, onlineSaved ? 'success' : 'info');
             refreshFicheInfo();
         } catch (error) {
             logger.error('Erreur génération CERFA 15498:', error);
@@ -307,7 +297,7 @@ function CerfaPage15498() {
     // Réinitialiser le compteur (admin)
     const handleResetCounter = useCallback(() => {
         if (window.confirm('Voulez-vous vraiment réinitialiser le compteur de fiches CERFA à 0 ?')) {
-            resetFicheCounter(0);
+            resetFicheCounter('15498', 0);
             refreshFicheInfo();
             showToast('Compteur réinitialisé', 'success');
             setShowAdminReset(false);
@@ -405,6 +395,7 @@ function CerfaPage15498() {
 
                 {/* Body */}
                 <div className="cerfa-page-body">
+                <OdooCerfaImport type="15498" onImport={data => setFormData(prev => ({ ...prev, ...data }))} />
 
                     {/* Section: Type d'équipement */}
                     <section className="cerfa-section">

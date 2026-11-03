@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveService } from '../lib/supabase';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Hook pour gérer les demandes de congés avec React Query
@@ -8,6 +9,7 @@ import { leaveService } from '../lib/supabase';
  */
 export function useLeaveRequests(userId = null) {
     const queryClient = useQueryClient();
+    const profile=useAuthStore(s=>s.profile);
 
     // Query pour récupérer les demandes de congés
     const {
@@ -16,7 +18,8 @@ export function useLeaveRequests(userId = null) {
         error,
         refetch,
     } = useQuery({
-        queryKey: ['leaveRequests', userId],
+        queryKey: ['leaveRequests', profile?.organization_id,profile?.id,userId],
+        enabled:!!profile?.id && !!profile?.organization_id,
         queryFn: async () => {
             const { data, error } = await leaveService.getLeaveRequests(userId);
             if (error) throw error;
@@ -70,9 +73,9 @@ export function useLeaveRequests(userId = null) {
 
         // Fonctions
         refetch,
-        createLeaveRequest: createMutation.mutate,
-        updateLeaveRequest: updateMutation.mutate,
-        deleteLeaveRequest: deleteMutation.mutate,
+        createLeaveRequest: createMutation.mutateAsync,
+        updateLeaveRequest: updateMutation.mutateAsync,
+        deleteLeaveRequest: deleteMutation.mutateAsync,
 
         // États des mutations
         isCreating: createMutation.isPending,

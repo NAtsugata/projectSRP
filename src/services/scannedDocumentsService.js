@@ -2,7 +2,8 @@
 import { supabase, storageService } from '../lib/supabase';
 import { sanitizeFilename } from '../utils/sanitize';
 import logger from '../utils/logger';
-import { withOrgId, getOrgId } from '../utils/orgHelper';
+import { getOrgId } from '../utils/orgHelper';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Échappe les caractères spéciaux pour les requêtes SQL LIKE
@@ -35,7 +36,7 @@ const escapeSQLLike = (str) => {
  * - metadata: JSONB
  */
 
-const SCANNED_DOC_LIST_COLUMNS = 'id, user_id, title, description, file_url, file_name, file_type, thumbnail_url, tags, category, created_at';
+const SCANNED_DOC_LIST_COLUMNS = 'id, user_id, title, description, file_url, file_name, file_size, file_type, thumbnail_url, tags, category, created_at';
 
 const scannedDocumentsService = {
   /**
@@ -46,6 +47,7 @@ const scannedDocumentsService = {
       const { data, error } = await supabase
         .from('scanned_documents')
         .select(SCANNED_DOC_LIST_COLUMNS)
+        .eq('organization_id', getOrgId())
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -66,6 +68,7 @@ const scannedDocumentsService = {
       const { data, error } = await supabase
         .from('scanned_documents')
         .select(SCANNED_DOC_LIST_COLUMNS)
+        .eq('organization_id', getOrgId())
         .order('created_at', { ascending: false })
         .limit(1000);
 
@@ -82,17 +85,18 @@ const scannedDocumentsService = {
    */
   async createDocument({ userId, title, description = '', category = 'autre', tags = [], file, metadata = {} }) {
     try {
-      // 1. Upload le fichier vers Supabase Storage
-      // Sanitize le nom de fichier pour éviter path traversal
-      // Arborescence canonique : {org}/employees/{user}/scans/...
-      const safeFileName = sanitizeFilename(file.name);
       const orgId = getOrgId();
-      const scanPath = orgId
-        ? `${orgId}/employees/${userId}/scans/${Date.now()}-${safeFileName}`
-        : `scanned-docs/${userId}/${Date.now()}-${safeFileName}`;
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !orgId || authData?.user?.id !== userId || useAuthStore.getState().profile?.id !== userId) throw new Error('Session ou organisation invalide. Reconnectez-vous.');
+      const assertScope = () => {
+        if (getOrgId() !== orgId || useAuthStore.getState().profile?.id !== userId) throw new Error('La session a changé. Rouvrez vos documents.');
+      };
+      assertScope();
+      const safeFileName = sanitizeFilename(file.name);
+      const scanPath = `${orgId}/employees/${userId}/scans/${crypto.randomUUID()}-${safeFileName}`;
       const uploadResult = await storageService.uploadFile(file, scanPath);
-
       if (uploadResult.error) throw uploadResult.error;
+      assertScope();
 
       // 2. Créer le thumbnail si c'est une image
       let thumbnailUrl = null;
@@ -103,6 +107,7 @@ const scannedDocumentsService = {
       // 3. Insérer dans la base de données
       const docData = {
         user_id: userId,
+        organization_id: orgId,
         title,
         description,
         file_url: uploadResult.publicURL,
@@ -117,11 +122,15 @@ const scannedDocumentsService = {
 
       const { data, error } = await supabase
         .from('scanned_documents')
-        .insert([withOrgId(docData)])
+        .insert([docData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (getOrgId() === orgId && useAuthStore.getState().profile?.id === userId) await storageService.deleteFile(scanPath);
+        throw error;
+      }
+      assertScope();
       return { data, error: null };
     } catch (error) {
       logger.error('❌ Erreur createDocument:', error);
@@ -191,8 +200,10 @@ const scannedDocumentsService = {
         // Convertir le blob en File si nécessaire
         let file;
         if (doc.blob instanceof Blob) {
-          const fileName = `scan_${Date.now()}_${i + 1}.jpg`;
-          file = new File([doc.blob], fileName, { type: doc.blob.type || 'image/jpeg' });
+          const mime = doc.blob.type || 'image/jpeg';
+          const extension = mime === 'application/pdf' ? 'pdf' : mime === 'image/png' ? 'png' : 'jpg';
+          const fileName = `scan_${Date.now()}_${i + 1}.${extension}`;
+          file = new File([doc.blob], fileName, { type: mime });
         } else if (doc.url && doc.url.startsWith('data:')) {
           // Convertir dataURL en File
           const response = await fetch(doc.url);
@@ -212,6 +223,7 @@ const scannedDocumentsService = {
           tags,
           file,
           metadata: {
+            pageCount: doc.pageCount || 1,
             scannedAt: doc.timestamp || new Date().toISOString(),
             enhanceMode: doc.enhanceMode || 'original',
             rotation: doc.rotation || 0,
@@ -220,6 +232,7 @@ const scannedDocumentsService = {
         });
 
         if (result.error) {
+          if (scannedDocs.length === 1) throw result.error;
           logger.error(`Erreur sauvegarde document ${i + 1}:`, result.error);
           continue;
         }
@@ -297,7 +310,8 @@ const scannedDocumentsService = {
     try {
       let query = supabase
         .from('scanned_documents')
-        .select(SCANNED_DOC_LIST_COLUMNS);
+        .select(SCANNED_DOC_LIST_COLUMNS)
+        .eq('organization_id', getOrgId());
 
       // Filtre par utilisateur si pas admin
       if (!isAdmin) {
@@ -330,6 +344,7 @@ const scannedDocumentsService = {
       let query = supabase
         .from('scanned_documents')
         .select(SCANNED_DOC_LIST_COLUMNS)
+        .eq('organization_id', getOrgId())
         .eq('category', category);
 
       if (!isAdmin) {

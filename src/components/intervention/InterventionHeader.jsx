@@ -3,6 +3,8 @@
 
 import { ChevronLeftIcon, AlertTriangleIcon } from '../SharedUI';
 import './InterventionHeader.css';
+import StatusBadge from '../ui/StatusBadge';
+import { interventionStageStatus } from '../../utils/statusPresentation';
 
 const InterventionHeader = ({
   intervention,
@@ -46,6 +48,7 @@ const InterventionHeader = ({
         </button>
 
         <div className="header-badges">
+          <StatusBadge status={interventionStageStatus(intervention)}/>
           {isUrgent && (
             <span className="badge badge-urgent">
               <AlertTriangleIcon />
@@ -126,7 +129,7 @@ const InterventionHeader = ({
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span>{intervention.time}</span>
+            <span>{intervention.time.slice(0,5)}</span>
           </div>
         )}
       </div>

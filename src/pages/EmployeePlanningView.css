@@ -1,243 +1,144 @@
-/* ============================================
-   EmployeePlanningView - Mobile Comfort Design
-   ============================================ */
+.field-workspace{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:24px;color:var(--text-primary,#19342f);min-width:0}
 
-:root {
-  --comfort-bg: var(--bg-app);
-  --comfort-card-bg: var(--bg-primary);
-  --comfort-text-primary: var(--text-primary);
-  --comfort-text-secondary: var(--text-secondary);
-  --comfort-accent: var(--color-primary-600);
-  /* Teal-700 */
-  --comfort-accent-light: var(--color-primary-100);
-  /* Teal-100 */
-  --comfort-radius: 24px;
-  --comfort-shadow: var(--shadow-md);
+.field-workspace *{box-sizing:border-box}
+.field-workspace h1,.field-workspace h2,.field-workspace h3,.field-workspace p{margin:0}
+.field-workspace svg{width:20px;height:20px;flex-shrink:0}
+.field-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.field-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.6px;color:var(--text-secondary,#5b716a)}
+.field-heading h1{font-size:clamp(28px,3vw,40px);font-weight:750;letter-spacing:-1.5px;margin:6px 0 10px;line-height:1.15}
+.field-heading-dot{color:#bc7d36}
+.field-heading p{color:var(--text-secondary,#5b716a);font-size:14px;text-transform:none}
+.field-workspace button,.field-workspace a{font:inherit}
+.field-workspace button{cursor:pointer}
+.field-workspace a{text-decoration:none}
+.field-workspace button:focus-visible,.field-workspace a:focus-visible{outline:3px solid #d69740;outline-offset:3px}
+.field-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.field-summary>button{display:flex;align-items:center;gap:14px;text-align:left;border:1px solid var(--border-color,#d7e1dc);border-radius:16px;padding:20px;background:var(--bg-primary,#fff);color:inherit;min-width:0}
+.field-summary>button>svg{margin-left:auto;width:16px;color:var(--text-secondary,#5b716a)}
+.field-stat-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#16756815;color:#167568;flex-shrink:0}
+.field-stat-icon.is-copper{background:#bc7d3617;color:#a46727}
+.field-summary small{display:block;font-size:12px;color:var(--text-secondary,#5b716a);margin-bottom:7px}
+.field-summary strong{display:flex;align-items:baseline;gap:8px;font-size:28px;line-height:1;font-weight:750}
+.field-summary em{font-size:11px;font-style:normal;font-weight:500;color:var(--text-secondary,#5b716a)}
+.field-overview-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px}
+.field-next,.field-week,.field-planning-section{border:1px solid var(--border-color,#d7e1dc);border-radius:18px;background:var(--bg-primary,#fff);min-width:0;overflow:hidden}
+.field-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.field-section-title h2{font-size:18px;font-weight:750;letter-spacing:-.4px}
+.field-next>.field-section-title{padding:19px 22px;background:var(--bg-secondary,#f4f8f5);border-bottom:1px solid var(--border-color,#d7e1dc)}
+.field-next>.field-section-title>span:last-child:not(:first-child){font-size:11px;background:var(--bg-primary,#fff);border:1px solid var(--border-color,#d7e1dc);padding:5px 10px;border-radius:20px}
+.field-appointment{padding:22px;border:1px solid var(--border-color,#d7e1dc);border-radius:14px;background:var(--bg-primary,#fff);min-width:0}
+.field-next .field-appointment{border:0;border-radius:0;padding:24px}
+.field-appointment-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.field-time{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text-secondary,#5b716a)}
+.field-time svg{width:16px;height:16px}
+.field-status{font-size:10px;font-weight:700;display:inline-flex;padding:6px 10px;border-radius:20px;color:#41685b;background:#e9f1ed}
+.field-status.running{background:#fff1d7;color:#88560c}
+.field-status.complete{background:#dff3e9;color:#15654c}
+.field-appointment h3{font-size:19px;line-height:1.3;overflow-wrap:anywhere;letter-spacing:-.4px}
+.field-appointment.is-featured h3{font-size:26px}
+.field-appointment h3 a{color:var(--text-primary,#19342f)}
+.field-appointment .field-service{font-size:13px;color:var(--text-secondary,#5b716a);margin:8px 0 15px;line-height:1.6}
+.field-address{display:flex;align-items:flex-start;gap:7px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.field-address svg{width:16px;height:18px}
+.field-appointment .field-team{margin-top:10px;font-size:11px;color:var(--text-secondary,#5b716a);line-height:1.5}
+.field-appointment-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px}
+.field-workspace .field-primary-link{display:inline-flex;align-items:center;justify-content:center;gap:14px;background:#176e5d;color:white;border:1px solid #176e5d;border-radius:9px;padding:12px 15px;font-size:12px;font-weight:700;min-height:44px}
+.field-primary-link svg{width:15px;height:15px}
+.field-map-link{color:var(--text-primary,#19342f);padding:12px 16px;border:1px solid var(--border-color,#d7e1dc);border-radius:9px;font-size:12px;min-height:44px}
+.field-week{padding:22px}
+.field-week>.field-section-title>span{font-size:11px;color:var(--text-secondary,#5b716a)}
+.field-week>p{font-size:11px;color:var(--text-secondary,#5b716a);margin:8px 0 18px}
+.field-week-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:155px}
+.field-week-chart button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 2px;border:0;background:transparent;color:var(--text-secondary,#5b716a);font-size:10px;min-width:0;min-height:44px;border-radius:7px}
+.field-week-chart button strong{font-size:11px;color:var(--text-primary,#19342f)}
+.field-week-chart .is-today{background:#b9803611}
+.field-bar-track{width:100%;max-width:24px;height:105px;display:flex;align-items:end;background:var(--bg-secondary,#f4f8f5);border-radius:5px;overflow:hidden}
+.field-bar-total{width:100%;position:relative;min-height:0;background:#b1cbbf;border-radius:5px 5px 0 0;display:block}
+.field-bar-complete{position:absolute;bottom:0;left:0;width:100%;background:#19715e;display:block}
+.field-chart-legend{display:flex;justify-content:center;gap:20px;font-size:10px;color:var(--text-secondary,#5b716a);margin-top:16px}
+.field-chart-legend span:before{content:'';display:inline-block;width:7px;height:7px;border-radius:2px;background:#b1cbbf;margin-right:6px}
+.field-chart-legend span:last-child:before{background:#19715e}
+.field-week .field-chart-note{font-size:10px;margin-bottom:0;line-height:1.5}
+.field-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.field-shortcuts>a{display:flex;align-items:center;gap:12px;border:1px solid var(--border-color,#d7e1dc);background:var(--bg-primary,#fff);border-radius:13px;padding:17px 14px;color:inherit;min-width:0}
+.field-shortcuts>a>svg:first-child{color:#a56c2c}
+.field-shortcuts>a>svg:last-child{width:14px;margin-left:auto}
+.field-shortcuts strong{display:block;font-size:12px}
+.field-shortcuts small{display:block;font-size:10px;color:var(--text-secondary,#5b716a);margin-top:4px;line-height:1.5}
+.field-planning-title{padding:22px}
+.field-planning-title h2{margin-top:6px}
+.field-view-tabs,.field-period-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.field-view-tabs{padding:4px;border:1px solid var(--border-color,#d7e1dc);border-radius:10px;background:var(--bg-secondary,#f4f8f5)}
+.field-view-tabs button,.field-period-tabs button{border:0;border-radius:7px;background:transparent;color:var(--text-secondary,#5b716a);padding:10px 13px;font-size:11px;font-weight:650;min-height:44px}
+.field-view-tabs button[aria-pressed=true]{background:var(--bg-primary,#fff);color:var(--text-primary,#19342f);box-shadow:0 1px 3px #0001}
+.field-period-tabs{padding:0 22px 18px;border-bottom:1px solid var(--border-color,#d7e1dc);gap:8px}
+.field-period-tabs button{border:1px solid var(--border-color,#d7e1dc)}
+.field-period-tabs button[aria-pressed=true]{background:#176e5d;color:#fff;border-color:#176e5d}
+.field-day-progress{display:flex;align-items:center;gap:16px;padding:20px 22px 0;font-size:11px;color:var(--text-secondary,#5b716a)}
+.field-day-progress progress{width:140px;height:6px;accent-color:#19715e;max-width:40%;border-radius:8px;overflow:hidden}
+.field-day-progress progress::-webkit-progress-bar{background:var(--bg-secondary,#edf3ef)}
+.field-day-progress progress::-webkit-progress-value{background:#19715e}
+.field-timeline{list-style:none;padding:22px;margin:0;display:flex;flex-direction:column;gap:16px}
+.field-timeline>li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px}
+.field-timeline-marker{position:relative;display:flex;align-items:center;flex-direction:column;gap:9px;padding-top:12px}
+.field-timeline-marker span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;font-size:10px;font-weight:750;color:var(--text-secondary,#5b716a);background:var(--bg-secondary,#f4f8f5);border:1px solid var(--border-color,#d7e1dc)}
+.field-timeline-marker time{font-size:10px;color:var(--text-secondary,#5b716a)}
+.field-timeline>li:not(:last-child) .field-timeline-marker:after{content:'';position:absolute;top:78px;bottom:-24px;width:1px;background:var(--border-color,#d7e1dc)}
+.field-empty{padding:32px 22px;text-align:center;color:var(--text-secondary,#5b716a)}
+.field-empty>svg{width:30px;height:30px;margin-bottom:12px;color:#a56c2c}
+.field-empty h3{font-size:17px;color:var(--text-primary,#19342f);margin-bottom:8px}
+.field-empty p{font-size:13px;line-height:1.7}
+.field-empty button{background:transparent;border:1px solid var(--border-color,#d7e1dc);padding:12px;border-radius:8px;color:inherit;min-height:44px;margin-top:16px}
+.field-legacy-view{padding:18px;min-width:0;overflow:auto}
+.field-error{padding:16px;border:1px solid #b75d4a;background:var(--bg-primary,#fff);border-radius:12px;color:var(--text-primary,#19342f)}
+
+@media(max-width:1050px){.field-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+.field-summary>button{padding:16px;gap:10px}
+.field-summary em{display:block;margin-top:6px}
+.field-summary strong{display:block}
+.field-stat-icon{width:36px;height:36px}
+.field-summary>button>svg{display:none}
+.field-overview-grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
 }
 
-.employee-planning-view {
-  padding: var(--spacing-4);
-  max-width: 800px;
-  /* Mobile-first optimization */
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
-  min-height: 100vh;
-  background-color: var(--comfort-bg);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+@media(max-width:700px){.field-workspace{gap:18px}
+.field-heading{align-items:flex-start}
+.field-heading h1{font-size:30px}
+.field-heading p{font-size:12px;line-height:1.7}
+.field-summary{gap:8px}
+.field-summary>button{padding:13px 10px;display:block;border-radius:12px}
+.field-summary .field-stat-icon{width:30px;height:30px;margin-bottom:10px}
+.field-stat-icon svg{width:16px;height:16px}
+.field-summary small{font-size:10px;min-height:26px;line-height:1.4;margin-bottom:6px}
+.field-summary strong{font-size:25px}
+.field-summary em{font-size:9px}
+.field-overview-grid{grid-template-columns:minmax(0,1fr);gap:18px}
+.field-next>.field-section-title,.field-next .field-appointment,.field-week{padding:18px}
+.field-appointment.is-featured h3{font-size:23px}
+.field-shortcuts{gap:9px}
+.field-shortcuts>a{padding:13px;gap:8px}
+.field-shortcuts>a>svg:last-child{display:none}
+.field-shortcuts small{font-size:9px}
+.field-shortcuts strong{font-size:11px}
+.field-shortcuts>a>svg:first-child{width:18px}
+.field-planning-title{padding:18px;align-items:start;gap:16px}
+.field-view-tabs{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.field-period-tabs{padding:0 14px 14px;gap:6px}
+.field-period-tabs button{padding:9px 11px;font-size:10px}
+.field-timeline{padding:18px 12px}
+.field-timeline>li{grid-template-columns:36px minmax(0,1fr);gap:8px}
+.field-timeline-marker time{font-size:8px;text-align:center}
+.field-timeline .field-appointment{padding:15px}
+.field-appointment h3{font-size:17px}
+.field-appointment .field-service{font-size:12px}
+.field-time{font-size:10px}
+.field-status{font-size:9px}
+.field-address{font-size:12px}
+.field-appointment-actions{gap:8px}
+.field-appointment-actions>a{flex:1 1 135px;padding:11px 10px;text-align:center;font-size:11px}
+.field-day-progress{padding:18px 14px 0;gap:10px;font-size:10px}
+.field-legacy-view{padding:10px}
 }
 
-/* ==================== HEADER SECTION ==================== */
-.planning-header-section {
-  padding: var(--spacing-4) var(--spacing-2);
-  margin-bottom: var(--spacing-2);
-}
-
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-4);
-  flex-wrap: wrap;
-}
-
-.header-text {
-  flex: 1;
-  min-width: 200px;
-}
-
-.planning-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--comfort-text-primary);
-  margin: 0 0 var(--spacing-2) 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.planning-subtitle {
-  font-size: 1rem;
-  color: var(--comfort-text-secondary);
-  margin: 0;
-  font-weight: 400;
-}
-
-/* ==================== HEADER ACTIONS ==================== */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-/* ==================== VIEW MODE SELECTOR ==================== */
-.employee-planning-view .view-mode-selector {
-  display: flex;
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 4px;
-  gap: 4px;
-  box-shadow: var(--shadow-sm);
-}
-
-.employee-planning-view .view-mode-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--comfort-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.employee-planning-view .view-mode-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.employee-planning-view .view-mode-btn:hover {
-  background: rgba(20, 184, 166, 0.1);
-  color: var(--comfort-accent);
-}
-
-.employee-planning-view .view-mode-btn.active {
-  background: var(--comfort-accent);
-  color: var(--text-inverse);
-  box-shadow: var(--shadow-sm);
-}
-
-.employee-planning-view .view-mode-label {
-  display: inline;
-}
-
-/* ==================== PLANNING CONTENT ==================== */
-.planning-content {
-  animation: slideUp 0.4s ease-out;
-}
-
-/* ==================== INTERVENTION LIST OVERRIDES ==================== */
-/* We target the list component styles to inject our comfort design */
-.employee-planning-view .intervention-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-/* ==================== EMPTY STATE ==================== */
-.employee-planning-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12) var(--spacing-6);
-  background: var(--comfort-card-bg);
-  border-radius: var(--comfort-radius);
-  box-shadow: var(--comfort-shadow);
-  margin-bottom: var(--spacing-2);
-}
-
-.employee-planning-empty-description {
-  font-size: 0.95rem;
-  color: var(--comfort-text-secondary);
-  line-height: 1.5;
-  max-width: 280px;
-}
-
-/* ==================== ANIMATIONS ==================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* ==================== LOADING ==================== */
-.loading-spinner-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12);
-}
-
-/* ==================== RESPONSIVE ==================== */
-@media (max-width: 640px) {
-  .header-top {
-    flex-direction: column;
-    gap: var(--spacing-3);
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .employee-planning-view .view-mode-selector {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .employee-planning-view .view-mode-btn {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .employee-planning-view .view-mode-label {
-    display: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .employee-planning-view {
-    padding: var(--spacing-8);
-  }
-
-  .planning-title {
-    font-size: 2.25rem;
-  }
-}
-
-/* ==================== DARK MODE SUPPORT ==================== */
-/* thème sombre de l'application (ex-@media prefers-color-scheme) */
-  /* Les couleurs sont automatiquement gérées par les variables CSS */
-
-
-/* Support explicite via classe .dark-theme */
-[data-theme="dark"] .employee-planning-view,
-.dark-theme .employee-planning-view {
-  /* Overrides spécifiques si nécessaires */
+@media(prefers-reduced-motion:reduce){.field-workspace *{animation:none!important;transition:none!important}
 }

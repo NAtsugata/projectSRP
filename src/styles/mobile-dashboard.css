@@ -278,24 +278,8 @@ svg {
         background-color: var(--bg-secondary);
     }
 
-    /* Universal text colors */
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    .title,
-    .heading {
-        color: var(--text-primary);
-    }
-
-    p,
-    span,
-    div,
-    li {
-        color: var(--text-primary);
-    }
+    /* Text inherits from semantic components so status colors stay meaningful. */
+    h1, h2, h3, h4, h5, h6 { color: var(--text-primary); }
 
     /* Tables */
     table,

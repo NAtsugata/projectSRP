@@ -6,7 +6,7 @@ import logger from '../utils/logger';
 import { withOrgId } from '../utils/orgHelper';
 
 export const interventionService = {
-  async getInterventions(userId = null, isArchived = false) {
+  async getInterventions(userId = null, isArchived = false, organizationId = null) {
     logger.log('📋 getInterventions called with:', { userId, isArchived });
 
     let query;
@@ -56,6 +56,7 @@ export const interventionService = {
         `);
     }
 
+    if (organizationId) query = query.eq('organization_id', organizationId);
     if (isArchived !== null) {
       query = query.eq('is_archived', isArchived);
     }

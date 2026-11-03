@@ -19,10 +19,14 @@ import { detectDocument } from '../utils/jscanifyDetector';
 import { safeStorage } from '../utils/safeStorage';
 import logger from '../utils/logger';
 import '../components/expenses/ExpensesStyles.css';
+import RequestGuide from '../components/RequestGuide';
+import StatusBadge from '../components/ui/StatusBadge';
 
-export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteExpense, profile, filters, onUpdateFilters }) {
+export default function ExpensesView(props){return <ExpensesWorkspace key={`${props.profile?.organization_id}:${props.profile?.id}`} {...props}/>;}
+function ExpensesWorkspace({ expenses = [], onSubmitExpense, onDeleteExpense, profile, filters, onUpdateFilters }) {
+  const draftKey=`expenses-draft:${profile?.organization_id}:${profile?.id}`;
   const [isCreating, setIsCreating] = useState(() => {
-    const saved = safeStorage.getJSON('expense_form_isCreating', false);
+    const saved = safeStorage.getJSON(draftKey+':open', false);
     logger.log('Restauration isCreating depuis localStorage:', saved);
     return saved;
   });
@@ -34,7 +38,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
       description: '',
       receipts: []
     };
-    const saved = safeStorage.getJSON('expense_form_data', defaultExpense);
+    const saved = safeStorage.getJSON(draftKey+':data', defaultExpense);
     if (saved && saved !== defaultExpense) {
       logger.log('Données restaurées:', { receipts: saved.receipts?.length || 0 });
     }
@@ -54,8 +58,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
     if (isCreating) {
-      safeStorage.setJSON('expense_form_isCreating', isCreating);
-      safeStorage.setJSON('expense_form_data', newExpense);
+      safeStorage.setJSON(draftKey+':open', isCreating);
+      safeStorage.setJSON(draftKey+':data', newExpense);
     }
   }, [isCreating, newExpense]);
 
@@ -63,8 +67,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        const saved = safeStorage.getJSON('expense_form_isCreating', false);
-        const savedData = safeStorage.getJSON('expense_form_data', null);
+        const saved = safeStorage.getJSON(draftKey+':open', false);
+        const savedData = safeStorage.getJSON(draftKey+':data', null);
         if (saved) {
           setIsCreating(true);
           if (savedData) setNewExpense(savedData);
@@ -74,10 +78,10 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
 
     const handlePageShow = (event) => {
       if (event.persisted) {
-        const saved = safeStorage.getJSON('expense_form_isCreating', false);
+        const saved = safeStorage.getJSON(draftKey+':open', false);
         if (saved) {
           setIsCreating(true);
-          const savedData = safeStorage.getJSON('expense_form_data', null);
+          const savedData = safeStorage.getJSON(draftKey+':data', null);
           if (savedData) setNewExpense(savedData);
         }
       }
@@ -305,8 +309,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         receipts: []
       });
       setIsCreating(false);
-      localStorage.removeItem('expense_form_isCreating');
-      localStorage.removeItem('expense_form_data');
+      localStorage.removeItem(draftKey+':open');
+      localStorage.removeItem(draftKey+':data');
     } catch (err) {
       logger.error('Erreur soumission note de frais:', err);
       setError(`Erreur: ${err.message}`);
@@ -331,22 +335,6 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
     }).format(amount);
   };
 
-  const getStatusBadge = (expense) => {
-    if (expense.is_paid) {
-      return { icon: '💰', label: 'Payé', color: '#4338ca', bg: '#eff6ff' };
-    }
-    switch (expense.status) {
-      case 'pending':
-        return { icon: <ClockIcon />, label: 'En attente', color: '#b45309', bg: '#fef3c7' };
-      case 'approved':
-        return { icon: <CheckCircleIcon />, label: 'Approuvé', color: '#047857', bg: '#d1fae5' };
-      case 'rejected':
-        return { icon: <XCircleIcon />, label: 'Rejeté', color: '#b91c1c', bg: '#fee2e2' };
-      default:
-        return { icon: <ClockIcon />, label: 'Inconnu', color: '#475569', bg: '#f1f5f9' };
-    }
-  };
-
   const renderFilterButton = (status, label, emoji, count, colors) => (
     <button
       type="button"
@@ -363,9 +351,10 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
   );
 
   return (
-    <div>
+    <div className="expenses-workspace">
+      <RequestGuide kind="expense" rows={expenses}/>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 className="view-title" style={{ marginBottom: 0 }}>💰 Mes Notes de Frais</h2>
+        <h2 className="view-title" style={{ marginBottom: 0 }}>Mes notes de frais</h2>
         <select
           className="form-control"
           onChange={(e) => handlePeriodChange(e.target.value)}
@@ -378,28 +367,9 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
         </select>
       </div>
 
-      {/* Statistiques */}
+      {/* Une seule synthèse : chaque carte filtre directement les notes. */}
       <div className="expense-stats-grid">
-        <div className="stat-card warning">
-          <div className="stat-label">EN ATTENTE</div>
-          <div className="stat-value">{stats.pending.count}</div>
-          <div className="stat-subvalue">{formatAmount(stats.pending.total)}</div>
-        </div>
-        <div className="stat-card success">
-          <div className="stat-label">APPROUVÉ</div>
-          <div className="stat-value">{stats.approved.count}</div>
-          <div className="stat-subvalue">{formatAmount(stats.approved.total)}</div>
-        </div>
-        <div className="stat-card danger">
-          <div className="stat-label">REJETÉ</div>
-          <div className="stat-value">{stats.rejected.count}</div>
-          <div className="stat-subvalue">{formatAmount(stats.rejected.total)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">TOTAL</div>
-          <div className="stat-value">{expenses.length}</div>
-          <div className="stat-subvalue">{formatAmount(stats.total)}</div>
-        </div>
+        {[["pending","En attente"],["approved","Validées à payer"],["paid","Payées"],["rejected","Refusées"],["all","Toutes les notes"]].map(([status,label])=><button type="button" key={status} className="stat-card" aria-pressed={filterStatus===status} onClick={()=>setFilterStatus(status)}><span className="stat-label">{label}</span><strong className="stat-value">{status==="all"?expenses.length:stats[status].count} <small>note{(status==="all"?expenses.length:stats[status].count)>1?"s":""}</small></strong><span className="stat-subvalue">Montant : {formatAmount(status==="all"?stats.total:stats[status].total)}</span></button>)}
       </div>
 
       {/* Bouton Nouvelle Note */}
@@ -522,8 +492,8 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                 if (!isProcessingPhoto) {
                   setIsCreating(false);
                   setError(null);
-                  localStorage.removeItem('expense_form_isCreating');
-                  localStorage.removeItem('expense_form_data');
+                  localStorage.removeItem(draftKey+':open');
+                  localStorage.removeItem(draftKey+':data');
                 }
               }}
               disabled={isSubmitting || isProcessingPhoto}
@@ -533,30 +503,6 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
           </div>
         </div>
       )}
-
-      {/* Statistiques mini */}
-      <div className="stats-mini-grid">
-        <div className="stats-mini-card" style={{ background: '#fef3c7' }}>
-          <div className="label" style={{ color: '#92400e' }}>⏳ EN ATTENTE</div>
-          <div className="value" style={{ color: '#b45309' }}>{stats.pending.count}</div>
-          <div className="subvalue" style={{ color: '#92400e' }}>{formatAmount(stats.pending.total)}</div>
-        </div>
-        <div className="stats-mini-card" style={{ background: '#d1fae5' }}>
-          <div className="label" style={{ color: '#065f46' }}>✅ APPROUVÉ</div>
-          <div className="value" style={{ color: '#047857' }}>{stats.approved.count}</div>
-          <div className="subvalue" style={{ color: '#065f46' }}>{formatAmount(stats.approved.total)}</div>
-        </div>
-        <div className="stats-mini-card" style={{ background: '#eff6ff' }}>
-          <div className="label" style={{ color: '#1e3a8a' }}>💰 PAYÉ</div>
-          <div className="value" style={{ color: '#4338ca' }}>{stats.paid.count}</div>
-          <div className="subvalue" style={{ color: '#1e3a8a' }}>{formatAmount(stats.paid.total)}</div>
-        </div>
-        <div className="stats-mini-card" style={{ background: '#fee2e2' }}>
-          <div className="label" style={{ color: '#991b1b' }}>❌ REJETÉ</div>
-          <div className="value" style={{ color: '#b91c1c' }}>{stats.rejected.count}</div>
-          <div className="subvalue" style={{ color: '#991b1b' }}>{formatAmount(stats.rejected.total)}</div>
-        </div>
-      </div>
 
       {/* Filtres */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -586,7 +532,6 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .map(expense => {
                 const categoryInfo = getCategoryInfo(expense.category);
-                const statusInfo = getStatusBadge(expense);
 
                 return (
                   <div key={expense.id} className="expense-item">
@@ -637,10 +582,7 @@ export default function ExpensesView({ expenses = [], onSubmitExpense, onDeleteE
                         <CalendarIcon style={{ display: 'inline', width: '12px', height: '12px', marginRight: '4px' }} />
                         {formatDate(expense.date)}
                       </div>
-                      <span className="status-badge" style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}>
-                        {statusInfo.icon}
-                        {statusInfo.label}
-                      </span>
+                      <StatusBadge status={expense.is_paid?'paid':expense.status}/>
                     </div>
 
                     {expense.status === 'pending' && (

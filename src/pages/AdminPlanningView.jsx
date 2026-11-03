@@ -1,3 +1,4 @@
+import { defaultPlanningView } from '../utils/workspaceTracking';
 // src/pages/AdminPlanningView.js - Version refactorisée
 // Gestion du planning admin avec composants modulaires
 
@@ -40,7 +41,7 @@ export default function AdminPlanningView({
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true' || !!prefillClient);
   const [viewMode, setViewMode] = useState(() => {
     // Récupérer la préférence de vue depuis localStorage (Gantt par défaut)
-    return localStorage.getItem('planningViewMode') || VIEW_MODES.GANTT;
+    return defaultPlanningView('planningViewMode');
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);

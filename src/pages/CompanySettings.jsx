@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import './CompanySettings.css';
+import { saveCompanyInfo } from '../utils/cerfaService';
 
 const CompanySettings = () => {
   const [companyData, setCompanyData] = useState({
@@ -79,6 +80,7 @@ const CompanySettings = () => {
     const assuranceDecennaleText = `${companyData.assuranceCompany} - Contrat n°${companyData.assuranceNumContrat} - Valide du ${companyData.assuranceValiditeDebut} au ${companyData.assuranceValiditeFin}`;
     localStorage.setItem('companyAssuranceDecennale', assuranceDecennaleText);
 
+    saveCompanyInfo({ companyName: companyData.name, address: companyData.address, siret: companyData.siret, phone: companyData.phone, email: companyData.email });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };

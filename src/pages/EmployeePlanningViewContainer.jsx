@@ -7,12 +7,16 @@ import { useAuthStore } from '../store/authStore';
 import { getDayTeamIds } from '../utils/teamForDate';
 import EmployeePlanningView from './EmployeePlanningView';
 import logger from '../utils/logger';
+import { useModules } from '../hooks/useModules';
+import { HREF_TO_MODULE, isHrefHidden } from '../config/menuModules';
 
 /**
  * Container pour EmployeePlanningView qui gère la logique de données avec React Query
  */
 const EmployeePlanningViewContainer = () => {
-    const { profile, user } = useAuthStore();
+    const { profile, user, organization } = useAuthStore();
+    const { hasModule } = useModules();
+    const allowedLinks = ['/agenda', '/expenses', '/leaves', '/documents'].filter(href => !isHrefHidden(href, organization?.settings?.hidden_modules || []) && hasModule(HREF_TO_MODULE[href]));
 
     // Debug: Log profile info
     useEffect(() => {
@@ -61,6 +65,8 @@ const EmployeePlanningViewContainer = () => {
     return (
         <EmployeePlanningView
             interventions={myInterventions}
+            error={error}
+            allowedLinks={allowedLinks}
             users={users}
             loading={isLoading}
             userId={profile?.id}

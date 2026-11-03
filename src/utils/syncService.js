@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import expenseService from '../services/expenseService';
+import { useAuthStore } from '../store/authStore';
 import {
   addToSyncQueue,
   getPendingSyncOperations,
@@ -26,6 +27,8 @@ export const SYNC_OPERATION_TYPES = {
 // État de la synchronisation
 let isSyncing = false;
 let syncListeners = [];
+const currentScope=()=>{const p=useAuthStore.getState().profile;return p?.id && p.organization_id?{id:p.id,org:p.organization_id}:null;};
+const ownsOperation=operation=>{const scope=currentScope();return !!scope && operation.scope?.id===scope.id && operation.scope?.org===scope.org;};
 
 /**
  * Ajoute un listener pour les événements de sync
@@ -48,7 +51,9 @@ const notifySyncListeners = (event) => {
  * Queue une opération pour synchronisation ultérieure
  */
 export const queueOperation = async (type, payload) => {
+  const scope=currentScope();if(!scope)throw new Error('Session requise pour conserver une opération hors ligne.');
   const operation = {
+    scope,
     type,
     payload,
     timestamp: Date.now()
@@ -65,6 +70,9 @@ export const queueOperation = async (type, payload) => {
  * Exécute une opération de sync
  */
 const executeOperation = async (operation) => {
+  if(!ownsOperation(operation))throw new Error('Cette opération appartient à une autre session.');
+  const {data,error}=await supabase.auth.getUser();
+  if(error || data?.user?.id!==operation.scope.id || !ownsOperation(operation))throw new Error('Reconnectez le compte propriétaire avant la synchronisation.');
   const { type, payload } = operation;
 
   switch (type) {
@@ -135,6 +143,8 @@ export const syncPendingOperations = async () => {
   logger.log(`[SyncService] ${operations.length} opérations à synchroniser`);
 
   for (const operation of operations) {
+    // Older unscoped operations are retained, never replayed under another account.
+    if(!ownsOperation(operation))continue;
     try {
       const { error } = await executeOperation(operation);
 
@@ -178,7 +188,7 @@ export const syncPendingOperations = async () => {
  */
 export const hasPendingOperations = async () => {
   const operations = await getPendingSyncOperations();
-  return operations.length > 0;
+  return operations.some(ownsOperation);
 };
 
 /**
@@ -186,7 +196,7 @@ export const hasPendingOperations = async () => {
  */
 export const getPendingCount = async () => {
   const operations = await getPendingSyncOperations();
-  return operations.length;
+  return operations.filter(ownsOperation).length;
 };
 
 // Écouter les changements de connexion

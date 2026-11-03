@@ -26,8 +26,11 @@ const LeaveRequestForm = ({
 }) => {
   const { values, errors, handleChange, handleSubmit } = useForm(
     initialValues,
-    validateLeaveRequest,
-    onSubmit
+    onSubmit,
+    values => {
+      const result=validateLeaveRequest(values);
+      return result.isValid?{}:{reason:result.errors.join(' · ')};
+    }
   );
 
   return (

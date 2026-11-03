@@ -22,8 +22,8 @@ const COLORS = {
 };
 
 const CHART_THEME = {
-  textColor: '#94a3b8',
-  gridColor: 'rgba(148, 163, 184, 0.1)',
+  textColor: 'var(--text-secondary)',
+  gridColor: 'var(--border-color)',
 };
 
 // Tooltip personnalisé dark mode
@@ -622,72 +622,4 @@ export const ContractsChart = ({ contracts = [] }) => {
 // ========================
 // 10. Infographie résumé (Big Numbers)
 // ========================
-export const SummaryInfoGraphic = ({ interventions = [], expenses = [], contracts = [], leaveRequests = [], cerfaCount = 0 }) => {
-  const summary = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-
-    // Interventions ce mois
-    const monthInterventions = interventions.filter(i => {
-      const d = new Date(i.created_at);
-      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-    }).length;
-
-    // Dépenses ce mois
-    const monthExpenses = expenses.reduce((sum, e) => {
-      const d = new Date(e.date || e.created_at);
-      if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
-        return sum + (Number(e.amount) || 0);
-      }
-      return sum;
-    }, 0);
-
-    // Dépenses en attente
-    const pendingExpenses = expenses.filter(e => e.status === 'pending');
-    const pendingTotal = pendingExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-
-    // Contrats actifs
-    const activeContracts = contracts.filter(c => c.status === 'active').length;
-
-    // KM total ce mois
-    const monthKm = interventions.reduce((sum, i) => {
-      if (i.is_archived && i.report?.km_start && i.report?.km_end) {
-        const d = new Date(i.archived_at || i.created_at);
-        if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
-          return sum + Math.max(0, (i.report.km_end - i.report.km_start));
-        }
-      }
-      return sum;
-    }, 0);
-
-    return [
-      { icon: '📋', value: monthInterventions, label: 'Interventions ce mois', color: COLORS.primary },
-      { icon: '💰', value: `${Math.round(monthExpenses).toLocaleString('fr-FR')} €`, label: 'Dépenses ce mois', color: COLORS.orange },
-      { icon: '⏳', value: `${pendingExpenses.length}`, sublabel: `${Math.round(pendingTotal).toLocaleString('fr-FR')} €`, label: 'Notes en attente', color: COLORS.warning },
-      { icon: '📝', value: activeContracts, label: 'Contrats actifs', color: COLORS.success },
-      { icon: '📄', value: cerfaCount, label: 'CERFA générés', color: COLORS.info },
-      { icon: '🚗', value: `${Math.round(monthKm).toLocaleString('fr-FR')}`, sublabel: 'km', label: 'Kilomètres ce mois', color: COLORS.cyan },
-    ];
-  }, [interventions, expenses, contracts, cerfaCount]);
-
-  return (
-    <div className="chart-card summary-card">
-      <h3 className="chart-title">Résumé du mois</h3>
-      <div className="summary-grid">
-        {summary.map((item, i) => (
-          <div key={i} className="summary-item">
-            <span className="summary-icon">{item.icon}</span>
-            <div className="summary-data">
-              <span className="summary-value" style={{ color: item.color }}>
-                {item.value}
-                {item.sublabel && <span className="summary-sublabel"> {item.sublabel}</span>}
-              </span>
-              <span className="summary-label">{item.label}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+export { default as SummaryInfoGraphic } from './ActivitySummary';

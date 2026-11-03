@@ -1,3 +1,5 @@
+import StatusBadge from '../ui/StatusBadge';
+import { numericAmount } from '../../utils/dashboardSummary';
 // src/components/expenses/UserExpensesAccordion.js
 // Accordion pour afficher les notes de frais d'un employé (vue admin)
 
@@ -50,11 +52,11 @@ const UserExpensesAccordion = ({
     const rejected = expenses.filter(e => e.status === 'rejected');
 
     return {
-      pending: pending.reduce((sum, e) => sum + (e.amount || 0), 0),
-      approved: approved.reduce((sum, e) => sum + (e.amount || 0), 0),
-      paid: paid.reduce((sum, e) => sum + (e.amount || 0), 0),
-      rejected: rejected.reduce((sum, e) => sum + (e.amount || 0), 0),
-      total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+      pending: pending.reduce((sum, e) => sum + numericAmount(e.amount), 0),
+      approved: approved.reduce((sum, e) => sum + numericAmount(e.amount), 0),
+      paid: paid.reduce((sum, e) => sum + numericAmount(e.amount), 0),
+      rejected: rejected.reduce((sum, e) => sum + numericAmount(e.amount), 0),
+      total: expenses.reduce((sum, e) => sum + numericAmount(e.amount), 0)
     };
   }, [expenses]);
 
@@ -540,9 +542,7 @@ const UserExpensesAccordion = ({
                     <h3 className="admin-expense-title">
                       {categoryInfo.label.replace(/^[^\s]+\s/, '')}
                     </h3>
-                    <span style={getStatusStyle(expense)}>
-                      {getStatusLabel(expense)}
-                    </span>
+                    <StatusBadge status={expense.is_paid?'paid':expense.status}/>
                   </div>
 
                   {/* Description */}

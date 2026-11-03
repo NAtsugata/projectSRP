@@ -9,6 +9,7 @@ import { PlusIcon } from '../components/SharedUI';
 import { LEAVE_STATUS } from '../utils/leaveStatus';
 import logger from '../utils/logger';
 import './EmployeeLeaveView.css';
+import RequestGuide from '../components/RequestGuide';
 
 export default function EmployeeLeaveView({
   leaveRequests = [],
@@ -79,6 +80,7 @@ export default function EmployeeLeaveView({
 
   return (
     <div className="employee-leave-view">
+      <RequestGuide kind="leave" rows={leaveRequests}/>
       {/* Header */}
       <div className="leave-header">
         <div className="header-content">
