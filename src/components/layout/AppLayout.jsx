@@ -31,6 +31,7 @@ import { DemoBanner } from '../DemoBanner';
 import './AppLayout.css';
 import { NavigationGroups, WorkspaceHeader, WorkspaceMenu } from './WorkspaceChrome';
 import '../../styles/workspace.css';
+import '../../styles/workspace-polish.css';
 
 const AppLayout = ({ profile, handleLogout, lastNotification }) => {
     const { pathname } = useLocation();

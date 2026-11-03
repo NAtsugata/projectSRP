@@ -8,6 +8,8 @@ import { readAssistantDraft,REQUEST_CATEGORIES,validatePersonalRequest } from '.
 import { personalRequestId,requestScope,listPersonalRequests,submitPersonalRequest } from '../services/personalRequestService';
 import { leaveStatusLabel } from '../utils/leaveStatus';
 import './PersonalRequestsPage.css';
+import RequestGuide from '../components/RequestGuide';
+import StatusBadge from '../components/ui/StatusBadge';
 
 export default function PersonalRequestsPage(){
     const profile=useAuthStore(s=>s.profile),organization=useAuthStore(s=>s.organization),{hasModule}=useModules(),location=useLocation(),navigate=useNavigate(),[params]=useSearchParams(),[notice,setNotice]=useState('');
@@ -16,7 +18,8 @@ export default function PersonalRequestsPage(){
     if(!allowed.length)return <p>Aucun module de demande n’est accessible. Contactez votre responsable.</p>;
     const kind=allowed.includes(params.get('type'))?params.get('type'):allowed[0],draft=readAssistantDraft(location.state?.assistantDraft,profile);
     return <div className="personal-requests"><header><small>MON ESPACE PERSONNEL</small><h1>Mes demandes</h1><p>Préparer, vérifier et suivre mes demandes auprès de mon entreprise.</p></header><nav aria-label="Type de demande">{allowed.map(value=><button type="button" key={value} aria-pressed={value===kind} onClick={()=>{setNotice('');navigate(`/my-requests?type=${value}`,{replace:true,state:null});}}>{value==='leave'?'Congés / absences':'Notes de frais'}</button>)}</nav>
-        {location.state?.assistantDraft && !draft && <p role="alert">Ce brouillon a expiré ou appartient à une autre session. Remplissez le formulaire ou rouvrez l’assistant.</p>}
+        <RequestGuide kind={kind} compact/>
+        {location.state?.assistantDraft && !draft && <p role="alert">Ce brouillon a expiré ou appartient à une autre session. Remplissez le formulaire ou rouvrez l'assistant.</p>}
         {notice?.scope===profile.organization_id+':'+profile.id && <p role="status">{notice.text}</p>}
         <PersonalRequestForm onSaved={result=>{setNotice({scope:profile.organization_id+':'+profile.id,text:'Demande enregistrée. Statut : '+leaveStatusLabel(result.status)+'.'});navigate(`/my-requests?type=${kind}`,{replace:true,state:null});}} key={`${profile.organization_id}:${profile.id}:${kind}:${draft?.id || 'manual'}`} kind={kind} profile={profile} initial={draft?.kind===kind?draft.values:null}/>
     </div>;
@@ -47,5 +50,5 @@ function PersonalRequestForm({kind,profile,initial,onSaved}){
             </>}
             <label className="personal-request-confirm"><input type="checkbox" required checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>J’ai vérifié ces informations et je souhaite envoyer cette demande pour mon compte.</span></label><button type="submit">{busy?'Enregistrement…':'Envoyer ma demande'}</button>
         </fieldset></form>{error && <p role="alert">{error}</p>}{success && <p role="status">{success}</p>}
-    </section><section className="personal-request-history"><h2>Suivi de mes demandes</h2><p>Vos 50 demandes les plus récentes pour cette catégorie.</p>{listError && <p role="alert">Le suivi n’a pas pu être chargé : {listError}</p>}{!rows.length && !listError && <p>Aucune demande à afficher.</p>}{rows.map(row=><article key={row.id}><div><strong>{kind==='leave'?`${row.start_date} → ${row.end_date}`:`${row.date} · ${Number(row.amount).toLocaleString('fr-FR',{style:'currency',currency:'EUR'})}`}</strong><span>{kind==='expense' && row.is_paid?'Payée':leaveStatusLabel(row.status)}</span></div><p>{kind==='leave'?row.reason:row.description}</p>{(row.rejection_reason || row.admin_comment) && <p>Retour du responsable : {row.rejection_reason || row.admin_comment}</p>}</article>)}<Link to={kind==='leave'?'/leaves':'/expenses'}>Ouvrir l’écran habituel →</Link></section></>;
+    </section><section className="personal-request-history"><h2>Suivi de mes demandes</h2><p>Vos 50 demandes les plus récentes pour cette catégorie.</p>{listError && <p role="alert">Le suivi n’a pas pu être chargé : {listError}</p>}{!rows.length && !listError && <p>Aucune demande à afficher.</p>}{rows.map(row=><article key={row.id}><div><strong>{kind==='leave'?`${row.start_date} → ${row.end_date}`:`${row.date} · ${Number(row.amount).toLocaleString('fr-FR',{style:'currency',currency:'EUR'})}`}</strong><StatusBadge status={kind==='expense' && row.is_paid?'paid':row.status}/></div><p>{kind==='leave'?row.reason:row.description}</p>{(row.rejection_reason || row.admin_comment) && <p>Retour du responsable : {row.rejection_reason || row.admin_comment}</p>}</article>)}<Link to={kind==='leave'?'/leaves':'/expenses'}>Ouvrir l’écran habituel →</Link></section></>;
 }

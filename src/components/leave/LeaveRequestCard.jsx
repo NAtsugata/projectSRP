@@ -3,8 +3,9 @@
 
 import { Button } from '../ui';
 import { CheckIcon, XIcon, TrashIcon } from '../SharedUI';
-import { leaveStatusLabel, leaveStatusColor, normalizeLeaveStatus, LEAVE_STATUS } from '../../utils/leaveStatus';
+import { leaveStatusLabel, normalizeLeaveStatus, LEAVE_STATUS } from '../../utils/leaveStatus';
 import './LeaveRequestCard.css';
+import StatusBadge from '../ui/StatusBadge';
 
 /**
  * Calculate number of days between two dates
@@ -34,7 +35,6 @@ const LeaveRequestCard = ({
   showActions = true,
   showUserName = false
 }) => {
-  const statusClass = leaveStatusColor(request.status);
   const days = calculateDays(request.start_date, request.end_date);
   const isPending = normalizeLeaveStatus(request.status) === LEAVE_STATUS.PENDING;
 
@@ -47,9 +47,7 @@ const LeaveRequestCard = ({
             {showUserName && request.user_name && (
               <h4 className="request-user-name">{request.user_name}</h4>
             )}
-            <span className={`status-badge ${statusClass}`}>
-              {leaveStatusLabel(request.status)}
-            </span>
+            <StatusBadge status={request.status} label={leaveStatusLabel(request.status)}/>
           </div>
           <p className="request-reason">{request.reason}</p>
         </div>

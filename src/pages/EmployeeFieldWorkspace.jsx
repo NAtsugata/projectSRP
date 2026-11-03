@@ -7,13 +7,15 @@ import { LoadingSpinner } from '../components/ui';
 import { employeeOverview, employeeTimeLabel } from '../utils/employeeOverview';
 import { getDayTeamNames } from '../utils/teamForDate';
 import './EmployeePlanningView.css';
+import StatusBadge from '../components/ui/StatusBadge';
+import { interventionStageStatus } from '../utils/statusPresentation';
 
 const dayLabel=(day,options={weekday:'long',day:'numeric',month:'long'})=>new Date(`${day}T12:00:00Z`).toLocaleDateString('fr-FR',{timeZone:'Europe/Paris',...options});
 const shortcuts=[{href:'/agenda',title:'Mon agenda',text:'Voir mes rendez-vous',icon:CalendarIcon},{href:'/expenses',title:'Mes dépenses',text:'Ajouter un justificatif',icon:DollarSignIcon},{href:'/leaves',title:'Mes congés',text:'Consulter mes demandes',icon:SunIcon},{href:'/documents',title:'Mes documents',text:'Retrouver mes fichiers',icon:FileTextIcon}];
 function Appointment({row,usersMap,featured=false}) {
     const {item,date}=row,team=getDayTeamNames(item,date,usersMap),done=item.status==='Terminée';
     return <article className={`field-appointment ${featured?'is-featured':''} ${done?'is-complete':''}`}>
-        <div className="field-appointment-top"><span className="field-time"><ClockIcon/>{employeeTimeLabel(item)}</span><span className={`field-status ${done?'complete':item.status==='En cours'?'running':'planned'}`}>{item.status || 'À venir'}</span></div>
+        <div className="field-appointment-top"><span className="field-time"><ClockIcon/>{employeeTimeLabel(item)}</span><StatusBadge status={interventionStageStatus(item)}/></div>
         <h3><Link to={`/planning/${encodeURIComponent(item.id)}`}>{item.client || 'Intervention'}</Link></h3>
         <p className="field-service">{item.service || 'Consignes à consulter dans la fiche'}</p>
         {item.address && <p className="field-address"><MapPinIcon/><span>{item.address}</span></p>}

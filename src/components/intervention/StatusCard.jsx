@@ -2,35 +2,17 @@
 // Carte de résumé rapide de l'intervention
 
 import './StatusCard.css';
+import StatusBadge from '../ui/StatusBadge';
 
 const StatusCard = ({ intervention, report, stats }) => {
   const { client, address, status } = intervention || {};
-  const { duration, photoCount, checkpointProgress, team } = stats || {};
+  const { duration, photoCount, checkpointProgress, team,teamCount } = stats || {};
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-      case 'Terminé':
-        return '#10b981';
-      case 'in_progress':
-      case 'En cours':
-        return '#0ea5e9';
-      case 'pending':
-      case 'À venir':
-        return '#f59e0b';
-      default:
-        return '#6b7280';
-    }
-  };
-
-  const statusColor = getStatusColor(status);
 
   return (
     <div className="status-card">
       <div className="status-card-header">
-        <div className="status-indicator" style={{ background: statusColor }}>
-          <span className="status-pulse" style={{ background: statusColor }}></span>
-        </div>
+        <StatusBadge status={status}/>
         <div className="status-info">
           <h3 className="status-title">{client || 'Client'}</h3>
           <p className="status-subtitle">{address || 'Adresse'}</p>
@@ -62,7 +44,7 @@ const StatusCard = ({ intervention, report, stats }) => {
         {team && team.length > 0 && (
           <div className="metric">
             <span className="metric-icon">👥</span>
-            <span className="metric-value">{team.length > 1 ? `${team.length} personnes` : team[0]}</span>
+            <span className="metric-value">{Number.isInteger(teamCount)?`${teamCount} personne${teamCount>1?'s':''} · ${team}`:Array.isArray(team)?team.join(', '):team}</span>
           </div>
         )}
       </div>

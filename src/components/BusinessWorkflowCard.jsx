@@ -4,6 +4,7 @@ import { workflowCommand, workflowHistory, reviewLegacyWorkflowItem } from '../s
 import { WORKFLOW_STATUSES, WORKFLOW_TYPES, interpretManagerReply, validateWorkflowReply, terminalWorkflowStatus, workflowSourceUrl } from '../utils/businessWorkflow';
 import { parisDay, shiftPlanningDay } from '../utils/planningAssistant';
 import './BusinessWorkflow.css';
+import StatusBadge from './ui/StatusBadge';
 const dateLabel=value=>value ? new Date(value).toLocaleString('fr-FR',{timeZone:'Europe/Paris',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 
 export default function BusinessWorkflowCard({item,onSaved,compact=false}) {
@@ -30,9 +31,10 @@ export default function BusinessWorkflowCard({item,onSaved,compact=false}) {
         try{const rows=await workflowHistory(item.id);if(alive.current)setHistory(rows);}catch(e){if(alive.current)setError(e.message);}
     }
     return <article className={`business-workflow-card ${due?'is-due':''} ${compact?'is-compact':''}`}>
-        <header><div><small>{WORKFLOW_TYPES[item.source_type]} · {item.legacy?'Ancien dossier':'Suivi métier'}</small><h3><Link to={workflowSourceUrl(item)}>{item.title}</Link></h3></div><span className={`business-workflow-status ${item.legacy?'waiting':item.status}`}>{item.legacy?'À qualifier':WORKFLOW_STATUSES[item.status]}</span></header>
+        <header><div><small>{WORKFLOW_TYPES[item.source_type]} · {item.legacy?'Ancien dossier':'Suivi métier'}</small><h3><Link to={workflowSourceUrl(item)}>{item.title}</Link></h3></div><StatusBadge status={item.legacy?'waiting':item.status} label={item.legacy?'À qualifier':WORKFLOW_STATUSES[item.status]}/></header>
         {item.legacy?<p className="business-workflow-question">Ce dossier du {new Date(`${item.source_date}T12:00:00`).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})} est toujours ouvert. Que faut-il en faire ?</p>:due && <p className="business-workflow-question">Ce dossier attend votre retour. Quelle est la situation et la prochaine action ?</p>}
         <p className="business-workflow-meta">{item.legacy?'Dernière modification enregistrée':'Dernière évolution'} : {dateLabel(item.last_activity_at)}<br/>{item.legacy?`Statut enregistré : ${WORKFLOW_STATUSES[item.status]}`:`Prochain contrôle : ${dateLabel(item.due_at)}`}</p>
+        <div className="manager-next-action"><small>PROCHAINE ACTION</small><strong>{item.legacy?'Décider de la suite du dossier':item.status==='waiting'?'Confirmer ce qui manque et fixer la prochaine date':item.status==='procedure'?'Préciser l’avancement de la procédure':terminalWorkflowStatus(item.status)?'Consulter la décision enregistrée':'Donner un retour sur l’avancement'}</strong>{!terminalWorkflowStatus(item.status)&&!item.legacy&&<span>{due?'Retour attendu maintenant':`À revoir le ${dateLabel(item.due_at)}`}</span>}</div>
         {item.reason && <p><strong>Dernier motif :</strong> {item.reason}</p>}
         <button type="button" disabled={busy} onClick={()=>{request.current=null;setEditing(v=>!v);setStatus(item.status);setError('');setConfirmed(false);}}>{editing?'Fermer le retour':'Répondre / changer le statut'}</button>
         {editing && <form onSubmit={save}>

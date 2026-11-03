@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import './SmartAlerts.css';
 
-const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
+const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2,onAction }) => {
   const alerts = useMemo(() => {
     const alertList = [];
 
@@ -89,6 +89,7 @@ const SmartAlerts = ({ report, intervention, MIN_PHOTOS = 2 }) => {
   if (alerts.length === 0) return null;
 
   const scrollToSection = (action) => {
+    if(onAction){onAction(action);return;}
     const sectionMap = {
       photos: 'photos-section',
       signature: 'signature-section',

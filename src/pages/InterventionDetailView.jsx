@@ -34,6 +34,9 @@ import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
 import WorkInstructions from '../components/WorkInstructions';
+import InterventionJourney from '../components/intervention/InterventionJourney';
+import StatusBadge from '../components/ui/StatusBadge';
+import { interventionStageStatus } from '../utils/statusPresentation';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 
@@ -84,6 +87,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [uploadQueue, setUploadQueue] = useState([]);
   const [showCerfaModal, setShowCerfaModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [detailTab,setDetailTab]=useState(0);
+  function selectDetailTab(index){setDetailTab(index);requestAnimationFrame(()=>document.getElementById('intervention-details')?.scrollIntoView({behavior:'smooth',block:'start'}));}
   const [cerfaData, setCerfaData] = useState(null);
 
   // Debug: logger les changements de uploadQueue
@@ -654,7 +659,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     </div>
   );
 
-  const currentStatus = intervention.status || (report.arrivalTime ? 'En cours' : 'À venir');
+  const currentStatus = interventionStageStatus({...intervention,report});
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
   // Calcul des statistiques pour StatusCard
@@ -669,6 +674,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   };
 
   const stats = {
+    teamCount:new Set((intervention.intervention_assignments || []).map(a=>a.user_id)).size,
     duration: calculateDuration(),
     photoCount: report.files?.filter(f => f.type?.startsWith('image/')).length || 0,
     checkpointProgress: report.quick_checkpoints?.length > 0
@@ -683,15 +689,16 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     <div className="intervention-detail-modern">
       {/* NOUVEAU HEADER MODERNE */}
       <InterventionHeader
-        intervention={intervention}
+        intervention={{...intervention, report}}
         onBack={() => navigate('/planning')}
       />
 
       <div className="intervention-content">
         <WorkInstructions key={`${profile?.id}:${intervention.id}`} interventionId={intervention.id} fallback={intervention.service} isAdmin={isAdmin} />
+        <InterventionJourney report={report} status={currentStatus} activeTab={detailTab} onSelect={selectDetailTab} onArrival={()=>markWithGeo('arrival')} busy={isSaving || uploadQueue.some(item=>item.status==='uploading')}/>
         {/* CARTE DE RÉSUMÉ */}
         <StatusCard
-          intervention={intervention}
+          intervention={{...intervention,status:currentStatus}}
           report={report}
           stats={stats}
         />
@@ -701,6 +708,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           report={report}
           intervention={intervention}
           MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
+          onAction={action=>selectDetailTab(({photos:1,checklist:2,signature:3,complete:3,time:0})[action] ?? 0)}
         />
 
         {/* ACTIONS RAPIDES */}
@@ -791,7 +799,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         )}
 
         {/* CONTENU ORGANISÉ EN TABS */}
-        <Tabs defaultTab={0}>
+        <div id="intervention-details" className="intervention-details-anchor">
+        <Tabs value={detailTab} onChange={setDetailTab}>
           {/* ONGLET INFOS */}
           <Tab label="Infos" icon="📋">
             <div>
@@ -802,7 +811,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <div className="section">
                 <h3>⚑ Statut de l'intervention</h3>
                 <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                  <span className="badge">Statut actuel : {currentStatus}</span>
+                  <StatusBadge status={currentStatus}/>
                   {urgentCount > 0 && <span className="badge" style={{ background: '#f59e0b', color: '#111827' }}>URG {urgentCount}</span>}
                 </div>
               </div>
@@ -868,7 +877,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
               <div className="section-header" style={{ marginBottom: '1rem' }}>
                 <h3 className="section-title" style={{ margin: 0 }}>
                   <span className="section-title-icon">📷</span>
-                  Photos et Documents <span style={{ fontSize: '0.7em', color: '#16a34a' }}>(v4.0 IndexedDB Cache)</span>
+                  Photos et documents
                   {report.files && report.files.length > 0 && (
                     <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
                       ({report.files.length})
@@ -1140,6 +1149,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             </div>
           </Tab>
         </Tabs>
+        </div>
 
         {/* Save button section */}
         {isAdmin ? (

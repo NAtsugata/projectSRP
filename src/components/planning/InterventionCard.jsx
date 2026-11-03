@@ -8,24 +8,9 @@ import { getAssignedUsersNames } from '../../utils/helpers';
 import AssignChecklistButton from '../intervention/AssignChecklistButton';
 import logger from '../../utils/logger';
 import './InterventionCard.css';
+import StatusBadge from '../ui/StatusBadge';
+import { interventionStageStatus } from '../../utils/statusPresentation';
 
-/**
- * Get status of intervention
- */
-const getInterventionStatus = (intervention) => {
-  if (intervention.status === 'Terminée') return 'Terminée';
-  if (intervention.report && intervention.report.arrivalTime) return 'En cours';
-  return intervention.status || 'À venir';
-};
-
-/**
- * Status badge color mapping
- */
-const STATUS_COLORS = {
-  'À venir': 'status-blue',
-  'En cours': 'status-yellow',
-  'Terminée': 'status-green'
-};
 
 /**
  * InterventionCard Component
@@ -48,8 +33,7 @@ const InterventionCard = ({
   onAssignChecklist,
   showActions = true
 }) => {
-  const status = getInterventionStatus(intervention);
-  const statusClass = STATUS_COLORS[status] || 'status-default';
+  const status = interventionStageStatus(intervention);
   const assignedNames = getAssignedUsersNames(intervention.intervention_assignments);
   const documentsCount = intervention.intervention_briefing_documents?.length || 0;
 
@@ -68,9 +52,7 @@ const InterventionCard = ({
             <h4 className="intervention-card-title">
               {intervention.client}
             </h4>
-            <span className={`status-badge ${statusClass}`}>
-              {status}
-            </span>
+            <StatusBadge status={status}/>
           </div>
           {intervention.service && (
             <p className="intervention-card-service">{intervention.service}</p>

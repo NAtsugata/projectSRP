@@ -1,3 +1,4 @@
+import StatusBadge from '../ui/StatusBadge';
 import { numericAmount } from '../../utils/dashboardSummary';
 // src/components/expenses/UserExpensesAccordion.js
 // Accordion pour afficher les notes de frais d'un employé (vue admin)
@@ -541,9 +542,7 @@ const UserExpensesAccordion = ({
                     <h3 className="admin-expense-title">
                       {categoryInfo.label.replace(/^[^\s]+\s/, '')}
                     </h3>
-                    <span style={getStatusStyle(expense)}>
-                      {getStatusLabel(expense)}
-                    </span>
+                    <StatusBadge status={expense.is_paid?'paid':expense.status}/>
                   </div>
 
                   {/* Description */}
