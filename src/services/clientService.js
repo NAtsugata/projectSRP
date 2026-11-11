@@ -487,7 +487,7 @@ export const clientService = {
       // Chercher un client existant avec le meme nom
       const { data: existing, error: searchError } = await supabase
         .from('clients')
-        .select('id, name')
+        .select('id, name, address, phone, email')
         .ilike('name', clientName)
         .limit(1)
         .single();

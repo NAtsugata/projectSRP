@@ -1,1 +1,14 @@
 .odoo-quotes{max-width:1300px;margin:auto}.odoo-quotes>header,.odoo-quote-card>header{display:flex;justify-content:space-between;align-items:center;gap:12px}.odoo-quotes h1{font-size:30px}.odoo-quotes p{line-height:1.5}.odoo-quotes button,.odoo-quotes input,.odoo-quotes select{padding:10px 14px;border-radius:8px;border:1px solid #94a3b8;background:var(--bg-primary,#fff);color:inherit;min-height:44px}.odoo-quotes button{cursor:pointer}.odoo-quotes button:disabled{opacity:.45;cursor:default}.odoo-quotes form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0}.odoo-quotes form input{flex:1;min-width:160px}.odoo-status-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.odoo-status-filters [aria-pressed=true]{background:#0f766e;color:white;border-color:#0f766e}.odoo-quotes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin:20px 0}.odoo-quote-card{padding:20px;border:1px solid #94a3b855;border-radius:16px;background:var(--bg-primary,#fff)}.odoo-quote-card h2{font-size:18px;margin:18px 0 8px}.odoo-amount{font-size:24px;display:block}.odoo-stage{font-size:12px;border-radius:20px;padding:6px 10px;background:#fff1d6;color:#7c4900}.odoo-stage.done{background:#d1fae5;color:#065f46}.odoo-stage.in_progress{background:#dbeafe;color:#1e40af}.odoo-quote-card select{display:block;width:100%;margin:8px 0 16px}.odoo-quote-card summary{cursor:pointer;margin-top:16px}.odoo-invoice-row{padding:12px 0;border-bottom:1px solid #94a3b844}.odoo-quotes nav{display:flex;gap:16px;align-items:center;justify-content:center;margin:24px 0}.odoo-quotes [role=alert]{padding:16px;border:1px solid #e11d48;border-radius:10px}@media(max-width:600px){.odoo-quotes>header{align-items:flex-start}.odoo-quotes h1{font-size:24px}.odoo-quotes form label{width:100%}}
+.odoo-quotes .odoo-appointment-button {
+  width: 100%;
+  margin: 0 0 12px;
+  color: #fff;
+  background: #99512f;
+  border-color: #99512f;
+  font-weight: 650;
+}
+
+.odoo-quotes .odoo-appointment-button:not(:disabled):hover {
+  background: #7e3f23;
+  border-color: #7e3f23;
+}

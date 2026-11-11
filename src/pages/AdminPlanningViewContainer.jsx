@@ -19,7 +19,7 @@ const AdminPlanningViewContainer = () => {
             // Auto-enregistrer le client dans la base clients
             // (ne bloque pas la creation d'intervention si ca echoue)
             let clientId = null;
-            if (formData?.client) {
+            if (formData?.client && !formData.client_id) {
                 const { data: clientData } = await clientService.getOrCreateClientFromIntervention(formData);
                 if (clientData?.id) {
                     clientId = clientData.id;

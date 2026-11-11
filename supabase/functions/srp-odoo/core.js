@@ -12,6 +12,8 @@ const text = value => typeof value === 'string' ? value : '';
 const label = value => Array.isArray(value) ? text(value[1]) : '';
 const relatedId = value => Array.isArray(value) ? value[0] : value;
 export const isTechnicalDesignation = value => !/(?:€|\beuros?\b|\b(?:prix|tarif|remise|acompte|factur\w*|total|tva|ttc)\b)/i.test(String(value || ''));
+const partnerAddress = partner => [partner?.street, partner?.street2, [partner?.zip, partner?.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+const technicalLine = line => !line.display_type && !line.is_downpayment && text(line.name).trim() && isTechnicalDesignation(line.name);
 const siret = row => {
     const value = text(row.l10n_fr_siret || row.company_registry).replace(/\s/g, '');
     return /^\d{14}$/.test(value) ? value : '';
@@ -75,6 +77,43 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         const rows = await odoo('res.partner', 'search_read', { domain: [['active', '=', true], ...companyDomain(), ['name', 'ilike', query.trim()]], fields, limit: 15, order: 'name' });
         return rows.map(row => ({ id: row.id, name: text(row.name), address: [row.street, row.street2, row.zip, row.city].filter(Boolean).join(' '), city: text(row.city) }));
     };
+    const appointmentPrefill = async quoteId => {
+        const id = positiveId(quoteId);
+        const companyId = config().companyId;
+        const [order] = await odoo('sale.order', 'search_read', {
+            domain: [['id', '=', id], ['company_id', '=', companyId], ['state', 'in', ['draft', 'sent', 'sale']]],
+            fields: ['id', 'name', 'partner_id', 'partner_shipping_id'], limit: 1,
+        });
+        if (!order || !label(order.partner_id) || !text(order.name).trim()) throw new HttpError(404, 'Devis ou client introuvable dans cette société');
+        const clientId = relatedId(order.partner_id);
+        const deliveryId = relatedId(order.partner_shipping_id) || clientId;
+        const contactFields = ['id', 'street', 'street2', 'zip', 'city', 'phone', 'mobile', 'email'];
+        const [available, lines] = await Promise.all([
+            odoo('res.partner', 'fields_get', { allfields: contactFields, attributes: ['type'] }),
+            odoo('sale.order.line', 'search_read', {
+                domain: [['order_id', '=', id], ['company_id', '=', companyId], ['display_type', '=', false], ['is_downpayment', '=', false]],
+                fields: ['name'], order: 'sequence, id', limit: 50,
+            }),
+        ]);
+        const partners = await odoo('res.partner', 'search_read', {
+            domain: [['id', 'in', [...new Set([clientId, deliveryId])]], ...companyDomain()],
+            fields: contactFields.filter(field => Object.hasOwn(available, field)), limit: 2,
+        });
+        const client = partners.find(partner => partner.id === clientId);
+        const delivery = partners.find(partner => partner.id === deliveryId);
+        const phone = text(delivery?.phone || delivery?.mobile || client?.phone || client?.mobile);
+        const secondaryPhone = [delivery?.mobile, client?.phone, client?.mobile].find(value => value && value !== phone);
+        const designation = lines.find(technicalLine)?.name.trim().split(/\r?\n/, 1)[0];
+        return {
+            client: label(order.partner_id),
+            address: partnerAddress(delivery),
+            client_phone: phone,
+            secondary_phone: text(secondaryPhone),
+            client_email: text(delivery?.email || client?.email),
+            ticket_number: order.name,
+            service: designation?.slice(0, 160) || `Intervention sur devis ${order.name}`,
+        };
+    };
     const workInstructions = async ({ interventionId, orderReference }, profile, userId, authorization) => {
         if (!Number.isSafeInteger(interventionId) || interventionId < 1) throw new HttpError(400, 'Intervention invalide');
         const base = requireValue(get('SUPABASE_URL'), 'SUPABASE_URL');
@@ -93,29 +132,35 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
         if (!(profile.is_admin === true || profile.is_super_admin === true || assigned)) throw new HttpError(403, 'Cette intervention ne vous est pas affectée');
         const client = text(intervention.client).trim();
         if (!client) return { interventionId, client: '', orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
-        const domain=[['company_id', '=', config().companyId], ['partner_id.name', '=ilike', client], ['state', '=', 'sale']];
-        const availableOrders = await odoo('sale.order', 'search_read', {
-            domain,
-            fields: ['id', 'name', 'partner_id', 'date_order', 'state'], order: 'date_order desc, id desc', limit: admin?100:1,
-        });
-        const orders=orderReference?availableOrders.filter(order=>order.name===orderReference):availableOrders.slice(0,1);
+        const clientDomain = [['company_id', '=', config().companyId], ['partner_id.name', '=ilike', client.replace(/[\\%_]/g, '\\$&')]];
+        const orderFields = ['id', 'name', 'partner_id', 'date_order', 'state'];
+        const ticket = text(intervention.ticket_number).trim();
+        const [linkedOrder] = !orderReference && ticket ? await odoo('sale.order', 'search_read', {
+            domain: [...clientDomain, ['name', '=', ticket]], fields: orderFields, limit: 1,
+        }) : [];
+        const availableOrders = admin || !linkedOrder ? await odoo('sale.order', 'search_read', {
+            domain: [...clientDomain, ['state', '=', 'sale']],
+            fields: orderFields, order: 'date_order desc, id desc', limit: admin ? 100 : 1,
+        }) : [];
+        const orders = orderReference ? availableOrders.filter(order => order.name === orderReference)
+            : linkedOrder ? [linkedOrder].filter(order => order.state === 'sale') : availableOrders.slice(0, 1);
         if(orderReference && !orders.length)throw new HttpError(404,'Devis validé introuvable pour ce client');
-        if (!orders.length) return { interventionId, client, orders: [], fallback: text(intervention.service), syncedAt: new Date().toISOString() };
-        const lineFields = await odoo('sale.order.line', 'fields_get', { allfields: ['id','order_id','name','product_uom_qty','product_uom','product_uom_id','display_type','sequence'], attributes: ['type'] });
+        const choices = admin ? availableOrders.map(order => ({ reference: text(order.name), date: order.date_order || null })) : [];
+        if (!orders.length) return { interventionId, client, orders: [], choices, fallback: text(intervention.service), syncedAt: new Date().toISOString() };
+        const lineFields = await odoo('sale.order.line', 'fields_get', { allfields: ['id','order_id','name','product_uom_qty','product_uom','product_uom_id','display_type','is_downpayment','sequence'], attributes: ['type'] });
         const unitField = Object.hasOwn(lineFields,'product_uom_id') ? 'product_uom_id' : Object.hasOwn(lineFields,'product_uom') ? 'product_uom' : null;
         const lines = await odoo('sale.order.line', 'search_read', {
             domain: [['order_id', 'in', orders.map(order => order.id)], ['company_id', '=', config().companyId]],
-            fields: ['id', 'order_id', 'name', 'product_uom_qty', 'display_type', 'sequence', ...(unitField?[unitField]:[])].filter(field=>Object.hasOwn(lineFields,field)), order: 'order_id desc, sequence, id', limit: 2000,
+            fields: ['id', 'order_id', 'name', 'product_uom_qty', 'display_type', 'is_downpayment', 'sequence', ...(unitField?[unitField]:[])].filter(field=>Object.hasOwn(lineFields,field)), order: 'order_id desc, sequence, id', limit: 2000,
         });
         if (lines.length >= 2000) throw new HttpError(409, 'Trop de lignes de devis ; affinez le chantier dans Odoo');
         return {
             interventionId, client, fallback: text(intervention.service), syncedAt: new Date().toISOString(),
-            choices: admin?availableOrders.map(order=>({reference:text(order.name),date:order.date_order || null})):[],
+            choices,
             orders: orders.map(order => ({
                 reference: text(order.name), date: order.date_order || null, state: text(order.state),
-                lines: lines.filter(line => relatedId(line.order_id) === order.id && !line.display_type)
-                    .map(line => ({ designation: text(line.name).trim(), quantity: Number(line.product_uom_qty), unit: unitField ? label(line[unitField]) : '' }))
-                    .filter(line => line.designation && isTechnicalDesignation(line.designation)),
+                lines: lines.filter(line => relatedId(line.order_id) === order.id && technicalLine(line))
+                    .map(line => ({ designation: text(line.name).trim(), quantity: Number(line.product_uom_qty), unit: unitField ? label(line[unitField]) : '' })),
             })).filter(order => order.lines.length),
         };
     };
@@ -203,6 +248,7 @@ export function createConnector({ env, fetcher = fetch, cryptoApi = crypto, now 
                 if (body.action === 'status') return json({ configured: !missingConfig().length, missing: missingConfig(), organizationId: profile.organization_id }, 200, cors);
                 if (body.action === 'search_clients') return json({ clients: await searchClients(body.query) }, 200, cors);
                 if (body.action === 'prefill') return json(await prefill(body), 200, cors);
+                if (body.action === 'appointment_prefill') return json(await appointmentPrefill(body.quoteId), 200, cors);
                 if (body.action === 'quotes') {
                     const { companyId, origin } = config();
                     return json(await createQuoteReader({ odoo, companyId, origin })(body), 200, cors);

@@ -33,6 +33,7 @@ export const DraftBanner = ({ lastSavedAt, onIgnore }) => {
 
 export const useFormDraft = (formKey, defaultValues) => {
   const [formData, setFormData] = useState(() => {
+    if (!formKey) return defaultValues;
     // Initialize from draft on first render
     try {
       const draftStr = localStorage.getItem(`draft_${formKey}`);
@@ -51,6 +52,7 @@ export const useFormDraft = (formKey, defaultValues) => {
   });
 
   const [hasDraft, setHasDraft] = useState(() => {
+    if (!formKey) return false;
     try {
       const draftStr = localStorage.getItem(`draft_${formKey}`);
       if (draftStr) {
@@ -62,6 +64,7 @@ export const useFormDraft = (formKey, defaultValues) => {
   });
 
   const [lastSavedAt, setLastSavedAt] = useState(() => {
+    if (!formKey) return null;
     try {
       const draftStr = localStorage.getItem(`draft_${formKey}`);
       if (draftStr) {
@@ -87,15 +90,17 @@ export const useFormDraft = (formKey, defaultValues) => {
 
   // Debounced save on formData change
   useEffect(() => {
+    if (!formKey) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       saveDraft(formData);
     }, 800);
     return () => clearTimeout(timeoutRef.current);
-  }, [formData, saveDraft]);
+  }, [formData, formKey, saveDraft]);
 
   // Force save on visibility change and pagehide (iOS)
   useEffect(() => {
+    if (!formKey) return;
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') saveDraft(formData);
     };
@@ -106,10 +111,10 @@ export const useFormDraft = (formKey, defaultValues) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
     };
-  }, [formData, saveDraft]);
+  }, [formData, formKey, saveDraft]);
 
   const clearDraft = useCallback(() => {
-    localStorage.removeItem(`draft_${formKey}`);
+    if (formKey) localStorage.removeItem(`draft_${formKey}`);
     setHasDraft(false);
     setLastSavedAt(null);
     setFormData(defaultValues);

@@ -47,10 +47,13 @@ const InterventionForm = ({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  prefillClient = null
+  prefillClient = null,
+  prefillQuote = null
 }) => {
   // Si un client est préfillé (depuis la vue clients), fusionner avec les valeurs initiales
-  const mergedInitialValues = prefillClient
+  const mergedInitialValues = prefillQuote
+    ? { ...initialValues, ...prefillQuote, time: '' }
+    : prefillClient
     ? {
         ...initialValues,
         client: prefillClient.client || '',
@@ -60,37 +63,40 @@ const InterventionForm = ({
         client_id: prefillClient.client_id || null
       }
     : initialValues;
-  const { formData: values, setFormData: setValues, clearDraft, hasDraft, lastSavedAt } = useFormDraft('intervention-create', mergedInitialValues);
-  const [errors, setErrors] = useState({});
+  const { formData: values, setFormData: setValues, clearDraft, hasDraft, lastSavedAt } = useFormDraft(prefillQuote ? null : 'intervention-create', mergedInitialValues);
+  const [errors, setErrors] = useState([]);
 
   const handleChange = useCallback((event) => {
     const { name, value, type, checked } = event.target;
     const fieldValue = type === 'checkbox' ? checked : value;
-    setValues(prev => ({ ...prev, [name]: fieldValue }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-  }, [errors, setValues]);
+    setValues(prev => ({ ...prev, [name]: fieldValue, ...(name === 'client' ? { client_id: null } : {}) }));
+    setErrors([]);
+  }, [setValues]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const validationErrors = validateIntervention(values);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    if (isSubmitting) return;
+    const validation = validateIntervention(values);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
-    logger.log('InterventionForm: Submitting...', values);
     const formDataWithScheduledDates = {
       ...values,
       scheduled_dates: scheduledDates.length > 0 ? scheduledDates : null,
-      client_id: selectedClient?.id || prefillClient?.client_id || null
+      client_id: values.client_id || null
     };
-    await onSubmit({
-      formData: formDataWithScheduledDates,
-      assignedUsers,
-      files: briefingFiles.map(f => f.fileObject)
-    });
-    clearDraft();
+    try {
+      const created = await onSubmit({
+        formData: formDataWithScheduledDates,
+        assignedUsers,
+        files: briefingFiles.map(f => f.fileObject)
+      });
+      if (created) clearDraft();
+      else setErrors(["L’intervention n’a pas pu être enregistrée."]);
+    } catch {
+      setErrors(["L’intervention n’a pas pu être enregistrée. Réessayez."]);
+    }
   };
 
   const reset = useCallback(() => {
@@ -105,10 +111,6 @@ const InterventionForm = ({
   // Client autocomplete
   const [clientSuggestions, setClientSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  // Si un client est préfillé, le marquer comme sélectionné
-  const [selectedClient, setSelectedClient] = useState(
-    prefillClient?.client_id ? { id: prefillClient.client_id, name: prefillClient.client } : null
-  );
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -142,13 +144,11 @@ const InterventionForm = ({
   // Quand on tape dans le champ client, lancer la recherche
   const handleClientInputChange = useCallback((e) => {
     handleChange(e);
-    setSelectedClient(null); // Reset la selection si on retape
     searchClientsDebounced(e.target.value);
   }, [handleChange, searchClientsDebounced]);
 
   // Quand on selectionne un client dans la liste
   const handleSelectClient = useCallback((client) => {
-    setSelectedClient(client);
     setShowSuggestions(false);
     setClientSuggestions([]);
 
@@ -157,20 +157,18 @@ const InterventionForm = ({
       .filter(Boolean)
       .join(', ');
 
-    // Mettre a jour les champs du formulaire
-    handleChange({ target: { name: 'client', value: client.name } });
-    if (fullAddress) {
-      handleChange({ target: { name: 'address', value: fullAddress } });
-    }
-    if (client.phone) {
-      handleChange({ target: { name: 'client_phone', value: client.phone } });
-    }
-    if (client.email) {
-      handleChange({ target: { name: 'client_email', value: client.email } });
-    }
+    setValues(prev => ({
+      ...prev,
+      client: client.name,
+      client_id: client.id,
+      address: fullAddress || prev.address,
+      client_phone: client.phone || prev.client_phone,
+      client_email: client.email || prev.client_email,
+    }));
+    setErrors([]);
 
     logger.log('InterventionForm: Client selectionne', client.name);
-  }, [handleChange]);
+  }, [setValues]);
 
   // Fermer les suggestions quand on clique en dehors
   useEffect(() => {
@@ -297,6 +295,7 @@ const InterventionForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="intervention-form" onPaste={handlePaste}>
+      {prefillQuote && <p className="form-hint">Devis Odoo {prefillQuote.ticket_number}. Vérifiez les coordonnées, puis choisissez la date et l’heure.</p>}
       {hasDraft && <DraftBanner lastSavedAt={lastSavedAt} onIgnore={clearDraft} />}
       {/* Client avec autocomplete */}
       <div className="form-group client-autocomplete-wrapper" ref={suggestionsRef}>
@@ -314,15 +313,14 @@ const InterventionForm = ({
               if (clientSuggestions.length > 0) setShowSuggestions(true);
             }}
             disabled={isSubmitting}
-            className={`form-control ${errors.client ? 'error' : ''}`}
+            className="form-control"
             placeholder="Tapez pour rechercher un client existant..."
             required
             autoComplete="off"
           />
           {isSearching && <span className="client-search-indicator">...</span>}
-          {selectedClient && <span className="client-selected-badge">Client existant</span>}
+          {values.client_id && <span className="client-selected-badge">Client existant</span>}
         </div>
-        {errors.client && <span className="error-message">{errors.client}</span>}
 
         {/* Liste de suggestions clients */}
         {showSuggestions && clientSuggestions.length > 0 && (
@@ -362,11 +360,10 @@ const InterventionForm = ({
             value={values.client_phone}
             onChange={handleChange}
             disabled={isSubmitting}
-            className={`form-control ${errors.client_phone ? 'error' : ''}`}
+            className="form-control"
             placeholder="06 12 34 56 78"
             required
           />
-          {errors.client_phone && <span className="error-message">{errors.client_phone}</span>}
         </div>
 
         <div className="form-group">
@@ -433,11 +430,10 @@ const InterventionForm = ({
           value={values.address}
           onChange={handleChange}
           disabled={isSubmitting}
-          className={`form-control ${errors.address ? 'error' : ''}`}
+          className="form-control"
           placeholder="Adresse complète"
           required
         />
-        {errors.address && <span className="error-message">{errors.address}</span>}
       </div>
 
       {/* Service */}
@@ -452,11 +448,10 @@ const InterventionForm = ({
           value={values.service}
           onChange={handleChange}
           disabled={isSubmitting}
-          className={`form-control ${errors.service ? 'error' : ''}`}
+          className="form-control"
           placeholder="Type de service"
           required
         />
-        {errors.service && <span className="error-message">{errors.service}</span>}
       </div>
 
       {/* Date & Time */}
@@ -472,10 +467,9 @@ const InterventionForm = ({
             value={values.date}
             onChange={handleChange}
             disabled={isSubmitting}
-            className={`form-control ${errors.date ? 'error' : ''}`}
+            className="form-control"
             required
           />
-          {errors.date && <span className="error-message">{errors.date}</span>}
         </div>
 
         <div className="form-group">
@@ -489,10 +483,9 @@ const InterventionForm = ({
             value={values.time}
             onChange={handleChange}
             disabled={isSubmitting}
-            className={`form-control ${errors.time ? 'error' : ''}`}
+            className="form-control"
             required
           />
-          {errors.time && <span className="error-message">{errors.time}</span>}
         </div>
       </div>
 
@@ -690,6 +683,7 @@ const InterventionForm = ({
       </div>
 
       {/* Form actions */}
+      {errors.length > 0 && <ul className="error-message" role="alert">{errors.map(error => <li key={error}>{error}</li>)}</ul>}
       <div className="form-actions">
         <Button
           type="button"

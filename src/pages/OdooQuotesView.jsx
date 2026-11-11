@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import OdooBusinessWorkflow, { useOdooBusinessWorkflow } from '../components/OdooBusinessWorkflow';
 import { requestOdoo } from '../services/odooService';
 import './OdooQuotesView.css';
@@ -13,9 +13,12 @@ export default function OdooQuotesView() {
     return <Quotes key={`${profile?.organization_id}:${profile?.id}:${initialSearch}`} profile={profile} initialSearch={initialSearch} />;
 }
 function Quotes({ profile, initialSearch }) {
+    const navigate = useNavigate();
     const [data, setData] = useState(null), [page, setPage] = useState(0);
     const [input, setInput] = useState(initialSearch), [query, setQuery] = useState(initialSearch), [filter, setFilter] = useState('all');
     const [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const [preparingQuote, setPreparingQuote] = useState(null);
+    const [appointmentError, setAppointmentError] = useState(null);
     const alive = useRef(true), sequence = useRef(0);
     const load = useCallback(async () => {
         const current = ++sequence.current; setBusy(true); setError('');
@@ -28,6 +31,20 @@ function Quotes({ profile, initialSearch }) {
     const labels = { todo: 'À facturer', done: 'Facturation complète' };
     const quotes = data?.quotes || [];
     const workflow = useOdooBusinessWorkflow(quotes, profile);
+    const prepareAppointment = async quoteId => {
+        setPreparingQuote(quoteId);
+        setAppointmentError(null);
+        try {
+            const fields = await requestOdoo({ action: 'appointment_prefill', quoteId });
+            if (alive.current) navigate('/planning?new=true', {
+                state: { quoteAppointment: { fields, userId: profile.id, organizationId: profile.organization_id } },
+            });
+        } catch (error) {
+            if (alive.current) setAppointmentError({ quoteId, message: error.message });
+        } finally {
+            if (alive.current) setPreparingQuote(null);
+        }
+    };
     return <section className="odoo-quotes"><header><div><h1>Devis Odoo</h1><p>Suivi du traitement et de la facture finale</p></div><button onClick={load} disabled={busy}>{busy ? 'Actualisation…' : 'Actualiser'}</button></header>
         <p>La facturation est complète lorsque les prestations sont entièrement facturées par une facture comptabilisée. Le suivi métier se gère séparément sur chaque devis. Un acompte ou un brouillon ne suffit pas. Le règlement reste suivi séparément.</p>
         <form onSubmit={e => { e.preventDefault(); setData(null); setPage(0); setQuery(input.trim()); }}><label htmlFor="odoo-search">Référence ou client</label><input id="odoo-search" value={input} maxLength={100} onChange={e => setInput(e.target.value)} /><button disabled={busy}>Rechercher</button></form>
@@ -35,6 +52,10 @@ function Quotes({ profile, initialSearch }) {
         <small>Compteurs et filtres sur cette page (25 devis maximum). Actualisation toutes les 30 secondes.</small>
         {error && <p role="alert">{error}</p>}{workflow.error && <p role="alert">Suivi métier : {workflow.error}</p>}{data && <p>Dernière lecture : {new Date(data.syncedAt).toLocaleTimeString('fr-FR')}</p>}
         <div className="odoo-quotes-grid">{quotes.filter(q => filter === 'all' || status(q) === filter).map(quote => <article key={quote.id} className="odoo-quote-card"><header><a href={quote.url} target="_blank" rel="noreferrer">{quote.reference} ↗</a><span className={`odoo-stage ${status(quote)}`}>{labels[status(quote)]}</span></header><h2>{quote.client}</h2><strong className="odoo-amount">{money(quote.amount, quote.currency)}</strong><p>{stages[quote.invoiceStage]}</p>
+            <button type="button" className="odoo-appointment-button" disabled={preparingQuote !== null} onClick={() => prepareAppointment(quote.id)}>
+                {preparingQuote === quote.id ? 'Préparation du rendez-vous…' : 'Créer un rendez-vous'}
+            </button>
+            {appointmentError?.quoteId === quote.id && <p role="alert">{appointmentError.message}</p>}
             <OdooBusinessWorkflow item={workflow.items[String(quote.id)]} onSaved={workflow.saved} />
             <details><summary>Factures associées ({quote.invoices.length})</summary>{quote.invoices.map(invoice => <div className="odoo-invoice-row" key={invoice.id}><a href={`${quote.invoiceOrigin}/odoo/account.move/${invoice.id}`} target="_blank" rel="noreferrer">{invoice.reference} ↗</a><p>{invoice.type === 'out_refund' ? 'Avoir' : invoice.isFinal ? 'Prestations' : 'Acompte / autre'} · {invoice.state === 'posted' ? 'Comptabilisée' : invoice.state === 'cancel' ? 'Annulée' : 'Brouillon'}</p><p>Total : {money(invoice.amount, invoice.currency)}<br/>Reste à régler : {money(invoice.remaining, invoice.currency)}</p></div>)}</details>
         </article>)}</div>{data && !quotes.length && <p>Aucun devis trouvé.</p>}

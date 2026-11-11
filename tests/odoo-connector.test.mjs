@@ -16,17 +16,31 @@ function fixture(overrides = {}) {
     const profile = { organization_id: 'org-a', is_admin: true };
     const user = { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', user_metadata: { is_admin: true } };
     const assignment = { userId: user.id };
+    const intervention = { id: 42, client: 'Client Démo', service: 'Entretien', ticket_number: '' };
+    const orders = [{ id: 80, name: 'S080', partner_id: [7, 'Client Démo'], partner_shipping_id: [9, 'Chantier Démo'], date_order: '2026-11-02', state: 'sale' }];
     const fetcher = async (url, options) => {
         calls.push({ url, ...options });
         const data = options.body ? JSON.parse(options.body) : null;
         if (url.endsWith('/auth/v1/user')) return Response.json(user);
         if (url.includes('/rest/v1/profiles')) return Response.json([profile]);
-        if (url.includes('/rest/v1/interventions')) return Response.json([{ id: 42, client: 'Client Démo', service: 'Entretien', intervention_assignments: [{ user_id: assignment.userId }] }]);
-        if (url.endsWith('/sale.order/search_read')) return Response.json([{ id: 80, name: 'S080', partner_id: [7, 'Client Démo'], date_order: '2026-11-02', state: 'sale' }]);
-        if (url.endsWith('/sale.order.line/search_read')) return Response.json([{ id: 81, order_id: [80, 'S080'], name: 'Remplacer le circulateur', product_uom_qty: 1, product_uom: [1, 'Unité'], display_type: false, sequence: 10 }]);
+        if (url.includes('/rest/v1/interventions')) return Response.json([{ ...intervention, intervention_assignments: [{ user_id: assignment.userId }] }]);
+        if (url.endsWith('/sale.order/search_read')) {
+            const id = data.domain.find(item => item[0] === 'id')?.[2];
+            const name = data.domain.find(item => item[0] === 'name')?.[2];
+            const state = data.domain.find(item => item[0] === 'state' && item[1] === '=')?.[2];
+            return Response.json(orders.filter(order => (!id || order.id === id) && (!name || order.name === name) && (!state || order.state === state)).slice(0, data.limit));
+        }
+        if (url.endsWith('/sale.order.line/search_read')) return Response.json([
+            { id: 79, order_id: [80, 'S080'], name: 'Ligne 99 €' },
+            { id: 81, order_id: [80, 'S080'], name: 'Remplacer le circulateur', product_uom_qty: 1, product_uom: [1, 'Unité'], display_type: false, sequence: 10 },
+        ]);
         if (url.endsWith('/fields_get')) return Response.json(Object.fromEntries(data.allfields.filter(name=>name!=='product_uom_id').map(name => [name, { type: 'char' }])));
         if (url.endsWith('/res.company/search_read')) return Response.json([{ id: 1, name: 'Entreprise Test', partner_id: [2, 'Entreprise Test'], company_registry: '12345678901234' }]);
         if (url.endsWith('/res.partner/search_read')) {
+            if (data.domain.some(item => item[0] === 'id' && item[1] === 'in')) return Response.json([
+                { id: 7, street: 'Adresse de facturation', phone: '0612345678', email: 'client@example.com' },
+                { id: 9, street: '12 rue du Chantier', zip: '04000', city: 'Digne-les-Bains', phone: '0623456789' },
+            ]);
             const id = data.domain.find(item => Array.isArray(item) && item[0] === 'id')?.[2];
             return Response.json([{ id: id || 7, name: id === 2 ? 'Entreprise Test' : 'Société Alice & Fils', street: id === 2 ? '422 route de Digne' : '12 bis rue des Lilas', zip: '04660', city: 'Champtercier', email: 'test@example.com', country_id: [75, 'France'], l10n_fr_siret: id === 2 ? false : '12345678901234' }]);
         }
@@ -35,7 +49,7 @@ function fixture(overrides = {}) {
     const handler = createConnector({ env: key => settings[key], fetcher, cryptoApi: webcrypto, now: () => currentTime });
     const app = async (body, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer user-jwt', Origin: settings.PORTAL_URL, ...headers }, body: JSON.stringify(body) }));
     const mcp = async (method, args, headers = {}) => handler(new Request('https://test.supabase.co/functions/v1/srp-odoo/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...headers }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: args }) }));
-    return { handler, app, mcp, settings, calls, profile, user, assignment, expire: () => { currentTime += 600001; } };
+    return { handler, app, mcp, settings, calls, profile, user, assignment, intervention, orders, expire: () => { currentTime += 600001; } };
 }
 
 test('all transports fail closed without their credentials', async () => {
@@ -73,6 +87,36 @@ test('an unassigned employee cannot read work instructions or contact Odoo', asy
     const response = await f.app({ action: 'work_instructions', interventionId: 42 });
     assert.equal(response.status, 403);
     assert.equal(f.calls.some(call => call.url.includes('odoo.com')), false);
+});
+
+test('appointment prefill uses the selected quote and delivery address without exposing prices', async () => {
+    const f = fixture();
+    const response = await f.app({ action: 'appointment_prefill', quoteId: 80 });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+        client: 'Client Démo', address: '12 rue du Chantier, 04000 Digne-les-Bains',
+        client_phone: '0623456789', secondary_phone: '0612345678', client_email: 'client@example.com',
+        ticket_number: 'S080', service: 'Remplacer le circulateur',
+    });
+    const orderCall = f.calls.find(call => call.url.endsWith('/sale.order/search_read'));
+    assert.ok(JSON.parse(orderCall.body).domain.some(item => item[0] === 'company_id' && item[2] === 1));
+    assert.equal((await f.app({ action: 'appointment_prefill', quoteId: 999 })).status, 404);
+    assert.equal((await f.app({ action: 'appointment_prefill', quoteId: '80' })).status, 400);
+    f.profile.is_admin = false;
+    const previousOdooCalls = f.calls.filter(call => call.url.includes('odoo.com')).length;
+    assert.equal((await f.app({ action: 'appointment_prefill', quoteId: 80 })).status, 403);
+    assert.equal(f.calls.filter(call => call.url.includes('odoo.com')).length, previousOdooCalls);
+});
+
+test('an assigned employee sees the linked quote even when a newer quote exists', async () => {
+    const f = fixture();
+    f.profile.is_admin = false;
+    f.intervention.ticket_number = 'S080';
+    f.orders.unshift({ ...f.orders[0], id: 82, name: 'S082' });
+    const read = async () => (await f.app({ action: 'work_instructions', interventionId: 42 })).json();
+    assert.deepEqual((await read()).orders.map(order => order.reference), ['S080']);
+    f.orders[1].state = 'draft';
+    assert.deepEqual((await read()).orders, []);
 });
 
 test('another organization and untrusted origin cannot read Odoo', async () => {

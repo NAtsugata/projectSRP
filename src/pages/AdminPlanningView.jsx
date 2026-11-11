@@ -2,13 +2,14 @@ import { defaultPlanningView } from '../utils/workspaceTracking';
 // src/pages/AdminPlanningView.js - Version refactorisée
 // Gestion du planning admin avec composants modulaires
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { InterventionForm, InterventionList, EditTeamModal, PlanningGanttView, PlanningMonthView, TeamStatistics } from '../components/planning';
 import { EmployeeAlertsPanel, useUnreadAlertsCount } from '../components/admin';
 import AbsenceManager from '../components/agenda/AbsenceManager';
 import { Button, ConfirmDialog } from '../components/ui';
 import { PlusIcon, ClipboardListIcon, CalendarIcon, ListIcon } from '../components/SharedUI';
+import { useAuthStore } from '../store/authStore';
 import logger from '../utils/logger';
 import './AdminPlanningView.css';
 
@@ -34,11 +35,12 @@ export default function AdminPlanningView({
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Récupérer le client préfillé depuis la navigation (depuis AdminClientsView)
+  const profile = useAuthStore(state => state.profile);
   const prefillClient = location.state?.prefillClient || null;
-
-  // Ouvrir automatiquement le formulaire si on arrive avec un client préfillé
-  const [showForm, setShowForm] = useState(searchParams.get('new') === 'true' || !!prefillClient);
+  const quoteAppointment = location.state?.quoteAppointment;
+  const prefillQuote = quoteAppointment && profile?.id === quoteAppointment.userId &&
+    profile?.organization_id === quoteAppointment.organizationId ? quoteAppointment.fields : null;
+  const showForm = searchParams.get('new') === 'true' || !!prefillClient || !!prefillQuote;
   const [viewMode, setViewMode] = useState(() => {
     // Récupérer la préférence de vue depuis localStorage (Gantt par défaut)
     return defaultPlanningView('planningViewMode');
@@ -55,11 +57,6 @@ export default function AdminPlanningView({
     setAbsences(newAbsences);
   }, []);
 
-  // Sync form visibility with URL params
-  useEffect(() => {
-    setShowForm(searchParams.get('new') === 'true');
-  }, [searchParams]);
-
   // Sauvegarder la préférence de vue
   const handleViewModeChange = useCallback((mode) => {
     setViewMode(mode);
@@ -73,13 +70,12 @@ export default function AdminPlanningView({
   }, [setSearchParams]);
 
   const closeForm = useCallback(() => {
-    setSearchParams({});
+    setSearchParams({}, { replace: true, state: null });
     logger.log('AdminPlanningView: Fermeture formulaire');
   }, [setSearchParams]);
 
   const handleSubmit = useCallback(async ({ formData, assignedUsers, files }) => {
     setIsSubmitting(true);
-    logger.log('AdminPlanningView: Soumission intervention', { formData, assignedUsers, filesCount: files.length });
 
     try {
       const result = await onAddIntervention(formData, assignedUsers, files);
@@ -207,6 +203,7 @@ export default function AdminPlanningView({
             variant="primary"
             icon={<PlusIcon />}
             onClick={showForm ? closeForm : openForm}
+            disabled={isSubmitting}
           >
             {showForm ? 'Annuler' : 'Nouvelle Intervention'}
           </Button>
@@ -217,11 +214,13 @@ export default function AdminPlanningView({
       {showForm && (
         <div className="planning-form-section">
           <InterventionForm
+            key={prefillClient || prefillQuote ? location.key : 'intervention-create'}
             users={users}
             onSubmit={handleSubmit}
             onCancel={closeForm}
             isSubmitting={isSubmitting}
             prefillClient={prefillClient}
+            prefillQuote={prefillQuote}
           />
         </div>
       )}
