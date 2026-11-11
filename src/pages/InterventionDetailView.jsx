@@ -10,6 +10,10 @@ import {
   ExpandIcon,
   RefreshCwIcon,
   AlertTriangleIcon,
+  CameraIcon,
+  ClipboardListIcon,
+  ClockIcon,
+  FileTextIcon,
 } from '../components/SharedUI';
 import { storageService } from '../lib/supabase';
 import {
@@ -718,7 +722,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           <InterventionJourney
             report={report}
             status={currentStatus}
-            activeTab={detailTab}
             onSelect={selectDetailTab}
             onArrival={() => markWithGeo('arrival')}
             busy={isSaving || uploadQueue.some(item => item.status === 'uploading')}
@@ -728,7 +731,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         {/* CONTENU ORGANISÉ EN TABS */}
         <div id="intervention-details" className="intervention-details-anchor">
         <Tabs value={detailTab} onChange={setDetailTab}>
-          <Tab label="Temps">
+          <Tab label="Temps" icon={<ClockIcon />}>
             <div className="intervention-time">
               <ArrivalDeparture
                 report={report}
@@ -743,7 +746,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </Tab>
 
           {/* ONGLET PHOTOS */}
-          <Tab label="Photos" badge={stats.photoCount > 0 ? stats.photoCount : null}>
+          <Tab label="Photos" icon={<CameraIcon />} badge={stats.photoCount > 0 ? stats.photoCount : null}>
             <div>
               <div className="section-header intervention-photos-header" style={{ marginBottom: '1rem' }}>
                 <h3 className="section-title" style={{ margin: 0 }}>
@@ -801,7 +804,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </Tab>
 
           {/* ONGLET CHECKPOINTS */}
-          <Tab label="Contrôles" badge={stats.checkpointProgress}>
+          <Tab label="Contrôles" icon={<ClipboardListIcon />} badge={stats.checkpointProgress}>
             <div>
               <h3 style={{ marginTop: 0 }}>Points de contrôle rapides</h3>
               {(!report.quick_checkpoints || report.quick_checkpoints.length === 0) && (
@@ -861,7 +864,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </Tab>
 
           {/* ONGLET RAPPORT */}
-          <Tab label="Rapport">
+          <Tab label="Rapport" icon={<FileTextIcon />}>
             <div>
               {/* Rapport */}
               <div className="section" style={{ marginTop: 0 }}>
@@ -1053,7 +1056,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         )}
 
         <details className="intervention-tools">
-          <summary>Autres actions et informations</summary>
+          <summary>Autres actions</summary>
           <div className="intervention-tools-body">
             <QuickActionsBar intervention={intervention} />
             <CallButtons intervention={intervention} />

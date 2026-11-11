@@ -34,7 +34,7 @@ export default function InterventionAdminNote({ note, onSave }) {
   return (
     <section className="intervention-note" aria-labelledby="intervention-note-title">
       <header>
-        <h2 id="intervention-note-title">Consignes de l’administrateur</h2>
+        <h2 id="intervention-note-title">Note administrateur</h2>
         {onSave && !editing && (
           <button ref={editRef} type="button" className="intervention-note-edit" onClick={() => {
             setDraft(note || '');

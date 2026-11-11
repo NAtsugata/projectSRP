@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap');
+
 /* ============================================
    InterventionDetailView - Modern Detail Page
    Full integration with Design System
@@ -756,41 +758,69 @@
   /* Overrides spécifiques si nécessaires */
 }
 .intervention-detail-modern {
-  --intervention-copper: #9a5031;
-  --intervention-button: #8e4628;
+  --intervention-copper: #85452e;
+  --intervention-button: #884629;
+  --intervention-paper: #fcf8f2;
+  --intervention-note-paper: #f6eee4;
+  --intervention-serif: 'Instrument Serif', Georgia, serif;
+  container: intervention / inline-size;
+  padding: clamp(10px, 2vw, 26px) clamp(8px, 2.6vw, 32px) 32px;
+  background: var(--intervention-paper);
 }
 
-[data-theme='dark'] .intervention-detail-modern { --intervention-copper: #e9a27e; }
+[data-theme='dark'] .intervention-detail-modern {
+  --intervention-copper: #e9a27e;
+  --intervention-paper: #231b17;
+  --intervention-note-paper: #30231c;
+}
+
+.app-layout .intervention-detail-modern .intervention-content {
+  padding: 0;
+  gap: 14px;
+  max-width: 1100px;
+}
 
 .intervention-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(295px, 1fr);
+  grid-template-columns: minmax(0, 1.85fr) minmax(215px, 1fr);
   align-items: start;
-  gap: 16px;
+  gap: clamp(18px, 3.3cqi, 36px);
+  padding: clamp(16px, 2.4cqi, 24px) 0 10px;
 }
 
-.intervention-brief { display: grid; gap: 12px; min-width: 0; }
-.intervention-detail-modern :is(.intervention-journey, .work-instructions, .intervention-note, .intervention-tools, .intervention-closeout) {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: 0 6px 18px #54270e09;
+.intervention-brief { display: grid; gap: 18px; min-width: 0; }
+.intervention-detail-modern .intervention-content .intervention-overview :is(.intervention-journey, .work-instructions) {
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.intervention-detail-modern .intervention-content .intervention-overview .intervention-journey {
+  padding-inline-start: clamp(16px, 2.9cqi, 33px);
+  border-inline-start: 1px solid var(--border-color);
+}
+.intervention-overview :is(.work-instructions, .intervention-journey) h2 {
+  font: 400 clamp(1.65rem, 3.2cqi, 2.25rem)/1.05 var(--intervention-serif);
+  letter-spacing: -.01em;
 }
 
 .intervention-note, .intervention-closeout { padding: clamp(14px, 2vw, 20px); }
-.intervention-note { border-inline-start: 3px solid var(--intervention-copper) !important; }
-.intervention-note > header, .intervention-note-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.intervention-note { background: var(--intervention-note-paper); border-inline-start: 3px solid var(--intervention-copper); border-radius: 7px; }
+.intervention-note > header, .intervention-note-actions { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; }
 .intervention-note h2, .intervention-closeout h2 { margin: 0; font-size: 1.06rem; letter-spacing: -.015em; }
 .intervention-note-text { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .intervention-note textarea { display: block; width: 100%; margin: 10px 0; font-size: 16px; }
 .intervention-note-actions { justify-content: flex-start; }
-.intervention-note :is(.intervention-note-edit, .intervention-note-save) { min-height: 44px; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font: inherit; font-size: .86rem; font-weight: 650; cursor: pointer; }
-.intervention-note .intervention-note-save { background: var(--intervention-button); border-color: var(--intervention-button); color: #fff; }
+.intervention-note :is(.intervention-note-edit, .intervention-note-save) { min-height: 44px; border: 0; background: transparent; color: var(--intervention-copper); font: inherit; font-size: .87rem; font-weight: 650; cursor: pointer; }
+.intervention-note .intervention-note-edit { padding: 3px 0; text-decoration: underline; text-underline-offset: 3px; }
+.intervention-note .intervention-note-save { padding: 7px 12px; border-radius: 8px; background: var(--intervention-button); color: #fff; }
 .intervention-note button:disabled { opacity: .65; cursor: wait; }
 .intervention-note p[role='alert'] { color: var(--color-danger); }
 
 .intervention-tools > summary, .intervention-closeout summary { cursor: pointer; font-weight: 650; }
-.intervention-tools > summary { min-height: 46px; padding: 12px 16px; }
+.intervention-tools { border-top: 1px solid var(--border-color); }
+.intervention-tools > summary { min-height: 46px; padding: 12px 0; }
 .intervention-tools-body { display: grid; gap: 12px; padding: 0 16px 16px; }
 .intervention-team { padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
 .intervention-team-member { padding: 5px 9px; border-radius: 999px; background: var(--bg-secondary); color: var(--text-primary); }
@@ -800,16 +830,18 @@
 .intervention-photos-header { flex-wrap: wrap; gap: 8px; }
 .intervention-detail-modern :is(.intervention-back, .intervention-contact, .journey-primary, .work-orders-toggle, .intervention-note button, .intervention-tools > summary):focus-visible { outline: 2px solid var(--intervention-copper); outline-offset: 3px; }
 
-.intervention-detail-modern .intervention-details-anchor .tabs-header { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.intervention-detail-modern .intervention-details-anchor .tab-button { min-width: 0; justify-content: center; white-space: normal; }
-.intervention-detail-modern .intervention-details-anchor .tab-button.active { border: 1px solid var(--intervention-copper); }
+.intervention-detail-modern .intervention-details-anchor .tabs-header { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border-color); background: transparent; }
+.intervention-detail-modern .intervention-details-anchor .tab-button { min-width: 0; justify-content: center; white-space: normal; border: 1px solid transparent; }
+.intervention-detail-modern .intervention-details-anchor .tab-button.active { border-color: transparent; color: var(--intervention-copper); background: var(--intervention-note-paper); }
 .intervention-detail-modern .intervention-details-anchor .tab-label { font-size: clamp(.73rem, 1.6vw, .9rem); }
+.intervention-detail-modern .intervention-details-anchor .tab-icon svg { width: 16px; height: 16px; }
 
-@media (max-width: 850px) {
+@container intervention (max-width: 720px) {
   .intervention-overview { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .intervention-detail-modern .intervention-content .intervention-overview .intervention-journey { padding: 0; border-inline-start: 0; }
 }
 
-@media (max-width: 650px) {
+@container intervention (max-width: 600px) {
   .intervention-detail-modern .intervention-details-anchor .tabs-content { padding: 12px; }
   .intervention-detail-modern .intervention-details-anchor .tab-button { padding: 7px 2px; gap: 3px; }
   .intervention-note-actions > button { min-width: 0; }

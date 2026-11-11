@@ -151,7 +151,12 @@ const InterventionDetailViewContainer = () => {
             .select('admin_note')
             .maybeSingle();
 
-        if (error || !data) throw new Error('Vérifiez vos droits ou la connexion, puis réessayez.');
+        if (error) {
+            logger.error('Échec de la sauvegarde de la note', { code: error.code, message: error.message });
+            if (error.code === '42501') throw new Error('Cette note est réservée aux administrateurs de l’organisation.');
+            throw new Error('La base n’a pas enregistré la note. Réessayez dans un instant.');
+        }
+        if (!data) throw new Error('Cette intervention n’est plus accessible avec votre compte.');
         queryClient.setQueryData(queryKey, previous => previous && { ...previous, admin_note: data.admin_note });
         queryClient.invalidateQueries({ queryKey: ['interventions'] });
         toast?.success('Note enregistrée.');

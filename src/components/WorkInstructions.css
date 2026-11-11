@@ -1,18 +1,14 @@
-.work-instructions { min-width: 0; padding: clamp(15px, 2.5vw, 22px); }
-.work-instructions > header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.work-instructions-heading { display: flex; align-items: center; gap: 9px; }
-.work-instructions h2 { margin: 0; font-size: clamp(1.12rem, 2vw, 1.4rem); letter-spacing: -.025em; }
-.work-instructions-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--intervention-copper); background: color-mix(in srgb, var(--bg-primary) 86%, var(--intervention-copper)); }
-.work-instructions-icon svg { width: 18px; height: 18px; }
-.work-instructions-count, .work-order-reference { font-size: .78rem; color: var(--text-secondary); font-weight: 650; }
-.work-order-reference { margin: 0 0 5px; overflow-wrap: anywhere; }
+.work-instructions { min-width: 0; }
+.work-instructions > header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 8px; }
+.work-instructions h2 { margin: 0; }
+.work-order-reference { margin: 0; color: var(--intervention-copper); font-size: .82rem; font-weight: 550; overflow-wrap: anywhere; }
 .work-order-lines { list-style: none; padding: 0; margin: 0; }
-.work-order-lines li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(38px, auto); align-items: start; gap: 8px; padding: 9px 0; border-top: 1px solid var(--border-color); }
+.work-order-lines li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
 .work-order-lines li > span { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.45; }
-.work-order-lines li > strong { justify-self: end; max-width: 108px; padding: 4px 7px; border-radius: 7px; text-align: right; font-size: .8rem; line-height: 1.35; overflow-wrap: anywhere; background: var(--bg-secondary); }
-.work-instructions-message { margin: 0; padding: 10px 12px; border-radius: 9px; color: var(--text-secondary); background: var(--bg-secondary); }
+.work-order-lines li > strong { max-width: 95px; text-align: right; font-size: .8rem; font-weight: 550; line-height: 1.45; overflow-wrap: anywhere; }
+.work-instructions-message { margin: 0; padding: 10px 12px; border-radius: 8px; color: var(--text-secondary); background: var(--bg-secondary); }
 .work-instructions-message p { margin: 0; }
-.work-instructions-select { display: grid; gap: 4px; margin-bottom: 13px; font-size: .8rem; }
+.work-instructions-select { display: grid; gap: 4px; margin-bottom: 10px; font-size: .8rem; }
 .work-instructions-select small { color: var(--text-secondary); }
 .work-instructions-select select { width: 100%; min-height: 44px; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: inherit; font: inherit; font-size: 16px; }
-.work-orders-toggle { padding: 6px 0; min-height: 44px; border: 0; background: transparent; color: var(--intervention-copper); font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.work-orders-toggle { padding: 4px 0; min-height: 44px; border: 0; background: transparent; color: var(--intervention-copper); font: inherit; font-weight: 550; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

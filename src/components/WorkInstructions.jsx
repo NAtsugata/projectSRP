@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react';
 import { requestOdoo } from '../services/odooService';
-import { ClipboardListIcon } from './SharedUI';
 import './WorkInstructions.css';
 
 const quantityFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 });
 const previewLength = 4;
 
-function WorkOrder({ order }) {
+function WorkOrder({ order, showReference }) {
     const [expanded, setExpanded] = useState(false);
     const remaining = order.lines.length - previewLength;
     const visibleLines = expanded ? order.lines : order.lines.slice(0, previewLength);
 
     return (
         <article>
-            <h3 className="work-order-reference">Devis {order.reference}</h3>
+            {showReference && <h3 className="work-order-reference">Devis {order.reference}</h3>}
             <ol className="work-order-lines">
                 {visibleLines.map((line, index) => (
                     <li key={index}>
@@ -50,16 +49,13 @@ export default function WorkInstructions({ interventionId, isAdmin = false }) {
     }, [interventionId, orderReference, attempt]);
 
     const orders = data?.orders ?? [];
-    const count = orders.reduce((sum, order) => sum + order.lines.length, 0);
+    const reference = !busy && !error && orders.length === 1 ? orders[0].reference : null;
 
     return (
         <section className="work-instructions" aria-labelledby="work-instructions-title">
             <header>
-                <div className="work-instructions-heading">
-                    <span className="work-instructions-icon"><ClipboardListIcon /></span>
-                    <h2 id="work-instructions-title">Travaux à réaliser</h2>
-                </div>
-                {!busy && !error && count > 0 && <span className="work-instructions-count">{count} prestation{count > 1 ? 's' : ''}</span>}
+                <h2 id="work-instructions-title">Travaux à réaliser</h2>
+                {reference && <span className="work-order-reference">Devis {reference}</span>}
             </header>
             {isAdmin && data?.choices?.length > 0 && (
                 <label className="work-instructions-select">
@@ -79,7 +75,7 @@ export default function WorkInstructions({ interventionId, isAdmin = false }) {
                 </div>
             )}
             {!busy && !error && orders.length === 0 && <p className="work-instructions-message">Aucune prestation issue d’un devis validé pour cette intervention.</p>}
-            {!busy && !error && orders.map(order => <WorkOrder key={order.reference} order={order} />)}
+            {!busy && !error && orders.map(order => <WorkOrder key={order.reference} order={order} showReference={!reference} />)}
         </section>
     );
 }

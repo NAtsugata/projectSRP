@@ -1,11 +1,10 @@
-import { CameraIcon, CheckIcon, ClipboardListIcon, ClockIcon, FileTextIcon } from '../SharedUI';
+import { CheckIcon } from '../SharedUI';
 import { interventionJourney } from '../../utils/interventionJourney';
 import './InterventionJourney.css';
 
-const stageIcons = [ClockIcon, CameraIcon, ClipboardListIcon, FileTextIcon];
 const nextActions = ['Enregistrer mon arrivée', 'Ajouter les photos', 'Vérifier les contrôles', 'Compléter le rapport'];
 
-export default function InterventionJourney({ report, status, activeTab, onSelect, onArrival, busy }) {
+export default function InterventionJourney({ report, status, onSelect, onArrival, busy }) {
   const { stages, completed, terminal, next } = interventionJourney(report, status);
   const action = terminal ? 'Voir le rapport' : completed === stages.length ? 'Vérifier et clôturer' : nextActions[next.tab];
 
@@ -22,20 +21,17 @@ export default function InterventionJourney({ report, status, activeTab, onSelec
       </header>
       <progress max={stages.length} value={completed} aria-label="Étapes renseignées" />
       <ol>
-        {stages.map(stage => {
-          const Icon = stage.done ? CheckIcon : stageIcons[stage.tab];
-          return (
+        {stages.map(stage => (
             <li key={stage.tab}>
-              <div className="journey-stage" aria-current={activeTab === stage.tab ? 'step' : undefined}>
-                <span className={`journey-stage-icon${stage.done ? ' is-done' : ''}`}><Icon /></span>
+              <div className="journey-stage" aria-current={!terminal && !stage.done && next.tab === stage.tab ? 'step' : undefined}>
+                <span className={`journey-stage-icon${stage.done ? ' is-done' : ''}`} aria-hidden="true">{stage.done && <CheckIcon />}</span>
                 <span><strong>{stage.label}</strong><small>{stage.detail}</small></span>
               </div>
             </li>
-          );
-        })}
+        ))}
       </ol>
       <button type="button" className="journey-primary" disabled={busy} onClick={handleNext}>
-        {action}<span aria-hidden="true"> →</span>
+        {action}
       </button>
     </section>
   );

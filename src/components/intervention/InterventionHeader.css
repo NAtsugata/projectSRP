@@ -1,74 +1,67 @@
 .intervention-hero {
-  position: relative;
   max-width: 1100px;
-  margin: 0 auto 18px;
-  padding: clamp(16px, 3vw, 30px);
-  overflow: hidden;
-  background: linear-gradient(126deg, var(--bg-primary, #fff), color-mix(in srgb, var(--bg-primary, #fff) 90%, var(--intervention-copper)));
-  border: 1px solid var(--border-color, #e4d6cb);
-  border-radius: 22px;
-  box-shadow: 0 12px 34px #54270e0c;
+  margin: 0 auto;
+  padding: 0 0 clamp(14px, 2.3vw, 24px);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.intervention-hero::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  background: linear-gradient(90deg, #8b4628, #c77e57, #e7b496);
-  content: '';
-}
-
-.intervention-hero-toolbar,
-.intervention-hero-main,
-.intervention-hero-actions,
-.intervention-hero-badges {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.intervention-hero-toolbar,
-.intervention-hero-main { justify-content: space-between; }
-.intervention-hero-badges, .intervention-hero-actions { flex-wrap: wrap; }
-.intervention-hero-main { gap: 18px; margin: 20px 0; }
-.intervention-hero-main > div:first-child { min-width: 0; }
-.intervention-hero h1 { margin: 0; font-size: clamp(26px, 4vw, 43px); line-height: 1.08; letter-spacing: -.045em; overflow-wrap: anywhere; }
-.intervention-hero-main p { margin: 7px 0 0; color: var(--text-secondary); overflow-wrap: anywhere; }
 .intervention-hero svg { width: 17px; height: 17px; flex: none; }
-
-.intervention-back,
-.intervention-contact {
+.intervention-back, .intervention-contact {
   display: inline-flex;
-  justify-content: center;
   align-items: center;
   gap: 7px;
-  padding: 8px 12px;
   min-height: 44px;
-  border: 1px solid var(--border-color, #e4d6cb);
-  border-radius: 10px;
-  background: var(--bg-primary, #fff);
-  color: var(--text-primary, #31231c);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
-  font-size: .875rem;
-  font-weight: 650;
-  text-decoration: none;
+  font-weight: 550;
   cursor: pointer;
 }
 
-.intervention-contact:hover, .intervention-back:hover { background: var(--bg-secondary, #f8f2ec); color: var(--text-primary, #31231c); }
-.intervention-directions { background: var(--intervention-button); border-color: var(--intervention-button); color: #fff; }
-.intervention-directions:hover { background: #733719; color: #fff; }
-.intervention-priority { padding: 5px 9px; border-radius: 999px; background: #ffeadc; color: #87371e; font-size: .75rem; font-weight: 700; }
+.intervention-back:hover { color: var(--intervention-copper); }
+.intervention-contact { color: var(--intervention-copper); text-underline-offset: 4px; }
+.intervention-contact:hover { color: var(--text-primary); }
 
-.intervention-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 8px; margin: 0; }
-.intervention-meta > div { min-width: 0; padding: 10px 12px; border: 1px solid var(--border-color, #e4d6cb); border-radius: 12px; background: var(--bg-primary, #fff); }
-.intervention-meta dt { display: flex; align-items: center; gap: 6px; color: var(--text-secondary, #69564b); font-size: .76rem; }
-.intervention-meta dt svg { color: var(--intervention-copper); }
-.intervention-meta dd { margin: 3px 0 0; font-size: .9rem; font-weight: 650; overflow-wrap: anywhere; }
+.intervention-hero-badges, .intervention-hero-actions, .intervention-meta-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
 
-@media (max-width: 650px) {
-  .intervention-hero-main { align-items: stretch; flex-direction: column; margin: 15px 0; }
-  .intervention-hero-actions > a { flex: 1 1 110px; }
-  .intervention-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .intervention-meta > div:nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
+.intervention-hero-badges { margin-top: 9px; font-size: .85rem; font-weight: 650; }
+.intervention-status { display: inline-flex; align-items: center; gap: 8px; }
+.intervention-status::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--intervention-copper);
+  content: '';
+}
+.intervention-status:is([data-tone='running'], [data-tone='completed'])::before { background: #39844d; }
+.intervention-status[data-tone='cancelled']::before { background: var(--color-danger); }
+.intervention-priority { color: var(--intervention-copper); }
+
+.intervention-hero-main { margin: 10px 0 16px; }
+.intervention-hero h1 {
+  margin: 0;
+  font: 400 clamp(2.6rem, 6cqi, 4.35rem)/.98 var(--intervention-serif);
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+.intervention-hero-main p { margin: 7px 0 0; font-size: clamp(1rem, 2.2cqi, 1.32rem); overflow-wrap: anywhere; }
+.intervention-meta-line { gap: 2px 22px; }
+.intervention-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; margin: 0; }
+.intervention-meta > div { display: flex; align-items: center; min-width: 0; gap: 7px; }
+.intervention-meta dt { display: flex; }
+.intervention-meta dt span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.intervention-meta dd { margin: 0; font-size: .87rem; overflow-wrap: anywhere; }
+.intervention-hero-actions { font-size: .87rem; }
+
+@container intervention (max-width: 600px) {
+  .intervention-hero-main { margin-bottom: 12px; }
+  .intervention-meta { align-items: flex-start; flex-direction: column; }
+  .intervention-meta-line { align-items: flex-start; flex-direction: column; }
 }

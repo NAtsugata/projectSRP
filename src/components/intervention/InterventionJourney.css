@@ -1,19 +1,26 @@
-.intervention-journey { min-width: 0; padding: clamp(15px, 2.5vw, 22px); }
-.intervention-journey > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.intervention-journey h2 { font-size: 1.13rem; margin: 0; letter-spacing: -.02em; }
-.intervention-journey > header > span { flex: none; font-size: .76rem; color: var(--text-secondary); }
-.intervention-journey progress { width: 100%; height: 7px; margin: 10px 0; accent-color: var(--intervention-copper); }
-.intervention-journey ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 0; margin: 5px 0 13px; list-style: none; }
-.journey-stage { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 58px; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; }
-.intervention-journey li [aria-current='step'] { border-color: var(--intervention-copper); background: color-mix(in srgb, var(--bg-primary) 91%, var(--intervention-copper)); }
-.intervention-journey li strong, .intervention-journey li small { display: block; overflow-wrap: anywhere; }
-.intervention-journey li strong { font-size: .82rem; }
-.intervention-journey li small { font-size: .7rem; color: var(--text-secondary); }
-.journey-stage-icon { display: grid; place-items: center; flex: none; width: 25px; height: 25px; border-radius: 8px; color: var(--intervention-copper); background: var(--bg-secondary); }
-.journey-stage-icon svg { width: 15px; height: 15px; }
-.journey-stage-icon.is-done { background: #e1f3e9; color: #245c44; }
-.intervention-journey .journey-primary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px; width: 100%; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--intervention-button); color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-.intervention-journey .journey-primary:hover:not(:disabled) { background: #733719; }
+.intervention-journey { min-width: 0; }
+.intervention-journey > header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 10px; flex-wrap: wrap; }
+.intervention-journey h2 { margin: 0; }
+.intervention-journey > header > span { font-size: .78rem; color: var(--text-secondary); }
+.intervention-journey progress { width: 100%; height: 5px; margin: 9px 0 5px; accent-color: var(--intervention-copper); }
+.intervention-journey ol { padding: 0; margin: 8px 0 18px; list-style: none; }
+.intervention-journey li { position: relative; }
+.intervention-journey li:not(:last-child)::after { position: absolute; top: 25px; bottom: -7px; left: 10px; width: 1px; background: var(--border-color); content: ''; }
+.journey-stage { display: flex; align-items: flex-start; gap: 12px; min-height: 45px; padding: 5px 0; }
+.journey-stage strong, .journey-stage small { display: block; overflow-wrap: anywhere; }
+.journey-stage strong { font-size: .96rem; font-weight: 500; }
+.journey-stage small { font-size: .75rem; color: var(--text-secondary); }
+.journey-stage[aria-current='step'] strong { font-weight: 750; }
+.journey-stage-icon { position: relative; z-index: 1; display: grid; place-items: center; flex: none; width: 21px; height: 21px; border: 1px solid var(--border-color); border-radius: 50%; background: var(--intervention-paper); }
+.journey-stage[aria-current='step'] .journey-stage-icon { border: 2px solid var(--intervention-copper); }
+.journey-stage-icon svg { width: 14px; height: 14px; }
+.journey-stage-icon.is-done { background: #367348; border-color: #367348; color: #fff; }
+.intervention-journey .journey-primary { min-height: 48px; width: 100%; padding: 10px 13px; border: 0; border-radius: 8px; background: var(--intervention-button); color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.intervention-journey .journey-primary:hover:not(:disabled) { background: #713a26; }
 .intervention-journey .journey-primary:disabled { opacity: .65; cursor: wait; }
+
+@container intervention (max-width: 540px) {
+  .intervention-journey > header, .intervention-journey > progress, .intervention-journey > ol { display: none; }
+}
 
 @media print { .intervention-journey .journey-primary { display: none; } }
