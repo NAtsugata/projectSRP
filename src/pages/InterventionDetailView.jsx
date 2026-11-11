@@ -23,7 +23,6 @@ import {
   SignatureModal,
   FileUploader,
   VoiceRecorder,
-  StatusCard,
   ArrivalDeparture,
 } from '../components/intervention';
 import { Tabs, Tab } from '../components/ui';
@@ -32,10 +31,9 @@ import CerfaGeneratorModal from '../components/CerfaGeneratorModal';
 import ReceptionForm from '../components/ReceptionForm';
 import { EditTeamModal } from '../components/planning';
 import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
-import BusinessWorkflowSource from '../components/BusinessWorkflowSource';
 import WorkInstructions from '../components/WorkInstructions';
 import InterventionJourney from '../components/intervention/InterventionJourney';
-import StatusBadge from '../components/ui/StatusBadge';
+import InterventionAdminNote from '../components/intervention/InterventionAdminNote';
 import { interventionStageStatus } from '../utils/statusPresentation';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
@@ -88,7 +86,14 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const [showCerfaModal, setShowCerfaModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [detailTab,setDetailTab]=useState(0);
-  function selectDetailTab(index){setDetailTab(index);requestAnimationFrame(()=>document.getElementById('intervention-details')?.scrollIntoView({behavior:'smooth',block:'start'}));}
+  function selectDetailTab(index) {
+    setDetailTab(index);
+    requestAnimationFrame(() => {
+      const details = document.getElementById('intervention-details');
+      details?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+      details?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    });
+  }
   const [cerfaData, setCerfaData] = useState(null);
 
   // Debug: logger les changements de uploadQueue
@@ -510,7 +515,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   // -------- Besoins --------
   const [needDraft, setNeedDraft] = useState({ label: '', qty: 1, urgent: false, note: '', category: 'materiel', estimated_price: '' });
   const [needsOpen, setNeedsOpen] = useState(true);
-  const [adminNoteExpanded, setAdminNoteExpanded] = useState(false);
   const needsTotal = Array.isArray(report?.needs) ? report.needs.reduce((sum, n) => sum + (Number(n.estimated_price) || 0), 0) : 0;
 
   const addNeed = async () => {
@@ -662,7 +666,6 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   const currentStatus = interventionStageStatus({...intervention,report});
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
-  // Calcul des statistiques pour StatusCard
   const calculateDuration = () => {
     if (!report.arrivalTime) return null;
     const now = report.departureTime ? new Date(report.departureTime) : new Date();
@@ -674,9 +677,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   };
 
   const stats = {
-    teamCount:new Set((intervention.intervention_assignments || []).map(a=>a.user_id)).size,
     duration: calculateDuration(),
-    photoCount: report.files?.filter(f => f.type?.startsWith('image/')).length || 0,
+    photoCount: (report.files || []).filter(isImageUrl).length,
     checkpointProgress: report.quick_checkpoints?.length > 0
       ? `${report.quick_checkpoints.filter(c => c.done).length}/${report.quick_checkpoints.length}`
       : null,
@@ -687,196 +689,64 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
   return (
     <div className="intervention-detail-modern">
-      {/* NOUVEAU HEADER MODERNE */}
       <InterventionHeader
-        intervention={{...intervention, report}}
+        intervention={intervention}
+        status={currentStatus}
+        team={stats.team}
+        duration={stats.duration}
+        urgentCount={urgentCount}
         onBack={() => navigate('/planning')}
       />
 
       <div className="intervention-content">
-        <WorkInstructions key={`${profile?.id}:${intervention.id}`} interventionId={intervention.id} fallback={intervention.service} isAdmin={isAdmin} />
-        <InterventionJourney report={report} status={currentStatus} activeTab={detailTab} onSelect={selectDetailTab} onArrival={()=>markWithGeo('arrival')} busy={isSaving || uploadQueue.some(item=>item.status==='uploading')}/>
-        {/* CARTE DE RÉSUMÉ */}
-        <StatusCard
-          intervention={{...intervention,status:currentStatus}}
-          report={report}
-          stats={stats}
-        />
-
-        {/* ALERTES INTELLIGENTES */}
-        <SmartAlerts
-          report={report}
-          intervention={intervention}
-          MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
-          onAction={action=>selectDetailTab(({photos:1,checklist:2,signature:3,complete:3,time:0})[action] ?? 0)}
-        />
-
-        {/* ACTIONS RAPIDES */}
-        <QuickActionsBar
-          intervention={intervention}
-          onAction={(action) => logger.log('Action:', action)}
-        />
-
-        {/* BOUTONS D'APPEL ULTRA-VISIBLES */}
-        <CallButtons
-          intervention={intervention}
-          onCall={(label) => logger.log('Appel vers:', label)}
-        />
-
-        {/* CHRONOMÈTRE AVANCÉ AVEC PAUSE/REPRISE */}
-        <div id="time-section">
-          <TimeTrackerEnhanced
+        <div className="intervention-overview">
+          <div className="intervention-brief">
+            <WorkInstructions
+              key={JSON.stringify([profile?.id, profile?.organization_id, intervention.id])}
+              interventionId={intervention.id}
+              isAdmin={isAdmin}
+            />
+            <InterventionAdminNote
+              key={intervention.id}
+              note={intervention.admin_note}
+              onSave={isAdmin && onUpdateAdminNote ? async note => {
+                const saved = await onUpdateAdminNote(intervention.id, note);
+                setIntervention(previous => previous?.id === intervention.id ? { ...previous, admin_note: saved } : previous);
+              } : undefined}
+            />
+          </div>
+          <InterventionJourney
             report={report}
-            onUpdateReport={persistReport}
-            disabled={false}
+            status={currentStatus}
+            activeTab={detailTab}
+            onSelect={selectDetailTab}
+            onArrival={() => markWithGeo('arrival')}
+            busy={isSaving || uploadQueue.some(item => item.status === 'uploading')}
           />
         </div>
-
-        {/* ÉDITEUR DE DATES PLANIFIÉES (Admin uniquement) */}
-        {isAdmin && onUpdateScheduledDates && (
-          <ScheduledDatesEditor
-            scheduledDates={intervention.scheduled_dates || []}
-            onUpdate={(dates) => onUpdateScheduledDates(intervention.id, dates)}
-            disabled={false}
-          />
-        )}
-
-        {/* GESTION DE L'ÉQUIPE (Admin uniquement) */}
-        {isAdmin && onUpdateTeam && (
-          <div className="card-white" style={{ marginBottom: '1rem' }}>
-            <div className="section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h3 style={{ margin: 0 }}>👥 Équipe assignée</h3>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setShowTeamModal(true)}
-                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}
-                >
-                  Modifier l'équipe
-                </button>
-              </div>
-
-              {/* Affichage de l'équipe actuelle */}
-              {intervention.intervention_assignments && intervention.intervention_assignments.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {intervention.intervention_assignments.map((assignment, idx) => (
-                    <span
-                      key={assignment.user_id || idx}
-                      className="badge"
-                      style={{ background: '#3b82f6', color: 'white', padding: '0.35rem 0.6rem', borderRadius: '1rem' }}
-                    >
-                      {assignment.profiles?.full_name || 'Employé'}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted" style={{ margin: 0 }}>Aucun employé assigné</p>
-              )}
-
-              {/* Affichage des assignations par jour si présentes */}
-              {intervention.daily_assignments && Object.keys(intervention.daily_assignments).length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: '#6b7280' }}>Équipe par jour :</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {Object.entries(intervention.daily_assignments).sort(([a], [b]) => a.localeCompare(b)).map(([date, userIds]) => {
-                      const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-                      const userNames = userIds.map(uid => {
-                        const assignment = intervention.intervention_assignments?.find(a => a.user_id === uid);
-                        return assignment?.profiles?.full_name || users.find(u => u.id === uid)?.full_name || 'Employé';
-                      });
-                      return (
-                        <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                          <span style={{ fontWeight: 500, minWidth: '80px' }}>{formattedDate}</span>
-                          <span style={{ color: '#374151' }}>{userNames.join(', ') || 'Aucun'}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* CONTENU ORGANISÉ EN TABS */}
         <div id="intervention-details" className="intervention-details-anchor">
         <Tabs value={detailTab} onChange={setDetailTab}>
-          {/* ONGLET INFOS */}
-          <Tab label="Infos" icon="📋">
-            <div>
-              <h2 style={{ marginTop: 0 }}>{intervention.client}</h2>
-              <p className="text-muted">{intervention.address}</p>
-
-              {/* Statut + badges */}
-              <div className="section">
-                <h3>⚑ Statut de l'intervention</h3>
-                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                  <StatusBadge status={currentStatus}/>
-                  {urgentCount > 0 && <span className="badge" style={{ background: '#f59e0b', color: '#111827' }}>URG {urgentCount}</span>}
-                </div>
-              </div>
-
-              {/* Arrivé / Départ - Nouveau composant */}
-              <div className="section">
-                <ArrivalDeparture
-                  report={report}
-                  onMarkArrival={() => markWithGeo('arrival')}
-                  onMarkDeparture={() => markWithGeo('departure')}
-                  disabled={false}
-                />
-              </div>
-
-              {/* Admin Note Section */}
-              <div className="section">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h3 style={{ margin: 0 }}>📝 Note Admin</h3>
-                  {!isAdmin && intervention.admin_note && (
-                    <button
-                      onClick={() => setAdminNoteExpanded(!adminNoteExpanded)}
-                      className="btn btn-sm btn-outline-secondary"
-                      style={{ padding: '0.25rem 0.75rem' }}
-                    >
-                      {adminNoteExpanded ? '🔽 Réduire' : '🔼 Agrandir'}
-                    </button>
-                  )}
-                </div>
-                {isAdmin ? (
-                  <textarea
-                    className="form-control"
-                    value={intervention.admin_note || ''}
-                    onChange={(e) => {
-                      setIntervention(prev => ({ ...prev, admin_note: e.target.value }));
-                    }}
-                    onBlur={(e) => onUpdateAdminNote && onUpdateAdminNote(intervention.id, e.target.value)}
-                    placeholder="Note pour l'employé..."
-                    rows={3}
-                  />
-                ) : (
-                  <div
-                    className="admin-note-display p-3 bg-gray-50 rounded border"
-                    style={{
-                      maxHeight: adminNoteExpanded ? 'none' : '150px',
-                      overflow: adminNoteExpanded ? 'visible' : 'auto',
-                      transition: 'max-height 0.3s ease'
-                    }}
-                  >
-                    {intervention.admin_note ? (
-                      <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{intervention.admin_note}</p>
-                    ) : (
-                      <span className="text-muted">Aucune note.</span>
-                    )}
-                  </div>
-                )}
+          <Tab label="Temps">
+            <div className="intervention-time">
+              <ArrivalDeparture
+                report={report}
+                onMarkArrival={() => markWithGeo('arrival')}
+                onMarkDeparture={() => markWithGeo('departure')}
+                disabled={false}
+              />
+              <div id="time-section">
+                <TimeTrackerEnhanced report={report} onUpdateReport={persistReport} disabled={false} />
               </div>
             </div>
           </Tab>
 
           {/* ONGLET PHOTOS */}
-          <Tab label="Photos" icon="📷" badge={stats.photoCount > 0 ? stats.photoCount : null}>
+          <Tab label="Photos" badge={stats.photoCount > 0 ? stats.photoCount : null}>
             <div>
-              <div className="section-header" style={{ marginBottom: '1rem' }}>
+              <div className="section-header intervention-photos-header" style={{ marginBottom: '1rem' }}>
                 <h3 className="section-title" style={{ margin: 0 }}>
-                  <span className="section-title-icon">📷</span>
                   Photos et documents
                   {report.files && report.files.length > 0 && (
                     <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#6b7280', marginLeft: '0.5rem' }}>
@@ -903,11 +773,9 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
 
               {/* Galerie d'images optimisée avec pagination et lazy loading */}
               <ImageGalleryOptimized
-                images={(report.files || []).filter(f => f.type?.startsWith('image/')).map(f => ({
-                  url: f.url,
-                  name: f.name,
-                  type: f.type
-                }))}
+                images={(report.files || []).filter(isImageUrl).map(file =>
+                  typeof file === 'string' ? { url: file } : file
+                )}
                 uploadQueue={uploadQueue.filter(item => {
                   // Filtrer UNIQUEMENT les images (pas les PDFs ou audios)
                   const isImage = item.type?.startsWith('image/');
@@ -933,7 +801,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </Tab>
 
           {/* ONGLET CHECKPOINTS */}
-          <Tab label="Checks" icon="✅" badge={stats.checkpointProgress}>
+          <Tab label="Contrôles" badge={stats.checkpointProgress}>
             <div>
               <h3 style={{ marginTop: 0 }}>Points de contrôle rapides</h3>
               {(!report.quick_checkpoints || report.quick_checkpoints.length === 0) && (
@@ -993,7 +861,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
           </Tab>
 
           {/* ONGLET RAPPORT */}
-          <Tab label="Rapport" icon="📝">
+          <Tab label="Rapport">
             <div>
               {/* Rapport */}
               <div className="section" style={{ marginTop: 0 }}>
@@ -1151,59 +1019,117 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         </Tabs>
         </div>
 
-        {/* Save button section */}
-        {isAdmin ? (
-          currentStatus !== 'Terminée' ? (
-            <>
-              {/* Afficher les oublis de l'employé */}
-              {(() => {
-                const oublis = getEmployeeOublis();
-                if (oublis.length === 0) return null;
-                return (
-                  <div className="mt-4" style={{ padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
-                    <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '0.5rem' }}>
-                      Oublis de l'employé ({oublis.length})
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
-                      {oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
-                    </ul>
-                    <div style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                      Ces oublis seront enregistrés dans le rapport.
-                    </div>
+        {detailTab === 3 && (
+          <section className="intervention-closeout" aria-label="Clôture">
+            {currentStatus === 'Terminée' ? (
+              <>
+                <h2>Intervention terminée</h2>
+                {report.admin_oublis?.length > 0 && (
+                  <details>
+                    <summary>Éléments manquants à la clôture ({report.admin_oublis.length})</summary>
+                    <ul>{report.admin_oublis.map(item => <li key={item}>{item}</li>)}</ul>
+                    {report.admin_closed_at && <p>Clôturée par l’administrateur le {fmtTime(report.admin_closed_at)}</p>}
+                  </details>
+                )}
+              </>
+            ) : (
+              <>
+                <h2>Clôture de l’intervention</h2>
+                {isAdmin && (() => {
+                  const missing = getEmployeeOublis();
+                  return missing.length > 0 && (
+                    <details>
+                      <summary>Éléments manquants qui seront ajoutés au rapport ({missing.length})</summary>
+                      <ul>{missing.map(item => <li key={item}>{item}</li>)}</ul>
+                    </details>
+                  );
+                })()}
+                <button type="button" onClick={handleSave} disabled={isSaving} className="btn btn-primary">
+                  {isSaving ? 'Clôture en cours…' : 'Clôturer l’intervention'}
+                </button>
+              </>
+            )}
+          </section>
+        )}
+
+        <details className="intervention-tools">
+          <summary>Autres actions et informations</summary>
+          <div className="intervention-tools-body">
+            <QuickActionsBar intervention={intervention} />
+            <CallButtons intervention={intervention} />
+            <SmartAlerts
+              report={report}
+              intervention={intervention}
+              MIN_PHOTOS={MIN_REQUIRED_PHOTOS}
+              onAction={action => selectDetailTab(({ photos: 1, checklist: 2, signature: 3, complete: 3, time: 0 })[action] ?? 0)}
+            />
+        {/* ÉDITEUR DE DATES PLANIFIÉES (Admin uniquement) */}
+        {isAdmin && onUpdateScheduledDates && (
+          <ScheduledDatesEditor
+            scheduledDates={intervention.scheduled_dates || []}
+            onUpdate={(dates) => onUpdateScheduledDates(intervention.id, dates)}
+            disabled={false}
+          />
+        )}
+
+        {/* GESTION DE L'ÉQUIPE (Admin uniquement) */}
+        {isAdmin && onUpdateTeam && (
+          <div className="intervention-team">
+            <div className="section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0 }}>👥 Équipe assignée</h3>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowTeamModal(true)}
+                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}
+                >
+                  Modifier l'équipe
+                </button>
+              </div>
+
+              {/* Affichage de l'équipe actuelle */}
+              {intervention.intervention_assignments && intervention.intervention_assignments.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {intervention.intervention_assignments.map((assignment, idx) => (
+                    <span
+                      key={assignment.user_id || idx}
+                      className="intervention-team-member"
+                    >
+                      {assignment.profiles?.full_name || 'Employé'}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted" style={{ margin: 0 }}>Aucun employé assigné</p>
+              )}
+
+              {/* Affichage des assignations par jour si présentes */}
+              {intervention.daily_assignments && Object.keys(intervention.daily_assignments).length > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: '#6b7280' }}>Équipe par jour :</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {Object.entries(intervention.daily_assignments).sort(([a], [b]) => a.localeCompare(b)).map(([date, userIds]) => {
+                      const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                      const userNames = userIds.map(uid => {
+                        const assignment = intervention.intervention_assignments?.find(a => a.user_id === uid);
+                        return assignment?.profiles?.full_name || users.find(u => u.id === uid)?.full_name || 'Employé';
+                      });
+                      return (
+                        <div key={date} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                          <span style={{ fontWeight: 500, minWidth: '80px' }}>{formattedDate}</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{userNames.join(', ') || 'Aucun'}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })()}
-              <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-                {isSaving ? (<><LoaderIcon className="animate-spin" /> Clôture...</>) : 'Clôturer l\'intervention (Admin)'}
-              </button>
-            </>
-          ) : (
-            <div>
-              {report.admin_oublis?.length > 0 && (
-                <div className="mt-4" style={{ padding: '1rem', background: '#fef2f2', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
-                  <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '0.5rem' }}>
-                    Oublis de l'employé ({report.admin_oublis.length})
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.875rem' }}>
-                    {report.admin_oublis.map((o, i) => <li key={i} style={{ marginBottom: '0.25rem' }}>{o}</li>)}
-                  </ul>
-                  {report.admin_closed_at && (
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      Clôturée par admin le {new Date(report.admin_closed_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
                 </div>
               )}
-              <div className="text-center mt-4" style={{ padding: '1rem', background: '#dcfce7', borderRadius: '0.5rem', color: '#166534', fontWeight: 600 }}>
-                Intervention terminée
-              </div>
             </div>
-          )
-        ) : (
-          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full mt-4" style={{ fontSize: '1rem', padding: '1rem', fontWeight: 600 }}>
-            {isSaving ? (<><LoaderIcon className="animate-spin" /> Sauvegarde...</>) : 'Sauvegarder et Clôturer'}
-          </button>
+          </div>
         )}
+
+          </div>
+        </details>
       </div>
 
       {/* Modale signature */}

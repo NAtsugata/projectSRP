@@ -15,6 +15,7 @@ const InterventionDetailViewContainer = () => {
     const { interventionId } = useParams();
     const navigate = useNavigate();
     const { profile } = useAuthStore();
+    const isAdmin = Boolean(profile?.is_admin || profile?.is_super_admin);
     const toast = useToast();
     const queryClient = useQueryClient();
     const { users } = useUsers();
@@ -140,21 +141,21 @@ const InterventionDetailViewContainer = () => {
     };
 
     const handleUpdateAdminNote = async (id, note) => {
-        try {
-            const { error } = await interventionService.updateIntervention(id, {
-                admin_note: note
-            });
+        if (!isAdmin || !profile?.organization_id) throw new Error('Accès administrateur requis.');
+        const queryKey = ['intervention', String(id)];
+        await queryClient.cancelQueries({ queryKey });
+        const { data, error } = await supabase.from('interventions')
+            .update({ admin_note: note })
+            .eq('id', id)
+            .eq('organization_id', profile.organization_id)
+            .select('admin_note')
+            .maybeSingle();
 
-            if (error) throw error;
-
-            // Silent update or toast? Toast is better for explicit save
-            // But if it's auto-save (onBlur), maybe silent?
-            // Let's assume explicit save or onBlur with toast
-            toast?.success('Note admin mise à jour.');
-            refetch();
-        } catch (error) {
-            toast?.error('Erreur maj note: ' + error.message);
-        }
+        if (error || !data) throw new Error('Vérifiez vos droits ou la connexion, puis réessayez.');
+        queryClient.setQueryData(queryKey, previous => previous && { ...previous, admin_note: data.admin_note });
+        queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        toast?.success('Note enregistrée.');
+        return data.admin_note;
     };
 
     const handleUpdateTeam = async (id, userIds, dailyAssignments) => {
@@ -203,7 +204,7 @@ const InterventionDetailViewContainer = () => {
             onUpdateTeam={handleUpdateTeam}
             isUpdatingTeam={isUpdatingTeam}
             users={users}
-            isAdmin={profile?.is_admin}
+            isAdmin={isAdmin}
             refreshData={refetch}
             dataVersion={Date.now()}
         />
