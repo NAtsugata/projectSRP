@@ -4,14 +4,9 @@ import './InterventionJourney.css';
 
 const nextActions = ['Enregistrer mon arrivée', 'Ajouter les photos', 'Vérifier les contrôles', 'Compléter le rapport'];
 
-export default function InterventionJourney({ report, status, onSelect, onArrival, busy }) {
+export default function InterventionJourney({ report, status, onSelect, busy, showAction = true }) {
   const { stages, completed, terminal, next } = interventionJourney(report, status);
   const action = terminal ? 'Voir le rapport' : completed === stages.length ? 'Vérifier et clôturer' : nextActions[next.tab];
-
-  const handleNext = () => {
-    if (!terminal && next.tab === 0 && !report.arrivalTime) onArrival();
-    else onSelect(terminal ? 3 : next.tab);
-  };
 
   return (
     <section className="intervention-journey" aria-labelledby="intervention-journey-title">
@@ -30,9 +25,9 @@ export default function InterventionJourney({ report, status, onSelect, onArriva
             </li>
         ))}
       </ol>
-      <button type="button" className="journey-primary" disabled={busy} onClick={handleNext}>
+      {showAction && <button type="button" className="journey-primary" disabled={busy} onClick={() => onSelect(terminal ? 3 : next.tab)}>
         {action}
-      </button>
+      </button>}
     </section>
   );
 }

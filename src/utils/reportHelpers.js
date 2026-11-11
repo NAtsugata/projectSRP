@@ -14,6 +14,9 @@ export const buildSanitizedReport = (report) => {
       files: [],
       arrivalTime: null,
       departureTime: null,
+      isPaused: false,
+      pauseStartedAt: null,
+      pauseHistory: [],
       signature: null,
       needs: [],
       supply_requests: [],
@@ -32,6 +35,9 @@ export const buildSanitizedReport = (report) => {
     files: Array.isArray(report.files) ? report.files : [],
     arrivalTime: report.arrivalTime || null,
     departureTime: report.departureTime || null,
+    isPaused: !!report.isPaused,
+    pauseStartedAt: report.pauseStartedAt || null,
+    pauseHistory: Array.isArray(report.pauseHistory) ? report.pauseHistory : [],
     signature: report.signature || null,
 
     // Champs additionnels

@@ -27,7 +27,6 @@ import {
   SignatureModal,
   FileUploader,
   VoiceRecorder,
-  ArrivalDeparture,
 } from '../components/intervention';
 import { Tabs, Tab } from '../components/ui';
 import useBodyScrollLock from '../hooks/useBodyScrollLock';
@@ -38,7 +37,8 @@ import { prepareCerfaDataFromIntervention } from '../utils/cerfaService';
 import WorkInstructions from '../components/WorkInstructions';
 import InterventionJourney from '../components/intervention/InterventionJourney';
 import InterventionAdminNote from '../components/intervention/InterventionAdminNote';
-import { interventionStageStatus } from '../utils/statusPresentation';
+import { interventionStageStatus, statusPresentation } from '../utils/statusPresentation';
+import { finishInterventionPause, readInterventionTiming } from '../utils/interventionTime';
 import logger from '../utils/logger';
 import './InterventionDetailView_Modern.css';
 
@@ -78,12 +78,15 @@ const fmtTime = (iso) => {
 
 // InlineUploader et VoiceNoteRecorder remplacés par FileUploader et VoiceRecorder importés
 
-export default function InterventionDetailView({ interventions, onSave, onSaveSilent, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
+export default function InterventionDetailView({ interventions, onSave, onSaveSilent, onSaveTiming, isAdmin, dataVersion, refreshData, onUpdateScheduledDates, onUpdateAdminNote, onUpdateTeam, isUpdatingTeam, users = [], profile, organization }) {
   const { interventionId } = useParams();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState(null);
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
+  const [timeBusy, setTimeBusy] = useState(false);
+  const [timeError, setTimeError] = useState('');
+  const timeRequest = useRef(false);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
@@ -258,6 +261,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         const currentReport = prev || ensureReportSchema(found.report);
         return {
           ...currentReport,  // Garde les changements locaux
+          ...readInterventionTiming(found.report || {}),
           files: found.report?.files || currentReport.files,  // ✅ UPDATE files depuis la BDD
           updated_at: found.updated_at
         };
@@ -533,63 +537,42 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
     await persistReport(updated);
   };
 
-  // -------- Arrivé / Départ (nouveau) --------
-  const markWithGeo = useCallback(async (kind) => {
-    const isArrival = kind === 'arrival';
-    const nowIso = new Date().toISOString();
-
-    // Early guard UI : départ ne peut pas précéder l'arrivée
-    if (!isArrival && report?.arrivalTime) {
-      try {
-        const arr = new Date(report.arrivalTime).getTime();
-        const dep = new Date(nowIso).getTime();
-        if (dep < arr) { alert("L'heure de départ ne peut pas précéder l'arrivée."); return; }
-      } catch { /* date parse error – ignore */ }
-    }
-
-    // Lock le body pendant la phase géoloc + persistance (mobile peut sauter)
-    saveScroll(); pendingRestoreRef.current = true; if (!document.body.dataset.__scrollLocked) lock();
-
-    const finalize = async (updated, msg) => {
-      try {
-        await persistReport(updated);
-        if (msg) alert(msg);
-      } finally {
-        // ✅ Toujours déverrouiller et restaurer le scroll
-        unlock();
-        restoreScroll();
-        pendingRestoreRef.current = false;
-      }
-    };
-
-    if (!('geolocation' in navigator)) {
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
-      };
-      await finalize(updated, 'Géolocalisation indisponible. Heure enregistrée.');
+  const handleTimeAction = async action => {
+    if (timeRequest.current || !report || !intervention || report.departureTime) return;
+    if (action === 'arrival' ? report.arrivalTime : !report.arrivalTime) return;
+    const at = new Date().toISOString();
+    if (action === 'departure' && Date.parse(report.arrivalTime) > Date.parse(at)) {
+      setTimeError('L’heure de départ ne peut pas précéder l’arrivée.');
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const { latitude, longitude, accuracy } = pos.coords || {};
-      const geo = { lat: latitude, lng: longitude, acc: accuracy };
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: geo,
-      };
-      await finalize(updated);
-    }, async () => {
-      const updated = {
-        ...report,
-        [isArrival ? 'arrivalTime' : 'departureTime']: nowIso,
-        [isArrival ? 'arrivalGeo' : 'departureGeo']: null,
-      };
-      await finalize(updated, 'Géolocalisation refusée. Heure enregistrée sans position.');
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }, [report, lock, unlock, saveScroll, restoreScroll, persistReport]);  
+    timeRequest.current = true;
+    setTimeBusy(true);
+    setTimeError('');
+    try {
+      let timing;
+      if (action === 'pause') timing = { isPaused: true, pauseStartedAt: at };
+      else if (action === 'resume') timing = finishInterventionPause(report, at);
+      else {
+        const geo = navigator.geolocation ? await new Promise(resolve => {
+          navigator.geolocation.getCurrentPosition(({ coords }) => {
+            resolve({ lat: coords.latitude, lng: coords.longitude, acc: coords.accuracy });
+          }, () => resolve(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+        }) : null;
+        timing = action === 'arrival' ? { arrivalTime: at, arrivalGeo: geo }
+          : { ...finishInterventionPause(report, at), departureTime: at, departureGeo: geo };
+      }
+
+      await onSaveTiming(intervention.id, timing, report);
+      setReport(previous => ({ ...previous, ...timing }));
+    } catch (error) {
+      logger.error('Impossible d’enregistrer le temps sur site', error);
+      setTimeError(error?.message || 'Impossible d’enregistrer le temps sur site. Réessayez.');
+    } finally {
+      timeRequest.current = false;
+      setTimeBusy(false);
+    }
+  };
 
   // -------- Validation & sauvegarde --------
   const validateCanClose = () => {
@@ -668,6 +651,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
   );
 
   const currentStatus = interventionStageStatus({...intervention,report});
+  const timeReadOnly = ['completed', 'cancelled'].includes(statusPresentation(currentStatus).tone);
   const urgentCount = Array.isArray(report.needs) ? report.needs.filter(n => n.urgent).length : 0;
 
   const calculateDuration = () => {
@@ -723,8 +707,8 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
             report={report}
             status={currentStatus}
             onSelect={selectDetailTab}
-            onArrival={() => markWithGeo('arrival')}
-            busy={isSaving || uploadQueue.some(item => item.status === 'uploading')}
+            showAction={detailTab !== 0}
+            busy={isSaving || timeBusy || uploadQueue.some(item => item.status === 'uploading')}
           />
         </div>
 
@@ -732,17 +716,13 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
         <div id="intervention-details" className="intervention-details-anchor">
         <Tabs value={detailTab} onChange={setDetailTab}>
           <Tab label="Temps" icon={<ClockIcon />}>
-            <div className="intervention-time">
-              <ArrivalDeparture
-                report={report}
-                onMarkArrival={() => markWithGeo('arrival')}
-                onMarkDeparture={() => markWithGeo('departure')}
-                disabled={false}
-              />
-              <div id="time-section">
-                <TimeTrackerEnhanced report={report} onUpdateReport={persistReport} disabled={false} />
-              </div>
-            </div>
+            <TimeTrackerEnhanced
+              report={report}
+              onAction={handleTimeAction}
+              busy={timeBusy || isSaving}
+              disabled={timeReadOnly}
+              error={timeError}
+            />
           </Tab>
 
           {/* ONGLET PHOTOS */}
@@ -1047,7 +1027,7 @@ export default function InterventionDetailView({ interventions, onSave, onSaveSi
                     </details>
                   );
                 })()}
-                <button type="button" onClick={handleSave} disabled={isSaving} className="btn btn-primary">
+                <button type="button" onClick={handleSave} disabled={isSaving || timeBusy} className="btn btn-primary">
                   {isSaving ? 'Clôture en cours…' : 'Clôturer l’intervention'}
                 </button>
               </>

@@ -826,13 +826,12 @@
 .intervention-team-member { padding: 5px 9px; border-radius: 999px; background: var(--bg-secondary); color: var(--text-primary); }
 .intervention-closeout { display: grid; justify-items: start; gap: 12px; }
 .intervention-closeout details { width: 100%; }
-.intervention-time { display: grid; gap: 12px; }
 .intervention-photos-header { flex-wrap: wrap; gap: 8px; }
 .intervention-detail-modern :is(.intervention-back, .intervention-contact, .journey-primary, .work-orders-toggle, .intervention-note button, .intervention-tools > summary):focus-visible { outline: 2px solid var(--intervention-copper); outline-offset: 3px; }
 
 .intervention-detail-modern .intervention-details-anchor .tabs-header { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border-color); background: transparent; }
 .intervention-detail-modern .intervention-details-anchor .tab-button { min-width: 0; justify-content: center; white-space: normal; border: 1px solid transparent; }
-.intervention-detail-modern .intervention-details-anchor .tab-button.active { border-color: transparent; color: var(--intervention-copper); background: var(--intervention-note-paper); }
+.intervention-detail-modern .intervention-details-anchor .tab-button.active { border-color: transparent; border-bottom: 2px solid var(--intervention-copper); border-radius: 0; color: var(--intervention-copper); background: transparent; }
 .intervention-detail-modern .intervention-details-anchor .tab-label { font-size: clamp(.73rem, 1.6vw, .9rem); }
 .intervention-detail-modern .intervention-details-anchor .tab-icon svg { width: 16px; height: 16px; }
 

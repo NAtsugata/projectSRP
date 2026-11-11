@@ -21,6 +21,7 @@
 
 @container intervention (max-width: 540px) {
   .intervention-journey > header, .intervention-journey > progress, .intervention-journey > ol { display: none; }
+  .intervention-journey:not(:has(.journey-primary)) { display: none; }
 }
 
 @media print { .intervention-journey .journey-primary { display: none; } }

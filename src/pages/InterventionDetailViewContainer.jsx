@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { useUsers } from '../hooks/useUsers';
 import { buildSanitizedReport } from '../utils/reportHelpers';
+import { finishInterventionPause, readInterventionTiming } from '../utils/interventionTime';
 import InterventionDetailView from './InterventionDetailView';
 import logger from '../utils/logger';
 
@@ -74,33 +75,56 @@ const InterventionDetailViewContainer = () => {
         );
     }
 
-    // ⚙️ Persistance silencieuse — attend le *report* directement
+    const reportConflict = () => new Error('Cette intervention a été modifiée. Rechargez la fiche avant de réessayer.');
+
+    const updateCurrentReport = async (id, prepareUpdate) => {
+        const queryKey = ['intervention', String(id)];
+        const { data: current, error: readError } = await supabase.from('interventions')
+            .select('report, updated_at').eq('id', id).single();
+        if (readError) throw readError;
+        const update = supabase.from('interventions').update(prepareUpdate(current.report || {})).eq('id', id);
+        const checkedUpdate = current.updated_at == null ? update.is('updated_at', null) : update.eq('updated_at', current.updated_at);
+        const { data, error } = await checkedUpdate.select('report, status, updated_at').maybeSingle();
+        if (error) throw error;
+        if (!data) throw reportConflict();
+        await queryClient.cancelQueries({ queryKey });
+        queryClient.setQueryData(queryKey, cached => cached && { ...cached, ...data });
+    };
+
     const handleUpdateInterventionReportSilent = async (id, report) => {
-        const sanitizedReport = buildSanitizedReport(report);
-        const { error } = await interventionService.updateIntervention(id, {
-            report: sanitizedReport
+        await updateCurrentReport(id, current => ({
+            report: { ...current, ...buildSanitizedReport(report), ...readInterventionTiming(current) },
+        }));
+        return { success: true };
+    };
+
+    const handleSaveTiming = async (id, timing, previous) => {
+        await updateCurrentReport(id, current => {
+            const timingChanged = ['arrivalTime', 'departureTime', 'pauseStartedAt'].some(key =>
+                (current[key] || null) !== (previous[key] || null)) || !!current.isPaused !== !!previous.isPaused;
+            if (timingChanged) throw reportConflict();
+            return { report: { ...current, ...timing } };
         });
-        if (!error) {
-            queryClient.invalidateQueries({ queryKey: ['intervention', id] });
-        }
-        return { success: !error, error };
+        queryClient.invalidateQueries({ queryKey: ['interventions'] });
     };
 
     // 💾 Sauvegarde + clôture
     const handleUpdateInterventionReport = async (id, report) => {
         try {
             // L'utilisateur a cliqué "Sauvegarder et Clôturer" → toujours Terminée
-            const sanitizedReport = buildSanitizedReport(report);
-            if (!sanitizedReport.departureTime) {
-                sanitizedReport.departureTime = new Date().toISOString();
-            }
-
-            const { error } = await interventionService.updateIntervention(id, {
-                report: sanitizedReport,
-                status: 'Terminée'
+            await updateCurrentReport(id, current => {
+                const departureTime = current.departureTime || new Date().toISOString();
+                return {
+                    report: {
+                        ...current,
+                        ...buildSanitizedReport(report),
+                        ...readInterventionTiming(current),
+                        ...finishInterventionPause(current, departureTime),
+                        departureTime,
+                    },
+                    status: 'Terminée',
+                };
             });
-
-            if (error) throw error;
 
             toast?.success('Rapport sauvegardé et intervention clôturée.');
             queryClient.invalidateQueries({ queryKey: ['intervention', id] });
@@ -197,12 +221,14 @@ const InterventionDetailViewContainer = () => {
 
     return (
         <InterventionDetailView
+            key={interventionId}
             intervention={intervention}
             interventions={intervention ? [intervention] : []}
             profile={profile}
             organization={organization}
             onSave={handleUpdateInterventionReport}
             onSaveSilent={handleUpdateInterventionReportSilent}
+            onSaveTiming={handleSaveTiming}
             onAddBriefingDocuments={handleAddBriefingDocuments}
             onUpdateScheduledDates={handleUpdateScheduledDates}
             onUpdateAdminNote={handleUpdateAdminNote}
