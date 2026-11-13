@@ -40,7 +40,7 @@ export default function FreeDocumentScanner({onSave,onClose,initialMode='photo'}
         setHint(found?'Bords détectés : vérifiez les quatre coins avant de valider.':'Aucun bord fiable détecté : la photo entière est conservée. Ajustez les coins si nécessaire.');
     }
     async function appendPhoto(file){
-        const {blob,canvas}=await prepareScanPhoto(file);let found=null;try{found=await detect(canvas);}catch{}
+        const {blob,canvas}=await prepareScanPhoto(file);let found=null;try{found=await detect(canvas);}catch{ /* détection facultative : recadrage manuel */ }
         const source=urlFor(blob);
         try{const rendered=found?await renderScanPage(source,found,'color',0):blob;if(!active())return;
             setPages(items=>[...items,{id:crypto.randomUUID(),blob:rendered,url:urlFor(rendered)}]);clearPdf();

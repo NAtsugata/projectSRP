@@ -1,0 +1,5 @@
+-- Récupérée depuis la base de production (appliquée le 03/11/2026, absente du dépôt)
+create policy scanned_owner_scope_select on public.scanned_documents as restrictive for select to authenticated using (organization_id=(select public.current_user_org_id()) and ((select public.is_admin()) or user_id=(select auth.uid())));
+create policy scanned_owner_scope_insert on public.scanned_documents as restrictive for insert to authenticated with check (organization_id=(select public.current_user_org_id()) and user_id=(select auth.uid()));
+create policy scanned_owner_scope_update on public.scanned_documents as restrictive for update to authenticated using (organization_id=(select public.current_user_org_id()) and ((select public.is_admin()) or user_id=(select auth.uid()))) with check (organization_id=(select public.current_user_org_id()) and ((select public.is_admin()) or user_id=(select auth.uid())));
+create policy scanned_owner_scope_delete on public.scanned_documents as restrictive for delete to authenticated using (organization_id=(select public.current_user_org_id()) and ((select public.is_admin()) or user_id=(select auth.uid())));
